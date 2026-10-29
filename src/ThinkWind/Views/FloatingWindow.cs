@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -15,11 +16,15 @@ internal abstract class FloatingWindow : Window
     protected readonly SettingsStore Store;
     protected readonly Border Surface;
     protected abstract bool AttachedTop { get; }
+    protected virtual bool UsesIslandAppearance => AttachedTop;
     protected OverlayChrome.Display Display => OverlayChrome.GetDisplay(Store.Value.MonitorIndex, Store.Value.MonitorDeviceName);
     private readonly DispatcherTimer animation = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private readonly Stopwatch elapsed = new();
     private OverlayChrome.PixelRect start, target;
     private bool placed, positioning;
+    private BackdropHost? backdrop;
+    internal nint BackdropHandle => backdrop?.Handle ?? 0;
+    internal bool HasNativeMaterial => backdrop?.MaterialAvailable == true;
     private double radius;
     private readonly Border centerGuide = new() { Width = 1, Opacity = .35, IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed };
     private (int Width, int Height, int Radius, bool Top) lastClip;
@@ -27,10 +32,16 @@ internal abstract class FloatingWindow : Window
     {
         Store = store;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
+        AllowsTransparency = true;
         ShowInTaskbar = false; Topmost = true; ShowActivated = false;
         WindowStartupLocation = WindowStartupLocation.Manual;
         Left = -10000; Top = -10000; Width = 320; Height = 56;
         Background = Brushes.Transparent;
+        // Remove the themed Window border/background container as well as the
+        // non-client frame. Only our alpha-clipped content is painted.
+        var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+        presenter.SetBinding(ContentPresenter.ContentProperty, new Binding("Content") { RelativeSource = RelativeSource.TemplatedParent });
+        Template = new ControlTemplate(typeof(Window)) { VisualTree = presenter };
         SetResourceReference(ForegroundProperty, "Think.Text");
         FontFamily = new FontFamily("Segoe UI Variable Text");
         Surface = new Border { BorderThickness = new Thickness(0), Padding = new Thickness(10), SnapsToDevicePixels = true };
@@ -39,12 +50,16 @@ internal abstract class FloatingWindow : Window
         frame.Children.Add(centerGuide); Content = frame;
         SourceInitialized += (_, _) =>
         {
-            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(WindowMessage);
+            var source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+            source.CompositionTarget.BackgroundColor = Colors.Transparent;
+            source.AddHook(WindowMessage);
+            backdrop = new BackdropHost(this);
             ApplyAppearance();
         };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) backdrop?.Hide(); else UpdateClip(); };
         Loaded += (_, _) => Position();
         Closing += (_, e) => { if (Application.Current is App app && !app.IsExiting) { e.Cancel = true; Hide(); } };
-        Closed += (_, _) => animation.Stop();
+        Closed += (_, _) => { animation.Stop(); backdrop?.Dispose(); };
         animation.Tick += (_, _) =>
         {
             var progress = Math.Clamp(elapsed.Elapsed.TotalMilliseconds / Math.Max(1, Store.Value.AnimationMilliseconds), 0, 1);
@@ -70,12 +85,12 @@ internal abstract class FloatingWindow : Window
     protected void ApplyAppearance()
     {
         var p = Store.Value;
-        radius = AttachedTop ? p.IslandRadius : p.DockRadius;
-        var material = AttachedTop ? p.IslandMaterial : p.DockMaterial;
-        var alpha = (AttachedTop ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
-        bool backdrop = OverlayChrome.Material(this, SystemParameters.HighContrast ? "Solid" : material, ThemeService.Light);
+        radius = UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
+        var material = UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial;
+        var alpha = (UsesIslandAppearance ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
+        backdrop?.SetMaterial(SystemParameters.HighContrast ? "Solid" : material, ThemeService.Light);
         var color = ThemeService.BaseColor;
-        color.A = (byte)Math.Round(255 * (backdrop ? alpha : 1));
+        color.A = (byte)Math.Round(255 * (backdrop?.MaterialAvailable == true ? alpha : 1));
         Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(color);
         Surface.CornerRadius = AttachedTop ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
         centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;
@@ -87,9 +102,30 @@ internal abstract class FloatingWindow : Window
         if (hwnd == 0 || !OverlayChrome.GetWindowRect(hwnd, out var rectangle)) return;
         var scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1;
         var next = (rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top, (int)Math.Round(radius * scale), AttachedTop);
-        if (next == lastClip || next.Item1 < 1 || next.Item2 < 1) return;
-        lastClip = next;
-        OverlayChrome.Clip(hwnd, next.Item1, next.Item2, next.Item3, AttachedTop);
+        if (next.Item1 < 1 || next.Item2 < 1) return;
+        // The foreground is per-pixel alpha; only the material HWND uses an HRGN.
+        // Transparent pixels outside this WPF geometry do not receive mouse input.
+        if (next != lastClip)
+        {
+            lastClip = next;
+            var geometry = new StreamGeometry();
+            double width = next.Item1 / scale, height = next.Item2 / scale;
+            double r = Math.Min(radius, Math.Min(width, height) / 2);
+            using (var context = geometry.Open())
+            {
+                context.BeginFigure(new Point(AttachedTop ? 0 : r, 0), true, true);
+                context.LineTo(new Point(AttachedTop ? width : width - r, 0), true, false);
+                if (!AttachedTop) context.ArcTo(new Point(width, r), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
+                context.LineTo(new Point(width, height - r), true, false);
+                context.ArcTo(new Point(width - r, height), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
+                context.LineTo(new Point(r, height), true, false);
+                context.ArcTo(new Point(0, height - r), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
+                context.LineTo(new Point(0, AttachedTop ? 0 : r), true, false);
+                if (!AttachedTop) context.ArcTo(new Point(r, 0), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
+            }
+            geometry.Freeze(); ((Grid)Content).Clip = geometry;
+        }
+        backdrop?.Synchronize(rectangle, next.Item3, AttachedTop, IsVisible);
     }
     protected void Place(double width, double height, bool animate = false)
     {
@@ -116,6 +152,25 @@ internal abstract class FloatingWindow : Window
         positioning = true;
         try { OverlayChrome.Move(new WindowInteropHelper(this).Handle, rectangle); UpdateClip(); }
         finally { positioning = false; }
+    }
+    internal OverlayChrome.PixelRect Bounds
+    {
+        get { OverlayChrome.GetWindowRect(new WindowInteropHelper(this).Handle, out var rectangle); return rectangle; }
+    }
+    internal OverlayChrome.PixelRect TargetBounds => placed ? target : Bounds;
+    protected void PlaceNear(double width, double height, OverlayChrome.PixelRect anchor, bool animate)
+    {
+        var display = Display;
+        int w = (int)Math.Round(Math.Min(width, display.Width - 16) * display.Scale);
+        int h = (int)Math.Round(Math.Min(height, display.Height - 16) * display.Scale);
+        int x = Math.Clamp((anchor.Left + anchor.Right - w) / 2, display.Work.Left + 8, Math.Max(display.Work.Left + 8, display.Work.Right - w - 8));
+        int y = Math.Clamp(anchor.Bottom + (int)(8 * display.Scale), display.Bounds.Top + 8, Math.Max(display.Bounds.Top + 8, display.Work.Bottom - h - 8));
+        animation.Stop();
+        target = new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + w, Bottom = y + h };
+        if (animate && placed && Store.Value.AnimationMilliseconds > 0 && SystemParameters.ClientAreaAnimation && OverlayChrome.GetWindowRect(new WindowInteropHelper(this).Handle, out start))
+        { elapsed.Restart(); animation.Start(); }
+        else Move(target);
+        placed = true;
     }
     protected void AttachPositionGrip(FrameworkElement grip)
     {

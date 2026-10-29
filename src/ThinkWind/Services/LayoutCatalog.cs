@@ -18,9 +18,9 @@ internal static class LayoutCatalog
         new("airplane", "Modo avião", "\uE709", "ms-settings:network-airplanemode"),
         new("settings", "Personalizar", "\uE713", null)
     };
-    internal static readonly string[] Modules = { "connections", "media", "audio", "metrics", "calendar" };
+    internal static readonly string[] Modules = { "connections", "media", "audio", "metrics", "calendar", "background", "notifications" };
     internal static string ModuleName(string id) => id switch
-    { "connections" => "Conexões", "media" => "Reprodução de mídia", "audio" => "Saída e microfone", "metrics" => "Monitoramento", "calendar" => "Calendário", _ => id };
+    { "connections" => "Conexões", "media" => "Reprodução de mídia", "audio" => "Saída e microfone", "metrics" => "Monitoramento", "calendar" => "Calendário", "background" => "Aplicativos e processos", "notifications" => "Notificações", _ => id };
     internal static List<string> Complete(IEnumerable<string>? order, IEnumerable<string> known) =>
         (order ?? Array.Empty<string>()).Where(known.Contains).Concat(known).Distinct(StringComparer.Ordinal).ToList();
     internal static void Move(List<string> order, string source, string target, bool after)

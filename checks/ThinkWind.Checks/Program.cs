@@ -9,8 +9,9 @@ internal static class Program
     private static int passed, failed, skipped;
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "ThinkWindChecks", Guid.NewGuid().ToString("N"));
     [STAThread]
-    private static int Main()
+    private static int Main(string[] args)
     {
+        if (args.Contains("--visual-background")) return VisualBackground.Run();
         Directory.CreateDirectory(Root);
         Run("Configuração ausente usa valores padrão", () =>
         {
@@ -71,10 +72,39 @@ internal static class Program
             Require(windows.Count > 0 && windows.All(w => w.Handle != 0 && !string.IsNullOrWhiteSpace(w.Title)));
         });
         Run("Uso de RAM está entre 1 e 100", () => Require(Desktop.MemoryPercent() is > 0 and <= 100));
+        Run("Ilha começa compacta e hover não abre painel completo", () =>
+        {
+            var state = new IslandInteraction(); Require(state.Stage == IslandStage.Compact);
+            state.Enter(); Require(state.Stage == IslandStage.Hover); state.Leave(); Require(state.Stage == IslandStage.Compact);
+        });
+        Run("Painel completo retorna ao estágio anterior", () =>
+        {
+            var state = new IslandInteraction(); state.Enter(); state.OpenFull(); state.Leave();
+            Require(state.Stage == IslandStage.Full); state.CloseFull(); Require(state.Stage == IslandStage.Hover);
+        });
+        Run("Mini-ilha compacta bloqueia expansão por hover", () =>
+        {
+            var state = new IslandInteraction(); state.OpenMini(); state.Enter(); state.Leave();
+            Require(state.Stage == IslandStage.Compact && state.MiniOpen); state.CloseMini(); state.Enter(); Require(state.Stage == IslandStage.Hover);
+        });
+        Run("Mini-ilha mantém estágio hover sem promover painel", () =>
+        {
+            var state = new IslandInteraction(); state.Enter(); state.OpenMini(); state.Leave();
+            Require(state.Stage == IslandStage.Hover); state.CloseMini(); state.Leave(); Require(state.Stage == IslandStage.Compact);
+        });
+        Run("Rede retorna snapshot real sem afirmar acesso à internet", () =>
+        {
+            var state = NetworkService.Read(); Require(!string.IsNullOrWhiteSpace(state.Name) && !string.IsNullOrWhiteSpace(state.Kind));
+        });
+        foreach (bool top in new[] { false, true }) foreach (bool light in new[] { false, true })
+            Run($"Composição {(top ? "ilha" : "dock")} / {(light ? "claro" : "escuro")}: alfa, HWNDs e recorte", () => OverlayChecks.Check(top, light, PathFor("composition-" + top + light)));
+        Run("Mini de volume fecha por Esc sem fechar a ilha", () => OverlayChecks.MiniEscape(PathFor("mini-escape")));
+        Run("Mini de rede fecha ao ativar outra janela", () => OverlayChecks.MiniOutsideFocus(PathFor("mini-outside")));
         CheckAudio(CoreAudio.Flow.Render, "Saída");
         CheckAudio(CoreAudio.Flow.Capture, "Microfone");
         Console.WriteLine($"RESULTADO: {passed} aprovados; {failed} falhos; {skipped} ignorados.");
         Console.WriteLine("Arquivos temporários isolados: " + Root);
+        BackdropComposition.Shutdown();
         return failed == 0 ? 0 : 1;
     }
     private static void CheckAudio(CoreAudio.Flow flow, string name)

@@ -100,7 +100,7 @@ internal sealed class SettingsWindow : Window
         Slider(island, "Espaçamento", 0, 20, store.Value.IslandSpacing, v => Change(p => p.IslandSpacing = v));
         Slider(island, "Arredondamento inferior", 0, 48, store.Value.IslandRadius, v => Change(p => p.IslandRadius = v));
         Slider(island, "Posição horizontal", -4000, 4000, store.Value.IslandHorizontalOffset, v => Change(p => p.IslandHorizontalOffset = v));
-        Note(island, "Acrylic e Mica usam o desfoque do Windows. O raio do desfoque é definido pelo sistema; a intensidade acima controla a tonalidade, preservando a nitidez dos ícones e textos.");
+        Note(island, "Acrylic usa o fundo real através da composição do Windows. Mica é um material opaco baseado no papel de parede. A intensidade acima controla a tonalidade; o raio do desfoque é definido pelo sistema.");
 
         var layout = Section("Editor de layout", "Arraste pelos puxadores no desktop. As linhas ciano indicam onde o item será inserido.");
         // Detach reusable controls from their previous section when resetting.

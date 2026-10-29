@@ -1,5 +1,16 @@
 # Histórico do Think Wind
 
+## 0.21.0-dev — 2026-10-29
+
+- Conteúdo WPF com transparência por pixel, template sem fundo de tema e máscara alfa; material separado em HWND nativo sem bitmap GDI.
+- Acrylic por HostBackdropBrush/Windows Composition, independente do foco da janela, com recorte e posição sincronizados.
+- Estágios compacto (relógio/rede/volume), hover com intervalos de entrada/saída e painel completo explícito.
+- Mini-ilhas independentes de volume e rede, com fechamento por Esc/perda de foco e proteção contra conflitos de hover/clique.
+- Snapshot real da rede, consulta WLAN quando autorizada pelo Windows, processos reais da sessão e acesso à central nativa de notificações.
+- Build sem erros/avisos e 29 checks aprovados no escopo autorizado. Transparência confirmada visualmente pelo usuário. Nenhum instalador gerado.
+
+Detalhes em `VALIDACAO-0.21.md`.
+
 ## 2.0.0-dev — 2026-10-29
 
 - Identidade visual baseada no Think Monitor: grafite, ciano e recursos dinâmicos para temas claro, escuro e automático.

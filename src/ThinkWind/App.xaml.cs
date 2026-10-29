@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using Microsoft.Win32;
+using ThinkWind.Native;
 using ThinkWind.Services;
 using ThinkWind.Views;
 using Forms = System.Windows.Forms;
@@ -55,6 +56,7 @@ public partial class App : Application
         SystemEvents.UserPreferenceChanged -= WindowsPreferencesChanged;
         if (store is not null) { store.Changed -= PreferencesChanged; store.Flush(); }
         if (tray is not null) { tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
+        BackdropComposition.Shutdown();
         instance?.Dispose();
         base.OnExit(e);
     }

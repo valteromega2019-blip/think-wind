@@ -6,7 +6,13 @@ Repositório próprio: https://github.com/valteromega2019-blip/think-wind
 
 Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicial e a branch `developer` é a área de desenvolvimento. O histórico deste repositório é independente do Think Monitor.
 
-## Think Wind 2.0 — em desenvolvimento
+## Atualização v0.21 — em teste
+
+Correção estrutural da transparência por pixel e do material nativo com `HostBackdropBrush`; ilha com estados compacto, hover e painel completo; mini-ilhas independentes para volume e rede. **29 checks aprovados e build Release sem erros/avisos** no escopo de validação solicitado. A transparência real foi confirmada pelo usuário sobre o fundo colorido de verificação. Detalhes e limites em [VALIDACAO-0.21.md](VALIDACAO-0.21.md).
+
+Executável local atualizado: `src/ThinkWind/bin/Release/net10.0-windows10.0.19041.0/ThinkWind.exe`. Nenhum instalador novo foi gerado; o conteúdo de `artifacts` continua na versão antiga.
+
+## Etapa anterior: refinamentos 2.0-dev
 
 O código atual implementa a nova direção visual, ilha presa ao topo, ícones sem fundos, recuperação de ícones pelo Shell/janelas, temas claro/escuro/automático, ajustes independentes, personalização instantânea com salvamento automático e editor visual com arraste, guias, visibilidade e restauração de layouts. Detalhes de uso e limites em [REFINAMENTOS-2.0.md](REFINAMENTOS-2.0.md).
 
@@ -29,7 +35,7 @@ O código atual implementa a nova direção visual, ilha presa ao topo, ícones 
 
 ## Arquitetura
 
-`src/ThinkWind` é um aplicativo C# / WPF para .NET 10. `Native` concentra interoperabilidade Win32/DWM; `Services` contém persistência e ações do sistema; `Views` contém dock, ilha e configurações. Não há dependências NuGet externas.
+`src/ThinkWind` é um aplicativo C# / WPF para .NET 10. `Native` concentra interoperabilidade Win32/DWM/Windows Composition; `Services` contém persistência, transições e ações do sistema; `Views` contém dock, ilha, mini-ilhas e configurações. A integração WinRT usa as projeções oficiais do SDK Windows.
 
 O áudio fica separado em `Native/CoreAudio.cs` (interfaces COM documentadas), `Services/AudioService.cs` (enumeração, leitura e escrita de endpoints) e `Views/AudioEndpointControl.cs` (controle reutilizado para saída e entrada). As referências COM e os valores PROPVARIANT são liberados ao final de cada operação. A leitura de volume do microfone não abre um fluxo de gravação. O botão de mudo altera o endpoint e pode afetar todos os aplicativos que usam aquele dispositivo; não altera permissões de privacidade do Windows.
 

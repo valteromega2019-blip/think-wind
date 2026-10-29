@@ -1,0 +1,102 @@
+using System;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using ThinkWind.Native;
+using ThinkWind.Services;
+using ThinkWind.Views;
+
+internal static class OverlayChecks
+{
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
+    [DllImport("user32.dll")] private static extern int GetWindowRgn(nint window, nint region);
+    [DllImport("gdi32.dll")] private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
+    [DllImport("gdi32.dll")] private static extern bool PtInRegion(nint region, int x, int y);
+    [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint region);
+    internal static void Check(bool top, bool light, string path)
+    {
+        _ = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        var store = new SettingsStore(path);
+        store.Value.Theme = light ? "Light" : "Dark";
+        ThemeService.Apply(store.Value);
+        var window = new Surface(store, top);
+        try
+        {
+            window.Show(); window.UpdateLayout();
+            var hwnd = new WindowInteropHelper(window).Handle;
+            Require((GetWindowLong(hwnd, -20) & 0x80000) != 0, "Conteúdo deve ser WS_EX_LAYERED.");
+            Require(window.BackdropHandle != 0 && (GetWindowLong(window.BackdropHandle, -20) & 0x80000) == 0, "Material deve ter HWND não-layered separado.");
+            Require((GetWindowLong(window.BackdropHandle, -20) & 0x200000) != 0, "Material não pode possuir bitmap GDI de redirecionamento.");
+            Require(window.HasNativeMaterial, "Windows Composition não aceitou o material neste ambiente.");
+            OverlayChrome.GetWindowRect(hwnd, out var front); OverlayChrome.GetWindowRect(window.BackdropHandle, out var back);
+            Require(front.Left == back.Left && front.Top == back.Top && front.Right == back.Right && front.Bottom == back.Bottom, "Superfícies devem ter os mesmos limites.");
+            var region = CreateRectRgn(0, 0, 0, 0);
+            try
+            {
+                Require(GetWindowRgn(window.BackdropHandle, region) > 0, "Material deve possuir recorte.");
+                Require(!PtInRegion(region, 0, front.Bottom - front.Top - 1), "Canto externo inferior não pode bloquear cliques.");
+                Require(PtInRegion(region, (front.Right - front.Left) / 2, (front.Bottom - front.Top) / 2), "Centro deve pertencer ao material.");
+            }
+            finally { DeleteObject(region); }
+            var root = (FrameworkElement)window.Content;
+            int width = Math.Max(1, (int)Math.Ceiling(root.ActualWidth)), height = Math.Max(1, (int)Math.Ceiling(root.ActualHeight));
+            var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32); bitmap.Render(root);
+            var pixel = new byte[4];
+            bitmap.CopyPixels(new Int32Rect(0, height - 1, 1, 1), pixel, 4, 0);
+            Require(pixel[3] == 0, "Pixels externos devem possuir alfa zero, não cinza opaco.");
+            bitmap.CopyPixels(new Int32Rect(width / 2, height / 2, 1, 1), pixel, 4, 0);
+            Require(pixel[3] is > 0 and < 255, "Tonalidade central deve preservar alfa parcial.");
+            Require(Math.Abs(root.ActualWidth - window.ActualWidth) < 2, "Conteúdo deve acompanhar o HWND durante redimensionamento.");
+            window.Expand();
+            for (int i = 0; i < 8; i++)
+            {
+                var frame = new System.Windows.Threading.DispatcherFrame();
+                var tick = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(35) };
+                tick.Tick += (_, _) => { tick.Stop(); frame.Continue = false; };
+                tick.Start(); System.Windows.Threading.Dispatcher.PushFrame(frame); window.UpdateLayout();
+                OverlayChrome.GetWindowRect(hwnd, out front); OverlayChrome.GetWindowRect(window.BackdropHandle, out back);
+                Require(front.Left == back.Left && front.Top == back.Top && front.Right == back.Right && front.Bottom == back.Bottom, "Material e conteúdo não podem se separar na animação.");
+            }
+            Require(window.ActualHeight > 150 && window.ActualWidth > 340, "Animação deve concluir com as dimensões solicitadas.");
+        }
+        finally { window.Close(); }
+    }
+    internal static void MiniEscape(string path)
+    {
+        var store = new SettingsStore(path); ThemeService.Apply(store.Value);
+        var mini = new MiniIslandWindow(store, MiniIslandKind.Volume, () => new OverlayChrome.PixelRect { Left = 100, Right = 320, Top = 0, Bottom = 50 });
+        int dismissed = 0; mini.Dismissed += () => dismissed++;
+        try
+        {
+            mini.Present(); Require(mini.IsVisible, "Mini deve abrir independentemente.");
+            mini.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(mini), 0, Key.Escape) { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+            Require(!mini.IsVisible && dismissed == 1, "Esc deve fechar a mini e avisar a ilha uma única vez.");
+        }
+        finally { mini.Close(); }
+    }
+    internal static void MiniOutsideFocus(string path)
+    {
+        var store = new SettingsStore(path); ThemeService.Apply(store.Value);
+        var mini = new MiniIslandWindow(store, MiniIslandKind.Network, () => new OverlayChrome.PixelRect { Left = 100, Right = 320, Top = 0, Bottom = 50 });
+        var other = new Window { Title = "Think Wind · Check de foco", Width = 100, Height = 60, ShowInTaskbar = false };
+        try
+        {
+            mini.Present(); Require(mini.IsVisible, "Mini de rede deve abrir.");
+            other.Show(); other.Activate();
+            Require(!mini.IsVisible, "Ativar outra janela deve fechar a mini de rede.");
+        }
+        finally { other.Close(); mini.Close(); }
+    }
+    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+    private sealed class Surface : FloatingWindow
+    {
+        private readonly bool top;
+        protected override bool AttachedTop => top;
+        internal Surface(SettingsStore store, bool attached) : base(store) { top = attached; Title = "Think Wind · Check de composição"; }
+        public override void Position() => Place(260, 72);
+        internal void Expand() => Place(360, 180, true);
+    }
+}

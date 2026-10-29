@@ -1,4 +1,8 @@
-# Verificação da primeira versão experimental — 0.2.0
+# Relatórios de validação
+
+A atualização v0.21 foi compilada e validada com 29 checks aprovados, conforme pedido explícito do usuário. Relatório atual em [VALIDACAO-0.21.md](VALIDACAO-0.21.md). A execução anterior da etapa 2.0-dev foi autorizada posteriormente pelo pedido de abrir o aplicativo; nenhuma autorização é estendida automaticamente a mudanças futuras.
+
+## Histórico da primeira versão experimental — 0.2.0
 
 **Relatório histórico da 0.2.0. Não valida as alterações 2.0.0-dev, que não foram compiladas nem testadas nesta etapa.**
 

@@ -1,5 +1,7 @@
 # Think Wind 2.0 — refinamentos em desenvolvimento
 
+**Documento histórico da etapa anterior.** A atualização de composição/interação seguinte é a v0.21, descrita e validada em [VALIDACAO-0.21.md](VALIDACAO-0.21.md). As afirmações de ausência de compilação abaixo se referem ao momento desta etapa, antes dos pedidos posteriores de execução/validação.
+
 Esta etapa altera somente o código-fonte. Não foram executados testes, type check, build, publish ou inspeção da interface em execução. Nenhum instalador foi gerado. Os binários existentes em `artifacts` continuam sendo os da versão experimental 0.2.0.
 
 ## Direção visual
