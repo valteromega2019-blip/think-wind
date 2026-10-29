@@ -10,7 +10,7 @@ Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicia
 
 Menu Iniciar próprio, biblioteca de aplicativos por AppsFolder/atalhos do Windows, pesquisa em painel próprio com Windows Search, bandeja superior em mini-ilha e Drag & Drop OLE. A barra recolhida usa uma faixa visível na borda física inferior, independente do layout expandido, com espera configurável. Detalhes de uso, compatibilidade e limites em [REFINAMENTOS-0.05.md](REFINAMENTOS-0.05.md).
 
-**Testes, type check, build e publish não foram executados nesta atualização. Nenhum instalador foi gerado. O executável local consultado continua na v0.03 e não contém as alterações v0.04/v0.05.**
+**Compilação Release da v0.05 realizada a pedido do usuário: zero erros e zero avisos. O aplicativo atualizado foi iniciado. Testes, type check separado e publish não foram executados; nenhum instalador foi gerado.** Executável: `src/ThinkWind/bin/Release/net10.0-windows10.0.19041.0/ThinkWind.exe`.
 
 ## Atualização anterior: v0.04
 

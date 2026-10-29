@@ -62,7 +62,9 @@ Aceitação pelo receptor não garante que o programa entenda cada formato de ar
 
 ## Estado da entrega
 
-Revisão por leitura de código e diff. **Testes, type check, build, publish e validação visual em execução não foram realizados nesta atualização**, conforme a preferência permanente do usuário. Nenhum instalador foi gerado. O executável local consultado ainda identifica a compilação `0.3.0-dev`; não contém a v0.04 nem a v0.05.
+Após a revisão por leitura de código e diff, o usuário solicitou a compilação para execução. **Build Release da v0.05 concluído com zero erros e zero avisos**, pelo SDK .NET 10.0.403. O aplicativo atualizado foi iniciado e o processo permaneceu em execução na consulta seguinte. Executável: `src/ThinkWind/bin/Release/net10.0-windows10.0.19041.0/ThinkWind.exe`.
+
+**Testes, type check separado, publish e validação visual não foram executados. Nenhum instalador foi gerado.** As verificações do compilador fazem parte do build autorizado; iniciar o processo não valida todas as funcionalidades.
 
 Ficam pendentes de validação em execução, quando solicitada: carregamento real do catálogo, disponibilidade do índice, ativação Store/MSIX, foco entre barra e painel, menus da bandeja, posição em DPI/monitores diferentes e negociação OLE com cada programa de destino. Nenhum resultado histórico de compilação ou checks valida esta atualização.
 

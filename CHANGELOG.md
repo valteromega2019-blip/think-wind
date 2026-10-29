@@ -8,7 +8,7 @@
 - Bandeja em mini-ilha superior independente, botões transparentes e acesso à bandeja original preservado.
 - Recolhimento padrão de 0,8 s configurável; estado recolhido independente na borda física inferior, com distância final de zero pixels.
 - Drag & Drop OLE: revelar na borda, manter aberto durante a operação, ativar janela por hover e negociar entrega com receptores nativos, sem simular recebimento nem mover arquivos de origem.
-- Revisão por código/diff. Testes, type check, build e publish não executados. Nenhum instalador gerado; executável anterior preservado.
+- Compilação Release posteriormente solicitada pelo usuário: zero erros e zero avisos; aplicativo atualizado iniciado. Testes, type check separado e publish não executados. Nenhum instalador gerado.
 
 Detalhes e limitações em `REFINAMENTOS-0.05.md`.
 
