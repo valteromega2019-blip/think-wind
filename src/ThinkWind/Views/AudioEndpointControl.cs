@@ -30,9 +30,9 @@ internal sealed class AudioEndpointControl : Border
     internal AudioEndpointControl(AudioService audioService, CoreAudio.Flow direction)
     {
         audio = audioService; flow = direction;
-        Margin = new Thickness(4, 6, 4, 6); Padding = new Thickness(12);
+        Margin = new Thickness(0, 4, 0, 4); Padding = new Thickness(8);
         CornerRadius = new CornerRadius(14);
-        Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+        Background = Brushes.Transparent;
         var panel = new StackPanel();
         var name = direction == CoreAudio.Flow.Render ? "SAÍDA DE ÁUDIO" : "MICROFONE";
         panel.Children.Add(new TextBlock { Text = name, FontSize = 11, FontWeight = FontWeights.SemiBold });

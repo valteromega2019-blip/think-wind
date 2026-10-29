@@ -1,5 +1,7 @@
 # Verificação da primeira versão experimental — 0.2.0
 
+**Relatório histórico da 0.2.0. Não valida as alterações 2.0.0-dev, que não foram compiladas nem testadas nesta etapa.**
+
 Data: 29/10/2026. Escopo autorizado explicitamente pelo usuário: realizar os testes e entregar uma primeira versão para avaliação.
 
 ## Resultados efetivamente obtidos

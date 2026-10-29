@@ -6,7 +6,13 @@ Repositório próprio: https://github.com/valteromega2019-blip/think-wind
 
 Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicial e a branch `developer` é a área de desenvolvimento. O histórico deste repositório é independente do Think Monitor.
 
-## Implementação atual — 0.2.0
+## Think Wind 2.0 — em desenvolvimento
+
+O código atual implementa a nova direção visual, ilha presa ao topo, ícones sem fundos, recuperação de ícones pelo Shell/janelas, temas claro/escuro/automático, ajustes independentes, personalização instantânea com salvamento automático e editor visual com arraste, guias, visibilidade e restauração de layouts. Detalhes de uso e limites em [REFINAMENTOS-2.0.md](REFINAMENTOS-2.0.md).
+
+**Esta etapa foi revisada somente por leitura de código e diff. Testes, type check, build e publish não foram executados. Nenhum instalador novo foi gerado.** Os arquivos 0.2.0 citados abaixo são da entrega anterior e não contêm os refinamentos 2.0. O histórico de testes da 0.2.0 não valida a versão em desenvolvimento.
+
+## Versão experimental anterior — 0.2.0
 
 - Dock nativo flutuante: enumeração das janelas visíveis, ícones de executáveis quando acessíveis, indicadores de execução e foco, ativação, restauração e minimização.
 - Atalhos persistentes: adicionar executáveis ou `.lnk`, fixar uma janela com executável acessível, mover e remover pelo menu de contexto. Janelas são exibidas individualmente; atalhos `.lnk` ainda não são associados ao processo aberto.
@@ -51,15 +57,15 @@ O instalador desta entrega está em `artifacts/installer/ThinkWind-Setup-0.2.0.e
 
 O script Inno Setup prepara um instalador por usuário e remove a entrada de inicialização ao desinstalar. Atualizações manuais podem usar o mesmo AppId, com o aplicativo encerrado. As configurações pessoais são preservadas na desinstalação. A instalação e a desinstalação completas ainda não foram verificadas nesta entrega.
 
-## Próximas etapas
+## Verificações e recursos ainda pendentes
 
-Esta é uma primeira versão experimental com compilação, checks automatizados e abertura do executável verificados. Não representa todos os recursos do produto final.
+Os resultados de compilação e checks acima pertencem à 0.2.0. Os refinamentos 2.0 estão implementados em código e ainda precisam de verificação solicitada pelo usuário. O aplicativo não representa todos os recursos do produto final.
 
 1. Ampliar a verificação em Windows 11: DPI misto, múltiplos monitores, acessibilidade, instalação/desinstalação e todas as ações interativas.
 2. Ocultação reversível da barra original com processo supervisor e restauração após falhas. Nesta etapa ela permanece visível; o launcher não altera o Explorer.
 3. Sessões de mídia com metadados; conectividade com estado real e permissões apropriadas. A integração de volume e mudo foi verificada nos dispositivos locais por leitura e regravação dos valores atuais, sem alterar o áudio do usuário.
 4. Notificações com consentimento, integração da bandeja respeitando limitações oficiais, CPU/GPU/rede e atalhos personalizados.
-5. Temas claros/escuros/automáticos, cores, perfis, cantos e posicionamento livre, arrastar atalhos, animação de ocultação e múltiplas barras simultâneas.
+5. Verificar os novos temas, materiais, recortes, salvamento automático e editor de layout. Perfis nomeados e múltiplas barras simultâneas continuam pendentes; a ilha permanece ancorada ao topo e permite deslocamento horizontal.
 6. Atualizador com manifesto autenticado, assinatura e verificação de integridade do pacote, rollback e distribuição assinada. Não baixar nem executar atualizações sem essa cadeia de confiança.
 
 ## Segurança e restauração

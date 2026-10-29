@@ -1,22 +1,32 @@
 <Application x:Class="ThinkWind.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" ShutdownMode="OnExplicitShutdown">
  <Application.Resources>
-  <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#EFF0FA"/><Setter Property="FontFamily" Value="Segoe UI Variable Display"/></Style>
-  <Style TargetType="CheckBox"><Setter Property="Foreground" Value="#EFF0FA"/><Setter Property="Margin" Value="4,10"/></Style>
+  <ResourceDictionary>
+  <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Views/CalendarTheme.xaml"/></ResourceDictionary.MergedDictionaries>
+  <SolidColorBrush x:Key="Think.Background" Color="#111318"/>
+  <SolidColorBrush x:Key="Think.Surface" Color="#1A1E25"/>
+  <SolidColorBrush x:Key="Think.GlassCard" Color="#0DFFFFFF"/>
+  <SolidColorBrush x:Key="Think.Control" Color="#222832"/>
+  <SolidColorBrush x:Key="Think.Text" Color="#F4F6FA"/>
+  <SolidColorBrush x:Key="Think.Muted" Color="#AAB3C1"/>
+  <SolidColorBrush x:Key="Think.Hover" Color="#303B48"/>
+  <SolidColorBrush x:Key="Think.Accent" Color="#60CDFF"/>
+  <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="FontFamily" Value="Segoe UI Variable Text"/></Style>
+  <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Margin" Value="4,10"/></Style>
   <Style TargetType="ComboBoxItem">
-   <Setter Property="Foreground" Value="#EFF0FA"/><Setter Property="Padding" Value="10,8"/>
+   <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,8"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem">
     <Border x:Name="ItemSurface" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="6"><ContentPresenter/></Border>
     <ControlTemplate.Triggers>
-     <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="#4C557A"/></Trigger>
-     <Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="#394365"/></Trigger>
+     <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Think.Hover}"/></Trigger>
+     <Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Think.Hover}"/></Trigger>
     </ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="ComboBox">
-   <Setter Property="Foreground" Value="#EFF0FA"/><Setter Property="Background" Value="#252A40"/>
+   <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Background" Value="{DynamicResource Think.Control}"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
     <Grid>
-     <Border x:Name="ComboSurface" Background="{TemplateBinding Background}" BorderBrush="#556078" BorderThickness="1" CornerRadius="8">
+     <Border x:Name="ComboSurface" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="8">
       <Grid>
        <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" IsHitTestVisible="False" Margin="10,7,30,7" VerticalAlignment="Center"/>
        <TextBlock Text="⌄" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" IsHitTestVisible="False"/>
@@ -26,24 +36,41 @@
       </Grid>
      </Border>
      <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False">
-      <Border Background="#252A40" BorderBrush="#556078" BorderThickness="1" CornerRadius="8" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+      <Border Background="{DynamicResource Think.Control}" BorderThickness="0" CornerRadius="8" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
        <ScrollViewer MaxHeight="260" CanContentScroll="True"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
       </Border>
      </Popup>
     </Grid>
     <ControlTemplate.Triggers>
-     <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ComboSurface" Property="BorderBrush" Value="#AABFFF"/></Trigger>
+     <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ComboSurface" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/></Trigger>
      <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
     </ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="Button">
-   <Setter Property="Foreground" Value="#F4F4FA"/><Setter Property="Background" Value="#22FFFFFF"/>
+   <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Background" Value="{DynamicResource Think.Control}"/>
    <Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="14,10"/><Setter Property="Margin" Value="4"/><Setter Property="Cursor" Value="Hand"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
     <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-    <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="#506D75A8"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="#AABFFF"/><Setter TargetName="Surface" Property="BorderThickness" Value="2"/></Trigger></ControlTemplate.Triggers>
+    <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="{DynamicResource Think.Hover}"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/><Setter TargetName="Surface" Property="BorderThickness" Value="1"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.45"/></Trigger></ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
+  <Style x:Key="Think.IconButton" TargetType="Button">
+   <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Background" Value="Transparent"/>
+   <Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="6"/>
+   <Setter Property="Margin" Value="0"/><Setter Property="Cursor" Value="Hand"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+    <Border x:Name="IconSurface" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="8">
+     <ContentPresenter x:Name="IconContent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="IconContent" Property="Opacity" Value="0.75"/></Trigger>
+     <Trigger Property="IsPressed" Value="True"><Setter TargetName="IconContent" Property="Opacity" Value="0.5"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="IconSurface" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/><Setter TargetName="IconSurface" Property="BorderThickness" Value="1"/></Trigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter TargetName="IconContent" Property="Opacity" Value="0.35"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  </ResourceDictionary>
  </Application.Resources>
 </Application>

@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media;
 
 namespace ThinkWind.Native;
 internal static class Desktop
@@ -22,11 +19,8 @@ internal static class Desktop
     [DllImport("user32.dll")] private static extern bool IsIconic(nint hwnd);
     [DllImport("user32.dll")] private static extern bool ShowWindow(nint hwnd, int command);
     [DllImport("user32.dll")] private static extern uint SendInput(uint count, INPUT[] input, int size);
-    [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(nint hwnd, int attribute, out int value, int size);
-    [DllImport("dwmapi.dll")] private static extern int DwmExtendFrameIntoClientArea(nint hwnd, ref MARGINS margins);
     [DllImport("kernel32.dll")] private static extern bool GlobalMemoryStatusEx(ref MEMORY status);
-    [StructLayout(LayoutKind.Sequential)] private struct MARGINS { public int Left, Right, Top, Bottom; }
     [StructLayout(LayoutKind.Sequential)] private struct MEMORY
     { public uint Length, Load; public ulong TotalPhysical, AvailablePhysical, TotalPage, AvailablePage, TotalVirtual, AvailableVirtual, AvailableExtended; }
     [StructLayout(LayoutKind.Sequential)] private struct INPUT { public uint Type; public INPUTUNION Data; }
@@ -34,7 +28,7 @@ internal static class Desktop
     { [FieldOffset(0)] public KEYBOARD Keyboard; [FieldOffset(0)] public MOUSE Mouse; }
     [StructLayout(LayoutKind.Sequential)] private struct KEYBOARD { public ushort Key, Scan; public uint Flags, Time; public nuint Extra; }
     [StructLayout(LayoutKind.Sequential)] private struct MOUSE { public int X, Y; public uint Data, Flags, Time; public nuint Extra; }
-    internal sealed record RunningWindow(nint Handle, string Title, string? Executable);
+    internal sealed record RunningWindow(nint Handle, string Title, string? Executable, bool Minimized);
     internal static List<RunningWindow> Windows()
     {
         var result = new List<RunningWindow>();
@@ -49,7 +43,7 @@ internal static class Desktop
             string? executable = null;
             try { using var process = Process.GetProcessById((int)pid); executable = process.MainModule?.FileName; }
             catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException) { }
-            result.Add(new(hwnd, text.ToString(), executable)); return true;
+            result.Add(new(hwnd, text.ToString(), executable, IsIconic(hwnd))); return true;
         }, 0);
         return result;
     }
@@ -63,15 +57,15 @@ internal static class Desktop
         var inputs = new[] { new INPUT { Type = 1, Data = new INPUTUNION { Keyboard = new KEYBOARD { Key = key } } }, new INPUT { Type = 1, Data = new INPUTUNION { Keyboard = new KEYBOARD { Key = key, Flags = 2 } } } };
         if (SendInput(2, inputs, Marshal.SizeOf<INPUT>()) != 2) throw new InvalidOperationException("O Windows bloqueou o comando de teclado.");
     }
+    internal static void Chord(ushort modifier, ushort key)
+    {
+        static INPUT Input(ushort value, uint flags) => new() { Type = 1, Data = new INPUTUNION { Keyboard = new KEYBOARD { Key = value, Flags = flags } } };
+        var inputs = new[] { Input(modifier, 0), Input(key, 0), Input(key, 2), Input(modifier, 2) };
+        if (SendInput(4, inputs, Marshal.SizeOf<INPUT>()) == 4) return;
+        var release = new[] { Input(key, 2), Input(modifier, 2) };
+        SendInput(2, release, Marshal.SizeOf<INPUT>());
+        throw new InvalidOperationException("O Windows bloqueou o atalho solicitado.");
+    }
     internal static uint MemoryPercent()
     { var status = new MEMORY { Length = (uint)Marshal.SizeOf<MEMORY>() }; return GlobalMemoryStatusEx(ref status) ? status.Load : 0; }
-    internal static bool Acrylic(Window window)
-    {
-        var hwnd = new WindowInteropHelper(window).Handle;
-        HwndSource.FromHwnd(hwnd).CompositionTarget.BackgroundColor = Colors.Transparent;
-        var margins = new MARGINS { Left = -1 }; DwmExtendFrameIntoClientArea(hwnd, ref margins);
-        int dark = 1, round = 2, material = 3;
-        DwmSetWindowAttribute(hwnd, 20, ref dark, 4); DwmSetWindowAttribute(hwnd, 33, ref round, 4);
-        return DwmSetWindowAttribute(hwnd, 38, ref material, 4) == 0;
-    }
 }

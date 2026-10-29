@@ -1,60 +1,222 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
 internal sealed class SettingsWindow : Window
 {
-    public SettingsWindow(SettingsStore store, Action apply)
+    private sealed record Choice(string Id, string Name) { public override string ToString() => Name; }
+    private readonly SettingsStore store;
+    private readonly StackPanel content = new() { Margin = new Thickness(24, 8, 24, 24) };
+    private readonly StackPanel quickRows = new(), moduleRows = new();
+    private readonly TextBlock status = new() { Margin = new Thickness(24, 12, 24, 16), FontSize = 12, TextWrapping = TextWrapping.Wrap };
+    private readonly Button editing = new() { Margin = new Thickness(0, 12, 0, 8) };
+    private bool building;
+    private string layoutSignature = "";
+    public SettingsWindow(SettingsStore settings)
     {
+        store = settings;
         Title = "Think Wind · Personalização";
-        Width = 510; Height = 610; MinWidth = 420; MinHeight = 420;
-        WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Background = new SolidColorBrush(Color.FromRgb(19, 22, 35));
-        var panel = new StackPanel { Margin = new Thickness(24) };
-        Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        panel.Children.Add(new TextBlock { Text = "Faça do seu jeito.", FontSize = 28, Margin = new Thickness(0, 0, 0, 8) });
-        panel.Children.Add(new TextBlock { Text = "Barra flutuante e Dynamic Island", Margin = new Thickness(0, 0, 0, 20) });
-        panel.Children.Add(new TextBlock { Text = "Tamanho da barra" });
-        var scale = new Slider { Minimum = .75, Maximum = 1.5, Value = store.Value.DockScale, TickFrequency = .05, IsSnapToTickEnabled = true, Margin = new Thickness(0, 12, 0, 16) };
-        panel.Children.Add(scale);
-        panel.Children.Add(new TextBlock { Text = "Opacidade da tonalidade sobre o Acrylic" });
-        var opacity = new Slider { Minimum = .2, Maximum = 1, Value = store.Value.TintOpacity, Margin = new Thickness(0, 12, 0, 16) };
-        panel.Children.Add(opacity);
-        var hide = new CheckBox { Content = "Recolher a barra quando estiver ociosa", IsChecked = store.Value.AutoHide }; panel.Children.Add(hide);
-        var ram = new CheckBox { Content = "Mostrar uso real de memória RAM", IsChecked = store.Value.ShowMemory }; panel.Children.Add(ram);
-        var battery = new CheckBox { Content = "Mostrar bateria quando disponível", IsChecked = store.Value.ShowBattery }; panel.Children.Add(battery);
-        var audio = new CheckBox { Content = "Mostrar controles de saída e microfone na ilha", IsChecked = store.Value.ShowAudio }; panel.Children.Add(audio);
-        var startup = new CheckBox { Content = "Iniciar junto com o Windows" };
-        try { startup.IsChecked = SystemActions.StartupEnabled(); }
-        catch (Exception e) when (e is System.Security.SecurityException or UnauthorizedAccessException or IOException) { startup.IsEnabled = false; }
-        panel.Children.Add(startup);
-        panel.Children.Add(new TextBlock { Text = "Monitor da barra e da ilha", Margin = new Thickness(0, 12, 0, 8) });
-        var screens = System.Windows.Forms.Screen.AllScreens;
-        var monitor = new ComboBox { Margin = new Thickness(0, 0, 0, 12) };
-        foreach (var screen in screens) monitor.Items.Add($"{screen.DeviceName} · {screen.Bounds.Width} × {screen.Bounds.Height}");
-        monitor.SelectedIndex = Math.Clamp(store.Value.MonitorIndex, 0, screens.Length - 1);
-        panel.Children.Add(monitor);
-        panel.Children.Add(new TextBlock { Text = "Clique com o botão direito em um atalho da barra para mover ou remover. A barra original permanece disponível nesta primeira versão.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 12) });
-        var save = new Button { Content = "Salvar preferências" };
-        save.Click += (_, _) =>
-        {
-            try
-            {
-                // Startup is changed only when explicitly saving this setting.
-                if (startup.IsEnabled && (startup.IsChecked == true) != SystemActions.StartupEnabled()) SystemActions.SetStartup(startup.IsChecked == true);
-                store.Value.DockScale = scale.Value; store.Value.TintOpacity = opacity.Value;
-                store.Value.AutoHide = hide.IsChecked == true; store.Value.ShowMemory = ram.IsChecked == true;
-                store.Value.ShowBattery = battery.IsChecked == true; store.Value.MonitorIndex = monitor.SelectedIndex;
-                store.Value.ShowAudio = audio.IsChecked == true;
-                store.Save(); apply(); Close();
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
-            { MessageBox.Show("Não foi possível salvar todas as preferências.\n" + e.Message, "Think Wind"); }
-        };
-        panel.Children.Add(save);
+        Width = 700; Height = Math.Min(850, SystemParameters.WorkArea.Height - 40);
+        MinWidth = 480; MinHeight = 420; WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        SetResourceReference(BackgroundProperty, "Think.Background");
+        SetResourceReference(ForegroundProperty, "Think.Text");
+        var root = new DockPanel();
+        DockPanel.SetDock(status, Dock.Bottom); root.Children.Add(status);
+        var heading = new StackPanel { Margin = new Thickness(28, 24, 28, 12) };
+        heading.Children.Add(new TextBlock { Text = "THINK WIND", FontSize = 11, FontWeight = FontWeights.SemiBold });
+        heading.Children.Add(new TextBlock { Text = "Seu desktop. Seu ritmo.", FontSize = 28, Margin = new Thickness(0, 8, 0, 8) });
+        heading.Children.Add(new TextBlock { Text = "As mudanças aparecem na hora e são salvas automaticamente.", TextWrapping = TextWrapping.Wrap, Opacity = .7 });
+        DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
+        root.Children.Add(new AdornerDecoratorHost(new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }));
+        Content = root;
+        PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && store.IsEditing) { store.SetEditing(false); e.Handled = true; } };
+        editing.Click += (_, _) => store.SetEditing(!store.IsEditing);
+        store.Changed += StoreChanged; store.PersistenceChanged += PersistenceChanged;
+        Closed += (_, _) => { store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };
+        Build();
     }
+    private void StoreChanged(object? sender, EventArgs e)
+    {
+        editing.Content = store.IsEditing ? "Concluir edição visual" : "Editar layout na tela";
+        if (!building && layoutSignature != LayoutSignature()) Dispatcher.BeginInvoke(new Action(RebuildLayoutRows));
+        UpdateStatus();
+    }
+    private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio;
+    private void PersistenceChanged(object? sender, EventArgs e) => UpdateStatus();
+    private void UpdateStatus()
+    {
+        status.Text = store.SaveError ?? (store.HasPendingChanges ? "Salvando suas preferências…" : "Preferências salvas neste computador.");
+        status.SetResourceReference(TextBlock.ForegroundProperty, store.SaveError is null ? "Think.Muted" : "Think.Accent");
+    }
+    private void Change(Action<Preferences> change) { if (!building) store.Update(change); }
+    private void Build()
+    {
+        building = true; content.Children.Clear();
+        var general = Section("Aparência", "Grafite, ciano e superfícies limpas — identidade Think.");
+        Select(general, "Tema", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, value => Change(p => p.Theme = value));
+        var accent = new DockPanel { Margin = new Thickness(0, 10, 0, 14) };
+        var color = new TextBox { Text = store.Value.AccentColor, Width = 100, Padding = new Thickness(10, 7, 10, 7), VerticalContentAlignment = VerticalAlignment.Center };
+        color.SetResourceReference(Control.BackgroundProperty, "Think.Control"); color.SetResourceReference(Control.ForegroundProperty, "Think.Text");
+        color.ToolTip = "Cor de destaque em hexadecimal, por exemplo #60CDFF";
+        color.TextChanged += (_, _) =>
+        {
+            if (building) return;
+            string text = color.Text.Trim();
+            if (text.Length != 7 || !text.StartsWith('#') || !text.Skip(1).All(Uri.IsHexDigit)) return;
+            Change(p => p.AccentColor = text.ToUpperInvariant());
+        };
+        DockPanel.SetDock(color, Dock.Right); accent.Children.Add(color);
+        var swatches = new WrapPanel();
+        foreach (var hex in new[] { "#60CDFF", "#89A5FF", "#B69CFF", "#5ED6B3", "#FFAE6D", "#FA819A" })
+        {
+            var swatch = new Button { Width = 30, Height = 30, Padding = new Thickness(0), Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)), ToolTip = hex };
+            swatch.Click += (_, _) => color.Text = hex; swatches.Children.Add(swatch);
+        }
+        accent.Children.Add(swatches); general.Children.Add(new TextBlock { Text = "Cor de destaque" }); general.Children.Add(accent);
+        Slider(general, "Duração das animações", 0, 600, store.Value.AnimationMilliseconds, v => Change(p => p.AnimationMilliseconds = v), "0 'ms'");
+
+        var dock = Section("Barra inferior", "Ícones originais, sem fundos individuais. Ajustes independentes da ilha.");
+        Select(dock, "Material e desfoque", store.Value.DockMaterial, Materials(), v => Change(p => p.DockMaterial = v));
+        Slider(dock, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.DockOpacity ?? store.Value.TintOpacity, v => Change(p => p.DockOpacity = v), "P0");
+        Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");
+        Slider(dock, "Tamanho dos ícones", 20, 48, store.Value.IconSize, v => Change(p => p.IconSize = v));
+        Slider(dock, "Espaço entre os ícones", 0, 24, store.Value.DockSpacing, v => Change(p => p.DockSpacing = v));
+        Slider(dock, "Arredondamento", 0, 48, store.Value.DockRadius, v => Change(p => p.DockRadius = v));
+        Slider(dock, "Distância da borda inferior", 4, 80, store.Value.DockBottomOffset, v => Change(p => p.DockBottomOffset = v));
+        Slider(dock, "Posição horizontal", -4000, 4000, store.Value.DockHorizontalOffset, v => Change(p => p.DockHorizontalOffset = v));
+        Check(dock, "Recolher automaticamente quando estiver ociosa", store.Value.AutoHide, v => Change(p => p.AutoHide = v));
+
+        var island = Section("Dynamic Island", "Integrada à borda superior, com cantos inferiores arredondados.");
+        Select(island, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));
+        Slider(island, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.IslandOpacity ?? store.Value.TintOpacity, v => Change(p => p.IslandOpacity = v), "P0");
+        Slider(island, "Escala dos acessos rápidos", .8, 1.4, store.Value.IslandScale, v => Change(p => p.IslandScale = v), "P0");
+        Slider(island, "Largura expandida", 400, 900, store.Value.IslandExpandedWidth, v => Change(p => p.IslandExpandedWidth = v));
+        Slider(island, "Espaçamento", 0, 20, store.Value.IslandSpacing, v => Change(p => p.IslandSpacing = v));
+        Slider(island, "Arredondamento inferior", 0, 48, store.Value.IslandRadius, v => Change(p => p.IslandRadius = v));
+        Slider(island, "Posição horizontal", -4000, 4000, store.Value.IslandHorizontalOffset, v => Change(p => p.IslandHorizontalOffset = v));
+        Note(island, "Acrylic e Mica usam o desfoque do Windows. O raio do desfoque é definido pelo sistema; a intensidade acima controla a tonalidade, preservando a nitidez dos ícones e textos.");
+
+        var layout = Section("Editor de layout", "Arraste pelos puxadores no desktop. As linhas ciano indicam onde o item será inserido.");
+        // Detach reusable controls from their previous section when resetting.
+        if (editing.Parent is Panel oldEditing) oldEditing.Children.Remove(editing);
+        layout.Children.Add(editing);
+        Note(layout, "Na barra, arraste os ícones. Na ilha, arraste os acessos rápidos ou o título de cada módulo. O puxador lateral ajusta a posição horizontal. Esc conclui a edição.");
+        layout.Children.Add(new TextBlock { Text = "ACESSOS RÁPIDOS", FontSize = 11, Margin = new Thickness(0, 16, 0, 8) });
+        if (quickRows.Parent is Panel oldQuick) oldQuick.Children.Remove(quickRows);
+        layout.Children.Add(quickRows);
+        layout.Children.Add(new TextBlock { Text = "MÓDULOS DA ILHA", FontSize = 11, Margin = new Thickness(0, 18, 0, 8) });
+        if (moduleRows.Parent is Panel oldModules) oldModules.Children.Remove(moduleRows);
+        layout.Children.Add(moduleRows);
+        RebuildLayoutRows();
+        var resets = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
+        resets.Children.Add(Button("Restaurar barra", () => { store.ResetDock(); Build(); }));
+        resets.Children.Add(Button("Restaurar ilha", () => { store.ResetIsland(); Build(); }));
+        resets.Children.Add(Button("Restaurar tudo", () => { store.ResetAll(); Build(); }));
+        layout.Children.Add(resets);
+
+        var system = Section("Sistema", "Os recursos nativos do Windows permanecem disponíveis.");
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        int monitorIndex = Array.FindIndex(screens, s => s.DeviceName.Equals(store.Value.MonitorDeviceName, StringComparison.OrdinalIgnoreCase));
+        if (monitorIndex < 0) monitorIndex = Math.Clamp(store.Value.MonitorIndex, 0, screens.Length - 1);
+        Select(system, "Monitor da barra e da ilha", monitorIndex.ToString(), screens.Select((s, i) => new Choice(i.ToString(), $"{s.DeviceName} · {s.Bounds.Width} × {s.Bounds.Height}")).ToArray(), value => Change(p =>
+        { p.MonitorIndex = int.Parse(value); p.MonitorDeviceName = screens[p.MonitorIndex].DeviceName; }));
+        Check(system, "Mostrar uso de RAM", store.Value.ShowMemory, value => Change(p => p.ShowMemory = value));
+        Check(system, "Mostrar bateria quando disponível", store.Value.ShowBattery, value => Change(p => p.ShowBattery = value));
+        try
+        {
+            Check(system, "Iniciar junto com o Windows", SystemActions.StartupEnabled(), value =>
+            {
+                if (building) return;
+                try { SystemActions.SetStartup(value); }
+                catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { MessageBox.Show(e.Message, "Não foi possível alterar a inicialização"); Build(); }
+            });
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { Note(system, "A opção de inicialização não está disponível para esta conta."); }
+        Note(system, "A barra original permanece visível. Não são feitas alterações no Explorer.");
+        building = false; StoreChanged(this, EventArgs.Empty);
+    }
+    private void RebuildLayoutRows()
+    {
+        layoutSignature = LayoutSignature();
+        quickRows.Children.Clear(); moduleRows.Children.Clear();
+        foreach (var id in store.Value.QuickOrder.ToArray())
+        {
+            string label = LayoutCatalog.QuickControls.First(q => q.Id == id).Name;
+            LayoutRow(quickRows, "quick-settings", id, label, !store.Value.HiddenQuickControls.Contains(id), store.Value.QuickOrder,
+                enabled => store.Update(p => { if (enabled) p.HiddenQuickControls.Remove(id); else p.HiddenQuickControls.Add(id); }),
+                (from, to, after) => store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
+        }
+        foreach (var id in store.Value.ModuleOrder.ToArray())
+        {
+            LayoutRow(moduleRows, "modules-settings", id, LayoutCatalog.ModuleName(id), store.ModuleVisible(id), store.Value.ModuleOrder,
+                enabled => store.Update(p => { if (enabled) { p.HiddenModules.Remove(id); if (id == "audio") p.ShowAudio = true; } else p.HiddenModules.Add(id); }),
+                (from, to, after) => store.Update(p => LayoutCatalog.Move(p.ModuleOrder, from, to, after)));
+        }
+    }
+    private void LayoutRow(StackPanel parent, string scope, string id, string name, bool enabled, List<string> order, Action<bool> toggle, Action<string, string, bool> reorder)
+    {
+        var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3), Background = Brushes.Transparent };
+        var actions = new StackPanel { Orientation = Orientation.Horizontal };
+        foreach (int direction in new[] { -1, 1 })
+        {
+            var move = Button(direction < 0 ? "↑" : "↓", () =>
+            {
+                int index = order.IndexOf(id), target = index + direction;
+                if (target < 0 || target >= order.Count) return;
+                reorder(id, order[target], direction > 0); RebuildLayoutRows();
+            });
+            move.Padding = new Thickness(9, 5, 9, 5); move.ToolTip = direction < 0 ? "Mover para cima" : "Mover para baixo";
+            actions.Children.Add(move);
+        }
+        DockPanel.SetDock(actions, Dock.Right); row.Children.Add(actions);
+        var grip = new TextBlock { Text = "⋮⋮", Width = 26, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.SizeAll };
+        grip.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); row.Children.Add(grip);
+        var visible = new CheckBox { Content = name, IsChecked = enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 4, 0, 4) };
+        visible.Checked += (_, _) => { if (!building) toggle(true); };
+        visible.Unchecked += (_, _) => { if (!building) toggle(false); };
+        row.Children.Add(visible); parent.Children.Add(row);
+        LayoutDrag.Attach(row, scope, id, () => true, (from, to, after) => { reorder(from, to, after); Dispatcher.BeginInvoke(new Action(RebuildLayoutRows)); }, true, grip);
+    }
+    private StackPanel Section(string title, string description)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock { Text = title, FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
+        Note(panel, description);
+        var card = new Border { Child = panel, CornerRadius = new CornerRadius(16), Padding = new Thickness(20), Margin = new Thickness(0, 0, 0, 16) };
+        card.SetResourceReference(Border.BackgroundProperty, "Think.Surface"); content.Children.Add(card); return panel;
+    }
+    private static void Note(Panel parent, string text)
+    { var note = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 0, 0, 14) }; note.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); parent.Children.Add(note); }
+    private static Choice[] Materials() => new[] { new Choice("Acrylic", "Acrylic · desfoque nativo"), new Choice("Mica", "Mica · material do Windows"), new Choice("Solid", "Sólido · sem desfoque") };
+    private static void Slider(Panel parent, string label, double min, double max, double value, Action<double> changed, string format = "0 'px'")
+    {
+        var heading = new DockPanel { Margin = new Thickness(0, 10, 0, 6) };
+        var readout = new TextBlock { Text = value.ToString(format, System.Globalization.CultureInfo.CurrentCulture), HorizontalAlignment = HorizontalAlignment.Right };
+        readout.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
+        DockPanel.SetDock(readout, Dock.Right); heading.Children.Add(readout); heading.Children.Add(new TextBlock { Text = label }); parent.Children.Add(heading);
+        var slider = new System.Windows.Controls.Slider { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), SmallChange = format == "P0" ? .01 : 1, LargeChange = (max - min) / 10, Margin = new Thickness(0, 4, 0, 8) };
+        System.Windows.Automation.AutomationProperties.SetName(slider, label);
+        slider.ValueChanged += (_, _) => { readout.Text = slider.Value.ToString(format, System.Globalization.CultureInfo.CurrentCulture); changed(slider.Value); };
+        parent.Children.Add(slider);
+    }
+    private static void Select(Panel parent, string label, string selected, Choice[] choices, Action<string> changed)
+    {
+        parent.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 10, 0, 6) });
+        var combo = new ComboBox { ItemsSource = choices, SelectedItem = choices.FirstOrDefault(c => c.Id == selected), Margin = new Thickness(0, 0, 0, 10) };
+        System.Windows.Automation.AutomationProperties.SetName(combo, label);
+        combo.SelectionChanged += (_, _) => { if (combo.SelectedItem is Choice choice) changed(choice.Id); }; parent.Children.Add(combo);
+    }
+    private static void Check(Panel parent, string label, bool value, Action<bool> changed)
+    {
+        var check = new CheckBox { Content = label, IsChecked = value, Margin = new Thickness(0, 9, 0, 9) };
+        check.Checked += (_, _) => changed(true); check.Unchecked += (_, _) => changed(false); parent.Children.Add(check);
+    }
+    private static Button Button(string label, Action action)
+    { var button = new Button { Content = label }; button.Click += (_, _) => action(); return button; }
 }

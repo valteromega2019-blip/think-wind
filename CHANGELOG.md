@@ -1,5 +1,16 @@
 # Histórico do Think Wind
 
+## 2.0.0-dev — 2026-10-29
+
+- Identidade visual baseada no Think Monitor: grafite, ciano e recursos dinâmicos para temas claro, escuro e automático.
+- Ícones sem fundos; recuperação pelo Shell/janelas; resolução de atalhos; agrupamento de janelas e indicadores de minimização.
+- Ilha integrada ao topo, com acessos configuráveis, estados proporcionais, cartões translúcidos e calendário com tema.
+- Material, tonalidade, escala, espaçamento, raio e posicionamento independentes por componente; contorno DWM desativado e recorte nativo.
+- Editor visual com arraste de ícones, controles e módulos; linhas de inserção/alinhamento, listas acessíveis e restauração individual/completa.
+- Pré-visualização instantânea, salvamento automático com debounce e migração das preferências antigas.
+
+Revisão por leitura de código e diff. Sem testes, type check, build, publish ou novos instaladores, conforme preferências do usuário. Consulte `REFINAMENTOS-2.0.md` para limitações e verificação pendente.
+
 ## 0.2.0 — 2026-10-29
 
 - Integração com Core Audio para enumerar saídas e entradas ativas, ler e alterar volume e mudo por dispositivo.

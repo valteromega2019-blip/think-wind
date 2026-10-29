@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Windows;
+using Microsoft.Win32;
 using ThinkWind.Services;
 using ThinkWind.Views;
 using Forms = System.Windows.Forms;
@@ -22,13 +23,17 @@ public partial class App : Application
         instance = new Mutex(true, @"Local\ThinkWind.Launcher", out var first);
         if (!first) { MessageBox.Show("O Think Wind já está em execução. Use o ícone na bandeja do Windows.", "Think Wind"); Shutdown(); return; }
         store = new SettingsStore();
+        ThemeService.Apply(store.Value);
         dock = new DockWindow(store, OpenSettings);
         island = new IslandWindow(store, OpenSettings);
+        store.Changed += PreferencesChanged;
+        SystemEvents.UserPreferenceChanged += WindowsPreferencesChanged;
         // Expose both overlay windows to desktop inspection tools during manual QA.
         // Normal launches keep the launcher out of the native taskbar.
         if (e.Args.Contains("--inspect")) { dock.ShowInTaskbar = true; island.ShowInTaskbar = true; }
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Personalizar", null, (_, _) => Dispatcher.Invoke(OpenSettings));
+        menu.Items.Add("Editar / concluir layout", null, (_, _) => Dispatcher.Invoke(() => store.SetEditing(!store.IsEditing)));
         menu.Items.Add("Mostrar barra e ilha", null, (_, _) => Dispatcher.Invoke(() => { dock.Show(); island.Show(); dock.RefreshSettings(); island.RefreshSettings(); }));
         menu.Items.Add("Sair do Think Wind", null, (_, _) => Dispatcher.Invoke(() => { IsExiting = true; Shutdown(); }));
         tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = System.Drawing.SystemIcons.Application, ContextMenuStrip = menu, Visible = true };
@@ -40,14 +45,30 @@ public partial class App : Application
     private void OpenSettings()
     {
         if (settings is not null) { settings.Activate(); return; }
-        settings = new SettingsWindow(store, () => { dock?.RefreshSettings(); island?.RefreshSettings(); });
-        settings.Closed += (_, _) => settings = null;
+        store.SetCustomizing(true);
+        settings = new SettingsWindow(store);
+        settings.Closed += (_, _) => { settings = null; store.SetCustomizing(false); };
         settings.Show(); settings.Activate();
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        SystemEvents.UserPreferenceChanged -= WindowsPreferencesChanged;
+        if (store is not null) { store.Changed -= PreferencesChanged; store.Flush(); }
         if (tray is not null) { tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
         instance?.Dispose();
         base.OnExit(e);
     }
+    private void PreferencesChanged(object? sender, EventArgs e)
+    {
+        if (IsExiting) return;
+        ThemeService.Apply(store.Value);
+        dock?.RefreshSettings(); island?.RefreshSettings();
+    }
+    private void WindowsPreferencesChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (!IsExiting && !Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(() =>
+        { ThemeService.Apply(store.Value, true); dock?.RefreshSettings(); island?.RefreshSettings(); }));
+    }
+    protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+    { IsExiting = true; store?.Flush(); base.OnSessionEnding(e); }
 }
