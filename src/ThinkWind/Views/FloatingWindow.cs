@@ -26,6 +26,7 @@ internal abstract class FloatingWindow : Window
     internal nint BackdropHandle => backdrop?.Handle ?? 0;
     internal bool HasNativeMaterial => backdrop?.MaterialAvailable == true;
     private double radius;
+    private double animationDuration;
     private readonly Border centerGuide = new() { Width = 1, Opacity = .35, IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed };
     private (int Width, int Height, int Radius, bool Top) lastClip;
     protected FloatingWindow(SettingsStore store)
@@ -62,8 +63,8 @@ internal abstract class FloatingWindow : Window
         Closed += (_, _) => { animation.Stop(); backdrop?.Dispose(); };
         animation.Tick += (_, _) =>
         {
-            var progress = Math.Clamp(elapsed.Elapsed.TotalMilliseconds / Math.Max(1, Store.Value.AnimationMilliseconds), 0, 1);
-            var eased = 1 - Math.Pow(1 - progress, 3);
+            var progress = Math.Clamp(elapsed.Elapsed.TotalMilliseconds / Math.Max(1, animationDuration), 0, 1);
+            var eased = AttachedTop ? progress * progress * (3 - 2 * progress) : 1 - Math.Pow(1 - progress, 3);
             Move(new OverlayChrome.PixelRect
             {
                 Left = Blend(start.Left, target.Left, eased), Top = Blend(start.Top, target.Top, eased),
@@ -145,7 +146,7 @@ internal abstract class FloatingWindow : Window
         animation.Stop();
         if (animate && placed && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0 && OverlayChrome.GetWindowRect(hwnd, out start)
             && Math.Abs(start.Left - target.Left) < display.Work.Width / 2 && Math.Abs(start.Top - target.Top) < display.Work.Height / 2)
-        { elapsed.Restart(); animation.Start(); }
+        { animationDuration = Store.Value.AnimationMilliseconds; elapsed.Restart(); animation.Start(); }
         else Move(target);
         placed = true;
     }
@@ -170,7 +171,7 @@ internal abstract class FloatingWindow : Window
         animation.Stop();
         target = new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + w, Bottom = y + h };
         if (animate && placed && Store.Value.AnimationMilliseconds > 0 && SystemParameters.ClientAreaAnimation && OverlayChrome.GetWindowRect(new WindowInteropHelper(this).Handle, out start))
-        { elapsed.Restart(); animation.Start(); }
+        { animationDuration = Store.Value.AnimationMilliseconds; elapsed.Restart(); animation.Start(); }
         else Move(target);
         placed = true;
     }

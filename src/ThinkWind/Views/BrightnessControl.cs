@@ -59,7 +59,7 @@ internal sealed class BrightnessControl : Border
         else
         {
             level.Value = Math.Clamp((state.Value - (double)state.Minimum) * 100 / (state.Maximum - state.Minimum), 0, 100);
-            label.Text = $"Brilho  {level.Value:0}% · {state.Monitor}";
+            label.Text = $"Brilho  {level.Value:0}%"; ToolTip = state.Monitor;
         }
         LayoutChanged?.Invoke();
     }

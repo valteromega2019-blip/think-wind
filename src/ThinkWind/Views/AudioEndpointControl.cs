@@ -26,6 +26,10 @@ internal sealed class AudioEndpointControl : Border
     private string deviceSignature = "";
     private bool updating;
     private bool dragging;
+    private bool compact;
+    private readonly Button devicePicker = new() { Content = "\u22EF", Width = 28, Height = 24, Padding = new Thickness(0), Margin = new Thickness(0), Visibility = Visibility.Collapsed, ToolTip = "Escolher dispositivo a controlar" };
+    private ContextMenu? deviceMenu;
+    internal bool IsInteracting => dragging || IsMouseCaptureWithin || devices.IsDropDownOpen || deviceMenu?.IsOpen == true;
 
     internal AudioEndpointControl(AudioService audioService, CoreAudio.Flow direction)
     {
@@ -35,7 +39,10 @@ internal sealed class AudioEndpointControl : Border
         SetResourceReference(BackgroundProperty, "Think.GlassCard");
         var panel = new StackPanel();
         var name = direction == CoreAudio.Flow.Render ? "SAÍDA DE ÁUDIO" : "MICROFONE";
-        panel.Children.Add(new TextBlock { Text = name, FontSize = 11, FontWeight = FontWeights.SemiBold });
+        var heading = new DockPanel(); DockPanel.SetDock(devicePicker, Dock.Right); heading.Children.Add(devicePicker);
+        heading.Children.Add(new TextBlock { Text = name, FontSize = 10, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); panel.Children.Add(heading);
+        devicePicker.Click += (_, _) => OpenDeviceMenu();
+        System.Windows.Automation.AutomationProperties.SetName(devicePicker, "Escolher dispositivo · " + name);
         System.Windows.Automation.AutomationProperties.SetName(devices, "Dispositivo a controlar · " + name);
         System.Windows.Automation.AutomationProperties.SetName(level, "Volume · " + name);
         System.Windows.Automation.AutomationProperties.SetName(mute, "Alternar mudo · " + name);
@@ -66,7 +73,7 @@ internal sealed class AudioEndpointControl : Border
 
     internal void Poll(bool refreshDevices)
     {
-        if (dragging) return;
+        if (dragging || deviceMenu?.IsOpen == true || devices.IsDropDownOpen) return;
         try
         {
             updating = true;
@@ -93,14 +100,42 @@ internal sealed class AudioEndpointControl : Border
             // Mouse drags are excluded above; keyboard input runs synchronously.
             level.Value = current.Volume;
             percent.Text = $"{current.Volume:0}%";
-            mute.Content = current.Muted ? "Ativar som" : "Mudo";
+            mute.Content = compact ? MuteGlyph(current.Muted) : current.Muted ? "Ativar som" : "Mudo";
+            mute.ToolTip = current.Muted ? "Ativar som" : "Silenciar";
             mute.SetResourceReference(Control.BackgroundProperty, current.Muted ? "Think.Accent" : "Think.Control");
             mute.SetResourceReference(Control.ForegroundProperty, current.Muted ? "Think.Background" : "Think.Text");
             status.Text = current.Name + (current.Muted ? " · silenciado" : "");
+            ToolTip = status.Text;
             level.IsEnabled = mute.IsEnabled = true;
         }
         catch (AudioUnavailableException e) { Unavailable(e.Message); }
         finally { updating = false; }
+    }
+    internal void SetCompact(bool value)
+    {
+        compact = value;
+        devices.Visibility = status.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
+        devicePicker.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+        Padding = new Thickness(value ? 4 : 12); Margin = new Thickness(0, 2, 0, 2);
+        percent.Width = value ? 32 : 42; percent.FontSize = value ? 10 : 12;
+        mute.MinWidth = value ? 28 : 78; mute.Width = value ? 28 : double.NaN; mute.Height = value ? 28 : double.NaN;
+        mute.Padding = new Thickness(value ? 0 : 8); mute.Margin = new Thickness(3, 0, 0, 0);
+        if (current is not null) mute.Content = value ? MuteGlyph(current.Muted) : current.Muted ? "Ativar som" : "Mudo";
+    }
+    private static TextBlock MuteGlyph(bool muted)
+    {
+        var glyph = new TextBlock { Text = muted ? "\uE74F" : "\uE767", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 14 };
+        glyph.SetResourceReference(TextBlock.ForegroundProperty, muted ? "Think.Background" : "Think.Text"); return glyph;
+    }
+    private void OpenDeviceMenu()
+    {
+        Poll(true); deviceMenu = new ContextMenu { PlacementTarget = devicePicker };
+        foreach (var choice in devices.Items.Cast<Choice>())
+        {
+            var item = new MenuItem { Header = choice.Label, IsCheckable = true, IsChecked = Equals(choice, devices.SelectedItem) };
+            item.Click += (_, _) => devices.SelectedItem = choice; deviceMenu.Items.Add(item);
+        }
+        deviceMenu.IsOpen = true;
     }
 
     private bool Execute(Action action)
@@ -110,7 +145,7 @@ internal sealed class AudioEndpointControl : Border
     }
     private void Unavailable(string message)
     {
-        current = null; status.Text = message; percent.Text = "—";
+        current = null; status.Text = message; ToolTip = message; percent.Text = "—";
         level.IsEnabled = mute.IsEnabled = false;
     }
 }

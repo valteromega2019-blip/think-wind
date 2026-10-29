@@ -16,12 +16,22 @@ internal sealed class TrayCard : StackPanel
     private bool reading;
     private int page;
     private DateTime nextRefresh;
+    private bool compact;
+    private readonly Button native;
     internal event Action? LayoutChanged;
     internal TrayCard()
     {
         Children.Add(icons); Children.Add(navigation); Children.Add(status);
-        var native = new Button { Content = "Bandeja do Windows", Margin = new Thickness(4), ToolTip = "Focar a área de notificação original (Win+B)" };
+        native = new Button { Content = "Bandeja do Windows", Margin = new Thickness(4), ToolTip = "Focar a área de notificação original (Win+B)" };
         native.Click += (_, _) => Desktop.Chord(0x5B, 0x42); Children.Add(native);
+        Render();
+    }
+    internal void SetCompact(bool value)
+    {
+        if (compact == value) return;
+        compact = value; native.Content = value ? "Abrir bandeja" : "Bandeja do Windows";
+        native.Padding = new Thickness(6, 4, 6, 4); native.FontSize = 11;
+        status.FontSize = value ? 10 : 11;
         Render();
     }
     internal async void Refresh()
@@ -42,10 +52,11 @@ internal sealed class TrayCard : StackPanel
     private void Render()
     {
         icons.Children.Clear(); navigation.Children.Clear();
-        int pages = Math.Max(1, (entries.Count + 7) / 8); page = Math.Clamp(page, 0, pages - 1);
-        foreach (var entry in entries.GetRange(Math.Min(page * 8, entries.Count), Math.Min(8, Math.Max(0, entries.Count - page * 8))))
+        int pageSize = compact ? 4 : 8;
+        int pages = Math.Max(1, (entries.Count + pageSize - 1) / pageSize); page = Math.Clamp(page, 0, pages - 1);
+        foreach (var entry in entries.GetRange(Math.Min(page * pageSize, entries.Count), Math.Min(pageSize, Math.Max(0, entries.Count - page * pageSize))))
         {
-            var button = new Button { Width = 40, Height = 40, Padding = new Thickness(4), Margin = new Thickness(3), ToolTip = entry.Name, Content = entry.Icon is not null ? new Image { Source = entry.Icon, Width = 24, Height = 24 } : new TextBlock { Text = entry.Name[..1], HorizontalAlignment = HorizontalAlignment.Center } };
+            var button = new Button { Width = compact ? 30 : 40, Height = compact ? 30 : 40, Padding = new Thickness(3), Margin = new Thickness(2), ToolTip = entry.Name, Content = entry.Icon is not null ? new Image { Source = entry.Icon, Width = compact ? 20 : 24, Height = compact ? 20 : 24 } : new TextBlock { Text = entry.Name[..1], HorizontalAlignment = HorizontalAlignment.Center } };
             System.Windows.Automation.AutomationProperties.SetName(button, entry.Name);
             button.Click += async (_, _) => { if (!await TrayService.InvokeAsync(entry, false)) status.Text = "O aplicativo não expôs esse comando. Use a bandeja do Windows."; };
             button.PreviewMouseRightButtonUp += async (_, e) => { e.Handled = true; if (!await TrayService.InvokeAsync(entry, true)) status.Text = "Abra o menu pela bandeja do Windows."; };
@@ -53,11 +64,11 @@ internal sealed class TrayCard : StackPanel
         }
         if (pages > 1)
         {
-            var back = new Button { Content = "‹", IsEnabled = page > 0 }; back.Click += (_, _) => { page--; Render(); };
-            var forward = new Button { Content = "›", IsEnabled = page + 1 < pages }; forward.Click += (_, _) => { page++; Render(); };
+            var back = new Button { Content = "‹", Padding = new Thickness(6, 1, 6, 1), IsEnabled = page > 0, ToolTip = "Ícones anteriores" }; back.Click += (_, _) => { page--; Render(); };
+            var forward = new Button { Content = "›", Padding = new Thickness(6, 1, 6, 1), IsEnabled = page + 1 < pages, ToolTip = "Próximos ícones" }; forward.Click += (_, _) => { page++; Render(); };
             navigation.Children.Add(back); navigation.Children.Add(new TextBlock { Text = $"{page + 1} / {pages}", Margin = new Thickness(8), VerticalAlignment = VerticalAlignment.Center }); navigation.Children.Add(forward);
         }
-        status.Text = entries.Count == 0 ? "O Windows não expôs ícones acessíveis. Abra a bandeja nativa." : "Ícones visíveis da bandeja · botão direito para o menu nativo";
+        status.Text = compact ? entries.Count == 0 ? "Use a bandeja do Windows" : $"{entries.Count} ícones disponíveis" : entries.Count == 0 ? "O Windows não expôs ícones acessíveis. Abra a bandeja nativa." : "Ícones visíveis da bandeja · botão direito para o menu nativo";
         LayoutChanged?.Invoke();
     }
 }

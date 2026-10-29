@@ -26,7 +26,7 @@ public partial class App : Application
         if (!first) { MessageBox.Show("O Think Wind já está em execução. Use o ícone na bandeja do Windows.", "Think Wind"); Shutdown(); return; }
         store = new SettingsStore();
         ThemeService.Apply(store.Value);
-        dock = new DockWindow(store, OpenSettings);
+        dock = new DockWindow(store);
         island = new IslandWindow(store, OpenSettings);
         preferenceStamp = PreferenceStamp.Capture(store);
         store.Changed += PreferencesChanged;

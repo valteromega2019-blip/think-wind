@@ -33,6 +33,8 @@ public sealed class Preferences
     public double IslandScale { get; set; } = 1;
     public double IslandExpandedWidth { get; set; } = 560;
     public double IslandSpacing { get; set; } = 6;
+    public bool IslandAutoCollapse { get; set; } = true;
+    public double IslandCollapseSeconds { get; set; } = .45;
     public double AnimationMilliseconds { get; set; } = 220;
     public List<string> DockOrder { get; set; } = new();
     public List<string> QuickOrder { get; set; } = new() { "clock", "wifi", "bluetooth", "audio", "notifications", "calendar", "airplane", "settings" };
@@ -116,6 +118,7 @@ public sealed class SettingsStore
             p.QuickOrder = defaults.QuickOrder; p.HiddenQuickControls = defaults.HiddenQuickControls;
             p.IslandScale = 1; p.IslandExpandedWidth = defaults.IslandExpandedWidth; p.IslandSpacing = defaults.IslandSpacing;
             p.IslandRadius = defaults.IslandRadius; p.IslandHorizontalOffset = 0;
+            p.IslandAutoCollapse = defaults.IslandAutoCollapse; p.IslandCollapseSeconds = defaults.IslandCollapseSeconds;
             p.IslandMaterial = defaults.IslandMaterial; p.IslandOpacity = .72;
             p.ShowAudio = p.ShowMemory = p.ShowBattery = true;
         });
@@ -133,7 +136,8 @@ public sealed class SettingsStore
         p.IconSize = Limit(p.IconSize, 20, 48, 28); p.DockBottomOffset = Limit(p.DockBottomOffset, 4, 80, 12);
         p.DockHorizontalOffset = Limit(p.DockHorizontalOffset, -4000, 4000, 0);
         p.IslandHorizontalOffset = Limit(p.IslandHorizontalOffset, -4000, 4000, 0);
-        p.IslandScale = Limit(p.IslandScale, .8, 1.4, 1); p.IslandExpandedWidth = Limit(p.IslandExpandedWidth, 400, 640, 560);
+        p.IslandScale = Limit(p.IslandScale, .8, 1.4, 1); p.IslandExpandedWidth = Limit(p.IslandExpandedWidth, 400, 900, 560);
+        p.IslandCollapseSeconds = Limit(p.IslandCollapseSeconds, 0, 10, .45);
         p.AnimationMilliseconds = Limit(p.AnimationMilliseconds, 0, 600, 220);
         p.Theme = p.Theme is "Auto" or "Dark" or "Light" ? p.Theme : "Auto";
         p.DockMaterial = Material(p.DockMaterial); p.IslandMaterial = Material(p.IslandMaterial);

@@ -10,7 +10,7 @@ using ThinkWind.Native;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
-internal enum MiniIslandKind { Volume, Network }
+internal enum MiniIslandKind { Volume, Network, Calendar }
 internal sealed class MiniIslandWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
@@ -24,20 +24,26 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private DateTime nextRefresh;
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
+    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true;
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
-        Title = kind == MiniIslandKind.Volume ? "Think Wind — Mini volume" : "Think Wind — Mini rede";
+        Title = kind switch { MiniIslandKind.Volume => "Think Wind — Mini volume", MiniIslandKind.Calendar => "Think Wind — Calendário", _ => "Think Wind — Mini rede" };
         ShowActivated = true;
         var heading = new DockPanel();
         var close = ActionButton("Fechar", Dismiss); close.Padding = new Thickness(8, 4, 8, 4);
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
-        heading.Children.Add(new TextBlock { Text = kind == MiniIslandKind.Volume ? "Volume" : "Conexão de rede", FontSize = 16, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
+        heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Volume => "Volume", MiniIslandKind.Calendar => "Calendário", _ => "Conexão de rede" }, FontSize = 16, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
         panel.Children.Add(heading);
         if (kind == MiniIslandKind.Volume)
         {
             audio = new AudioEndpointControl(new AudioService(), CoreAudio.Flow.Render); panel.Children.Add(audio);
             panel.Children.Add(ActionButton("Configurações de som", () => SystemActions.Run("ms-settings:sound")));
+        }
+        else if (kind == MiniIslandKind.Calendar)
+        {
+            var calendar = new System.Windows.Controls.Calendar(); calendar.SetResourceReference(StyleProperty, "Think.Calendar");
+            calendar.DisplayModeChanged += (_, _) => Position(); panel.Children.Add(calendar);
         }
         else
         {
@@ -72,7 +78,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         bool refresh = force || DateTime.UtcNow >= nextRefresh;
         if (refresh) nextRefresh = DateTime.UtcNow.AddSeconds(5);
         if (audio is not null) audio.Poll(refresh);
-        else if (refresh)
+        else if (refresh && Kind == MiniIslandKind.Network)
         {
             try
             {

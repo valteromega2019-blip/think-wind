@@ -15,7 +15,6 @@ internal sealed class DockWindow : FloatingWindow
     protected override bool AttachedTop => false;
     private readonly StackPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(2) };
-    private readonly Action settings;
     private readonly ShellIcons icons = new();
     private readonly List<string> visibleOrder = new();
     private string signature = "";
@@ -30,9 +29,8 @@ internal sealed class DockWindow : FloatingWindow
     private double ExpandedHeight => Math.Max(44, contentHeight + Surface.Padding.Top + Surface.Padding.Bottom);
     private DateTime lastHover = DateTime.UtcNow;
     private sealed record Item(string Key, string Name, string? Target, string? Glyph, List<Desktop.RunningWindow> Windows, Shortcut? Pin, Action? Action);
-    public DockWindow(SettingsStore store, Action openSettings) : base(store)
+    public DockWindow(SettingsStore store) : base(store)
     {
-        settings = openSettings;
         Title = "Think Wind — Dock";
         SourceInitialized += (_, _) => HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(NoActivate);
         Surface.Child = new AdornerDecoratorHost(items);
@@ -99,14 +97,13 @@ internal sealed class DockWindow : FloatingWindow
                 entries.Add(new("app:" + group.Key, first.Title, first.Executable, null, groupWindows, null, null));
             }
             entries.Add(new("system:add", "Adicionar atalho", null, "\uE710", new(), null, AddShortcut));
-            entries.Add(new("system:settings", "Personalizar Think Wind", null, "\uE713", new(), null, settings));
             var present = entries.Select(i => i.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var order = Store.Value.DockOrder.Concat(visibleOrder).Where(present.Contains).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             foreach (var entry in entries.Where(i => !order.Contains(i.Key, StringComparer.OrdinalIgnoreCase)))
             {
                 int insertion = order.Count;
-                if (entry.Key is not ("system:add" or "system:settings"))
-                    while (insertion > 0 && (order[insertion - 1] is "system:add" or "system:settings")) insertion--;
+                if (entry.Key != "system:add")
+                    while (insertion > 0 && order[insertion - 1] == "system:add") insertion--;
                 order.Insert(insertion, entry.Key);
             }
             entries = entries.OrderBy(i => order.FindIndex(k => k.Equals(i.Key, StringComparison.OrdinalIgnoreCase))).ToList();
@@ -169,7 +166,7 @@ internal sealed class DockWindow : FloatingWindow
         panel.Children.Add(indicator);
         var button = ActionButton(item.Name, () =>
         {
-            if (Store.IsEditing && item.Key is not ("system:add" or "system:settings")) return;
+            if (Store.IsEditing && item.Key != "system:add") return;
             if (item.Action is not null) item.Action();
             else if (selected is not null) Desktop.Activate(selected.Handle);
             else if (item.Target is not null) SystemActions.Run(item.Target);

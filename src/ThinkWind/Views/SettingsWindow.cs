@@ -97,7 +97,9 @@ internal sealed class SettingsWindow : Window
         Select(island, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));
         Slider(island, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.IslandOpacity ?? store.Value.TintOpacity, v => Change(p => p.IslandOpacity = v), "P0");
         Slider(island, "Escala dos acessos rápidos", .8, 1.4, store.Value.IslandScale, v => Change(p => p.IslandScale = v), "P0");
-        Slider(island, "Largura expandida", 400, 640, store.Value.IslandExpandedWidth, v => Change(p => p.IslandExpandedWidth = v));
+        Slider(island, "Largura expandida", 400, 900, store.Value.IslandExpandedWidth, v => Change(p => p.IslandExpandedWidth = v));
+        Check(island, "Recolher a ilha automaticamente após sair com o mouse", store.Value.IslandAutoCollapse, v => Change(p => p.IslandAutoCollapse = v));
+        Slider(island, "Espera para recolher (segundos)", 0, 10, store.Value.IslandCollapseSeconds, v => Change(p => p.IslandCollapseSeconds = v), "0.0 's'", .1);
         Slider(island, "Espaçamento", 0, 20, store.Value.IslandSpacing, v => Change(p => p.IslandSpacing = v));
         Slider(island, "Arredondamento inferior", 0, 48, store.Value.IslandRadius, v => Change(p => p.IslandRadius = v));
         Slider(island, "Posição horizontal", -4000, 4000, store.Value.IslandHorizontalOffset, v => Change(p => p.IslandHorizontalOffset = v));
@@ -108,6 +110,7 @@ internal sealed class SettingsWindow : Window
         if (editing.Parent is Panel oldEditing) oldEditing.Children.Remove(editing);
         layout.Children.Add(editing);
         Note(layout, "Na barra, arraste os ícones. Na ilha, arraste os acessos rápidos ou o título de cada módulo. O puxador lateral ajusta a posição horizontal. Esc conclui a edição.");
+        Note(layout, "Os três primeiros módulos visíveis ficam em destaque; os demais aparecem em blocos menores abaixo. A engrenagem de personalização permanece no cabeçalho da ilha.");
         layout.Children.Add(new TextBlock { Text = "ACESSOS RÁPIDOS", FontSize = 11, Margin = new Thickness(0, 16, 0, 8) });
         if (quickRows.Parent is Panel oldQuick) oldQuick.Children.Remove(quickRows);
         layout.Children.Add(quickRows);
@@ -146,7 +149,7 @@ internal sealed class SettingsWindow : Window
     {
         layoutSignature = LayoutSignature();
         quickRows.Children.Clear(); moduleRows.Children.Clear();
-        foreach (var id in store.Value.QuickOrder.ToArray())
+        foreach (var id in store.Value.QuickOrder.Where(id => id != "settings").ToArray())
         {
             string label = LayoutCatalog.QuickControls.First(q => q.Id == id).Name;
             LayoutRow(quickRows, "quick-settings", id, label, !store.Value.HiddenQuickControls.Contains(id), store.Value.QuickOrder,
@@ -195,13 +198,13 @@ internal sealed class SettingsWindow : Window
     private static void Note(Panel parent, string text)
     { var note = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 0, 0, 14) }; note.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); parent.Children.Add(note); }
     private static Choice[] Materials() => new[] { new Choice("Acrylic", "Acrylic · desfoque nativo"), new Choice("Mica", "Mica · material do Windows"), new Choice("Solid", "Sólido · sem desfoque") };
-    private static void Slider(Panel parent, string label, double min, double max, double value, Action<double> changed, string format = "0 'px'")
+    private static void Slider(Panel parent, string label, double min, double max, double value, Action<double> changed, string format = "0 'px'", double? smallChange = null)
     {
         var heading = new DockPanel { Margin = new Thickness(0, 10, 0, 6) };
         var readout = new TextBlock { Text = value.ToString(format, System.Globalization.CultureInfo.CurrentCulture), HorizontalAlignment = HorizontalAlignment.Right };
         readout.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         DockPanel.SetDock(readout, Dock.Right); heading.Children.Add(readout); heading.Children.Add(new TextBlock { Text = label }); parent.Children.Add(heading);
-        var slider = new System.Windows.Controls.Slider { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), SmallChange = format == "P0" ? .01 : 1, LargeChange = (max - min) / 10, Margin = new Thickness(0, 4, 0, 8) };
+        var slider = new System.Windows.Controls.Slider { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), SmallChange = smallChange ?? (format == "P0" ? .01 : 1), LargeChange = (max - min) / 10, Margin = new Thickness(0, 4, 0, 8) };
         System.Windows.Automation.AutomationProperties.SetName(slider, label);
         slider.ValueChanged += (_, _) => { readout.Text = slider.Value.ToString(format, System.Globalization.CultureInfo.CurrentCulture); changed(slider.Value); };
         parent.Children.Add(slider);

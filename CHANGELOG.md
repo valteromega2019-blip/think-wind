@@ -1,5 +1,17 @@
 # Histórico do Think Wind
 
+## v0.04 (0.4.0-dev) — 2026-10-29
+
+- Sete módulos na mesma grade: três principais e quatro blocos secundários responsivos, respeitando ordem e visibilidade; removida a paginação dos módulos.
+- Mídia e volume disponíveis no hover, reutilizando os mesmos controles e mantendo seleção de dispositivo e reprodução.
+- Engrenagem no cabeçalho da ilha; removidos os acessos duplicados de personalização no hover e na barra inferior.
+- Recolhimento automático persistente de 0 a 10 segundos e opção de desativar; proteção para sliders, menus, teclado, edição e mini-ilhas associadas.
+- Calendário em mini-ilha, áudio e bandeja compactos; seletores reais e controles nativos preservados.
+- Redimensionamento com aceleração/desaceleração, duração estável durante a transição e movimento discreto dos cartões sem reiniciar destinos iguais.
+- Revisão por leitura de código e diff. Testes, type check, build e publish não executados; nenhum instalador gerado. Executável anterior preservado.
+
+Detalhes em `REFINAMENTOS-0.04.md`.
+
 ## v0.03 (0.3.0-dev) — 2026-10-29
 
 - Dimensionamento proporcional e paginação da barra inferior, sem ScrollViewer ou deformação dos ícones.

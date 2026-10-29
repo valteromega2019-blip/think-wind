@@ -19,24 +19,28 @@ internal sealed class MediaCard : StackPanel, IDisposable
     private readonly TextBlock time = new() { FontSize = 10, HorizontalAlignment = HorizontalAlignment.Right };
     private readonly Slider progress = new() { Minimum = 0, Margin = new Thickness(0, 8, 0, 0), IsMoveToPointEnabled = true };
     private readonly Button previous, toggle, next;
+    private readonly Border cover;
+    private readonly StackPanel transport;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private bool seeking, dragging, busy;
     internal bool Available => service.State is not null;
+    internal bool IsInteracting => seeking || dragging || busy || IsMouseCaptureWithin;
     internal event Action? AvailabilityChanged;
     internal event Action? LayoutChanged;
     internal MediaCard()
     {
         service = new MediaService(Dispatcher);
         var row = new Grid(); row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); row.ColumnDefinitions.Add(new ColumnDefinition());
-        var cover = new Border { Width = 64, Height = 64, CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = artwork, Margin = new Thickness(0, 0, 12, 0) };
-        artwork.Clip = new RectangleGeometry(new Rect(0, 0, 64, 64), 16, 16);
+        cover = new Border { Width = 44, Height = 44, CornerRadius = new CornerRadius(12), ClipToBounds = true, Child = artwork, Margin = new Thickness(0, 0, 8, 0) };
+        artwork.Width = artwork.Height = 44;
+        artwork.Clip = new RectangleGeometry(new Rect(0, 0, 44, 44), 12, 12);
         cover.SetResourceReference(Border.BackgroundProperty, "Think.Control"); row.Children.Add(cover);
         var details = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; details.Children.Add(title); details.Children.Add(artist); details.Children.Add(player);
         artist.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); player.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent");
         Grid.SetColumn(details, 1); row.Children.Add(details); Children.Add(row);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+        transport = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         previous = Transport("Anterior", "\uE892", MediaCommand.Previous); toggle = Transport("Reproduzir / pausar", "\uE768", MediaCommand.Toggle); next = Transport("Próxima", "\uE893", MediaCommand.Next);
-        buttons.Children.Add(previous); buttons.Children.Add(toggle); buttons.Children.Add(next); Children.Add(buttons); Children.Add(progress); Children.Add(time);
+        transport.Children.Add(previous); transport.Children.Add(toggle); transport.Children.Add(next); Children.Add(transport); Children.Add(progress); Children.Add(time);
         System.Windows.Automation.AutomationProperties.SetName(progress, "Posição da reprodução");
         progress.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => { seeking = true; dragging = true; }));
         progress.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(async (_, e) => { dragging = seeking = false; if (!e.Canceled) await Seek(); }));
@@ -49,7 +53,7 @@ internal sealed class MediaCard : StackPanel, IDisposable
     }
     private Button Transport(string label, string glyph, MediaCommand command)
     {
-        var button = new Button { Width = 40, Height = 36, Padding = new Thickness(0), Margin = new Thickness(4, 8, 4, 0), ToolTip = label, Content = Icon(glyph) };
+        var button = new Button { Width = 32, Height = 32, Padding = new Thickness(0), Margin = new Thickness(3, 6, 3, 0), ToolTip = label, Content = Icon(glyph) };
         System.Windows.Automation.AutomationProperties.SetName(button, label);
         button.Click += async (_, _) =>
         {
@@ -66,9 +70,12 @@ internal sealed class MediaCard : StackPanel, IDisposable
     {
         bool wasAvailable = Tag is true; Tag = Available;
         var state = service.State; artwork.Source = state?.Artwork;
+        cover.Visibility = transport.Visibility = Available ? Visibility.Visible : Visibility.Collapsed;
+        title.FontSize = Available ? 14 : 12;
         title.Text = state?.Title ?? "Nenhuma mídia ativa"; artist.Text = state?.Artist ?? service.Error ?? "Abra um player compatível com o Windows"; player.Text = state?.Player ?? "";
         toggle.Content = Icon(state?.Playing == true ? "\uE769" : "\uE768");
-        RenderButtons(); UpdateProgress(); if (wasAvailable != Available) AvailabilityChanged?.Invoke();
+        title.ToolTip = title.Text; artist.ToolTip = artist.Text; player.ToolTip = player.Text;
+        RenderButtons(); UpdateProgress(); if (wasAvailable != Available) { AvailabilityChanged?.Invoke(); LayoutChanged?.Invoke(); }
     }
     private void RenderButtons() { previous.IsEnabled = !busy && service.State?.CanPrevious == true; next.IsEnabled = !busy && service.State?.CanNext == true; toggle.IsEnabled = !busy && service.State?.CanToggle == true; }
     private void UpdateProgress()
