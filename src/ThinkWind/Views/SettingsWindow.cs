@@ -5,6 +5,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Interop;
+using ThinkWind.Native;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
@@ -23,15 +25,29 @@ internal sealed class SettingsWindow : Window
         store = settings;
         Title = "Think Wind · Personalização";
         SizeToContent = SizeToContent.Manual;
-        Width = 700; Height = Math.Min(850, SystemParameters.WorkArea.Height - 40);
-        MinWidth = 480; MinHeight = 420; WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        var display = OverlayChrome.GetDisplay(store.Value.MonitorIndex, store.Value.MonitorDeviceName);
+        Width = Math.Min(440, display.Width - 24); Height = Math.Min(580, display.Height - 24);
+        MinWidth = Math.Min(380, Width); MinHeight = Math.Min(360, Height);
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Topmost = true;
+        SourceInitialized += (_, _) =>
+        {
+            var screen = OverlayChrome.GetDisplay(store.Value.MonitorIndex, store.Value.MonitorDeviceName);
+            int gap = (int)Math.Round(12 * screen.Scale);
+            OverlayChrome.Move(new WindowInteropHelper(this).Handle, new OverlayChrome.PixelRect
+            {
+                Left = screen.Work.Left + gap, Top = screen.Work.Top + gap,
+                Right = screen.Work.Left + gap + (int)Math.Round(Width * screen.Scale),
+                Bottom = screen.Work.Top + gap + (int)Math.Round(Height * screen.Scale)
+            });
+        };
         SetResourceReference(BackgroundProperty, "Think.Background");
         SetResourceReference(ForegroundProperty, "Think.Text");
         var root = new DockPanel();
         DockPanel.SetDock(status, Dock.Bottom); root.Children.Add(status);
-        var heading = new StackPanel { Margin = new Thickness(28, 24, 28, 12) };
+        var heading = new StackPanel { Margin = new Thickness(20, 16, 20, 10) };
         heading.Children.Add(new TextBlock { Text = "THINK WIND", FontSize = 11, FontWeight = FontWeights.SemiBold });
-        heading.Children.Add(new TextBlock { Text = "Seu desktop. Seu ritmo.", FontSize = 28, Margin = new Thickness(0, 8, 0, 8) });
+        heading.Children.Add(new TextBlock { Text = "Seu desktop. Seu ritmo.", FontSize = 24, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 8) });
         heading.Children.Add(new TextBlock { Text = "As mudanças aparecem na hora e são salvas automaticamente.", TextWrapping = TextWrapping.Wrap, Opacity = .7 });
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         root.Children.Add(new AdornerDecoratorHost(new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }));
