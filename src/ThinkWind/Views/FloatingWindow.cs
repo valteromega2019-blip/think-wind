@@ -19,6 +19,8 @@ internal abstract class FloatingWindow : Window
     protected virtual bool UsesIslandAppearance => AttachedTop;
     protected virtual bool CollapsedDock => false;
     protected virtual Thickness TransparentInsets => new();
+    protected virtual bool HideOnClose => true;
+    protected virtual string? MaterialOverride => null;
     protected OverlayChrome.Display Display => OverlayChrome.GetDisplay(Store.Value.MonitorIndex, Store.Value.MonitorDeviceName);
     private readonly FrameClock animation = new();
     private readonly Stopwatch elapsed = new();
@@ -35,6 +37,7 @@ internal abstract class FloatingWindow : Window
     protected FloatingWindow(SettingsStore store)
     {
         Store = store;
+        Icon = AppBrand.WindowIcon;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = true;
         ShowInTaskbar = false; Topmost = true; ShowActivated = false;
@@ -66,7 +69,7 @@ internal abstract class FloatingWindow : Window
             else UpdateClip();
         };
         Loaded += (_, _) => Position();
-        Closing += (_, e) => { if (Application.Current is App app && !app.IsExiting) { e.Cancel = true; Hide(); } };
+        Closing += (_, e) => { if (HideOnClose && Application.Current is App app && !app.IsExiting) { e.Cancel = true; Hide(); } };
         Closed += (_, _) => { animation.Stop(); backdrop?.Dispose(); };
         animation.Tick += (_, _) =>
         {
@@ -94,7 +97,7 @@ internal abstract class FloatingWindow : Window
     {
         var p = Store.Value;
         radius = CollapsedDock ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
-        var material = UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial;
+        var material = MaterialOverride ?? (UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial);
         var alpha = (UsesIslandAppearance ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
         backdrop?.SetMaterial(SystemParameters.HighContrast ? "Solid" : material, ThemeService.Light);
         var color = ThemeService.BaseColor;

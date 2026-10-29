@@ -10,8 +10,11 @@ using ThinkWind.Native;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
-internal sealed class SettingsWindow : Window
+internal sealed class SettingsWindow : FloatingWindow
 {
+    protected override bool AttachedTop => false;
+    protected override bool HideOnClose => false;
+    protected override string? MaterialOverride => "Acrylic";
     private sealed record Choice(string Id, string Name) { public override string ToString() => Name; }
     private readonly SettingsStore store;
     private readonly StackPanel content = new() { Margin = new Thickness(24, 8, 24, 24) };
@@ -20,7 +23,7 @@ internal sealed class SettingsWindow : Window
     private readonly Button editing = new() { Margin = new Thickness(0, 12, 0, 8) };
     private bool building;
     private string layoutSignature = "";
-    public SettingsWindow(SettingsStore settings)
+    public SettingsWindow(SettingsStore settings) : base(settings)
     {
         store = settings;
         Title = "Think Wind · Personalização";
@@ -30,28 +33,29 @@ internal sealed class SettingsWindow : Window
         MinWidth = Math.Min(380, Width); MinHeight = Math.Min(360, Height);
         WindowStartupLocation = WindowStartupLocation.Manual;
         Topmost = true;
-        SourceInitialized += (_, _) =>
-        {
-            var screen = OverlayChrome.GetDisplay(store.Value.MonitorIndex, store.Value.MonitorDeviceName);
-            int gap = (int)Math.Round(12 * screen.Scale);
-            OverlayChrome.Move(new WindowInteropHelper(this).Handle, new OverlayChrome.PixelRect
-            {
-                Left = screen.Work.Left + gap, Top = screen.Work.Top + gap,
-                Right = screen.Work.Left + gap + (int)Math.Round(Width * screen.Scale),
-                Bottom = screen.Work.Top + gap + (int)Math.Round(Height * screen.Scale)
-            });
-        };
-        SetResourceReference(BackgroundProperty, "Think.Background");
+        SourceInitialized += (_, _) => Position();
+        ShowActivated = true;
+        Surface.Padding = new Thickness(0);
+        Surface.BorderThickness = new Thickness(1);
+        Surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
         SetResourceReference(ForegroundProperty, "Think.Text");
         var root = new DockPanel();
         DockPanel.SetDock(status, Dock.Bottom); root.Children.Add(status);
         var heading = new StackPanel { Margin = new Thickness(20, 16, 20, 10) };
+        var titleBar = new DockPanel { Margin = new Thickness(0, 0, 0, 8), Background = Brushes.Transparent };
+        var close = ActionButton("Fechar personalização", Close); close.Content = Glyph("\uE711", 13); close.Width = close.Height = 30; close.Padding = new Thickness(4);
+        close.SetResourceReference(StyleProperty, "Think.IconButton"); DockPanel.SetDock(close, Dock.Right); titleBar.Children.Add(close);
+        titleBar.Children.Add(new Image { Source = AppBrand.WindowIcon, Width = 28, Height = 28, HorizontalAlignment = HorizontalAlignment.Left });
+        titleBar.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 1 && !close.IsMouseOver) DragMove(); };
+        heading.Children.Add(titleBar);
         heading.Children.Add(new TextBlock { Text = "THINK WIND", FontSize = 11, FontWeight = FontWeights.SemiBold });
         heading.Children.Add(new TextBlock { Text = "Seu desktop. Seu ritmo.", FontSize = 24, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 8) });
         heading.Children.Add(new TextBlock { Text = "As mudanças aparecem na hora e são salvas automaticamente.", TextWrapping = TextWrapping.Wrap, Opacity = .7 });
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
-        root.Children.Add(new AdornerDecoratorHost(new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }));
-        Content = root;
+        var scroll = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, PanningMode = PanningMode.VerticalOnly };
+        scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
+        root.Children.Add(new AdornerDecoratorHost(scroll));
+        Surface.Child = root;
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && store.IsEditing) { store.SetEditing(false); e.Handled = true; } };
         editing.Click += (_, _) => store.SetEditing(!store.IsEditing);
         store.Changed += StoreChanged; store.PersistenceChanged += PersistenceChanged;
@@ -60,9 +64,21 @@ internal sealed class SettingsWindow : Window
     }
     private void StoreChanged(object? sender, EventArgs e)
     {
+        RefreshAppearance();
         editing.Content = store.IsEditing ? "Concluir edição visual" : "Editar layout na tela";
         if (!building && layoutSignature != LayoutSignature()) Dispatcher.BeginInvoke(new Action(RebuildLayoutRows));
         UpdateStatus();
+    }
+    public override void Position()
+    {
+        var screen = Display; int gap = (int)Math.Round(12 * screen.Scale);
+        var handle = new WindowInteropHelper(this).Handle; if (handle == 0) return;
+        OverlayChrome.Move(handle, new OverlayChrome.PixelRect
+        {
+            Left = screen.Work.Left + gap, Top = screen.Work.Top + gap,
+            Right = screen.Work.Left + gap + (int)Math.Round(Width * screen.Scale),
+            Bottom = screen.Work.Top + gap + (int)Math.Round(Height * screen.Scale)
+        });
     }
     private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio;
     private void PersistenceChanged(object? sender, EventArgs e) => UpdateStatus();

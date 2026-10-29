@@ -41,7 +41,7 @@ public partial class App : Application
         menu.Items.Add("Editar / concluir layout", null, (_, _) => Dispatcher.Invoke(() => store.SetEditing(!store.IsEditing)));
         menu.Items.Add("Mostrar barra e ilha", null, (_, _) => Dispatcher.Invoke(() => { dock.Show(); island.Show(); dock.RefreshSettings(); island.RefreshSettings(); }));
         menu.Items.Add("Sair do Think Wind", null, (_, _) => Dispatcher.Invoke(() => { IsExiting = true; Shutdown(); }));
-        tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = System.Drawing.SystemIcons.Application, ContextMenuStrip = menu, Visible = true };
+        tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = AppBrand.TrayIcon(), ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
         dock.Show(); island.Show();
         windowsTaskbar = new WindowsTaskbar(message =>
@@ -66,7 +66,7 @@ public partial class App : Application
         windowsTaskbar?.Dispose();
         SystemEvents.UserPreferenceChanged -= WindowsPreferencesChanged;
         if (store is not null) { store.Changed -= PreferencesChanged; store.Flush(); }
-        if (tray is not null) { tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
+        if (tray is not null) { tray.Visible = false; tray.Icon?.Dispose(); tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
         BackdropComposition.Shutdown();
         instance?.Dispose();
         base.OnExit(e);

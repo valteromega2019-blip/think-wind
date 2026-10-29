@@ -1,5 +1,15 @@
 # Think Wind — v0.06 (0.6.0-dev)
 
+## Identidade do aplicativo e personalização Acrylic
+
+Imagem fornecida pelo usuário preservada em `Assets/ThinkWind.png`, convertida para ICO com tamanhos 16/24/32/48/64/128/256 px. Aplicada ao recurso do executável, janelas do launcher, cabeçalho da personalização e NotifyIcon da bandeja. A arte e seu fundo original não foram redesenhados.
+
+Personalização passa a usar `FloatingWindow` com composição Acrylic real, superfície translúcida e borda discreta/arredondada. Mantém abertura compacta no canto superior esquerdo, botão próprio de fechar e área superior para arrastar. Fechar essa janela descarta seus recursos normalmente, preservando as demais janelas do launcher.
+
+Rolagem exclusiva da personalização com trilho fino, polegar arredondado e destaque dinâmico no hover/arraste. Suporta roda, arraste e clique no trilho, oculta a barra quando desnecessária e desativa rolagem horizontal. Temas e mudanças de opacidade/arredondamento continuam aplicados em tempo real.
+
+Alterações revisadas por leitura de código/diff. Sem compilação, execução, testes, type check ou instalador nesta etapa; o aplicativo atualmente aberto ainda não contém estas mudanças.
+
 ## Nova compilação e execução autorizadas — versão refinada
 
 Em 2026-10-29, o usuário solicitou compilar e executar todos os ajustes mais recentes. Build Release concluído com **zero erros e zero avisos**, em `artifacts/preview-v0.06-refinada/ThinkWind.exe`. Inclui fundo compacto do Dock, gavetas de aplicativos, tentativa MSAA para a bandeja, encaixe dos módulos da ilha e personalização compacta no canto superior esquerdo.

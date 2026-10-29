@@ -30,4 +30,40 @@
    </ControlTemplate.Triggers>
   </ControlTemplate></Setter.Value></Setter>
  </Style>
+ <Style x:Key="Think.ScrollPage" TargetType="RepeatButton">
+  <Setter Property="Focusable" Value="False"/>
+  <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></Setter.Value></Setter>
+ </Style>
+ <Style x:Key="Think.SettingsScrollBar" TargetType="ScrollBar">
+  <Setter Property="Width" Value="12"/><Setter Property="Orientation" Value="Vertical"/>
+  <Setter Property="Background" Value="Transparent"/>
+  <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar">
+   <Grid Background="Transparent" Margin="2,8">
+    <Border Width="4" Background="{DynamicResource Think.GlassCard}" CornerRadius="3"/>
+    <Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="Vertical" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}" ViewportSize="{TemplateBinding ViewportSize}">
+     <Track.DecreaseRepeatButton><RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Style="{StaticResource Think.ScrollPage}"/></Track.DecreaseRepeatButton>
+     <Track.Thumb><Thumb MinHeight="28">
+      <Thumb.Template><ControlTemplate TargetType="Thumb">
+       <Border x:Name="Grip" Background="{DynamicResource Think.Muted}" CornerRadius="4" Margin="1,0" Opacity="0.55"/>
+       <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Grip" Property="Background" Value="{DynamicResource Think.AccentInk}"/><Setter TargetName="Grip" Property="Opacity" Value="0.85"/></Trigger>
+        <Trigger Property="IsDragging" Value="True"><Setter TargetName="Grip" Property="Background" Value="{DynamicResource Think.AccentInk}"/><Setter TargetName="Grip" Property="Opacity" Value="1"/></Trigger>
+       </ControlTemplate.Triggers>
+      </ControlTemplate></Thumb.Template>
+     </Thumb></Track.Thumb>
+     <Track.IncreaseRepeatButton><RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Style="{StaticResource Think.ScrollPage}"/></Track.IncreaseRepeatButton>
+    </Track>
+   </Grid>
+  </ControlTemplate></Setter.Value></Setter>
+ </Style>
+ <Style x:Key="Think.SettingsScrollViewer" TargetType="ScrollViewer">
+  <Setter Property="Background" Value="Transparent"/>
+  <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollViewer">
+   <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" CanContentScroll="{TemplateBinding CanContentScroll}"/>
+    <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Style="{StaticResource Think.SettingsScrollBar}" Minimum="0" Maximum="{TemplateBinding ScrollableHeight}" ViewportSize="{TemplateBinding ViewportHeight}" Value="{Binding VerticalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+   </Grid>
+  </ControlTemplate></Setter.Value></Setter>
+ </Style>
 </ResourceDictionary>
