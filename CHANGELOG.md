@@ -2,6 +2,8 @@
 
 ## v0.06 (0.6.0-dev) — 2026-10-29
 
+- Encaixe da ilha expandida: cartões preenchem suas células; calendário/bandeja têm altura alinhada e coluna de blocos menores termina na mesma base, com intervalos uniformes. Sem novo build ou testes.
+
 - Após o build: camada transparente independente para o Dock, fundo Acrylic compacto, grades uniformes de aplicativos sem cartões e recuperação adicional de bandeja por MSAA. Extração de ícones maiores em worker com cache. Revisão somente de código; sem nova compilação, execução, testes ou type check.
 
 - Compilação Release posteriormente autorizada: zero erros e zero avisos. Entrega para teste em `artifacts/preview-v0.06/ThinkWind.exe`, preservando a cópia anterior em execução. Sem testes, type check separado, execução, publish ou instalador.

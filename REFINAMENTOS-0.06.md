@@ -1,5 +1,11 @@
 # Think Wind — v0.06 (0.6.0-dev)
 
+## Encaixe dos blocos no painel completo
+
+Cartões passam a preencher seus espaços na grade, com arredondamento de layout para alinhamento em pixels. Os três módulos principais compartilham a altura da respectiva linha. Calendário e bandeja passam a compartilhar as bordas superior/inferior; os blocos menores na coluna lateral distribuem o espaço restante para terminar exatamente na mesma base, mantendo o espaçamento configurado entre eles. As dimensões são medidas pelo conteúdo antes da distribuição, preservando ordem, visibilidade e controles existentes.
+
+Revisão por leitura de código/diff. Sem compilação, execução, testes ou type check neste ajuste; executável anterior preservado.
+
 ## Refinamento posterior à compilação — fundo compacto e gaveta de aplicativos
 
 - Dock agora separa o material/tintura da camada de ícones: o HWND transparente reserva espaço acima e nas laterais, mas o HWND Acrylic e a superfície colorida ocupam somente a barra compacta. Os ícones são irmãos da superfície no contêiner transparente, sem o recorte arredondado do fundo. Movimento do cursor altera apenas transformações dos botões; não altera tamanho/posição do fundo.

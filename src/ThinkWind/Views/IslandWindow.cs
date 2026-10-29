@@ -193,7 +193,7 @@ internal sealed class IslandWindow : FloatingWindow
                     hide.Padding = new Thickness(8, 3, 8, 3); DockPanel.SetDock(hide, Dock.Right); title.Children.Add(hide);
                 }
                 title.Children.Add(grip); content.Children.Add(title); content.Children.Add(body);
-                var card = new Border { Child = content, Tag = id, CornerRadius = new CornerRadius(20), Padding = new Thickness(10), VerticalAlignment = VerticalAlignment.Top };
+                var card = new Border { Child = content, Tag = id, CornerRadius = new CornerRadius(20), Padding = new Thickness(10), VerticalAlignment = VerticalAlignment.Stretch, HorizontalAlignment = HorizontalAlignment.Stretch, UseLayoutRounding = true };
                 card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
                 LayoutDrag.Attach(card, "modules", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.ModuleOrder, from, to, after)), true, grip);
                 cards[id] = card;

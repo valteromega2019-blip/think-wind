@@ -25,16 +25,33 @@ internal sealed class IslandModuleBoard : Panel
         if (details.Length > 0 && width >= 680)
         {
             double side = small.Length > 0 ? 128 : 0;
-            double sideHeight = side > 0 ? Group(small, side, 1, 72, y) : y;
             double remaining = width - side - (side > 0 ? Gap : 0);
-            double cell = (remaining - Gap * (details.Length - 1)) / details.Length; double end = y;
+            double cell = (remaining - Gap * (details.Length - 1)) / details.Length;
+            double detailHeight = 0, smallHeight = 0;
+            var smallHeights = new double[small.Length];
             for (int i = 0; i < details.Length; i++)
             {
                 var item = details[i]; item.Measure(new Size(cell, double.PositiveInfinity));
-                slots[item] = new Rect(side + (side > 0 ? Gap : 0) + i * (cell + Gap), y, cell, item.DesiredSize.Height);
-                end = Math.Max(end, y + item.DesiredSize.Height + Gap);
+                detailHeight = Math.Max(detailHeight, item.DesiredSize.Height);
             }
-            y = Math.Max(end, sideHeight);
+            for (int i = 0; i < small.Length; i++)
+            {
+                small[i].Measure(new Size(side, double.PositiveInfinity));
+                smallHeights[i] = Math.Max(72, small[i].DesiredSize.Height);
+                smallHeight += smallHeights[i];
+            }
+            smallHeight += Math.Max(0, small.Length - 1) * Gap;
+            double height = Math.Max(detailHeight, smallHeight);
+            for (int i = 0; i < details.Length; i++)
+                slots[details[i]] = new Rect(side + (side > 0 ? Gap : 0) + i * (cell + Gap), y, cell, height);
+            double smallY = y;
+            for (int i = 0; i < small.Length; i++)
+            {
+                double itemHeight = smallHeights[i] + (height - smallHeight) / small.Length;
+                slots[small[i]] = new Rect(0, smallY, side, itemHeight);
+                smallY += itemHeight + Gap;
+            }
+            y += height + Gap;
         }
         else y = Group(secondary, width, width >= 500 ? 2 : 1, 72, y);
         return new Size(width, Math.Max(0, y - (all.Length > 0 ? Gap : 0)));
