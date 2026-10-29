@@ -1,5 +1,11 @@
 # Think Wind — v0.06 (0.6.0-dev)
 
+## Nova compilação e execução autorizadas — versão refinada
+
+Em 2026-10-29, o usuário solicitou compilar e executar todos os ajustes mais recentes. Build Release concluído com **zero erros e zero avisos**, em `artifacts/preview-v0.06-refinada/ThinkWind.exe`. Inclui fundo compacto do Dock, gavetas de aplicativos, tentativa MSAA para a bandeja, encaixe dos módulos da ilha e personalização compacta no canto superior esquerdo.
+
+A instância anterior foi encerrada, aguardando seu auxiliar de restauração, e a versão refinada foi iniciada. Isso confirma compilação/inicialização do processo; aparência e integrações ficam para o teste manual do usuário. Não foram executados suíte de testes, type check separado ou publish. Nenhum instalador gerado. As notas anteriores de ausência de build são históricas e foram superadas por esta compilação.
+
 ## Encaixe dos blocos no painel completo
 
 Cartões passam a preencher seus espaços na grade, com arredondamento de layout para alinhamento em pixels. Os três módulos principais compartilham a altura da respectiva linha. Calendário e bandeja passam a compartilhar as bordas superior/inferior; os blocos menores na coluna lateral distribuem o espaço restante para terminar exatamente na mesma base, mantendo o espaçamento configurado entre eles. As dimensões são medidas pelo conteúdo antes da distribuição, preservando ordem, visibilidade e controles existentes.
