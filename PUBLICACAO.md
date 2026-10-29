@@ -1,5 +1,9 @@
 # Publicação — 2026-10-29
 
+## Atualização 0.08 Alfa
+
+Código enviado a `developer`; pré-release privada `v0.8.0-alpha` publicada com instalador e SHA-256. Correções do recorte de ícones grandes e transparência de controles validadas pela bateria de 37 checks; escopo em `VALIDACAO-0.08-ALFA.md`. Página pública sincronizada no commit `fb8987a` de `think-wind-site`, mantendo os downloads restritos. A publicação 0.07 abaixo permanece como histórico.
+
 ## Aplicativo privado
 
 Repositório: https://github.com/valteromega2019-blip/think-wind
