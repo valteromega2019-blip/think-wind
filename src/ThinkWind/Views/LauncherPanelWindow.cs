@@ -134,7 +134,7 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     {
         generation++; cancellation?.Cancel(); cancellation?.Dispose(); cancellation = new CancellationTokenSource(); debounce.Stop(); if (reset) page = 0;
         string term = query.Text.Trim(); title.Text = mode == LauncherPanelMode.Library ? "Biblioteca de Aplicativos" : term.Length > 0 || mode == LauncherPanelMode.Search ? "Pesquisar no desktop" : "Iniciar";
-        category.Visibility = (section is "Todos" or "Biblioteca") && term.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        category.Visibility = (section is "Todos" or "Biblioteca") && term.Length == 0 ? Visibility.Visible : Visibility.Hidden;
         IEnumerable<AppEntry> source;
         if (term.Length > 0)
         {
@@ -177,12 +177,12 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         var main = ActionButton(entry.Name, () => Launch(entry)); main.Style = (Style)FindResource("Think.IconButton"); main.Padding = new Thickness(6); main.ToolTip = entry.Name;
         var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         var icon = entry.Icon ?? icons.Get(entry.Target);
-        var image = new Image { Source = icon, Width = 40, Height = 40, Stretch = Stretch.Uniform };
+        var image = new Image { Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality); inside.Children.Add(image);
         LoadLargeIcon(image, entry.Target);
-        inside.Children.Add(new TextBlock { Text = entry.Name, FontSize = 11, LineHeight = 15, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Height = 30, Width = 84, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 7, 0, 0) });
+        inside.Children.Add(new TextBlock { Text = entry.Name, FontSize = 12, LineHeight = 16, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Height = 32, Width = 96, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 8, 0, 0) });
         main.Content = inside;
-        var card = new Border { Child = main, Margin = new Thickness(4), Height = 100 };
+        var card = new Border { Child = main, Margin = new Thickness(4), Height = AppDrawerLayout.CellHeight - 8 };
         if (mode == LauncherPanelMode.Library)
         {
             card.Child = null; var tile = new Grid(); tile.Children.Add(main); card.Child = tile;
@@ -249,15 +249,17 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     }
     public override void Position()
     {
-        double width = Math.Min(660, Display.Width - 16); var rect = anchor();
+        var rect = anchor();
         double available = Math.Max(160, (rect.Top - Display.Work.Top) / Display.Scale - 24);
-        double height = Math.Min(620, available);
-        int columns = Math.Clamp((int)((width - 28) / 100), 1, 6);
-        resultsGrid.Columns = columns;
-        int size = Math.Clamp((int)((height - 280) / 108), 1, 3) * columns;
+        var layout = AppDrawerLayout.Fit(Display.Width, available);
+        double width = layout.Width, height = layout.Height;
+        resultsGrid.Columns = layout.Columns; resultsGrid.Rows = layout.Rows;
+        resultsGrid.Height = layout.Rows * AppDrawerLayout.CellHeight;
+        int size = layout.Capacity;
         if (perPage != size) { perPage = size; Dispatcher.BeginInvoke(new Action(() => { if (IsVisible) RenderRows(); })); }
         content.Width = Math.Max(1, width - 28); viewport.Width = content.Width; viewport.MaxHeight = Math.Max(60, height - 28);
         content.Measure(new Size(content.Width, double.PositiveInfinity));
-        PlaceAbove(width, Math.Min(height, content.DesiredSize.Height + 28), rect, IsVisible);
+        // Tab contents never determine the native window size or grid cell size.
+        PlaceAbove(width, height, rect, IsVisible);
     }
 }

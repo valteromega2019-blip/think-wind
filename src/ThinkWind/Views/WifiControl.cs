@@ -26,6 +26,7 @@ internal sealed class WifiControl : StackPanel, IDisposable
     private DateTime nextScan;
     private int page, menus;
     internal bool IsInteracting => operating || menus > 0 || credentials.Visibility == Visibility.Visible || adapters.IsDropDownOpen || IsMouseCaptureWithin;
+    internal bool IsRefreshing => reading;
     internal event Action? LayoutChanged;
     internal WifiControl()
     {
@@ -65,12 +66,18 @@ internal sealed class WifiControl : StackPanel, IDisposable
         {
             bool requestScan = scan || DateTime.UtcNow >= nextScan;
             if (requestScan) nextScan = DateTime.UtcNow.AddSeconds(30);
-            var result = await service.ReadAsync(requestScan);
-            if (!disposed && active && !operating) Apply(result);
+            var result = await service.ReadAsync(requestScan).ConfigureAwait(false);
+            await OnUI(() => { if (!disposed && active && !operating) Apply(result); });
         }
         catch (Exception error) when (error is WifiUnavailableException or System.Runtime.InteropServices.COMException or TaskCanceledException)
-        { if (active && !disposed) { status.Text = error.Message; LayoutChanged?.Invoke(); } }
-        finally { reading = false; }
+        { await OnUI(() => { if (active && !disposed) { status.Text = error.Message; LayoutChanged?.Invoke(); } }); }
+        finally { await OnUI(() => reading = false); }
+    }
+    private Task OnUI(Action action)
+    {
+        if (Dispatcher.HasShutdownStarted) return Task.CompletedTask;
+        if (Dispatcher.CheckAccess()) { action(); return Task.CompletedTask; }
+        return Dispatcher.InvokeAsync(action).Task;
     }
     private void Apply(WifiSnapshot result)
     {
@@ -136,10 +143,10 @@ internal sealed class WifiControl : StackPanel, IDisposable
     {
         if (operating || disposed) return;
         operating = true; status.Text = message; Render(); credentials.IsEnabled = false;
-        try { var result = await action(); if (!disposed && active) { ClearCredentials(); operating = false; Apply(result); } }
+        try { var result = await action().ConfigureAwait(false); await OnUI(() => { if (!disposed && active) { ClearCredentials(); operating = false; Apply(result); } }); }
         catch (Exception error) when (error is WifiUnavailableException or TaskCanceledException or System.Runtime.InteropServices.COMException)
-        { if (!disposed && active) { operating = false; Render(); status.Text = error.Message; LayoutChanged?.Invoke(); } }
-        finally { operating = false; credentials.IsEnabled = true; }
+        { await OnUI(() => { if (!disposed && active) { operating = false; Render(); status.Text = error.Message; LayoutChanged?.Invoke(); } }); }
+        finally { await OnUI(() => { operating = false; if (!disposed) credentials.IsEnabled = true; }); }
     }
     internal void ClearCredentials() { password.Clear(); selected = null; credentials.Visibility = Visibility.Collapsed; LayoutChanged?.Invoke(); }
     public void Dispose() { disposed = true; timer.Stop(); password.Clear(); service.Dispose(); }

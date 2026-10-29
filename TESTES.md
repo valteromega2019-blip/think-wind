@@ -1,5 +1,9 @@
 # Relatórios de validação
 
+## Validação mais recente — v0.06
+
+Bateria explicitamente solicitada em 2026-10-29: **34 checks aprovados, zero falhos e zero ignorados**, seguida de build Release sem erros/avisos. Corrigidos o tamanho dos ícones, a estabilidade da grade Fixados/Recentes e uma atualização de Wi-Fi fora do dispatcher. Escopo, limites e executável em [VALIDACAO-0.06.md](VALIDACAO-0.06.md). Esta autorização não se estende automaticamente a alterações futuras.
+
 A atualização v0.21 foi compilada e validada com 29 checks aprovados, conforme pedido explícito do usuário. Relatório atual em [VALIDACAO-0.21.md](VALIDACAO-0.21.md). A execução anterior da etapa 2.0-dev foi autorizada posteriormente pelo pedido de abrir o aplicativo; nenhuma autorização é estendida automaticamente a mudanças futuras.
 
 ## Histórico da primeira versão experimental — 0.2.0

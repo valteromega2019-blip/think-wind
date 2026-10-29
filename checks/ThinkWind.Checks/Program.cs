@@ -102,6 +102,17 @@ internal static class Program
         Run("Mini de rede fecha ao ativar outra janela", () => OverlayChecks.MiniOutsideFocus(PathFor("mini-outside")));
         CheckAudio(CoreAudio.Flow.Render, "Saída");
         CheckAudio(CoreAudio.Flow.Capture, "Microfone");
+        Run("Gaveta cabe em telas pequenas e grandes", LayoutChecks.DrawerSizes);
+        Run("Fixados/Recentes: grade mantém tamanho com 0, 1 ou vários aplicativos", LayoutChecks.DrawerTabs);
+        Run("Blocos da ilha alinham bases sem sobreposição", LayoutChecks.IslandPacking);
+        Run("Wi-Fi: atualização sem contexto visual retorna ao dispatcher", LayoutChecks.WifiDispatcher);
+        Run("Preferências de ampliação e barra exclusiva persistem", () =>
+        {
+            var preferences = Store("dock-new");
+            preferences.Update(p => { p.DockMagnificationAmount = .6; p.DockMagnificationNeighbors = 4; p.DockMagnificationSpeed = 1.5; p.HideWindowsTaskbar = true; });
+            preferences.Flush(); var loaded = Store("dock-new");
+            Require(loaded.Value.DockMagnificationAmount == .6 && loaded.Value.DockMagnificationNeighbors == 4 && loaded.Value.DockMagnificationSpeed == 1.5 && loaded.Value.HideWindowsTaskbar);
+        });
         Console.WriteLine($"RESULTADO: {passed} aprovados; {failed} falhos; {skipped} ignorados.");
         Console.WriteLine("Arquivos temporários isolados: " + Root);
         BackdropComposition.Shutdown();
