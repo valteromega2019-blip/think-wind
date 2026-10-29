@@ -345,8 +345,6 @@ internal sealed class IslandWindow : FloatingWindow
         hoverModules.ColumnDefinitions[0].Width = new GridLength(Store.ModuleVisible("media") ? 1.35 : 0, GridUnitType.Star);
         hoverModules.ColumnDefinitions[1].Width = new GridLength(Store.ModuleVisible("audio") ? 1 : 0, GridUnitType.Star);
         media.SetActive(IsVisible && Stage != IslandStage.Compact && Store.ModuleVisible("media"));
-        if (Stage == IslandStage.Full && IsVisible && !IsPositionAnimating)
-        { if (Store.ModuleVisible("background")) trayCard.Refresh(); if (Store.ModuleVisible("connections")) brightness.Refresh(); }
     }
     private static void Rehost(FrameworkElement element, Border slot)
     {

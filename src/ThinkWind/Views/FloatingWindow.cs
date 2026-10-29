@@ -74,7 +74,7 @@ internal abstract class FloatingWindow : Window
         animation.Tick += (_, _) =>
         {
             var progress = Math.Clamp(elapsed.Elapsed.TotalMilliseconds / Math.Max(1, animationDuration), 0, 1);
-            var eased = AttachedTop ? progress * progress * (3 - 2 * progress) : 1 - Math.Pow(1 - progress, 3);
+            var eased = 1 - Math.Pow(1 - progress, 3);
             Move(new OverlayChrome.PixelRect
             {
                 Left = Blend(start.Left, target.Left, eased), Top = Blend(start.Top, target.Top, eased),

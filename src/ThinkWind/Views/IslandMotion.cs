@@ -25,7 +25,6 @@ internal sealed class IslandMotion
         window.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
         {
             if (current != revision || !window.IsVisible) return;
-            window.UpdateLayout();
             var live = new HashSet<FrameworkElement>(elements);
             foreach (var old in new List<FrameworkElement>(destinations.Keys)) if (!live.Contains(old)) destinations.Remove(old);
             foreach (var element in live)
@@ -45,7 +44,7 @@ internal sealed class IslandMotion
                 translate.X = translate.Y = 0;
                 if (Math.Abs(dx) < .5 && Math.Abs(dy) < .5) continue;
                 var duration = TimeSpan.FromMilliseconds(Math.Min(500, milliseconds));
-                var easing = new CubicEase { EasingMode = EasingMode.EaseInOut };
+                var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
                 translate.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(dx, 0, duration) { EasingFunction = easing, FillBehavior = FillBehavior.Stop });
                 translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(dy, 0, duration) { EasingFunction = easing, FillBehavior = FillBehavior.Stop });
             }

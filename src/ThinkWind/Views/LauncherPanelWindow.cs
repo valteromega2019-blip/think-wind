@@ -57,7 +57,7 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         query.Background = Brushes.Transparent; query.Margin = new Thickness(0); query.SetResourceReference(TextBox.ForegroundProperty, "Think.Text"); query.BorderThickness = new Thickness(0);
         System.Windows.Automation.AutomationProperties.SetName(query, "Pesquisar aplicativos, arquivos, documentos e configurações");
         var tabs = new WrapPanel();
-        foreach (string name in new[] { "Fixados", "Recentes", "Todos", "Biblioteca" })
+        foreach (string name in new[] { "Fixados", "Biblioteca", "Recentes", "Todos" })
         {
             var button = ActionButton(name, () => { section = name; mode = name == "Biblioteca" ? LauncherPanelMode.Library : LauncherPanelMode.Start; query.Text = ""; page = 0; Reload(); });
             button.Padding = new Thickness(10, 6, 10, 6); tabs.Children.Add(button);
@@ -150,6 +150,7 @@ internal sealed class LauncherPanelWindow : FloatingWindow
             string filter = category.SelectedItem as string ?? "Todas as categorias";
             if (filter is not ("Relevância · instalados primeiro" or "Todas as categorias" or "Ordem alfabética")) source = source.Where(app => app.Category == filter);
         }
+        source = source.Where(app => !AppVisibility.IsSystemTool(app));
         if (section is "Todos" or "Biblioteca" || term.Length > 0) source = OrderApplications(source, term);
         results = source.DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList();
         notice.Text = catalog.Warning ?? (results.Count == 0 ? "Nenhum item nesta seção. Use Todos ou Biblioteca para fixar aplicativos." : "Botão direito: fixar, remover atalho e reorganizar.");

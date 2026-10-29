@@ -1,5 +1,5 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.6.0"
 [Setup]
 AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
 AppName=Think Wind
@@ -12,6 +12,8 @@ OutputBaseFilename=ThinkWind-Setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\src\ThinkWind\Assets\ThinkWind.ico
+UninstallDisplayIcon={app}\ThinkWind.exe
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes

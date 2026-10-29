@@ -1,5 +1,13 @@
 # Think Wind — v0.06 (0.6.0-dev)
 
+## Instalador solicitado — ordem, ferramentas e animação
+
+Abas reorganizadas para Fixados, Biblioteca, Recentes e Todos. Ferramentas administrativas como PowerShell, Terminal, Prompt, Editor do Registro e Gerenciamento do Computador filtradas da gaveta/biblioteca; nada foi desinstalado. Aplicativos cotidianos do Windows continuam disponíveis.
+
+Expansão com desaceleração cúbica uniforme, remoção de uma chamada de layout síncrona redundante e adiamento da consulta imediata de brilho/bandeja ao entrar no painel completo. Fluidez visual ainda depende de avaliação em execução.
+
+A pedido explícito do usuário, `dotnet build -c Release -r win-x64 --no-restore --nologo -warnaserror` concluiu com zero erros e zero avisos, incluindo verificações de tipos C# e XAML. Publicação self-contained single-file `win-x64` concluída. Instalador Inno Setup gerado em `artifacts/installer/ThinkWind-Setup-0.6.0.exe`, com identidade visual atualizada, e seu assistente foi aberto. Isso não confirma conclusão da instalação pelo usuário. A instância de prévia foi encerrada antes da abertura, aguardando o auxiliar restaurar a barra nativa. Sem suíte de testes nesta etapa.
+
 ## Identidade do aplicativo e personalização Acrylic
 
 Imagem fornecida pelo usuário preservada em `Assets/ThinkWind.png`, convertida para ICO com tamanhos 16/24/32/48/64/128/256 px. Aplicada ao recurso do executável, janelas do launcher, cabeçalho da personalização e NotifyIcon da bandeja. A arte e seu fundo original não foram redesenhados.

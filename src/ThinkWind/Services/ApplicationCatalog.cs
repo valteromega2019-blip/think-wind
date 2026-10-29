@@ -111,7 +111,7 @@ internal sealed class ApplicationCatalog : IDisposable
             finally { CoreAudio.Release(entries); CoreAudio.Release(apps); }
         }
         finally { CoreAudio.Release(shell); }
-        return (result.Values.DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warning);
+        return (result.Values.Where(app => !AppVisibility.IsSystemTool(app)).DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warning);
     }
     public void Dispose() { disposed = true; debounce.Stop(); foreach (var watcher in watchers) watcher.Dispose(); worker.Dispose(); }
 }
