@@ -308,6 +308,7 @@ internal sealed partial class DockWindow : FloatingWindow
     { SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); }
     private void ToggleStart()
     { if (launcher?.IsVisible == true && panelMode == LauncherPanelMode.Start) launcher.Dismiss(); else ShowPanel(LauncherPanelMode.Start); }
+    internal void ToggleStartFromKeyboard() { if (!IsVisible) Show(); ToggleStart(); }
     public override void RefreshAppearance() { base.RefreshAppearance(); magnifier.Configure(Store.Value, magnificationReserve); launcher?.RefreshAppearance(); }
     private void MoveOne(string source, int direction)
     {

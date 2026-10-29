@@ -17,6 +17,7 @@ public partial class App : Application
     private IslandWindow? island;
     private SettingsWindow? settings;
     private WindowsTaskbar? windowsTaskbar;
+    private WindowsStartKey? startKey;
     private SettingsStore store = null!;
     private PreferenceStamp? preferenceStamp;
     internal bool IsExiting { get; private set; }
@@ -44,6 +45,8 @@ public partial class App : Application
         tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = AppBrand.TrayIcon(), ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
         dock.Show(); island.Show();
+        try { startKey = new WindowsStartKey(Dispatcher, () => { if (!IsExiting) dock.ToggleStartFromKeyboard(); }); }
+        catch (System.ComponentModel.Win32Exception error) { MessageBox.Show("Não foi possível integrar a tecla Windows: " + error.Message, "Think Wind"); }
         windowsTaskbar = new WindowsTaskbar(message =>
         {
             if (IsExiting) return;
@@ -64,6 +67,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         windowsTaskbar?.Dispose();
+        startKey?.Dispose();
         SystemEvents.UserPreferenceChanged -= WindowsPreferencesChanged;
         if (store is not null) { store.Changed -= PreferencesChanged; store.Flush(); }
         if (tray is not null) { tray.Visible = false; tray.Icon?.Dispose(); tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }

@@ -1,5 +1,11 @@
 # Histórico do Think Wind
 
+## 0.07 Alfa (0.7.0-alpha) — 2026-10-29
+
+- Microfone na primeira expansão, reutilizando o controle de entrada do painel completo.
+- Tecla Windows isolada alterna o Iniciar próprio enquanto o app estiver em execução; combinações encaminhadas ao sistema, sem histórico de teclado.
+- Compilação de tipos C#/XAML com avisos tratados como erros: zero erros/avisos. Publicação e instalador solicitados. Sem suíte de testes ou validação interativa do novo hook nesta etapa.
+
 ## v0.06 (0.6.0-dev) — 2026-10-29
 
 - Encaixe da ilha expandida: cartões preenchem suas células; calendário/bandeja têm altura alinhada e coluna de blocos menores termina na mesma base, com intervalos uniformes. Sem novo build ou testes.

@@ -22,7 +22,7 @@ internal sealed class IslandWindow : FloatingWindow
     private readonly IslandModuleBoard modules = new();
     private readonly StackPanel hoverPanel = new();
     private readonly Grid hoverModules = new();
-    private readonly Border mediaSlot = new(), outputSlot = new(), hoverMediaSlot = new(), hoverOutputSlot = new();
+    private readonly Border mediaSlot = new(), outputSlot = new(), microphoneSlot = new(), hoverMediaSlot = new(), hoverOutputSlot = new(), hoverMicrophoneSlot = new();
     private readonly WrapPanel hoverQuick = new() { HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock hoverStatus = new() { FontSize = 11, Margin = new Thickness(8), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
     private readonly DispatcherTimer hoverEnter = new() { Interval = TimeSpan.FromMilliseconds(80) };
@@ -74,7 +74,8 @@ internal sealed class IslandWindow : FloatingWindow
         DockPanel.SetDock(headerViewport, Dock.Top); root.Children.Add(headerViewport);
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition());
-        var hoverMedia = HoverCard("Reprodução", hoverMediaSlot); var hoverVolume = HoverCard("Volume", hoverOutputSlot);
+        var hoverAudio = new StackPanel(); hoverAudio.Children.Add(hoverOutputSlot); hoverAudio.Children.Add(hoverMicrophoneSlot);
+        var hoverMedia = HoverCard("Reprodução", hoverMediaSlot); var hoverVolume = HoverCard("Áudio e microfone", hoverAudio);
         Grid.SetColumn(hoverVolume, 1); hoverModules.Children.Add(hoverMedia); hoverModules.Children.Add(hoverVolume);
         hoverPanel.Children.Add(hoverModules); hoverPanel.Children.Add(hoverQuick); hoverPanel.Children.Add(hoverStatus);
         hoverViewport.Child = hoverPanel;
@@ -148,7 +149,7 @@ internal sealed class IslandWindow : FloatingWindow
         connectionPanel.Children.Add(displaySettings);
         bodies["connections"] = connectionPanel;
         bodies["media"] = mediaSlot;
-        var audio = new StackPanel(); audio.Children.Add(outputSlot); audio.Children.Add(microphone);
+        var audio = new StackPanel(); audio.Children.Add(outputSlot); audio.Children.Add(microphoneSlot);
         var audioSettings = new WrapPanel();
         var sound = ActionButton("Som", () => SystemActions.Run("ms-settings:sound")); sound.Padding = new Thickness(6, 3, 6, 3); sound.FontSize = 10; audioSettings.Children.Add(sound);
         var privacy = ActionButton("Microfone", () => SystemActions.Run("ms-settings:privacy-microphone")); privacy.Padding = sound.Padding; privacy.FontSize = 10; audioSettings.Children.Add(privacy);
@@ -315,7 +316,7 @@ internal sealed class IslandWindow : FloatingWindow
         if (!IsVisible || Stage == IslandStage.Compact || !Store.ModuleVisible("audio")) return;
         bool refresh = DateTime.UtcNow >= nextDeviceRefresh;
         if (refresh) nextDeviceRefresh = DateTime.UtcNow.AddSeconds(5);
-        output.Poll(refresh); if (Stage == IslandStage.Full) microphone.Poll(refresh);
+        output.Poll(refresh); microphone.Poll(refresh);
     }
     private void Transition(Action change)
     {
@@ -340,6 +341,7 @@ internal sealed class IslandWindow : FloatingWindow
         if (IsVisible && Stage == IslandStage.Compact) activation.Start(); else activation.Stop();
         Rehost(media, hover ? hoverMediaSlot : mediaSlot);
         Rehost(output, hover ? hoverOutputSlot : outputSlot);
+        Rehost(microphone, hover ? hoverMicrophoneSlot : microphoneSlot);
         hoverModules.Children[0].Visibility = Store.ModuleVisible("media") ? Visibility.Visible : Visibility.Collapsed;
         hoverModules.Children[1].Visibility = Store.ModuleVisible("audio") ? Visibility.Visible : Visibility.Collapsed;
         hoverModules.ColumnDefinitions[0].Width = new GridLength(Store.ModuleVisible("media") ? 1.35 : 0, GridUnitType.Star);
