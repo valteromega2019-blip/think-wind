@@ -1,5 +1,11 @@
 # Histórico do Think Wind
 
+## 0.08 Alfa (0.8.0-alpha) — 2026-10-29
+
+- Reserva superior medida, camada de ícones sem recorte e botão Iniciar dimensionado para ícones grandes.
+- Superfícies internas translúcidas, com opacidade global configurável em tempo real; texto e alto contraste preservados.
+- 37 checks aprovados, publicação Release com avisos tratados como erros e instalador solicitado. Release privada e site público atualizados.
+
 ## 0.07 Alfa (0.7.0-alpha) — 2026-10-29
 
 - Microfone na primeira expansão, reutilizando o controle de entrada do painel completo.

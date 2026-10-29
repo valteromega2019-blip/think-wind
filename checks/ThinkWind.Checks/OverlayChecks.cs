@@ -91,6 +91,36 @@ internal static class OverlayChecks
         finally { other.Close(); mini.Close(); }
     }
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+    internal static void DockOverflow(string path)
+    {
+        var store = new SettingsStore(path); ThemeService.Apply(store.Value);
+        var window = new OverflowSurface(store);
+        try
+        {
+            window.Show(); window.UpdateLayout();
+            var root = (FrameworkElement)window.Content;
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(root.ActualWidth), (int)Math.Ceiling(root.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(root); var pixel = new byte[4];
+            bitmap.CopyPixels(new Int32Rect(120, 55, 1, 1), pixel, 4, 0);
+            Require(pixel[2] > 200 && pixel[3] == 255, "Ícone ampliado deve aparecer acima do material sem recorte.");
+            bitmap.CopyPixels(new Int32Rect(5, 20, 1, 1), pixel, 4, 0);
+            Require(pixel[3] == 0, "Reserva fora do ícone deve ser transparente.");
+            OverlayChrome.GetWindowRect(new WindowInteropHelper(window).Handle, out var front); OverlayChrome.GetWindowRect(window.BackdropHandle, out var back);
+            Require(back.Top > front.Top && back.Left > front.Left && back.Bottom == front.Bottom, "Material deve continuar compacto dentro da janela transparente.");
+        }
+        finally { window.Close(); }
+    }
+    private sealed class OverflowSurface : FloatingWindow
+    {
+        protected override bool AttachedTop => false;
+        protected override Thickness TransparentInsets => new(16, 72, 16, 0);
+        internal OverflowSurface(SettingsStore store) : base(store)
+        {
+            var icon = new System.Windows.Controls.Border { Width = 64, Height = 64, Background = Brushes.Red, VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center, RenderTransformOrigin = new Point(.5, 1), RenderTransform = new ScaleTransform(1.648, 1.648) };
+            ((System.Windows.Controls.Grid)Content).Children.Add(new AdornerDecoratorHost(icon, true) { Margin = new Thickness(26, 82, 26, 10) });
+        }
+        public override void Position() => Place(240, 160);
+    }
     private sealed class Surface : FloatingWindow
     {
         private readonly bool top;

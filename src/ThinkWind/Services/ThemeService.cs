@@ -7,7 +7,7 @@ namespace ThinkWind.Services;
 
 internal static class ThemeService
 {
-    private static (string Theme, string Accent, bool Light, bool Contrast)? current;
+    private static (string Theme, string Accent, bool Light, bool Contrast, double InnerOpacity)? current;
     internal static bool Light { get; private set; }
     internal static bool IsLight(Preferences p)
     {
@@ -23,17 +23,18 @@ internal static class ThemeService
     internal static void Apply(Preferences p, bool refreshSystem = false)
     {
         var light = p.Theme == "Auto" && current?.Theme == "Auto" && !refreshSystem ? Light : IsLight(p);
-        var next = (p.Theme, p.AccentColor, light, SystemParameters.HighContrast);
+        var next = (p.Theme, p.AccentColor, light, SystemParameters.HighContrast, p.InnerSurfaceOpacity);
         if (current.HasValue && current.Value.Equals(next)) return;
         current = next; Light = light;
         var resources = Application.Current.Resources;
         Set("Think.Background", light ? "#F2F5F9" : "#111318");
-        Set("Think.Surface", light ? "#E5EBF2" : "#1A1E25");
-        Set("Think.GlassCard", light ? "#10000000" : "#0DFFFFFF");
-        Set("Think.Control", light ? "#E0E6ED" : "#222832");
+        Layer("Think.Surface", light ? "#E5EBF2" : "#1A1E25", p.InnerSurfaceOpacity * .7);
+        Layer("Think.GlassCard", light ? "#000000" : "#FFFFFF", p.InnerSurfaceOpacity * .12);
+        Layer("Think.Control", light ? "#E0E6ED" : "#222832", p.InnerSurfaceOpacity);
+        Set("Think.Popup", light ? "#E5EBF2" : "#1A1E25");
         Set("Think.Text", light ? "#18212D" : "#F4F6FA");
         Set("Think.Muted", light ? "#506071" : "#AAB3C1");
-        Set("Think.Hover", light ? "#CCD8E4" : "#303B48");
+        Layer("Think.Hover", light ? "#CCD8E4" : "#303B48", Math.Min(.95, p.InnerSurfaceOpacity + .12));
         var accent = (Color)ColorConverter.ConvertFromString(p.AccentColor);
         // Preserve the chosen hue, but lift/darken the control ink for readability.
         double luminance = (.2126 * accent.R + .7152 * accent.G + .0722 * accent.B) / 255;
@@ -51,6 +52,7 @@ internal static class ThemeService
             resources["Think.Surface"] = SystemColors.ControlBrush;
             resources["Think.GlassCard"] = SystemColors.ControlBrush;
             resources["Think.Control"] = SystemColors.ControlBrush;
+            resources["Think.Popup"] = SystemColors.ControlBrush;
             resources["Think.Accent"] = SystemColors.HighlightBrush;
             resources["Think.AccentInk"] = SystemColors.HighlightBrush;
             resources["Think.AccentSurface"] = SystemColors.ControlBrush;
@@ -58,5 +60,7 @@ internal static class ThemeService
         }
         void Set(string key, string color)
         { var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); brush.Freeze(); resources[key] = brush; }
+        void Layer(string key, string value, double opacity)
+        { var color = (Color)ColorConverter.ConvertFromString(value); color.A = (byte)Math.Round(255 * opacity); Set(key, color.ToString()); }
     }
 }

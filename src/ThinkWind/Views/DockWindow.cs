@@ -75,7 +75,7 @@ internal sealed partial class DockWindow : FloatingWindow
             else if (e.Key == Key.Escape) { launcher?.Dismiss(); Keyboard.ClearFocus(); e.Handled = true; }
         };
         SourceInitialized += (_, _) => HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(NoActivate);
-        iconLayer = new AdornerDecoratorHost(items);
+        iconLayer = new AdornerDecoratorHost(items, true);
         ((Grid)Content).Children.Add(iconLayer);
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
         timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
@@ -166,7 +166,7 @@ internal sealed partial class DockWindow : FloatingWindow
     {
         fittedWidth = Display.Width;
         double searchWidth = Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36;
-        double available = Math.Max(60, fittedWidth - 16 - 20 - 48 - searchWidth - (Store.IsEditing ? 30 : 0));
+        double available = Math.Max(60, fittedWidth - 16 - 20 - DockGeometry.StartWidth(Store.Value.IconSize * Store.Value.DockScale) - 8 - searchWidth - (Store.IsEditing ? 30 : 0));
         var p = Store.Value;
         bool magnify = p.DockMagnification && SystemParameters.ClientAreaAnimation && !Store.IsEditing;
         magnificationReserve = magnify ? Math.Min(available * .32, (p.IconSize * p.DockScale + 20) * p.DockMagnificationAmount * (p.DockMagnificationNeighbors + 1) * 1.12) : 0;
@@ -178,7 +178,7 @@ internal sealed partial class DockWindow : FloatingWindow
         iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 10 + magnificationHeadroom, 10 + magnificationReserve / 2, 10);
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Children.Clear();
-        var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = 40; start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
+        var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
         items.Children.Add(SearchSlot(searchWidth));
         start.Margin = new Thickness(0, 0, 8, 0);
         if (Store.IsEditing)
@@ -196,6 +196,9 @@ internal sealed partial class DockWindow : FloatingWindow
         if (pages > 1) items.Children.Add(PageButton(1, pages));
         items.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         contentWidth = items.DesiredSize.Width; contentHeight = items.DesiredSize.Height;
+        magnificationHeadroom = magnify ? DockGeometry.Headroom(contentHeight, p.DockMagnificationAmount) : 0;
+        Surface.Margin = TransparentInsets;
+        iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 10 + magnificationHeadroom, 10 + magnificationReserve / 2, 10);
         foreach (FrameworkElement child in items.Children) child.VerticalAlignment = VerticalAlignment.Center;
         magnifier.Bind(magnified, p, magnificationReserve);
     }
@@ -334,5 +337,7 @@ internal sealed partial class DockWindow : FloatingWindow
 // WPF's insertion adorners need a layer inside each independently hosted overlay.
 internal sealed class AdornerDecoratorHost : System.Windows.Documents.AdornerDecorator
 {
-    internal AdornerDecoratorHost(UIElement child) { Child = child; }
+    private readonly bool overflow;
+    internal AdornerDecoratorHost(UIElement child, bool allowOverflow = false) { overflow = allowOverflow; Child = child; ClipToBounds = false; }
+    protected override Geometry? GetLayoutClip(Size layoutSlotSize) => overflow ? null : base.GetLayoutClip(layoutSlotSize);
 }

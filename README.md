@@ -1,5 +1,9 @@
 # Think Wind
 
+## 0.08 Alfa — 0.8.0-alpha
+
+Correção de recortes em ícones grandes no Dock e controle de opacidade dos blocos/controles internos. **37 checks aprovados**, publicação Release sem erros/avisos e instalador atualizado. [Release privada 0.08 Alfa](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.8.0-alpha) · [Relatório de validação](VALIDACAO-0.08-ALFA.md).
+
 [Página de apresentação](https://valteromega2019-blip.github.io/think-wind-site/) · [Release 0.07 Alfa — acesso autorizado](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.7.0-alpha)
 
 O código e o instalador deste projeto permanecem privados. A página pública contém somente a apresentação do aplicativo, publicada separadamente em `think-wind-site`.

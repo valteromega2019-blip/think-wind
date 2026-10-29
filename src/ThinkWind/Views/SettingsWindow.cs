@@ -93,6 +93,7 @@ internal sealed class SettingsWindow : FloatingWindow
         building = true; content.Children.Clear();
         var general = Section("Aparência", "Grafite, ciano e superfícies limpas — identidade Think.");
         Select(general, "Tema", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, value => Change(p => p.Theme = value));
+        Slider(general, "Opacidade dos blocos e controles", .1, .9, store.Value.InnerSurfaceOpacity, v => Change(p => p.InnerSurfaceOpacity = v), "P0", .05);
         var accent = new DockPanel { Margin = new Thickness(0, 10, 0, 14) };
         var color = new TextBox { Text = store.Value.AccentColor, Width = 100, Padding = new Thickness(10, 7, 10, 7), VerticalContentAlignment = VerticalAlignment.Center };
         color.SetResourceReference(Control.BackgroundProperty, "Think.Control"); color.SetResourceReference(Control.ForegroundProperty, "Think.Text");

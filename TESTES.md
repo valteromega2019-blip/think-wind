@@ -1,5 +1,9 @@
 # Relatórios de validação
 
+## Validação mais recente — 0.08 Alfa
+
+Pedido explícito de ajustar, testar e publicar: **37 checks aprovados, zero falhos/ignorados**, publicação com avisos tratados como erros e instalador. Novas regressões de recorte dos ícones, reserva geométrica e transparência de superfícies. [Escopo e limites](VALIDACAO-0.08-ALFA.md).
+
 ## Validação mais recente — v0.06
 
 Bateria explicitamente solicitada em 2026-10-29: **34 checks aprovados, zero falhos e zero ignorados**, seguida de build Release sem erros/avisos. Corrigidos o tamanho dos ícones, a estabilidade da grade Fixados/Recentes e uma atualização de Wi-Fi fora do dispatcher. Escopo, limites e executável em [VALIDACAO-0.06.md](VALIDACAO-0.06.md). Esta autorização não se estende automaticamente a alterações futuras.

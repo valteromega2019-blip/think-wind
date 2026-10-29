@@ -68,5 +68,28 @@ internal static class LayoutChecks
         }
         finally { System.Threading.SynchronizationContext.SetSynchronizationContext(context); control.SetActive(false); control.Dispose(); }
     }
+    internal static void DockHeadroom()
+    {
+        foreach (double icon in new[] { 18d, 20, 28, 48, 72 })
+        foreach (double amount in new[] { .4, .5, .6 })
+        {
+            double row = icon + 22, reserve = DockGeometry.Headroom(row, amount);
+            Require(reserve - row * amount * 1.08 >= 12);
+            Require(DockGeometry.StartWidth(icon) >= icon + 8);
+        }
+    }
+    internal static void SurfaceOpacity()
+    {
+        foreach (string theme in new[] { "Dark", "Light" })
+        {
+            var p = new Preferences { Theme = theme, InnerSurfaceOpacity = .1 };
+            ThemeService.Apply(p); var low = ((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Control"]).Color.A;
+            p.InnerSurfaceOpacity = .9; ThemeService.Apply(p);
+            var high = ((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Control"]).Color.A;
+            Require(SystemParameters.HighContrast || (low > 0 && high < 255 && high > low));
+            Require(((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Text"]).Color.A == 255);
+            Require(((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Popup"]).Color.A == 255);
+        }
+    }
     private static void Require(bool value) { if (!value) throw new InvalidOperationException("Geometria inconsistente."); }
 }

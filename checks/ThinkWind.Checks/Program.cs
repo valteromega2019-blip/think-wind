@@ -106,6 +106,9 @@ internal static class Program
         Run("Fixados/Recentes: grade mantém tamanho com 0, 1 ou vários aplicativos", LayoutChecks.DrawerTabs);
         Run("Blocos da ilha alinham bases sem sobreposição", LayoutChecks.IslandPacking);
         Run("Wi-Fi: atualização sem contexto visual retorna ao dispatcher", LayoutChecks.WifiDispatcher);
+        Run("Dock: reserva para ícones de 18 a 72 DIP e mola até 60%", LayoutChecks.DockHeadroom);
+        Run("Dock: ícone ampliado renderiza fora do fundo Acrylic", () => OverlayChecks.DockOverflow(PathFor("dock-overflow")));
+        Run("Superfícies internas seguem opacidade em claro/escuro sem apagar texto", LayoutChecks.SurfaceOpacity);
         Run("Preferências de ampliação e barra exclusiva persistem", () =>
         {
             var preferences = Store("dock-new");

@@ -1,10 +1,10 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.7.0-alpha"
+#define MyAppVersion "0.8.0-alpha"
 [Setup]
 AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
 AppName=Think Wind
 AppVersion={#MyAppVersion}
-VersionInfoVersion=0.7.0.0
+VersionInfoVersion=0.8.0.0
 DefaultDirName={localappdata}\Programs\ThinkWind
 PrivilegesRequired=lowest
 DefaultGroupName=Think Wind

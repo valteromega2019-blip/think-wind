@@ -12,6 +12,7 @@ public sealed class Preferences
 {
     public double DockScale { get; set; } = 1;
     public double TintOpacity { get; set; } = .72;
+    public double InnerSurfaceOpacity { get; set; } = .5;
     public bool AutoHide { get; set; } = true;
     public bool DockMagnification { get; set; } = true;
     public double DockMagnificationAmount { get; set; } = .5;
@@ -145,6 +146,7 @@ public sealed class SettingsStore
         var p = Value;
         p.DockScale = Limit(p.DockScale, .75, 1.5, 1); p.TintOpacity = Limit(p.TintOpacity, .2, 1, .72);
         p.DockCollapseSeconds = Limit(p.DockCollapseSeconds, 0, 10, .8);
+        p.InnerSurfaceOpacity = Limit(p.InnerSurfaceOpacity, .1, .9, .5);
         p.DockMagnificationAmount = Limit(p.DockMagnificationAmount, .4, .6, .5);
         p.DockMagnificationSpeed = Limit(p.DockMagnificationSpeed, .5, 2, 1);
         p.DockMagnificationNeighbors = Math.Clamp(p.DockMagnificationNeighbors, 0, 4);

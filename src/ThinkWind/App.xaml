@@ -6,6 +6,7 @@
   <SolidColorBrush x:Key="Think.Surface" Color="#1A1E25"/>
   <SolidColorBrush x:Key="Think.GlassCard" Color="#0DFFFFFF"/>
   <SolidColorBrush x:Key="Think.Control" Color="#222832"/>
+  <SolidColorBrush x:Key="Think.Popup" Color="#1A1E25"/>
   <SolidColorBrush x:Key="Think.Text" Color="#F4F6FA"/>
   <SolidColorBrush x:Key="Think.Muted" Color="#AAB3C1"/>
   <SolidColorBrush x:Key="Think.Hover" Color="#303B48"/>
@@ -14,7 +15,7 @@
   <SolidColorBrush x:Key="Think.AccentSurface" Color="#2660CDFF"/>
   <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="FontFamily" Value="Segoe UI Variable Text"/></Style>
   <Style TargetType="ContextMenu">
-   <Setter Property="Background" Value="{DynamicResource Think.Surface}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="6"/>
+   <Setter Property="Background" Value="{DynamicResource Think.Popup}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="6"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ContextMenu"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="12"><ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/></ScrollViewer></Border></ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="MenuItem"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,6"/></Style>
@@ -43,7 +44,7 @@
       </Grid>
      </Border>
      <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False">
-      <Border Background="{DynamicResource Think.Control}" BorderThickness="0" CornerRadius="8" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+      <Border Background="{DynamicResource Think.Popup}" BorderThickness="0" CornerRadius="8" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
        <ScrollViewer MaxHeight="260" CanContentScroll="True"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
       </Border>
      </Popup>
