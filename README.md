@@ -6,7 +6,13 @@ Repositório próprio: https://github.com/valteromega2019-blip/think-wind
 
 Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicial e a branch `developer` é a área de desenvolvimento. O histórico deste repositório é independente do Think Monitor.
 
-## Atualização v0.04 — código em desenvolvimento
+## Atualização v0.05 — código em desenvolvimento
+
+Menu Iniciar próprio, biblioteca de aplicativos por AppsFolder/atalhos do Windows, pesquisa em painel próprio com Windows Search, bandeja superior em mini-ilha e Drag & Drop OLE. A barra recolhida usa uma faixa visível na borda física inferior, independente do layout expandido, com espera configurável. Detalhes de uso, compatibilidade e limites em [REFINAMENTOS-0.05.md](REFINAMENTOS-0.05.md).
+
+**Testes, type check, build e publish não foram executados nesta atualização. Nenhum instalador foi gerado. O executável local consultado continua na v0.03 e não contém as alterações v0.04/v0.05.**
+
+## Atualização anterior: v0.04
 
 Dynamic Island com os três primeiros módulos em destaque e quatro blocos menores abaixo, mídia e volume já no hover, engrenagem no cabeçalho e recolhimento configurável de 0 a 10 segundos, com opção de desativar. Grade responsiva sem paginação dos módulos e transições de posição dos cartões. Detalhes em [REFINAMENTOS-0.04.md](REFINAMENTOS-0.04.md).
 

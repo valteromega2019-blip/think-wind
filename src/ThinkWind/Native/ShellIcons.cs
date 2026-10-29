@@ -86,12 +86,13 @@ internal sealed class ShellIcons
         FileInfo info = default;
         try
         {
-            if (target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase))
+            if (target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) || target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase))
             {
                 nint pidl = 0;
                 try
                 {
-                    if (SHParseDisplayName(@"shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel", 0, out pidl, 0, out _) >= 0)
+                    string shellTarget = target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) ? @"shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel" : target;
+                    if (SHParseDisplayName(shellTarget, 0, out pidl, 0, out _) >= 0)
                         SHGetPidlInfo(pidl, 0, out info, (uint)Marshal.SizeOf<FileInfo>(), 0x108);
                 }
                 finally { if (pidl != 0) Marshal.FreeCoTaskMem(pidl); }

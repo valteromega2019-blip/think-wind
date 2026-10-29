@@ -1,5 +1,17 @@
 # Histórico do Think Wind
 
+## v0.05 (0.5.0-dev) — 2026-10-29
+
+- Menu Iniciar próprio acima da barra, com fixados reordenáveis, recentes, todos os aplicativos, informações do usuário e opções reais de energia com confirmação.
+- Biblioteca por AppsFolder e atalhos do usuário/máquina, ícones do Shell, categorias/ordem alfabética, adição em um clique e alternativa manual.
+- Pesquisa compacta/lupa com espaço reservado na barra e painel próprio; integração Windows Search/ADO, aplicativos, recentes e configurações nativas.
+- Bandeja em mini-ilha superior independente, botões transparentes e acesso à bandeja original preservado.
+- Recolhimento padrão de 0,8 s configurável; estado recolhido independente na borda física inferior, com distância final de zero pixels.
+- Drag & Drop OLE: revelar na borda, manter aberto durante a operação, ativar janela por hover e negociar entrega com receptores nativos, sem simular recebimento nem mover arquivos de origem.
+- Revisão por código/diff. Testes, type check, build e publish não executados. Nenhum instalador gerado; executável anterior preservado.
+
+Detalhes e limitações em `REFINAMENTOS-0.05.md`.
+
 ## v0.04 (0.4.0-dev) — 2026-10-29
 
 - Sete módulos na mesma grade: três principais e quatro blocos secundários responsivos, respeitando ordem e visibilidade; removida a paginação dos módulos.

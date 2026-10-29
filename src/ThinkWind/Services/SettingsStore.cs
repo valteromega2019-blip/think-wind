@@ -11,7 +11,11 @@ public sealed class Preferences
 {
     public double DockScale { get; set; } = 1;
     public double TintOpacity { get; set; } = .72;
-    public bool AutoHide { get; set; }
+    public bool AutoHide { get; set; } = true;
+    public double DockCollapseSeconds { get; set; } = .8;
+    public string DockSearchMode { get; set; } = "Bar";
+    public List<Shortcut> StartPins { get; set; } = new() { new("Explorador", "explorer.exe"), new("Configurações", "ms-settings:") };
+    public List<Shortcut> RecentLaunches { get; set; } = new();
     public bool ShowMemory { get; set; } = true;
     public bool ShowBattery { get; set; } = true;
     public bool ShowAudio { get; set; } = true;
@@ -37,7 +41,7 @@ public sealed class Preferences
     public double IslandCollapseSeconds { get; set; } = .45;
     public double AnimationMilliseconds { get; set; } = 220;
     public List<string> DockOrder { get; set; } = new();
-    public List<string> QuickOrder { get; set; } = new() { "clock", "wifi", "bluetooth", "audio", "notifications", "calendar", "airplane", "settings" };
+    public List<string> QuickOrder { get; set; } = new() { "clock", "wifi", "bluetooth", "audio", "tray", "notifications", "calendar", "airplane", "settings" };
     public List<string> HiddenQuickControls { get; set; } = new() { "calendar", "airplane", "settings" };
     public List<string> ModuleOrder { get; set; } = new() { "connections", "media", "audio", "metrics", "calendar" };
     public List<string> HiddenModules { get; set; } = new();
@@ -106,7 +110,8 @@ public sealed class SettingsStore
             p.Shortcuts = defaults.Shortcuts; p.DockOrder.Clear(); p.DockScale = 1;
             p.DockRadius = defaults.DockRadius; p.DockSpacing = defaults.DockSpacing; p.IconSize = defaults.IconSize;
             p.DockHorizontalOffset = 0; p.DockBottomOffset = defaults.DockBottomOffset;
-            p.DockMaterial = defaults.DockMaterial; p.DockOpacity = .72; p.AutoHide = false;
+            p.DockMaterial = defaults.DockMaterial; p.DockOpacity = .72; p.AutoHide = defaults.AutoHide;
+            p.DockCollapseSeconds = defaults.DockCollapseSeconds; p.DockSearchMode = defaults.DockSearchMode;
         });
     }
     public void ResetIsland()
@@ -129,6 +134,10 @@ public sealed class SettingsStore
     {
         var p = Value;
         p.DockScale = Limit(p.DockScale, .75, 1.5, 1); p.TintOpacity = Limit(p.TintOpacity, .2, 1, .72);
+        p.DockCollapseSeconds = Limit(p.DockCollapseSeconds, 0, 10, .8);
+        p.DockSearchMode = p.DockSearchMode is "Icon" or "Bar" ? p.DockSearchMode : "Bar";
+        p.StartPins = (p.StartPins ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(100).ToList();
+        p.RecentLaunches = (p.RecentLaunches ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(20).ToList();
         p.DockOpacity = Limit(p.DockOpacity ?? p.TintOpacity, .05, 1, .72);
         p.IslandOpacity = Limit(p.IslandOpacity ?? p.TintOpacity, .05, 1, .72);
         p.DockRadius = Limit(p.DockRadius, 0, 48, 22); p.IslandRadius = Limit(p.IslandRadius, 0, 48, 24);

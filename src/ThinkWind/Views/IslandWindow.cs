@@ -220,7 +220,8 @@ internal sealed class IslandWindow : FloatingWindow
         {
             var grip = Glyph("\uE784", 15); grip.Width = 22; AttachPositionGrip(grip); header.Children.Add(grip);
         }
-        var headerIds = (Store.IsEditing ? Store.Value.QuickOrder.Where(id => !Store.Value.HiddenQuickControls.Contains(id)) : new[] { "clock", "wifi", "audio" }.AsEnumerable()).Concat(new[] { "settings" }).Distinct();
+        var standard = new[] { "clock", "wifi", "audio" }.Concat(Store.Value.HiddenQuickControls.Contains("tray") ? Array.Empty<string>() : new[] { "tray" });
+        var headerIds = (Store.IsEditing ? Store.Value.QuickOrder.Where(id => !Store.Value.HiddenQuickControls.Contains(id)) : standard).Concat(new[] { "settings" }).Distinct();
         foreach (var id in headerIds)
         {
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
@@ -242,6 +243,7 @@ internal sealed class IslandWindow : FloatingWindow
                 if (Store.IsEditing && id != "settings") return;
                 if (id == "audio") ShowMini(MiniIslandKind.Volume);
                 else if (id == "wifi") ShowMini(MiniIslandKind.Network);
+                else if (id == "tray") ShowMini(MiniIslandKind.Tray);
                 else if (id == "calendar") ShowMini(MiniIslandKind.Calendar);
                 else if (id == "settings") openSettings();
                 else if (id == "notifications") Desktop.Chord(0x5B, 0x4E);
@@ -266,7 +268,7 @@ internal sealed class IslandWindow : FloatingWindow
             var expand = ActionButton("Abrir painel completo", OpenFull);
             expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(expand);
         }
-        foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "wifi" or "audio" or "settings") && !Store.Value.HiddenQuickControls.Contains(id)))
+        foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "wifi" or "audio" or "tray" or "settings") && !Store.Value.HiddenQuickControls.Contains(id)))
         {
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
             var quick = ActionButton(control.Name, () =>

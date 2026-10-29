@@ -11,6 +11,11 @@
   <SolidColorBrush x:Key="Think.Hover" Color="#303B48"/>
   <SolidColorBrush x:Key="Think.Accent" Color="#60CDFF"/>
   <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="FontFamily" Value="Segoe UI Variable Text"/></Style>
+  <Style TargetType="ContextMenu">
+   <Setter Property="Background" Value="{DynamicResource Think.Surface}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="6"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ContextMenu"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="12"><ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/></ScrollViewer></Border></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="MenuItem"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,6"/></Style>
   <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Margin" Value="4,10"/></Style>
   <Style TargetType="ComboBoxItem">
    <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,8"/>

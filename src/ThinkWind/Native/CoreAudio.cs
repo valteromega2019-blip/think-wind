@@ -28,7 +28,7 @@ internal static class CoreAudio
 
     internal static void Release(object? value)
     {
-        // Each reference is local to one synchronous UI-thread operation.
+          // Release each local reference on the apartment that created it.
         if (value is not null && Marshal.IsComObject(value)) Marshal.ReleaseComObject(value);
     }
 

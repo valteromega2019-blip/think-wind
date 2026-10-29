@@ -21,6 +21,9 @@ internal static class Desktop
     [DllImport("user32.dll")] private static extern uint SendInput(uint count, INPUT[] input, int size);
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(nint hwnd, int attribute, out int value, int size);
     [DllImport("kernel32.dll")] private static extern bool GlobalMemoryStatusEx(ref MEMORY status);
+    [DllImport("kernel32.dll")] private static extern nint OpenProcess(uint access, bool inherit, uint process);
+    [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)] private static extern int GetApplicationUserModelId(nint process, ref uint length, StringBuilder? id);
     [StructLayout(LayoutKind.Sequential)] private struct MEMORY
     { public uint Length, Load; public ulong TotalPhysical, AvailablePhysical, TotalPage, AvailablePage, TotalVirtual, AvailableVirtual, AvailableExtended; }
     [StructLayout(LayoutKind.Sequential)] private struct INPUT { public uint Type; public INPUTUNION Data; }
@@ -28,10 +31,11 @@ internal static class Desktop
     { [FieldOffset(0)] public KEYBOARD Keyboard; [FieldOffset(0)] public MOUSE Mouse; }
     [StructLayout(LayoutKind.Sequential)] private struct KEYBOARD { public ushort Key, Scan; public uint Flags, Time; public nuint Extra; }
     [StructLayout(LayoutKind.Sequential)] private struct MOUSE { public int X, Y; public uint Data, Flags, Time; public nuint Extra; }
-    internal sealed record RunningWindow(nint Handle, string Title, string? Executable, bool Minimized);
+    internal sealed record RunningWindow(nint Handle, string Title, string? Executable, bool Minimized, string? AppId = null);
     internal static List<RunningWindow> Windows()
     {
         var result = new List<RunningWindow>();
+        var identities = new Dictionary<uint, string?>();
         EnumWindows((hwnd, _) =>
         {
             if (!IsWindowVisible(hwnd) || GetWindow(hwnd, 4) != 0 || (GetWindowLong(hwnd, -20) & 0x80) != 0) return true;
@@ -43,15 +47,33 @@ internal static class Desktop
             string? executable = null;
             try { using var process = Process.GetProcessById((int)pid); executable = process.MainModule?.FileName; }
             catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException) { }
-            result.Add(new(hwnd, text.ToString(), executable, IsIconic(hwnd))); return true;
+            if (!identities.TryGetValue(pid, out var appId)) { appId = ReadAppId(pid); identities[pid] = appId; }
+            result.Add(new(hwnd, text.ToString(), executable, IsIconic(hwnd), appId)); return true;
         }, 0);
         return result;
+    }
+    private static string? ReadAppId(uint processId)
+    {
+        nint process = OpenProcess(0x1000, false, processId); if (process == 0) return null;
+        try
+        {
+            uint length = 0; if (GetApplicationUserModelId(process, ref length, null) != 122 || length is 0 or > 1024) return null;
+            var id = new StringBuilder((int)length); return GetApplicationUserModelId(process, ref length, id) == 0 ? id.ToString() : null;
+        }
+        finally { CloseHandle(process); }
     }
     internal static void Activate(nint hwnd)
     {
         if (GetForegroundWindow() == hwnd) ShowWindow(hwnd, 6);
         else { if (IsIconic(hwnd)) ShowWindow(hwnd, 9); SetForegroundWindow(hwnd); }
     }
+    internal static bool RestoreAndActivate(nint hwnd)
+    { if (IsIconic(hwnd)) ShowWindow(hwnd, 9); return GetForegroundWindow() == hwnd || SetForegroundWindow(hwnd); }
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
+    internal static bool LeftButtonDown => (GetAsyncKeyState(1) & 0x8000) != 0;
+    internal static bool EscapeDown => (GetAsyncKeyState(0x1B) & 0x8000) != 0;
+    internal static bool ForegroundIsOurs()
+    { GetWindowThreadProcessId(GetForegroundWindow(), out var process); return process == Environment.ProcessId; }
     internal static void Key(ushort key)
     {
         var inputs = new[] { new INPUT { Type = 1, Data = new INPUTUNION { Keyboard = new KEYBOARD { Key = key } } }, new INPUT { Type = 1, Data = new INPUTUNION { Keyboard = new KEYBOARD { Key = key, Flags = 2 } } } };

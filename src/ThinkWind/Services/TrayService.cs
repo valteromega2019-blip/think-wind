@@ -68,10 +68,30 @@ internal static class TrayService
             int size = Math.Min(24, (int)Math.Min(bounds.Width, bounds.Height));
             using var bitmap = new System.Drawing.Bitmap(size, size);
             using (var graphics = System.Drawing.Graphics.FromImage(bitmap)) graphics.CopyFromScreen((int)(bounds.X + (bounds.Width - size) / 2), (int)(bounds.Y + (bounds.Height - size) / 2), 0, 0, new System.Drawing.Size(size, size));
+            // Keep the actual exposed icon pixels; remove only uniform edge-connected tray tint.
+            RemoveEdgeTint(bitmap);
             using var stream = new System.IO.MemoryStream(); bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png); stream.Position = 0;
             var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad; image.StreamSource = stream; image.EndInit(); image.Freeze(); return image;
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or System.Runtime.InteropServices.ExternalException or ArgumentException) { return null; }
+    }
+    private static void RemoveEdgeTint(System.Drawing.Bitmap bitmap)
+    {
+        int width = bitmap.Width, height = bitmap.Height; var background = bitmap.GetPixel(0, 0);
+        bool Matches(System.Drawing.Color color) => Math.Abs(color.R - background.R) <= 4 && Math.Abs(color.G - background.G) <= 4 && Math.Abs(color.B - background.B) <= 4;
+        if (!Matches(bitmap.GetPixel(width - 1, 0)) || !Matches(bitmap.GetPixel(0, height - 1)) || !Matches(bitmap.GetPixel(width - 1, height - 1))) return;
+        var visited = new bool[width, height]; var queue = new Queue<(int X, int Y)>(); var backgroundPixels = new List<(int X, int Y)>();
+        for (int x = 0; x < width; x++) { queue.Enqueue((x, 0)); queue.Enqueue((x, height - 1)); }
+        for (int y = 0; y < height; y++) { queue.Enqueue((0, y)); queue.Enqueue((width - 1, y)); }
+        while (queue.Count > 0)
+        {
+            var (x, y) = queue.Dequeue();
+            if (x < 0 || y < 0 || x >= width || y >= height || visited[x, y]) continue;
+            visited[x, y] = true; if (!Matches(bitmap.GetPixel(x, y))) continue;
+            backgroundPixels.Add((x, y)); queue.Enqueue((x - 1, y)); queue.Enqueue((x + 1, y)); queue.Enqueue((x, y - 1)); queue.Enqueue((x, y + 1));
+        }
+        if (backgroundPixels.Count >= width * height * .9) return;
+        foreach (var pixel in backgroundPixels) bitmap.SetPixel(pixel.X, pixel.Y, System.Drawing.Color.Transparent);
     }
     internal static Task<bool> InvokeAsync(TrayEntry entry, bool context) => Task.Run(() =>
     {

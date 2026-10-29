@@ -4,17 +4,25 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using ThinkWind.Native;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
-internal sealed class DockWindow : FloatingWindow
+internal sealed partial class DockWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
+    protected override bool CollapsedDock => hidden;
     private readonly StackPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-    private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+    private readonly ApplicationCatalog catalog;
+    private LauncherPanelWindow? launcher;
+    private LauncherPanelMode panelMode;
+    private readonly TextBox dockSearch = new() { BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(4), VerticalContentAlignment = VerticalAlignment.Center, MaxLength = 160 };
+    private DateTime nextAppRefresh;
     private readonly ShellIcons icons = new();
     private readonly List<string> visibleOrder = new();
     private string signature = "";
@@ -32,71 +40,88 @@ internal sealed class DockWindow : FloatingWindow
     public DockWindow(SettingsStore store) : base(store)
     {
         Title = "Think Wind — Dock";
+        catalog = new ApplicationCatalog(Dispatcher);
+        dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
+        System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Think Wind");
+        dockSearch.TextChanged += (_, _) => { if (dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); } };
+        dockSearch.GotKeyboardFocus += (_, _) => { AnimateSearch(true); EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); };
+        dockSearch.LostKeyboardFocus += (_, _) => AnimateSearch(false);
+        dockSearch.PreviewMouseLeftButtonDown += (_, _) => Activate();
+        dockSearch.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) { launcher?.OpenFirstResult(); e.Handled = true; }
+            else if (e.Key == Key.Down) { launcher?.FocusSearch(); e.Handled = true; }
+            else if (e.Key == Key.Escape) { launcher?.Dismiss(); Keyboard.ClearFocus(); e.Handled = true; }
+        };
         SourceInitialized += (_, _) => HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(NoActivate);
         Surface.Child = new AdornerDecoratorHost(items);
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
-        timer.Tick += (_, _) => { if (IsVisible) { RefreshApps(); UpdateVisibility(); } };
+        timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
         MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); };
         MouseLeave += (_, _) => lastHover = DateTime.UtcNow;
         LayoutDrag.Completed += DragCompleted;
-        Closed += (_, _) => { timer.Stop(); LayoutDrag.Completed -= DragCompleted; };
+        InitializeFileDrop();
+        Closed += (_, _) => { timer.Stop(); DisposeFileDrop(); catalog.Dispose(); LayoutDrag.Completed -= DragCompleted; };
     }
     private void DragCompleted() { signature = ""; RefreshApps(); }
     private nint NoActivate(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
-    { if (message == 0x0021) { handled = true; return 3; } return 0; }
+    { if (message == 0x0021 && !dockSearch.IsMouseOver) { handled = true; return 3; } return 0; }
     public override void Position()
     {
         if (!rebuilding && Math.Abs(fittedWidth - Display.Width) > .5 && entries.Count > 0) RenderPage();
-        Place(TotalWidth, hidden ? 7 : ExpandedHeight);
+        Place(TotalWidth, hidden ? 6 : ExpandedHeight);
+        if (launcher?.IsVisible == true) launcher.Position();
     }
     public override void RefreshSettings()
     {
         if (LayoutDrag.Active || rebuilding) return;
         if (layoutRevision != Store.DockLayoutRevision) { layoutRevision = Store.DockLayoutRevision; visibleOrder.Clear(); }
         signature = "";
-        if (!Store.Value.AutoHide || Store.IsEditing || Store.IsCustomizing) hidden = false;
+        if (!Store.Value.AutoHide || Store.IsEditing) hidden = false;
         items.Visibility = hidden ? Visibility.Hidden : Visibility.Visible;
         ApplyAppearance(); RefreshApps();
+        launcher?.RefreshSettings();
     }
     private bool MenuOpen => items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
     private void UpdateVisibility()
     {
-        if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !MenuOpen && !IsMouseOver && !IsKeyboardFocusWithin && DateTime.UtcNow - lastHover > TimeSpan.FromSeconds(3)) SetHidden(true);
+        if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && !MenuOpen && !IsMouseOver && (!IsKeyboardFocusWithin || !Desktop.ForegroundIsOurs()) && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
     }
-    private void SetHidden(bool value)
+    private void SetHidden(bool value, bool animate = true)
     {
         if (hidden == value) return;
         hidden = value; items.Visibility = value ? Visibility.Hidden : Visibility.Visible;
-        Place(TotalWidth, hidden ? 7 : ExpandedHeight, true);
+        ApplyAppearance(); Place(TotalWidth, hidden ? 6 : ExpandedHeight, animate);
     }
     private void RefreshApps()
     {
-        if (LayoutDrag.Active || MenuOpen || rebuilding) return;
+        if (LayoutDrag.Active || fileDragging || MenuOpen || rebuilding || dockSearch.IsKeyboardFocusWithin) return;
         var windows = Desktop.Windows();
         var active = Desktop.GetForegroundWindow();
-        var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}")) + active;
+        var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}")) + active;
         if (next == signature) return;
         rebuilding = true;
         try
         {
             signature = next;
-            var entries = new List<Item> { new("system:start", "Iniciar", null, "\uE782", new(), null, () => Desktop.Key(0x5B)) };
-            var pinnedExecutables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var entries = new List<Item>();
+            var pinnedWindows = new HashSet<nint>();
             foreach (var pin in Store.Value.Shortcuts)
             {
                 var path = icons.Resolve(pin.Target);
-                var matching = windows.Where(w => string.Equals(w.Executable, path, StringComparison.OrdinalIgnoreCase)).ToList();
-                if (matching.Count > 0) pinnedExecutables.Add(path);
+                string? appId = pin.Target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase) ? pin.Target.Substring(@"shell:AppsFolder\".Length) : catalog.Items.FirstOrDefault(app => app.Target.Equals(pin.Target, StringComparison.OrdinalIgnoreCase))?.AppId;
+                var matching = windows.Where(w => string.Equals(w.Executable, path, StringComparison.OrdinalIgnoreCase) || (appId is not null && string.Equals(w.AppId, appId, StringComparison.OrdinalIgnoreCase))).ToList();
+                foreach (var window in matching) pinnedWindows.Add(window.Handle);
                 entries.Add(new("pin:" + pin.Target, pin.Name, pin.Target, null, matching, pin, null));
             }
-            foreach (var group in windows.Where(w => w.Executable is null || !pinnedExecutables.Contains(w.Executable))
-                .GroupBy(w => w.Executable ?? "window:" + w.Handle, StringComparer.OrdinalIgnoreCase))
+            foreach (var group in windows.Where(w => !pinnedWindows.Contains(w.Handle))
+                .GroupBy(w => w.AppId ?? w.Executable ?? "window:" + w.Handle, StringComparer.OrdinalIgnoreCase))
             {
                 var groupWindows = group.ToList();
                 var first = groupWindows[0];
                 entries.Add(new("app:" + group.Key, first.Title, first.Executable, null, groupWindows, null, null));
             }
-            entries.Add(new("system:add", "Adicionar atalho", null, "\uE710", new(), null, AddShortcut));
+            entries.Add(new("system:add", "Biblioteca de Aplicativos", null, "\uE710", new(), null, () => ShowPanel(LauncherPanelMode.Library)));
             var present = entries.Select(i => i.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var order = Store.Value.DockOrder.Concat(visibleOrder).Where(present.Contains).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             foreach (var entry in entries.Where(i => !order.Contains(i.Key, StringComparer.OrdinalIgnoreCase)))
@@ -117,10 +142,13 @@ internal sealed class DockWindow : FloatingWindow
     private void RenderPage()
     {
         fittedWidth = Display.Width;
-        double available = Math.Max(60, fittedWidth - 16 - Surface.Padding.Left - Surface.Padding.Right - (Store.IsEditing ? 30 : 0));
+        double searchWidth = Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36;
+        double available = Math.Max(60, fittedWidth - 16 - Surface.Padding.Left - Surface.Padding.Right - 40 - searchWidth - (Store.IsEditing ? 30 : 0));
         fit = CompactLayout.FitDock(entries.Count, available, Store.Value.IconSize * Store.Value.DockScale, Store.Value.DockSpacing);
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Children.Clear();
+        var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = Glyph("\uE782", 23); start.Width = 40; start.Height = 38; start.Padding = new Thickness(4); items.Children.Add(start);
+        items.Children.Add(SearchSlot(searchWidth));
         if (Store.IsEditing)
         {
             var grip = Glyph("\uE784", 16); grip.Width = 22; grip.Margin = new Thickness(4);
@@ -142,6 +170,7 @@ internal sealed class DockWindow : FloatingWindow
         {
             int target = direction < 0 ? page * fit.PerPage - 1 : (page + 1) * fit.PerPage;
             LayoutDrag.Attach(button, "dock", entries[target].Key, () => Store.IsEditing, Reorder);
+            AttachFilePageTarget(button, direction);
         }
         return button;
     }
@@ -164,6 +193,8 @@ internal sealed class DockWindow : FloatingWindow
         };
         indicator.SetResourceReference(Border.BackgroundProperty, focused is not null ? "Think.Accent" : "Think.Muted");
         panel.Children.Add(indicator);
+        var dropIndicator = new Border { Height = 2, Width = 20, CornerRadius = new CornerRadius(1), Margin = new Thickness(0, 2, 0, 0), Visibility = Visibility.Hidden };
+        dropIndicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent"); panel.Children.Add(dropIndicator);
         var button = ActionButton(item.Name, () =>
         {
             if (Store.IsEditing && item.Key != "system:add") return;
@@ -189,8 +220,42 @@ internal sealed class DockWindow : FloatingWindow
         button.ContextMenu = menu;
         menu.Closed += (_, _) => { signature = ""; Dispatcher.BeginInvoke(new Action(RefreshApps)); };
         LayoutDrag.Attach(button, "dock", item.Key, () => Store.IsEditing, Reorder);
+        AttachFileTarget(button, item, dropIndicator);
+        if (item.Key == "system:add") Menu(menu, "Adicionar executável manualmente…", AddShortcut);
         return button;
     }
+    private FrameworkElement SearchSlot(double width)
+    {
+        var slot = new Border { Width = width, Height = 36, CornerRadius = new CornerRadius(14), Padding = new Thickness(3), Margin = new Thickness(0) };
+        slot.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
+        var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) }); grid.ColumnDefinitions.Add(new ColumnDefinition());
+        var magnify = ActionButton("Pesquisar aplicativos, arquivos e configurações", () => ShowPanel(LauncherPanelMode.Search)); magnify.Style = (Style)FindResource("Think.IconButton"); magnify.Content = Glyph("\uE721", 16); magnify.Padding = new Thickness(2); magnify.Margin = new Thickness(0); grid.Children.Add(magnify);
+        if (Store.Value.DockSearchMode == "Bar")
+        {
+            if (dockSearch.Parent is Panel old) old.Children.Remove(dockSearch);
+            dockSearch.BeginAnimation(WidthProperty, null);
+            dockSearch.ToolTip = "Pesquisar no Windows"; dockSearch.Width = Math.Max(1, width - 42); dockSearch.HorizontalAlignment = HorizontalAlignment.Left; Grid.SetColumn(dockSearch, 1); grid.Children.Add(dockSearch);
+        }
+        slot.Child = grid; return slot;
+    }
+    private void AnimateSearch(bool expanded)
+    {
+        if (dockSearch.Parent is not Grid grid || grid.Parent is not Border slot) return;
+        double maximum = Math.Max(1, slot.Width - 36), target = expanded ? maximum : Math.Max(1, maximum - 12);
+        if (!SystemParameters.ClientAreaAnimation || Store.Value.AnimationMilliseconds == 0) { dockSearch.BeginAnimation(WidthProperty, null); dockSearch.Width = target; }
+        else dockSearch.BeginAnimation(WidthProperty, new DoubleAnimation(dockSearch.ActualWidth, target, TimeSpan.FromMilliseconds(120)) { FillBehavior = FillBehavior.HoldEnd });
+    }
+    private void EnsureLauncher()
+    {
+        if (launcher is not null) return;
+        launcher = new LauncherPanelWindow(Store, catalog, () => TargetBounds, () => dockSearch.IsKeyboardFocusWithin) { Owner = this };
+        launcher.Dismissed += () => { lastHover = DateTime.UtcNow; AnimateSearch(false); };
+    }
+    private void ShowPanel(LauncherPanelMode mode)
+    { SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); }
+    private void ToggleStart()
+    { if (launcher?.IsVisible == true && panelMode == LauncherPanelMode.Start) launcher.Dismiss(); else ShowPanel(LauncherPanelMode.Start); }
+    public override void RefreshAppearance() { base.RefreshAppearance(); launcher?.RefreshAppearance(); }
     private void MoveOne(string source, int direction)
     {
         int index = visibleOrder.IndexOf(source), targetIndex = index + direction;

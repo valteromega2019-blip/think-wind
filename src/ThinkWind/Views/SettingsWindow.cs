@@ -92,6 +92,9 @@ internal sealed class SettingsWindow : Window
         Slider(dock, "Distância da borda inferior", 4, 80, store.Value.DockBottomOffset, v => Change(p => p.DockBottomOffset = v));
         Slider(dock, "Posição horizontal", -4000, 4000, store.Value.DockHorizontalOffset, v => Change(p => p.DockHorizontalOffset = v));
         Check(dock, "Recolher automaticamente quando estiver ociosa", store.Value.AutoHide, v => Change(p => p.AutoHide = v));
+        Slider(dock, "Espera para recolher a barra (segundos)", 0, 10, store.Value.DockCollapseSeconds, v => Change(p => p.DockCollapseSeconds = v), "0.0 's'", .1);
+        Select(dock, "Pesquisa na barra", store.Value.DockSearchMode, new[] { new Choice("Bar", "Barra compacta"), new Choice("Icon", "Apenas lupa") }, v => Change(p => p.DockSearchMode = v));
+        Note(dock, "O estado recolhido é uma faixa visível de 6 DIP na borda física inferior, sem espaço. Tamanho, deslocamento e espaçamento configurados acima afetam apenas a barra expandida.");
 
         var island = Section("Dynamic Island", "Integrada à borda superior, com cantos inferiores arredondados.");
         Select(island, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));

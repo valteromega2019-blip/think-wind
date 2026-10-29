@@ -57,6 +57,7 @@ internal sealed class TrayCard : StackPanel
         foreach (var entry in entries.GetRange(Math.Min(page * pageSize, entries.Count), Math.Min(pageSize, Math.Max(0, entries.Count - page * pageSize))))
         {
             var button = new Button { Width = compact ? 30 : 40, Height = compact ? 30 : 40, Padding = new Thickness(3), Margin = new Thickness(2), ToolTip = entry.Name, Content = entry.Icon is not null ? new Image { Source = entry.Icon, Width = compact ? 20 : 24, Height = compact ? 20 : 24 } : new TextBlock { Text = entry.Name[..1], HorizontalAlignment = HorizontalAlignment.Center } };
+            button.SetResourceReference(StyleProperty, "Think.IconButton");
             System.Windows.Automation.AutomationProperties.SetName(button, entry.Name);
             button.Click += async (_, _) => { if (!await TrayService.InvokeAsync(entry, false)) status.Text = "O aplicativo não expôs esse comando. Use a bandeja do Windows."; };
             button.PreviewMouseRightButtonUp += async (_, e) => { e.Handled = true; if (!await TrayService.InvokeAsync(entry, true)) status.Text = "Abra o menu pela bandeja do Windows."; };

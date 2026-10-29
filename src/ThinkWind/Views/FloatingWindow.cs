@@ -17,6 +17,7 @@ internal abstract class FloatingWindow : Window
     protected readonly Border Surface;
     protected abstract bool AttachedTop { get; }
     protected virtual bool UsesIslandAppearance => AttachedTop;
+    protected virtual bool CollapsedDock => false;
     protected OverlayChrome.Display Display => OverlayChrome.GetDisplay(Store.Value.MonitorIndex, Store.Value.MonitorDeviceName);
     private readonly DispatcherTimer animation = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private readonly Stopwatch elapsed = new();
@@ -86,7 +87,7 @@ internal abstract class FloatingWindow : Window
     protected void ApplyAppearance()
     {
         var p = Store.Value;
-        radius = UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
+        radius = CollapsedDock ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
         var material = UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial;
         var alpha = (UsesIslandAppearance ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
         backdrop?.SetMaterial(SystemParameters.HighContrast ? "Solid" : material, ThemeService.Light);
@@ -140,6 +141,7 @@ internal abstract class FloatingWindow : Window
         int x = (int)Math.Round(display.Work.Left + (display.Work.Width - w) / 2d + offset * display.Scale);
         x = Math.Clamp(x, display.Work.Left + (AttachedTop ? 0 : 8), Math.Max(display.Work.Left + 8, display.Work.Right - w - (AttachedTop ? 0 : 8)));
         int y = AttachedTop ? display.Bounds.Top : display.Work.Bottom - margin - h;
+        if (CollapsedDock) { x = display.Bounds.Left; w = display.Bounds.Width; h = Math.Max(1, (int)Math.Round(6 * display.Scale)); y = display.Bounds.Bottom - h; }
         var nextTarget = new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + w, Bottom = y + h };
         if (placed && target.Left == nextTarget.Left && target.Top == nextTarget.Top && target.Right == nextTarget.Right && target.Bottom == nextTarget.Bottom) return;
         target = nextTarget;
@@ -171,6 +173,25 @@ internal abstract class FloatingWindow : Window
         animation.Stop();
         target = new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + w, Bottom = y + h };
         if (animate && placed && Store.Value.AnimationMilliseconds > 0 && SystemParameters.ClientAreaAnimation && OverlayChrome.GetWindowRect(new WindowInteropHelper(this).Handle, out start))
+        { animationDuration = Store.Value.AnimationMilliseconds; elapsed.Restart(); animation.Start(); }
+        else Move(target);
+        placed = true;
+    }
+    protected void PlaceAbove(double width, double height, OverlayChrome.PixelRect anchor, bool animate)
+    {
+        if (new WindowInteropHelper(this).Handle == 0) return;
+        var display = Display;
+        int gap = Math.Max(1, (int)Math.Round(8 * display.Scale));
+        int w = Math.Max(48, (int)Math.Round(Math.Min(width, display.Width - 16) * display.Scale));
+        int available = Math.Max(48, anchor.Top - display.Work.Top - gap * 2);
+        int h = Math.Min(available, Math.Max(48, (int)Math.Round(height * display.Scale)));
+        int x = Math.Clamp((anchor.Left + anchor.Right - w) / 2, display.Work.Left + gap, Math.Max(display.Work.Left + gap, display.Work.Right - w - gap));
+        int y = Math.Max(display.Work.Top + gap, anchor.Top - gap - h);
+        var next = new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + w, Bottom = y + h };
+        if (placed && next.Left == target.Left && next.Top == target.Top && next.Right == target.Right && next.Bottom == target.Bottom) return;
+        animation.Stop(); target = next;
+        if (animate && placed && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0 && OverlayChrome.GetWindowRect(new WindowInteropHelper(this).Handle, out start)
+            && Math.Abs(start.Left - target.Left) < display.Work.Width / 2 && Math.Abs(start.Top - target.Top) < display.Work.Height / 2)
         { animationDuration = Store.Value.AnimationMilliseconds; elapsed.Restart(); animation.Start(); }
         else Move(target);
         placed = true;
