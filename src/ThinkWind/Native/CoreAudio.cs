@@ -5,7 +5,7 @@ namespace ThinkWind.Native;
 
 // Only the documented prefix of each COM vtable is declared. Keep this order:
 // the native headers, rather than the alphabetical documentation index, define it.
-internal static class CoreAudio
+public static class CoreAudio
 {
     internal const uint ActiveDevice = 1;
     internal const uint AllContexts = 23;
@@ -17,7 +17,7 @@ internal static class CoreAudio
     internal enum Role { Console, Multimedia, Communications }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct PropertyKey
+    public struct PropertyKey
     {
         internal Guid Format;
         internal uint Id;
@@ -45,6 +45,8 @@ internal static class CoreAudio
         [PreserveSig] int EnumAudioEndpoints(Flow flow, uint mask, out IDeviceCollection collection);
         [PreserveSig] int GetDefaultAudioEndpoint(Flow flow, Role role, out IDevice device);
         [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IDevice device);
+        [PreserveSig] int RegisterEndpointNotificationCallback([MarshalAs(UnmanagedType.Interface)] IDeviceNotifications callback);
+        [PreserveSig] int UnregisterEndpointNotificationCallback([MarshalAs(UnmanagedType.Interface)] IDeviceNotifications callback);
     }
 
     [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -74,8 +76,8 @@ internal static class CoreAudio
     [ComImport, Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IEndpointVolume
     {
-        [PreserveSig] int RegisterControlChangeNotify(nint callback);
-        [PreserveSig] int UnregisterControlChangeNotify(nint callback);
+        [PreserveSig] int RegisterControlChangeNotify([MarshalAs(UnmanagedType.Interface)] IVolumeNotifications callback);
+        [PreserveSig] int UnregisterControlChangeNotify([MarshalAs(UnmanagedType.Interface)] IVolumeNotifications callback);
         [PreserveSig] int GetChannelCount(out uint channels);
         [PreserveSig] int SetMasterVolumeLevel(float level, ref Guid context);
         [PreserveSig] int SetMasterVolumeLevelScalar(float level, ref Guid context);
@@ -88,4 +90,15 @@ internal static class CoreAudio
         [PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool mute, ref Guid context);
         [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
     }
+    [ComVisible(true), Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IDeviceNotifications
+    {
+        [PreserveSig] int OnDeviceStateChanged([MarshalAs(UnmanagedType.LPWStr)] string id, uint state);
+        [PreserveSig] int OnDeviceAdded([MarshalAs(UnmanagedType.LPWStr)] string id);
+        [PreserveSig] int OnDeviceRemoved([MarshalAs(UnmanagedType.LPWStr)] string id);
+        [PreserveSig] int OnDefaultDeviceChanged(int flow, int role, [MarshalAs(UnmanagedType.LPWStr)] string? id);
+        [PreserveSig] int OnPropertyValueChanged([MarshalAs(UnmanagedType.LPWStr)] string id, PropertyKey key);
+    }
+    [ComVisible(true), Guid("657804FA-D6AD-4496-8A60-352752AF4F89"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IVolumeNotifications { [PreserveSig] int OnNotify(nint notification); }
 }

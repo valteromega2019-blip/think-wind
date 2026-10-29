@@ -1,5 +1,18 @@
 # Histórico do Think Wind
 
+## v0.06 (0.6.0-dev) — 2026-10-29
+
+- Bandeja 6 × 4 com paginação, nomes compactos, favoritos persistentes e prioridade por uso local/recência.
+- Calendário mensal aberto no painel completo e configuração do Windows no cabeçalho compacto; personalização do launcher somente no painel completo.
+- Mini-ilha WLAN com redes, conexão/desconexão, senha segura e rádio conforme suporte/permissões do Windows.
+- Saída padrão de áudio por PolicyConfig isolado, confirmação/recuperação e notificações Core Audio para volume, mute e dispositivos.
+- Recolhimento protegido durante interação, ativação por aproximação e transições sincronizadas aos quadros do WPF, com cache de recortes/geometria.
+- Cores de destaque suaves e adaptadas ao tema, preservando a composição Acrylic existente.
+- Símbolo vetorial do Windows no botão Iniciar da barra inferior, preservando o menu próprio.
+- Revisão por leitura de código e diff. Testes, type check, compilação, execução e publish não realizados. Sem instalador; executável anterior preservado.
+
+Detalhes e limites em `REFINAMENTOS-0.06.md`.
+
 ## v0.05 (0.5.0-dev) — 2026-10-29
 
 - Menu Iniciar próprio acima da barra, com fixados reordenáveis, recentes, todos os aplicativos, informações do usuário e opções reais de energia com confirmação.

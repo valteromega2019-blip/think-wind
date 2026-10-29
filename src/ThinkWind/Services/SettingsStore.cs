@@ -7,6 +7,7 @@ using System.Windows.Threading;
 
 namespace ThinkWind.Services;
 public sealed record Shortcut(string Name, string Target);
+public sealed record TrayActivity(int Count, DateTime LastUsedUtc, DateTime FirstSeenUtc);
 public sealed class Preferences
 {
     public double DockScale { get; set; } = 1;
@@ -16,6 +17,8 @@ public sealed class Preferences
     public string DockSearchMode { get; set; } = "Bar";
     public List<Shortcut> StartPins { get; set; } = new() { new("Explorador", "explorer.exe"), new("Configurações", "ms-settings:") };
     public List<Shortcut> RecentLaunches { get; set; } = new();
+    public List<string> TrayFavorites { get; set; } = new();
+    public Dictionary<string, TrayActivity> TrayActivity { get; set; } = new();
     public bool ShowMemory { get; set; } = true;
     public bool ShowBattery { get; set; } = true;
     public bool ShowAudio { get; set; } = true;
@@ -35,7 +38,7 @@ public sealed class Preferences
     public double DockHorizontalOffset { get; set; }
     public double IslandHorizontalOffset { get; set; }
     public double IslandScale { get; set; } = 1;
-    public double IslandExpandedWidth { get; set; } = 560;
+    public double IslandExpandedWidth { get; set; } = 780;
     public double IslandSpacing { get; set; } = 6;
     public bool IslandAutoCollapse { get; set; } = true;
     public double IslandCollapseSeconds { get; set; } = .45;
@@ -138,6 +141,9 @@ public sealed class SettingsStore
         p.DockSearchMode = p.DockSearchMode is "Icon" or "Bar" ? p.DockSearchMode : "Bar";
         p.StartPins = (p.StartPins ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(100).ToList();
         p.RecentLaunches = (p.RecentLaunches ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(20).ToList();
+        p.TrayFavorites = (p.TrayFavorites ?? new()).Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).Take(128).ToList();
+        p.TrayActivity = (p.TrayActivity ?? new()).Where(item => !string.IsNullOrWhiteSpace(item.Key) && item.Value is not null).OrderByDescending(item => item.Value.LastUsedUtc > item.Value.FirstSeenUtc ? item.Value.LastUsedUtc : item.Value.FirstSeenUtc).Take(512)
+            .ToDictionary(item => item.Key, item => item.Value with { Count = Math.Clamp(item.Value.Count, 0, 1_000_000) }, StringComparer.Ordinal);
         p.DockOpacity = Limit(p.DockOpacity ?? p.TintOpacity, .05, 1, .72);
         p.IslandOpacity = Limit(p.IslandOpacity ?? p.TintOpacity, .05, 1, .72);
         p.DockRadius = Limit(p.DockRadius, 0, 48, 22); p.IslandRadius = Limit(p.IslandRadius, 0, 48, 24);
@@ -145,7 +151,7 @@ public sealed class SettingsStore
         p.IconSize = Limit(p.IconSize, 20, 48, 28); p.DockBottomOffset = Limit(p.DockBottomOffset, 4, 80, 12);
         p.DockHorizontalOffset = Limit(p.DockHorizontalOffset, -4000, 4000, 0);
         p.IslandHorizontalOffset = Limit(p.IslandHorizontalOffset, -4000, 4000, 0);
-        p.IslandScale = Limit(p.IslandScale, .8, 1.4, 1); p.IslandExpandedWidth = Limit(p.IslandExpandedWidth, 400, 900, 560);
+        p.IslandScale = Limit(p.IslandScale, .8, 1.4, 1); p.IslandExpandedWidth = Limit(p.IslandExpandedWidth, 400, 900, 780);
         p.IslandCollapseSeconds = Limit(p.IslandCollapseSeconds, 0, 10, .45);
         p.AnimationMilliseconds = Limit(p.AnimationMilliseconds, 0, 600, 220);
         p.Theme = p.Theme is "Auto" or "Dark" or "Light" ? p.Theme : "Auto";

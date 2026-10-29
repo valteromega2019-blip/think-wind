@@ -29,6 +29,9 @@ internal sealed class AudioEndpointControl : Border
     private bool compact;
     private readonly Button devicePicker = new() { Content = "\u22EF", Width = 28, Height = 24, Padding = new Thickness(0), Margin = new Thickness(0), Visibility = Visibility.Collapsed, ToolTip = "Escolher dispositivo a controlar" };
     private ContextMenu? deviceMenu;
+    private AudioObserver? observer;
+    private string? selectionError;
+    internal event Action? LayoutChanged;
     internal bool IsInteracting => dragging || IsMouseCaptureWithin || devices.IsDropDownOpen || deviceMenu?.IsOpen == true;
 
     internal AudioEndpointControl(AudioService audioService, CoreAudio.Flow direction)
@@ -46,27 +49,43 @@ internal sealed class AudioEndpointControl : Border
         System.Windows.Automation.AutomationProperties.SetName(devices, "Dispositivo a controlar · " + name);
         System.Windows.Automation.AutomationProperties.SetName(level, "Volume · " + name);
         System.Windows.Automation.AutomationProperties.SetName(mute, "Alternar mudo · " + name);
-        devices.ToolTip = "Seleciona o dispositivo a controlar; não altera a saída ou entrada padrão do Windows.";
+        devices.ToolTip = direction == CoreAudio.Flow.Render ? "Altera a saída padrão do Windows para sons do sistema e multimídia." : "Seleciona o microfone a controlar.";
         panel.Children.Add(devices);
         var row = new DockPanel();
         DockPanel.SetDock(mute, Dock.Right); row.Children.Add(mute);
         DockPanel.SetDock(percent, Dock.Right); row.Children.Add(percent);
         row.Children.Add(level); panel.Children.Add(row); panel.Children.Add(status); Child = panel;
-        devices.SelectionChanged += (_, _) => { if (!updating) Poll(false); };
+        devices.SelectionChanged += (_, _) =>
+        {
+            if (updating) return;
+            selectionError = null;
+            if (flow == CoreAudio.Flow.Render && devices.SelectedItem is Choice choice && choice.Id is not null)
+            {
+                try { audio.SetDefaultOutput(choice.Id); }
+                catch (AudioUnavailableException) { selectionError = "O Windows não confirmou a troca de saída. A seleção foi sincronizada novamente com o sistema."; }
+            }
+            observer?.Rebind(); Poll(true); LayoutChanged?.Invoke();
+        };
+        Loaded += (_, _) => Observe(); Unloaded += (_, _) => { observer?.Dispose(); observer = null; };
+        IsVisibleChanged += (_, _) => Observe();
         level.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => dragging = true));
         level.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler((_, _) => { dragging = false; Poll(false); }));
         level.ValueChanged += (_, _) =>
         {
             var target = current;
             if (updating || target is null) return;
-            if (Execute(() => audio.SetVolume(flow, target.Id, level.Value))) percent.Text = $"{level.Value:0}%";
+            Execute(() =>
+            {
+                var actual = flow == CoreAudio.Flow.Render ? audio.Read(flow, null) : target;
+                audio.SetVolume(flow, actual.Id, level.Value); current = audio.Read(flow, actual.Id); percent.Text = $"{current.Volume:0}%";
+            });
         };
         mute.Click += (_, _) =>
         {
             var target = current;
             if (target is null) return;
             // Read again to avoid toggling a stale mute state changed elsewhere.
-            Execute(() => { var latest = audio.Read(flow, target.Id); audio.SetMuted(flow, latest.Id, !latest.Muted); });
+            Execute(() => { var latest = audio.Read(flow, flow == CoreAudio.Flow.Render ? null : target.Id); audio.SetMuted(flow, latest.Id, !latest.Muted); });
             Poll(false);
         };
     }
@@ -77,39 +96,48 @@ internal sealed class AudioEndpointControl : Border
         try
         {
             updating = true;
-            if (refreshDevices || devices.Items.Count == 0)
+            var systemDefault = flow == CoreAudio.Flow.Render ? audio.Read(flow, null) : null;
+            if (refreshDevices || devices.Items.Count == 0 || (systemDefault is not null && !devices.Items.Cast<Choice>().Any(choice => choice.Id == systemDefault.Id)))
             {
                 var available = audio.Devices(flow);
                 var signature = string.Join("|", available.Select(d => d.Id + ":" + d.Name));
                 if (devices.Items.Count == 0 || signature != deviceSignature)
                 {
-                    var selected = (devices.SelectedItem as Choice)?.Id;
+                    var selected = systemDefault?.Id ?? (devices.SelectedItem as Choice)?.Id;
                     devices.Items.Clear();
-                    devices.Items.Add(new Choice(null, "Seguir padrão do Windows"));
+                    if (flow == CoreAudio.Flow.Capture) devices.Items.Add(new Choice(null, "Seguir padrão do Windows"));
                     foreach (var device in available) devices.Items.Add(new Choice(device.Id, device.Name));
                     // Keep the user's explicit target even when it disconnects.
                     // Never silently redirect a volume/mute action to another device.
                     if (selected is not null && !available.Any(d => d.Id == selected))
                         devices.Items.Add(new Choice(selected, "Dispositivo desconectado"));
-                    devices.SelectedItem = devices.Items.Cast<Choice>().FirstOrDefault(c => c.Id == selected) ?? devices.Items[0];
+                    devices.SelectedItem = devices.Items.Cast<Choice>().FirstOrDefault(c => c.Id == selected) ?? (devices.Items.Count > 0 ? devices.Items[0] : null);
                     deviceSignature = signature;
                 }
             }
-            current = audio.Read(flow, (devices.SelectedItem as Choice)?.Id);
+            current = systemDefault ?? audio.Read(flow, (devices.SelectedItem as Choice)?.Id);
+            if (systemDefault is not null) devices.SelectedItem = devices.Items.Cast<Choice>().FirstOrDefault(choice => choice.Id == systemDefault.Id);
             // Programmatic refresh must never write back to the endpoint.
             // Mouse drags are excluded above; keyboard input runs synchronously.
             level.Value = current.Volume;
             percent.Text = $"{current.Volume:0}%";
             mute.Content = compact ? MuteGlyph(current.Muted) : current.Muted ? "Ativar som" : "Mudo";
             mute.ToolTip = current.Muted ? "Ativar som" : "Silenciar";
-            mute.SetResourceReference(Control.BackgroundProperty, current.Muted ? "Think.Accent" : "Think.Control");
-            mute.SetResourceReference(Control.ForegroundProperty, current.Muted ? "Think.Background" : "Think.Text");
-            status.Text = current.Name + (current.Muted ? " · silenciado" : "");
+            mute.SetResourceReference(Control.BackgroundProperty, current.Muted ? "Think.AccentSurface" : "Think.Control");
+            mute.SetResourceReference(Control.ForegroundProperty, "Think.Text");
+            status.Text = selectionError ?? current.Name + (current.Muted ? " · silenciado" : "");
+            status.Visibility = compact && selectionError is null ? Visibility.Collapsed : Visibility.Visible;
             ToolTip = status.Text;
             level.IsEnabled = mute.IsEnabled = true;
         }
         catch (AudioUnavailableException e) { Unavailable(e.Message); }
         finally { updating = false; }
+    }
+    private void Observe()
+    {
+        if (!IsLoaded || !IsVisible) { observer?.Dispose(); observer = null; return; }
+        observer ??= new AudioObserver(Dispatcher, flow, () => flow == CoreAudio.Flow.Render ? null : (devices.SelectedItem as Choice)?.Id, refresh => Poll(refresh));
+        Poll(true);
     }
     internal void SetCompact(bool value)
     {
@@ -125,7 +153,7 @@ internal sealed class AudioEndpointControl : Border
     private static TextBlock MuteGlyph(bool muted)
     {
         var glyph = new TextBlock { Text = muted ? "\uE74F" : "\uE767", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 14 };
-        glyph.SetResourceReference(TextBlock.ForegroundProperty, muted ? "Think.Background" : "Think.Text"); return glyph;
+        glyph.SetResourceReference(TextBlock.ForegroundProperty, muted ? "Think.AccentInk" : "Think.Text"); return glyph;
     }
     private void OpenDeviceMenu()
     {
@@ -136,6 +164,7 @@ internal sealed class AudioEndpointControl : Border
             item.Click += (_, _) => devices.SelectedItem = choice; deviceMenu.Items.Add(item);
         }
         deviceMenu.IsOpen = true;
+        deviceMenu.Closed += (_, _) => Poll(true);
     }
 
     private bool Execute(Action action)

@@ -17,7 +17,8 @@ internal static class LayoutCatalog
         new("notifications", "Notificações", "\uE7F4", "ms-settings:notifications"),
         new("calendar", "Calendário", "\uE787", null),
         new("airplane", "Modo avião", "\uE709", "ms-settings:network-airplanemode"),
-        new("settings", "Personalizar", "\uE713", null)
+        new("windows-settings", "Configurações do Windows", "\uE713", "ms-settings:"),
+        new("settings", "Configurações do Think Wind", "\uE771", null)
     };
     internal static readonly string[] Modules = { "connections", "media", "audio", "metrics", "calendar", "background", "notifications" };
     internal static string ModuleName(string id) => id switch

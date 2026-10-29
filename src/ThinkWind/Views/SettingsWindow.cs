@@ -113,7 +113,7 @@ internal sealed class SettingsWindow : Window
         if (editing.Parent is Panel oldEditing) oldEditing.Children.Remove(editing);
         layout.Children.Add(editing);
         Note(layout, "Na barra, arraste os ícones. Na ilha, arraste os acessos rápidos ou o título de cada módulo. O puxador lateral ajusta a posição horizontal. Esc conclui a edição.");
-        Note(layout, "Os três primeiros módulos visíveis ficam em destaque; os demais aparecem em blocos menores abaixo. A engrenagem de personalização permanece no cabeçalho da ilha.");
+        Note(layout, "Os três primeiros módulos visíveis ficam em destaque. Calendário e bandeja têm áreas detalhadas. A engrenagem do Windows fica no compacto; a personalização do Think Wind aparece apenas no painel completo.");
         layout.Children.Add(new TextBlock { Text = "ACESSOS RÁPIDOS", FontSize = 11, Margin = new Thickness(0, 16, 0, 8) });
         if (quickRows.Parent is Panel oldQuick) oldQuick.Children.Remove(quickRows);
         layout.Children.Add(quickRows);
@@ -152,7 +152,7 @@ internal sealed class SettingsWindow : Window
     {
         layoutSignature = LayoutSignature();
         quickRows.Children.Clear(); moduleRows.Children.Clear();
-        foreach (var id in store.Value.QuickOrder.Where(id => id != "settings").ToArray())
+        foreach (var id in store.Value.QuickOrder.Where(id => id is not ("settings" or "windows-settings")).ToArray())
         {
             string label = LayoutCatalog.QuickControls.First(q => q.Id == id).Name;
             LayoutRow(quickRows, "quick-settings", id, label, !store.Value.HiddenQuickControls.Contains(id), store.Value.QuickOrder,

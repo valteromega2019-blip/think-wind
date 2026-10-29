@@ -20,12 +20,12 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly Viewbox viewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     private readonly AudioEndpointControl? audio;
     private readonly TrayCard? tray;
-    private readonly TextBlock network = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 8, 6, 12) };
+    private readonly WifiControl? wifi;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private DateTime nextRefresh;
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
-    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true;
+    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true;
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
@@ -39,11 +39,12 @@ internal sealed class MiniIslandWindow : FloatingWindow
         if (kind == MiniIslandKind.Volume)
         {
             audio = new AudioEndpointControl(new AudioService(), CoreAudio.Flow.Render); panel.Children.Add(audio);
+            audio.LayoutChanged += Position;
             panel.Children.Add(ActionButton("Configurações de som", () => SystemActions.Run("ms-settings:sound")));
         }
         else if (kind == MiniIslandKind.Tray)
         {
-            tray = new TrayCard(); tray.SetCompact(true); tray.LayoutChanged += Position; panel.Children.Add(tray);
+            tray = new TrayCard(store); tray.LayoutChanged += Position; panel.Children.Add(tray);
         }
         else if (kind == MiniIslandKind.Calendar)
         {
@@ -52,26 +53,25 @@ internal sealed class MiniIslandWindow : FloatingWindow
         }
         else
         {
-            panel.Children.Add(network);
-            var shortcuts = new WrapPanel();
-            shortcuts.Children.Add(ActionButton("Wi-Fi", () => SystemActions.Run("ms-settings:network-wifi")));
-            shortcuts.Children.Add(ActionButton("Rede e internet", () => SystemActions.Run("ms-settings:network")));
-            panel.Children.Add(shortcuts);
+            wifi = new WifiControl(); wifi.LayoutChanged += Position; panel.Children.Add(wifi);
         }
         viewport.Child = panel; Surface.Child = viewport;
-        Deactivated += (_, _) => Dismiss();
+        Deactivated += (_, _) => { if (!IsInteracting) Dismiss(); };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
         Loaded += (_, _) => { RefreshContent(true); timer.Start(); };
         timer.Tick += (_, _) => { if (IsVisible) RefreshContent(false); };
-        IsVisibleChanged += (_, _) => { if (!IsVisible) { timer.Stop(); Dismissed?.Invoke(); } };
-        Closed += (_, _) => timer.Stop();
+        IsVisibleChanged += (_, _) => { wifi?.SetActive(IsVisible); if (!IsVisible) { timer.Stop(); Dismissed?.Invoke(); } };
+        Closed += (_, _) => { timer.Stop(); wifi?.Dispose(); };
     }
     internal void Present()
     {
         nextRefresh = DateTime.MinValue;
         Show(); RefreshSettings(); RefreshContent(true); timer.Start(); Activate();
         if (SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0)
-            Surface.BeginAnimation(OpacityProperty, new DoubleAnimation(.6, 1, TimeSpan.FromMilliseconds(120)));
+        {
+            var move = new TranslateTransform(); panel.RenderTransform = move;
+            move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(150)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
+        }
     }
     internal void Dismiss()
     {
@@ -84,18 +84,6 @@ internal sealed class MiniIslandWindow : FloatingWindow
         if (refresh) nextRefresh = DateTime.UtcNow.AddSeconds(5);
         if (audio is not null) audio.Poll(refresh);
         else if (tray is not null) tray.Refresh();
-        else if (refresh && Kind == MiniIslandKind.Network)
-        {
-            try
-            {
-                var state = NetworkService.Read();
-                network.Text = state.Connected
-                    ? $"{state.Kind} · {state.Name}\n{(state.Address is null ? "Conexão ativa" : "IP local · " + state.Address)}" + (state.Signal is null ? "" : $"\nSinal · {state.Signal}%")
-                    : "Nenhuma conexão de rede ativa.";
-            }
-            catch (Exception e) when (e is NetworkInformationException or System.ComponentModel.Win32Exception)
-            { network.Text = "Não foi possível consultar a conexão. Abra as configurações de rede para conferir."; }
-        }
         Position();
     }
     public override void Position()

@@ -5,48 +5,51 @@ using System.Windows;
 using System.Windows.Controls;
 
 namespace ThinkWind.Views;
-// Three leading cards are prominent; the remaining cards form a smaller grid below.
 internal sealed class IslandModuleBoard : Panel
 {
-    private readonly List<Rect> slots = new();
+    private readonly Dictionary<UIElement, Rect> slots = new();
     private double gap = 8;
     internal double Gap { get => gap; set { if (gap == value) return; gap = value; InvalidateMeasure(); } }
     internal void SetCards(IEnumerable<Border> cards)
     {
-        var next = cards.ToArray();
-        if (Children.Cast<UIElement>().SequenceEqual(next)) return;
-        Children.Clear(); foreach (var card in next) Children.Add(card);
-        InvalidateMeasure();
+        var next = cards.ToArray(); if (Children.Cast<UIElement>().SequenceEqual(next)) return;
+        Children.Clear(); foreach (var card in next) Children.Add(card); InvalidateMeasure();
     }
-    protected override Size MeasureOverride(Size availableSize)
+    private static bool Detailed(UIElement item) => item is FrameworkElement element && (element.Tag is "calendar" or "background");
+    protected override Size MeasureOverride(Size available)
     {
-        double width = double.IsFinite(availableSize.Width) ? Math.Max(1, availableSize.Width) : 600;
-        slots.Clear(); double y = 0;
-        int leading = Math.Min(3, Children.Count);
-        MeasureGroup(0, leading, width >= 520 ? 3 : width >= 350 ? 2 : 1, width, 132, ref y);
-        MeasureGroup(leading, Children.Count - leading, width >= 700 ? 4 : width >= 330 ? 2 : 1, width, 82, ref y);
-        return new Size(width, Math.Max(0, y - (Children.Count > 0 ? Gap : 0)));
-    }
-    private void MeasureGroup(int start, int count, int columns, double width, double minimum, ref double y)
-    {
-        for (int offset = 0; offset < count; offset += columns)
+        double width = double.IsFinite(available.Width) ? Math.Max(1, available.Width) : 760;
+        slots.Clear(); var all = Children.Cast<UIElement>().ToArray(); var leading = all.Take(3).ToArray(); var secondary = all.Skip(3).ToArray();
+        double y = Group(leading, width, leading.Any(Detailed) ? 2 : 3, 132, 0);
+        var details = secondary.Where(Detailed).ToArray(); var small = secondary.Where(item => !Detailed(item)).ToArray();
+        if (details.Length > 0 && width >= 680)
         {
-            int inRow = Math.Min(columns, count - offset);
-            double cellWidth = Math.Max(1, (width - Gap * (inRow - 1)) / inRow);
-            double height = minimum;
-            for (int cell = 0; cell < inRow; cell++)
+            double side = small.Length > 0 ? 128 : 0;
+            double sideHeight = side > 0 ? Group(small, side, 1, 72, y) : y;
+            double remaining = width - side - (side > 0 ? Gap : 0);
+            double cell = (remaining - Gap * (details.Length - 1)) / details.Length; double end = y;
+            for (int i = 0; i < details.Length; i++)
             {
-                var child = Children[start + offset + cell];
-                child.Measure(new Size(cellWidth, double.PositiveInfinity));
-                height = Math.Max(height, child.DesiredSize.Height);
+                var item = details[i]; item.Measure(new Size(cell, double.PositiveInfinity));
+                slots[item] = new Rect(side + (side > 0 ? Gap : 0) + i * (cell + Gap), y, cell, item.DesiredSize.Height);
+                end = Math.Max(end, y + item.DesiredSize.Height + Gap);
             }
-            for (int cell = 0; cell < inRow; cell++) slots.Add(new Rect(cell * (cellWidth + Gap), y, cellWidth, height));
+            y = Math.Max(end, sideHeight);
+        }
+        else y = Group(secondary, width, width >= 500 ? 2 : 1, 72, y);
+        return new Size(width, Math.Max(0, y - (all.Length > 0 ? Gap : 0)));
+    }
+    private double Group(UIElement[] items, double width, int columns, double minimum, double y)
+    {
+        for (int offset = 0; offset < items.Length; offset += columns)
+        {
+            int count = Math.Min(columns, items.Length - offset); double cell = Math.Max(1, (width - Gap * (count - 1)) / count), height = minimum;
+            for (int i = 0; i < count; i++) { items[offset + i].Measure(new Size(cell, double.PositiveInfinity)); height = Math.Max(height, items[offset + i].DesiredSize.Height); }
+            for (int i = 0; i < count; i++) slots[items[offset + i]] = new Rect(i * (cell + Gap), y, cell, height);
             y += height + Gap;
         }
+        return y;
     }
     protected override Size ArrangeOverride(Size finalSize)
-    {
-        for (int i = 0; i < Children.Count && i < slots.Count; i++) Children[i].Arrange(slots[i]);
-        return finalSize;
-    }
+    { foreach (UIElement child in Children) if (slots.TryGetValue(child, out var rectangle)) child.Arrange(rectangle); return finalSize; }
 }

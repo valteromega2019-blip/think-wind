@@ -8,7 +8,7 @@
    <ControlTemplate.Triggers>
     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Day" Property="Background" Value="{DynamicResource Think.Hover}"/></Trigger>
     <Trigger Property="IsToday" Value="True"><Setter TargetName="Day" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/></Trigger>
-    <Trigger Property="IsSelected" Value="True"><Setter TargetName="Day" Property="Background" Value="{DynamicResource Think.Hover}"/><Setter TargetName="Day" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/></Trigger>
+    <Trigger Property="IsSelected" Value="True"><Setter TargetName="Day" Property="Background" Value="{DynamicResource Think.AccentSurface}"/><Setter TargetName="Day" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/></Trigger>
     <Trigger Property="IsInactive" Value="True"><Setter Property="Opacity" Value="0.4"/></Trigger>
     <Trigger Property="IsBlackedOut" Value="True"><Setter Property="Opacity" Value="0.25"/></Trigger>
     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Day" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/></Trigger>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Automation;
@@ -8,7 +9,11 @@ using System.Windows.Media.Imaging;
 using ThinkWind.Native;
 
 namespace ThinkWind.Services;
-internal sealed record TrayEntry(string Name, ImageSource? Icon, AutomationElement Element, nint Host);
+internal sealed record TrayEntry(string Name, ImageSource? Icon, AutomationElement Element, nint Host, string Id = "")
+{
+    internal string DisplayName => Name.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? Name;
+    internal string Key => Id.Length > 0 ? Id : "name:" + DisplayName;
+}
 // Explorer owns the notification icons. Use its accessibility provider, never its memory.
 internal static class TrayService
 {
@@ -43,7 +48,8 @@ internal static class TrayService
                     // A taskbar-wide fallback must not mistake running app buttons for tray icons.
                     bool notification = info.ClassName.Contains("NotifyIcon", StringComparison.OrdinalIgnoreCase) || info.AutomationId.Contains("NotifyItem", StringComparison.OrdinalIgnoreCase) || (trayRoot && InNotificationToolbar(element, root));
                     if (!notification || result.Exists(e => e.Name == info.Name)) continue;
-                    result.Add(new(info.Name, CaptureIcon(info.BoundingRectangle), element, host));
+                    string firstLine = info.Name.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? info.Name;
+                    result.Add(new(info.Name, CaptureIcon(info.BoundingRectangle), element, host, info.ClassName + ":" + info.AutomationId + ":" + firstLine));
                 }
                 catch (Exception e) when (Unavailable(e)) { }
             }

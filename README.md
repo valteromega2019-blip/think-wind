@@ -6,7 +6,13 @@ Repositório próprio: https://github.com/valteromega2019-blip/think-wind
 
 Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicial e a branch `developer` é a área de desenvolvimento. O histórico deste repositório é independente do Think Monitor.
 
-## Atualização v0.05 — código em desenvolvimento
+## Atualização v0.06 — código em desenvolvimento
+
+Bandeja 6 × 4 com favoritos e paginação, calendário mensal aberto no painel completo, gerenciamento WLAN em mini-ilha, seleção real de saída padrão de áudio e refinamento das animações. Botão Iniciar com símbolo vetorial do Windows. Detalhes de uso e limitações em [REFINAMENTOS-0.06.md](REFINAMENTOS-0.06.md).
+
+**Testes, type check, build, execução e publish não realizados nesta etapa. Nenhum instalador gerado. O executável existente continua na v0.05.**
+
+## Atualização anterior: v0.05
 
 Menu Iniciar próprio, biblioteca de aplicativos por AppsFolder/atalhos do Windows, pesquisa em painel próprio com Windows Search, bandeja superior em mini-ilha e Drag & Drop OLE. A barra recolhida usa uma faixa visível na borda física inferior, independente do layout expandido, com espera configurável. Detalhes de uso, compatibilidade e limites em [REFINAMENTOS-0.05.md](REFINAMENTOS-0.05.md).
 

@@ -29,6 +29,9 @@ internal sealed class BackdropHost : IDisposable
     internal bool MaterialAvailable { get; private set; }
     private BackdropComposition? composition;
     private bool compositionFailed;
+    private (int Width, int Height, int Radius, bool Top) lastGeometry;
+    private OverlayChrome.PixelRect lastRectangle;
+    private bool synchronized, lastVisible;
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern nint GetModuleHandle(string? name);
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern ushort RegisterClassEx(ref WindowClass type);
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern nint CreateWindowEx(uint extended, string type, string name, uint style, int x, int y, int width, int height, nint owner, nint menu, nint instance, nint parameter);
@@ -72,7 +75,7 @@ internal sealed class BackdropHost : IDisposable
             int result = DwmSetWindowAttribute(Handle, 17, ref host, 4);
             if (result >= 0 && composition is null && !compositionFailed)
             {
-                try { composition = new BackdropComposition(Handle); }
+                try { composition = new BackdropComposition(Handle); synchronized = false; }
                 catch (Exception e) when (e is COMException or InvalidCastException or InvalidOperationException or NotSupportedException)
                 { compositionFailed = true; }
             }
@@ -89,11 +92,15 @@ internal sealed class BackdropHost : IDisposable
     {
         if (Handle == 0) return;
         int width = Math.Max(1, rectangle.Right - rectangle.Left), height = Math.Max(1, rectangle.Bottom - rectangle.Top);
-        composition?.Resize(width, height);
-        OverlayChrome.Clip(Handle, width, height, radius, top);
-        SetWindowPos(Handle, foreground, rectangle.Left, rectangle.Top, width, height, 0x0010 | (visible && MaterialAvailable ? 0x0040u : 0x0080u));
+        var geometry = (width, height, (int)Math.Round(radius), top);
+        if (!synchronized || lastGeometry != geometry)
+        { composition?.Resize(width, height); OverlayChrome.Clip(Handle, width, height, radius, top); lastGeometry = geometry; }
+        bool show = visible && MaterialAvailable;
+        if (!synchronized || lastVisible != show || rectangle.Left != lastRectangle.Left || rectangle.Top != lastRectangle.Top || rectangle.Right != lastRectangle.Right || rectangle.Bottom != lastRectangle.Bottom)
+            SetWindowPos(Handle, foreground, rectangle.Left, rectangle.Top, width, height, 0x0010 | (show ? 0x0040u : 0x0080u));
+        lastRectangle = rectangle; lastVisible = show; synchronized = true;
     }
-    internal void Hide() { if (Handle != 0) ShowWindow(Handle, 0); }
+    internal void Hide() { if (Handle != 0) ShowWindow(Handle, 0); lastVisible = false; }
     private static nint ProcessMessage(nint window, uint message, nint wParam, nint lParam) => message switch
     {
         0x0084 => -1, // HTTRANSPARENT: never consume clicks intended for content/desktop.

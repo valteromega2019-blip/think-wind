@@ -27,6 +27,7 @@ internal sealed class IslandWindow : FloatingWindow
     private readonly TextBlock hoverStatus = new() { FontSize = 11, Margin = new Thickness(8), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
     private readonly DispatcherTimer hoverEnter = new() { Interval = TimeSpan.FromMilliseconds(80) };
     private readonly DispatcherTimer hoverLeave = new() { Interval = TimeSpan.FromMilliseconds(450) };
+    private readonly DispatcherTimer activation = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private readonly Dictionary<MiniIslandKind, MiniIslandWindow> minis = new();
     private readonly StackPanel fullPanel = new();
     private readonly Viewbox moduleViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
@@ -34,7 +35,9 @@ internal sealed class IslandWindow : FloatingWindow
     private readonly Viewbox hoverViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     private readonly BrightnessControl brightness;
     private readonly MediaCard media = new();
-    private readonly TrayCard trayCard = new();
+    private readonly TrayCard trayCard;
+    private readonly System.Windows.Controls.Calendar calendar = new() { IsTodayHighlighted = true, SelectionMode = CalendarSelectionMode.SingleDate };
+    private readonly TextBlock connectionStatus = new() { FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4) };
     private string moduleStructure = "";
     private readonly IslandMotion motion = new();
     private bool resizeQueued, updatingLayout, dismissingMinis, contentResizePending, readingNetwork;
@@ -45,6 +48,7 @@ internal sealed class IslandWindow : FloatingWindow
     private readonly TextBlock clock = new() { FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 10, 0) };
     private readonly TextBlock metrics = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4), FontSize = 13 };
     private readonly TextBlock calendarDate = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
+    private DateTime calendarToday = DateTime.Today;
     private readonly AudioEndpointControl output, microphone;
     private readonly Dictionary<string, Border> cards = new();
     private readonly Dictionary<string, UIElement> bodies = new();
@@ -58,10 +62,14 @@ internal sealed class IslandWindow : FloatingWindow
     {
         Title = "Think Wind — Dynamic Island"; openSettings = settings;
         brightness = new BrightnessControl(() => Display.Bounds);
+        trayCard = new TrayCard(store);
+        calendar.SetResourceReference(StyleProperty, "Think.Calendar");
+        calendar.Language = System.Windows.Markup.XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag);
         var audio = new AudioService();
         output = new AudioEndpointControl(audio, CoreAudio.Flow.Render);
         microphone = new AudioEndpointControl(audio, CoreAudio.Flow.Capture);
         output.SetCompact(true); microphone.SetCompact(true);
+        output.LayoutChanged += ModuleSizeChanged; microphone.LayoutChanged += ModuleSizeChanged;
         headerViewport = new Viewbox { Child = header, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
         DockPanel.SetDock(headerViewport, Dock.Top); root.Children.Add(headerViewport);
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
@@ -76,8 +84,9 @@ internal sealed class IslandWindow : FloatingWindow
         root.Children.Add(fullPanel); Surface.Child = root;
         BuildBodies();
         Loaded += (_, _) => { RefreshSettings(); UpdateClock(); timer.Start(); };
+        activation.Tick += (_, _) => { if (NearActivationZone && !interaction.MiniOpen) { if (!hoverEnter.IsEnabled) hoverEnter.Start(); } else if (!IsMouseOver) hoverEnter.Stop(); };
         timer.Tick += (_, _) => { UpdateClock(); RefreshAudio(); UpdateHoverStatus(); if (contentResizePending && !ControlsBusy) ModuleSizeChanged(); if (IsVisible && Stage == IslandStage.Full) { if (Store.ModuleVisible("background")) trayCard.Refresh(); if (Store.ModuleVisible("connections")) brightness.Refresh(); } };
-        hoverEnter.Tick += (_, _) => { hoverEnter.Stop(); if (IsMouseOver && !interaction.MiniOpen) Transition(() => interaction.Enter()); };
+        hoverEnter.Tick += (_, _) => { hoverEnter.Stop(); if ((IsMouseOver || NearActivationZone) && !interaction.MiniOpen) Transition(() => interaction.Enter()); };
         hoverLeave.Tick += (_, _) =>
         {
             hoverLeave.Stop();
@@ -110,8 +119,8 @@ internal sealed class IslandWindow : FloatingWindow
         trayCard.LayoutChanged += ModuleSizeChanged;
         brightness.LayoutChanged += ModuleSizeChanged;
         LayoutDrag.Completed += DragCompleted;
-        Closed += (_, _) => { timer.Stop(); hoverEnter.Stop(); hoverLeave.Stop(); motion.Cancel(MotionElements()); LayoutDrag.Completed -= DragCompleted; media.Dispose(); };
-        IsVisibleChanged += (_, _) => { if (!IsVisible) { hoverEnter.Stop(); CancelCollapse(); DismissMinis(); motion.Cancel(MotionElements()); media.SetActive(false); } else UpdateStageVisibility(); };
+        Closed += (_, _) => { timer.Stop(); activation.Stop(); hoverEnter.Stop(); hoverLeave.Stop(); motion.Cancel(MotionElements()); LayoutDrag.Completed -= DragCompleted; media.Dispose(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { activation.Stop(); hoverEnter.Stop(); CancelCollapse(); DismissMinis(); motion.Cancel(MotionElements()); media.SetActive(false); } else UpdateStageVisibility(); };
     }
     private void DragCompleted() { RefreshSettings(); ScheduleCollapse(); }
     private Border HoverCard(string title, UIElement child)
@@ -125,7 +134,7 @@ internal sealed class IslandWindow : FloatingWindow
         var connections = new WrapPanel();
         foreach (var control in LayoutCatalog.QuickControls.Where(q => q.Id is "wifi" or "bluetooth" or "airplane"))
         {
-            var tile = ActionButton(control.Name, () => SystemActions.Run(control.Target!), "Abrir configurações de " + control.Name);
+            var tile = ActionButton(control.Name, () => { if (control.Id == "wifi") ShowMini(MiniIslandKind.Network); else SystemActions.Run(control.Target!); }, control.Id == "wifi" ? "Gerenciar redes Wi-Fi" : "Abrir configurações de " + control.Name);
             var content = new StackPanel(); content.Children.Add(Glyph(control.Glyph, 22));
             content.Children.Add(new TextBlock { Text = control.Name, FontSize = 11, Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
             tile.Content = content; tile.Width = 42; tile.Height = 56; tile.Padding = new Thickness(2); tile.Margin = new Thickness(2);
@@ -134,6 +143,7 @@ internal sealed class IslandWindow : FloatingWindow
             connections.Children.Add(tile);
         }
         var connectionPanel = new StackPanel(); connectionPanel.Children.Add(connections); connectionPanel.Children.Add(brightness);
+        connectionPanel.Children.Insert(1, connectionStatus);
         var displaySettings = ActionButton("Tela", () => SystemActions.Run("ms-settings:display")); displaySettings.Padding = new Thickness(6, 3, 6, 3); displaySettings.FontSize = 10;
         connectionPanel.Children.Add(displaySettings);
         bodies["connections"] = connectionPanel;
@@ -147,8 +157,7 @@ internal sealed class IslandWindow : FloatingWindow
         bodies["metrics"] = metrics;
         var calendarPanel = new StackPanel();
         calendarPanel.Children.Add(calendarDate);
-        var calendarButton = ActionButton("Calendário", () => ShowMini(MiniIslandKind.Calendar)); calendarButton.Padding = new Thickness(6, 4, 6, 4); calendarButton.FontSize = 11;
-        calendarPanel.Children.Add(calendarButton); bodies["calendar"] = calendarPanel;
+        calendarPanel.Children.Add(calendar); bodies["calendar"] = calendarPanel;
         bodies["background"] = trayCard;
         var notifications = new WrapPanel();
         var alerts = ActionButton("Abrir notificações", () => Desktop.Chord(0x5B, 0x4E)); alerts.Content = Glyph("\uE7F4", 20); alerts.Width = 36; alerts.Height = 36; alerts.Padding = new Thickness(4); notifications.Children.Add(alerts);
@@ -184,7 +193,7 @@ internal sealed class IslandWindow : FloatingWindow
                     hide.Padding = new Thickness(8, 3, 8, 3); DockPanel.SetDock(hide, Dock.Right); title.Children.Add(hide);
                 }
                 title.Children.Add(grip); content.Children.Add(title); content.Children.Add(body);
-                var card = new Border { Child = content, CornerRadius = new CornerRadius(20), Padding = new Thickness(10) };
+                var card = new Border { Child = content, Tag = id, CornerRadius = new CornerRadius(20), Padding = new Thickness(10), VerticalAlignment = VerticalAlignment.Top };
                 card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
                 LayoutDrag.Attach(card, "modules", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.ModuleOrder, from, to, after)), true, grip);
                 cards[id] = card;
@@ -200,7 +209,6 @@ internal sealed class IslandWindow : FloatingWindow
             if (card.Child is StackPanel content && content.Children[0] is DockPanel title)
                 foreach (var label in title.Children.OfType<TextBlock>()) label.FontSize = prominent ? 11 : 10;
         }
-        trayCard.SetCompact(Array.IndexOf(ordered, "background") >= 3);
         modules.Gap = Math.Max(6, Store.Value.IslandSpacing + 2);
         modules.SetCards(ordered.Select(id => cards[id]));
         if (Store.IsEditing) interaction.OpenFull();
@@ -221,7 +229,8 @@ internal sealed class IslandWindow : FloatingWindow
             var grip = Glyph("\uE784", 15); grip.Width = 22; AttachPositionGrip(grip); header.Children.Add(grip);
         }
         var standard = new[] { "clock", "wifi", "audio" }.Concat(Store.Value.HiddenQuickControls.Contains("tray") ? Array.Empty<string>() : new[] { "tray" });
-        var headerIds = (Store.IsEditing ? Store.Value.QuickOrder.Where(id => !Store.Value.HiddenQuickControls.Contains(id)) : standard).Concat(new[] { "settings" }).Distinct();
+        var headerIds = (Store.IsEditing ? Store.Value.QuickOrder.Where(id => id is not ("settings" or "windows-settings") && !Store.Value.HiddenQuickControls.Contains(id)) : standard)
+            .Concat(new[] { "windows-settings" }).Concat(Stage == IslandStage.Full ? new[] { "settings" } : Array.Empty<string>()).Distinct();
         foreach (var id in headerIds)
         {
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
@@ -240,7 +249,7 @@ internal sealed class IslandWindow : FloatingWindow
             }
             var button = ActionButton(control.Name, () =>
             {
-                if (Store.IsEditing && id != "settings") return;
+                if (Store.IsEditing && id is not ("settings" or "windows-settings")) return;
                 if (id == "audio") ShowMini(MiniIslandKind.Volume);
                 else if (id == "wifi") ShowMini(MiniIslandKind.Network);
                 else if (id == "tray") ShowMini(MiniIslandKind.Tray);
@@ -253,7 +262,7 @@ internal sealed class IslandWindow : FloatingWindow
             button.Style = (Style)FindResource("Think.IconButton");
             button.Width = 32 * scale; button.Height = 32 * scale;
             button.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
-            LayoutDrag.Attach(button, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
+            if (id is not ("settings" or "windows-settings")) LayoutDrag.Attach(button, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
             header.Children.Add(button);
         }
         if (Stage == IslandStage.Full || Store.IsEditing)
@@ -268,7 +277,7 @@ internal sealed class IslandWindow : FloatingWindow
             var expand = ActionButton("Abrir painel completo", OpenFull);
             expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(expand);
         }
-        foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "wifi" or "audio" or "tray" or "settings") && !Store.Value.HiddenQuickControls.Contains(id)))
+        foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "wifi" or "audio" or "tray" or "settings" or "windows-settings") && !Store.Value.HiddenQuickControls.Contains(id)))
         {
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
             var quick = ActionButton(control.Name, () =>
@@ -286,6 +295,11 @@ internal sealed class IslandWindow : FloatingWindow
         clock.Text = DateTime.Now.ToString("HH:mm", CultureInfo.GetCultureInfo("pt-BR"));
         clock.ToolTip = DateTime.Now.ToString("dddd, dd 'de' MMMM", CultureInfo.GetCultureInfo("pt-BR"));
         calendarDate.Text = DateTime.Now.ToString("ddd, dd MMM", CultureInfo.GetCultureInfo("pt-BR"));
+        if (calendarToday != DateTime.Today)
+        {
+            if (calendar.DisplayDate.Year == calendarToday.Year && calendar.DisplayDate.Month == calendarToday.Month) calendar.DisplayDate = DateTime.Today;
+            calendarToday = DateTime.Today; calendar.InvalidateVisual();
+        }
         if (!IsVisible || Stage != IslandStage.Full || !Store.ModuleVisible("metrics")) return;
         string text = Store.Value.ShowMemory ? $"RAM  {Desktop.MemoryPercent()}%" : "";
         if (Store.Value.ShowBattery)
@@ -313,6 +327,7 @@ internal sealed class IslandWindow : FloatingWindow
     }
     private void OpenFull()
     {
+        calendar.DisplayMode = CalendarMode.Month; calendar.DisplayDate = DateTime.Today;
         DismissMinis(); hoverEnter.Stop(); CancelCollapse();
         Transition(() => interaction.OpenFull());
     }
@@ -321,6 +336,7 @@ internal sealed class IslandWindow : FloatingWindow
         hoverViewport.Visibility = Stage == IslandStage.Hover ? Visibility.Visible : Visibility.Collapsed;
         fullPanel.Visibility = Stage == IslandStage.Full ? Visibility.Visible : Visibility.Collapsed;
         bool hover = Stage == IslandStage.Hover;
+        if (IsVisible && Stage == IslandStage.Compact) activation.Start(); else activation.Stop();
         Rehost(media, hover ? hoverMediaSlot : mediaSlot);
         Rehost(output, hover ? hoverOutputSlot : outputSlot);
         hoverModules.Children[0].Visibility = Store.ModuleVisible("media") ? Visibility.Visible : Visibility.Collapsed;
@@ -361,6 +377,15 @@ internal sealed class IslandWindow : FloatingWindow
         foreach (var mini in minis.Values) if (mini.IsVisible) mini.RefreshAppearance();
     }
     private bool PointerInsideGroup => IsMouseOver || minis.Values.Any(mini => mini.IsVisible && mini.IsMouseOver);
+    private bool NearActivationZone
+    {
+        get
+        {
+            if (!IsVisible || Stage != IslandStage.Compact) return false;
+            var bounds = TargetBounds; var pointer = System.Windows.Forms.Cursor.Position; double margin = 8 * Display.Scale;
+            return pointer.X >= bounds.Left - margin && pointer.X <= bounds.Right + margin && pointer.Y >= bounds.Top && pointer.Y <= bounds.Bottom + margin;
+        }
+    }
     private bool PointerInsideBridge
     {
         get
@@ -376,7 +401,7 @@ internal sealed class IslandWindow : FloatingWindow
             return false;
         }
     }
-    private bool ControlsBusy => IsMouseCaptureWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
+    private bool ControlsBusy => IsMouseCaptureWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || trayCard.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
     private bool InteractionInProgress => Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
     private void CancelCollapse() { hoverLeave.Stop(); outsideSince = null; }
     private void WaitForBridge() { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(50); hoverLeave.Start(); }
@@ -434,15 +459,16 @@ internal sealed class IslandWindow : FloatingWindow
     }
     private async void UpdateHoverStatus()
     {
-        if (!IsVisible || Stage != IslandStage.Hover || readingNetwork || DateTime.UtcNow < nextNetworkRefresh) return;
+        if (!IsVisible || Stage == IslandStage.Compact || readingNetwork || DateTime.UtcNow < nextNetworkRefresh) return;
         readingNetwork = true;
         nextNetworkRefresh = DateTime.UtcNow.AddSeconds(5);
         try
         {
             var network = await Task.Run(NetworkService.Read);
-            if (!IsVisible || Stage != IslandStage.Hover) return;
+            if (!IsVisible || Stage == IslandStage.Compact) return;
             string text = (network.Connected ? network.Kind + " · " + network.Name : "Sem rede ativa") + (Store.Value.ShowMemory ? $"    RAM {Desktop.MemoryPercent()}%" : "");
             if (hoverStatus.Text != text) { hoverStatus.Text = text; ModuleSizeChanged(); }
+            connectionStatus.Text = text;
         }
         catch (System.Net.NetworkInformation.NetworkInformationException)
         { if (IsVisible && Stage == IslandStage.Hover) { hoverStatus.Text = "Rede · abra o acesso rápido para conferir a conexão"; ModuleSizeChanged(); } }
@@ -458,15 +484,17 @@ internal sealed class IslandWindow : FloatingWindow
         double width = Stage == IslandStage.Compact ? compact : Stage == IslandStage.Hover ? Math.Min(Display.Width - 16, Math.Max(compact, Math.Min(540, p.IslandExpandedWidth))) : Math.Min(Display.Width - 16, p.IslandExpandedWidth);
         headerViewport.Width = Math.Max(1, width - 24);
         double headerHeight = Math.Max(40, 36 * p.IslandScale) + 10;
-        double limit = CompactLayout.PanelHeight(Display.Height);
+        double limit = Stage == IslandStage.Full ? Math.Max(120, Math.Min(620, Display.Height * .64)) : CompactLayout.PanelHeight(Display.Height);
         double inner = Math.Max(1, width - 24);
         hoverViewport.Width = inner; hoverPanel.Width = inner;
         hoverViewport.MaxHeight = Math.Max(24, limit - headerHeight - 12);
-        modules.Width = inner; moduleViewport.Width = inner;
+        double boardWidth = Math.Max(760, inner);
+        modules.Width = boardWidth; moduleViewport.Width = inner;
         moduleViewport.MaxHeight = Math.Max(24, limit - headerHeight - 16);
-        modules.Measure(new Size(inner, double.PositiveInfinity));
+        modules.Measure(new Size(boardWidth, double.PositiveInfinity));
+        moduleViewport.Measure(new Size(inner, moduleViewport.MaxHeight));
         hoverPanel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
-        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? Math.Min(limit, headerHeight + hoverPanel.DesiredSize.Height + 12) : Math.Min(limit, headerHeight + Math.Min(moduleViewport.MaxHeight, modules.DesiredSize.Height) + 16);
+        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? Math.Min(limit, headerHeight + hoverPanel.DesiredSize.Height + 12) : Math.Min(limit, headerHeight + moduleViewport.DesiredSize.Height + 16);
         Place(width, height, animate);
     }
 }

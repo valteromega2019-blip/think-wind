@@ -67,6 +67,29 @@ internal sealed class AudioService
         Check(volume.SetMute(muted, ref context));
         return true;
     });
+    internal void SetDefaultOutput(string id) => WithEnumerator(enumerator =>
+    {
+        string Before(Role role)
+        {
+            IDevice? endpoint = null;
+            try { Check(enumerator.GetDefaultAudioEndpoint(Flow.Render, role, out endpoint)); Check(endpoint.GetId(out var value)); return value; }
+            finally { Release(endpoint); }
+        }
+        string console = Before(Role.Console), multimedia = Before(Role.Multimedia);
+        // Validate that the requested device still exists and is active before changing policy.
+        Read(Flow.Render, id);
+        try
+        {
+            DefaultAudioPolicy.Set(id, Role.Console); DefaultAudioPolicy.Set(id, Role.Multimedia);
+            if (Before(Role.Console) != id || Before(Role.Multimedia) != id) throw new COMException("O Windows não confirmou a saída padrão solicitada.");
+        }
+        catch (Exception error) when (error is COMException or InvalidCastException or UnauthorizedAccessException)
+        {
+            try { DefaultAudioPolicy.Set(console, Role.Console); DefaultAudioPolicy.Set(multimedia, Role.Multimedia); } catch (Exception restore) when (restore is COMException or InvalidCastException or UnauthorizedAccessException) { }
+            throw new AudioUnavailableException(error);
+        }
+        return true;
+    });
 
     private static T WithEndpoint<T>(Flow flow, string? id, Func<IDevice, IEndpointVolume, T> action) => WithEnumerator(enumerator =>
     {

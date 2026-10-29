@@ -34,7 +34,15 @@ internal static class ThemeService
         Set("Think.Text", light ? "#18212D" : "#F4F6FA");
         Set("Think.Muted", light ? "#506071" : "#AAB3C1");
         Set("Think.Hover", light ? "#CCD8E4" : "#303B48");
-        Set("Think.Accent", p.AccentColor);
+        var accent = (Color)ColorConverter.ConvertFromString(p.AccentColor);
+        // Preserve the chosen hue, but lift/darken the control ink for readability.
+        double luminance = (.2126 * accent.R + .7152 * accent.G + .0722 * accent.B) / 255;
+        double mix = light && luminance > .5 ? .45 : !light && luminance < .55 ? .45 : 0;
+        byte target = light ? (byte)0 : (byte)255;
+        var ink = Color.FromRgb((byte)(accent.R + (target - accent.R) * mix), (byte)(accent.G + (target - accent.G) * mix), (byte)(accent.B + (target - accent.B) * mix));
+        Set("Think.Accent", ink.ToString());
+        Set("Think.AccentInk", ink.ToString());
+        Set("Think.AccentSurface", Color.FromArgb(light ? (byte)28 : (byte)38, accent.R, accent.G, accent.B).ToString());
         if (SystemParameters.HighContrast)
         {
             resources["Think.Background"] = SystemColors.WindowBrush;
@@ -44,6 +52,8 @@ internal static class ThemeService
             resources["Think.GlassCard"] = SystemColors.ControlBrush;
             resources["Think.Control"] = SystemColors.ControlBrush;
             resources["Think.Accent"] = SystemColors.HighlightBrush;
+            resources["Think.AccentInk"] = SystemColors.HighlightBrush;
+            resources["Think.AccentSurface"] = SystemColors.ControlBrush;
             resources["Think.Hover"] = SystemColors.HighlightBrush;
         }
         void Set(string key, string color)

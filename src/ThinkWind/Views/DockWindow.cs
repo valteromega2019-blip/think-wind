@@ -147,7 +147,7 @@ internal sealed partial class DockWindow : FloatingWindow
         fit = CompactLayout.FitDock(entries.Count, available, Store.Value.IconSize * Store.Value.DockScale, Store.Value.DockSpacing);
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Children.Clear();
-        var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = Glyph("\uE782", 23); start.Width = 40; start.Height = 38; start.Padding = new Thickness(4); items.Children.Add(start);
+        var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(); start.Width = 40; start.Height = 38; start.Padding = new Thickness(4); items.Children.Add(start);
         items.Children.Add(SearchSlot(searchWidth));
         if (Store.IsEditing)
         {
@@ -159,6 +159,20 @@ internal sealed partial class DockWindow : FloatingWindow
         if (pages > 1) items.Children.Add(PageButton(1, pages));
         items.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         contentWidth = items.DesiredSize.Width; contentHeight = items.DesiredSize.Height;
+    }
+    private static FrameworkElement WindowsStartIcon()
+    {
+        // Four equal panes: a crisp Windows symbol at every display scale,
+        // independent of installed icon-font versions and without a tile behind it.
+        var icon = new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse("M0,0 H10 V10 H0 Z M12,0 H22 V10 H12 Z M0,12 H10 V22 H0 Z M12,12 H22 V22 H12 Z"),
+            Width = 23, Height = 23, Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false
+        };
+        icon.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Think.AccentInk");
+        return icon;
     }
     private Button PageButton(int direction, int pages)
     {
