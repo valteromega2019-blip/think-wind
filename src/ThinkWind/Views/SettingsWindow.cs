@@ -87,6 +87,10 @@ internal sealed class SettingsWindow : Window
         Slider(dock, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.DockOpacity ?? store.Value.TintOpacity, v => Change(p => p.DockOpacity = v), "P0");
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");
         Slider(dock, "Tamanho dos ícones", 20, 48, store.Value.IconSize, v => Change(p => p.IconSize = v));
+        Check(dock, "Ampliação dos ícones estilo Dock", store.Value.DockMagnification, v => Change(p => p.DockMagnification = v));
+        Slider(dock, "Intensidade da ampliação", .4, .6, store.Value.DockMagnificationAmount, v => Change(p => p.DockMagnificationAmount = v), "P0", .01);
+        Slider(dock, "Velocidade da mola", .5, 2, store.Value.DockMagnificationSpeed, v => Change(p => p.DockMagnificationSpeed = v), "0.0 '×'", .1);
+        Slider(dock, "Ícones vizinhos de cada lado", 0, 4, store.Value.DockMagnificationNeighbors, v => Change(p => p.DockMagnificationNeighbors = (int)Math.Round(v)), "0", 1);
         Slider(dock, "Espaço entre os ícones", 0, 24, store.Value.DockSpacing, v => Change(p => p.DockSpacing = v));
         Slider(dock, "Arredondamento", 0, 48, store.Value.DockRadius, v => Change(p => p.DockRadius = v));
         Slider(dock, "Distância da borda inferior", 4, 80, store.Value.DockBottomOffset, v => Change(p => p.DockBottomOffset = v));

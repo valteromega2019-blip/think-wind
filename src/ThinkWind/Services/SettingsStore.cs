@@ -13,6 +13,10 @@ public sealed class Preferences
     public double DockScale { get; set; } = 1;
     public double TintOpacity { get; set; } = .72;
     public bool AutoHide { get; set; } = true;
+    public bool DockMagnification { get; set; } = true;
+    public double DockMagnificationAmount { get; set; } = .5;
+    public double DockMagnificationSpeed { get; set; } = 1;
+    public int DockMagnificationNeighbors { get; set; } = 2;
     public bool HideWindowsTaskbar { get; set; }
     public double DockCollapseSeconds { get; set; } = .8;
     public string DockSearchMode { get; set; } = "Bar";
@@ -116,6 +120,8 @@ public sealed class SettingsStore
             p.DockHorizontalOffset = 0; p.DockBottomOffset = defaults.DockBottomOffset;
             p.DockMaterial = defaults.DockMaterial; p.DockOpacity = .72; p.AutoHide = defaults.AutoHide;
             p.DockCollapseSeconds = defaults.DockCollapseSeconds; p.DockSearchMode = defaults.DockSearchMode;
+            p.DockMagnification = defaults.DockMagnification; p.DockMagnificationAmount = defaults.DockMagnificationAmount;
+            p.DockMagnificationSpeed = defaults.DockMagnificationSpeed; p.DockMagnificationNeighbors = defaults.DockMagnificationNeighbors;
         });
     }
     public void ResetIsland()
@@ -139,6 +145,9 @@ public sealed class SettingsStore
         var p = Value;
         p.DockScale = Limit(p.DockScale, .75, 1.5, 1); p.TintOpacity = Limit(p.TintOpacity, .2, 1, .72);
         p.DockCollapseSeconds = Limit(p.DockCollapseSeconds, 0, 10, .8);
+        p.DockMagnificationAmount = Limit(p.DockMagnificationAmount, .4, .6, .5);
+        p.DockMagnificationSpeed = Limit(p.DockMagnificationSpeed, .5, 2, 1);
+        p.DockMagnificationNeighbors = Math.Clamp(p.DockMagnificationNeighbors, 0, 4);
         p.DockSearchMode = p.DockSearchMode is "Icon" or "Bar" ? p.DockSearchMode : "Bar";
         p.StartPins = (p.StartPins ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(100).ToList();
         p.RecentLaunches = (p.RecentLaunches ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(20).ToList();

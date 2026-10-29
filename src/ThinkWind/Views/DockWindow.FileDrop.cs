@@ -44,6 +44,7 @@ internal sealed partial class DockWindow
     }
     private void BeginFileDrag()
     {
+        magnifier.Reset();
         fileDragging = true; lastHover = DateTime.UtcNow;
         launcher?.Dismiss();
         // The entire visible collapsed strip is a real OLE drop target at the screen edge.

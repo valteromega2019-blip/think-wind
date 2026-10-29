@@ -2,6 +2,18 @@
 
 ## Estado da entrega
 
+### Ampliação estilo Dock
+
+- Aplicativos fixados e abertos recebem ampliação contínua por distância horizontal, com curva cossenoidal e mola amortecida. Iniciar, pesquisa, biblioteca e navegação permanecem estáveis em tamanho, acompanhando o deslocamento do conjunto.
+- Personalização → Barra inferior: ativar/desativar, intensidade de 40% a 60% (padrão 50%), velocidade de 0,5× a 2× e zero a quatro vizinhos por lado (padrão dois).
+- Um relógio `CompositionTarget.Rendering` governa toda a linha e para quando a mola estabiliza. Entrada/movimento/saída do cursor retomam o cálculo; não há timers permanentes por ícone nem animações individuais disparadas a cada hover.
+- Escala ancorada à base dos botões e deslocamento acumulado conforme a largura ampliada, preservando intervalos e áreas reais de clique. Os indicadores acompanham seus botões.
+- A janela reserva largura e altura adicionais no layout expandido, antecipadamente. Essa reserva pode alterar a altura normal da superfície Acrylic e a quantidade de aplicativos por página; não há redimensionamento nativo por movimento do mouse. Em espaço restrito a intensidade efetiva é limitada à reserva disponível, para evitar cortes.
+- Recolhido continua sendo a faixa de 6 DIP na borda inferior. Ampliação é suspensa na edição visual, durante Drag & Drop de arquivos ou quando o Windows desativa animações. Atualizações periódicas da lista são adiadas enquanto o cursor está sobre os ícones, evitando reconstruções no meio da onda.
+- Preferências salvas e aplicadas em tempo real. Velocidade ajusta somente a mola; intensidade/vizinhos/ativação recalculam o espaço reservado sem alterar a janela de configurações. Restaurar barra também restaura essas opções.
+
+Implementação revisada somente por leitura de código/diff, sem compilação, testes, type check ou validação visual nesta etapa.
+
 Implementação revisada por leitura de código e diff. **Testes, type check, compilação, execução e publish não foram realizados nesta atualização**, conforme a preferência do usuário. Nenhum instalador foi gerado. O executável existente continua sendo o da v0.05; este documento não atesta validação visual ou funcionamento em máquina real da v0.06.
 
 ## Bandeja e acessos

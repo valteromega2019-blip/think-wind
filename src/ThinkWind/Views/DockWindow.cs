@@ -17,6 +17,8 @@ internal sealed partial class DockWindow : FloatingWindow
     protected override bool AttachedTop => false;
     protected override bool CollapsedDock => hidden;
     private readonly StackPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+    private readonly DockMagnifier magnifier;
+    private double magnificationReserve;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private readonly ApplicationCatalog catalog;
     private LauncherPanelWindow? launcher;
@@ -40,6 +42,9 @@ internal sealed partial class DockWindow : FloatingWindow
     public DockWindow(SettingsStore store) : base(store)
     {
         Title = "Think Wind — Dock";
+        items.VerticalAlignment = VerticalAlignment.Bottom;
+        items.Background = Brushes.Transparent;
+        magnifier = new DockMagnifier(items, () => !hidden && !Store.IsEditing && !LayoutDrag.Active && !fileDragging && !MenuOpen);
         catalog = new ApplicationCatalog(Dispatcher);
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
         System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Think Wind");
@@ -61,7 +66,7 @@ internal sealed partial class DockWindow : FloatingWindow
         MouseLeave += (_, _) => lastHover = DateTime.UtcNow;
         LayoutDrag.Completed += DragCompleted;
         InitializeFileDrop();
-        Closed += (_, _) => { timer.Stop(); DisposeFileDrop(); catalog.Dispose(); LayoutDrag.Completed -= DragCompleted; };
+        Closed += (_, _) => { magnifier.Dispose(); timer.Stop(); DisposeFileDrop(); catalog.Dispose(); LayoutDrag.Completed -= DragCompleted; };
     }
     private void DragCompleted() { signature = ""; RefreshApps(); }
     private nint NoActivate(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
@@ -91,11 +96,12 @@ internal sealed partial class DockWindow : FloatingWindow
     {
         if (hidden == value) return;
         hidden = value; items.Visibility = value ? Visibility.Hidden : Visibility.Visible;
+        if (value) magnifier.Reset(); else magnifier.Wake();
         ApplyAppearance(); Place(TotalWidth, hidden ? 6 : ExpandedHeight, animate);
     }
     private void RefreshApps()
     {
-        if (LayoutDrag.Active || fileDragging || MenuOpen || rebuilding || dockSearch.IsKeyboardFocusWithin) return;
+        if (LayoutDrag.Active || fileDragging || MenuOpen || rebuilding || dockSearch.IsKeyboardFocusWithin || (items.IsMouseOver && entries.Count > 0 && signature.Length > 0)) return;
         var windows = Desktop.Windows();
         var active = Desktop.GetForegroundWindow();
         var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}")) + active;
@@ -143,8 +149,15 @@ internal sealed partial class DockWindow : FloatingWindow
     {
         fittedWidth = Display.Width;
         double searchWidth = Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36;
-        double available = Math.Max(60, fittedWidth - 16 - Surface.Padding.Left - Surface.Padding.Right - 40 - searchWidth - (Store.IsEditing ? 30 : 0));
-        fit = CompactLayout.FitDock(entries.Count, available, Store.Value.IconSize * Store.Value.DockScale, Store.Value.DockSpacing);
+        double available = Math.Max(60, fittedWidth - 16 - 20 - 40 - searchWidth - (Store.IsEditing ? 30 : 0));
+        var p = Store.Value;
+        bool magnify = p.DockMagnification && SystemParameters.ClientAreaAnimation && !Store.IsEditing;
+        magnificationReserve = magnify ? Math.Min(available * .32, (p.IconSize * p.DockScale + 20) * p.DockMagnificationAmount * (p.DockMagnificationNeighbors + 1) * 1.12) : 0;
+        fit = CompactLayout.FitDock(entries.Count, available - magnificationReserve, p.IconSize * p.DockScale, p.DockSpacing);
+        // Fixed headroom belongs to the expanded layout, never to mouse frames.
+        // The same alpha-clipped Acrylic surface encloses every enlarged icon.
+        double headroom = magnify ? (fit.Icon + 26) * p.DockMagnificationAmount * 1.08 : 0;
+        Surface.Padding = new Thickness(10 + magnificationReserve / 2, 10 + headroom, 10 + magnificationReserve / 2, 10);
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Children.Clear();
         var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(); start.Width = 40; start.Height = 38; start.Padding = new Thickness(4); items.Children.Add(start);
@@ -155,10 +168,17 @@ internal sealed partial class DockWindow : FloatingWindow
             grip.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); AttachPositionGrip(grip); items.Children.Add(grip);
         }
         if (pages > 1) items.Children.Add(PageButton(-1, pages));
-        foreach (var entry in entries.Skip(page * fit.PerPage).Take(fit.PerPage)) items.Children.Add(CreateButton(entry, activeWindow));
+        var magnified = new List<FrameworkElement>();
+        foreach (var entry in entries.Skip(page * fit.PerPage).Take(fit.PerPage))
+        {
+            var button = CreateButton(entry, activeWindow); items.Children.Add(button);
+            if (!entry.Key.StartsWith("system:", StringComparison.Ordinal)) magnified.Add(button);
+        }
         if (pages > 1) items.Children.Add(PageButton(1, pages));
         items.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         contentWidth = items.DesiredSize.Width; contentHeight = items.DesiredSize.Height;
+        foreach (FrameworkElement child in items.Children) child.VerticalAlignment = VerticalAlignment.Bottom;
+        magnifier.Bind(magnified, p, magnificationReserve);
     }
     private static FrameworkElement WindowsStartIcon()
     {
@@ -269,7 +289,7 @@ internal sealed partial class DockWindow : FloatingWindow
     { SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); }
     private void ToggleStart()
     { if (launcher?.IsVisible == true && panelMode == LauncherPanelMode.Start) launcher.Dismiss(); else ShowPanel(LauncherPanelMode.Start); }
-    public override void RefreshAppearance() { base.RefreshAppearance(); launcher?.RefreshAppearance(); }
+    public override void RefreshAppearance() { base.RefreshAppearance(); magnifier.Configure(Store.Value, magnificationReserve); launcher?.RefreshAppearance(); }
     private void MoveOne(string source, int direction)
     {
         int index = visibleOrder.IndexOf(source), targetIndex = index + direction;

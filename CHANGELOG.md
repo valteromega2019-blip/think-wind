@@ -2,6 +2,8 @@
 
 ## v0.06 (0.6.0-dev) — 2026-10-29
 
+- Ampliação estilo Dock para fixados/abertos: campo contínuo de distância, mola compartilhada, deslocamento sem sobreposição, reserva fixa contra cortes e personalização instantânea de intensidade, velocidade e vizinhos. Sem compilação ou testes nesta etapa.
+
 - Refinamento posterior: removido o encaminhamento da área de segundo plano à bandeja do Windows; imagens reais com cache/renderização do host e ações de acessibilidade quando disponíveis.
 - Opção persistente para ocultar as barras originais em todos os monitores, com auxiliar de restauração ao encerrar/desativar ou detectar saída do launcher. Não encerra Explorer nem bloqueia a tecla Windows. Limites da enumeração de ícones ocultos documentados.
 
