@@ -2,6 +2,8 @@
 
 ## v0.06 (0.6.0-dev) — 2026-10-29
 
+- Compilação Release posteriormente autorizada: zero erros e zero avisos. Entrega para teste em `artifacts/preview-v0.06/ThinkWind.exe`, preservando a cópia anterior em execução. Sem testes, type check separado, execução, publish ou instalador.
+
 - Ampliação estilo Dock para fixados/abertos: campo contínuo de distância, mola compartilhada, deslocamento sem sobreposição, reserva fixa contra cortes e personalização instantânea de intensidade, velocidade e vizinhos. Sem compilação ou testes nesta etapa.
 
 - Refinamento posterior: removido o encaminhamento da área de segundo plano à bandeja do Windows; imagens reais com cache/renderização do host e ações de acessibilidade quando disponíveis.

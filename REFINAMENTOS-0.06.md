@@ -1,5 +1,11 @@
 # Think Wind — v0.06 (0.6.0-dev)
 
+## Compilação posterior autorizada — 2026-10-29
+
+Compilação Release concluída com **zero erros e zero avisos**, solicitada pelo usuário após os refinamentos da bandeja/barra exclusiva e ampliação Dock. Comando direto `dotnet build src/ThinkWind/ThinkWind.csproj -c Release -o artifacts/preview-v0.06 --nologo`; não executa o projeto de checks.
+
+Executável: `D:\think-wind\artifacts\preview-v0.06\ThinkWind.exe`. Cópia anterior em execução preservada; feche-a antes de abrir esta versão, pois o aplicativo permite apenas uma instância. Testes, type check separado, execução, publish e instalador não realizados. As indicações de ausência de build abaixo registram o estado anterior a esta compilação; comportamento visual e integrações continuam pendentes de teste em execução.
+
 ## Estado da entrega
 
 ### Ampliação estilo Dock

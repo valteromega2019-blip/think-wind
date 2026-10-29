@@ -10,7 +10,7 @@ Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicia
 
 Bandeja 6 × 4 com favoritos e paginação, calendário mensal aberto no painel completo, gerenciamento WLAN em mini-ilha, seleção real de saída padrão de áudio e refinamento das animações. Botão Iniciar com símbolo vetorial do Windows. Detalhes de uso e limitações em [REFINAMENTOS-0.06.md](REFINAMENTOS-0.06.md).
 
-**Testes, type check, build, execução e publish não realizados nesta etapa. Nenhum instalador gerado. O executável existente continua na v0.05.**
+**Compilação Release da v0.06 realizada posteriormente a pedido do usuário: zero erros e zero avisos.** Executável para teste em `artifacts/preview-v0.06/ThinkWind.exe`. Testes, type check separado, execução e publish não realizados; nenhum instalador gerado. A cópia anterior em `src/ThinkWind/bin/Release` foi preservada.
 
 Refinamento adicional: bandeja sem redirecionamento automático ao Windows e opção **Sistema → Usar somente a barra do Think Wind**, com ocultação temporária da barra original e auxiliar de restauração. Ícones ocultos não expostos pelo Explorer continuam sujeitos às limitações descritas no documento da v0.06.
 
