@@ -234,7 +234,9 @@ internal sealed class SettingsWindow : FloatingWindow
         panel.Children.Add(new TextBlock { Text = title, FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
         Note(panel, description);
         var card = new Border { Child = panel, CornerRadius = new CornerRadius(16), Padding = new Thickness(20), Margin = new Thickness(0, 0, 0, 16) };
-        card.SetResourceReference(Border.BackgroundProperty, "Think.Surface"); content.Children.Add(card); return panel;
+        card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
+        card.BorderThickness = new Thickness(1); card.SetResourceReference(Border.BorderBrushProperty, "Think.GlassCard");
+        content.Children.Add(card); return panel;
     }
     private static void Note(Panel parent, string text)
     { var note = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 0, 0, 14) }; note.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); parent.Children.Add(note); }
