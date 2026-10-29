@@ -9,8 +9,4 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>0.3.0-dev</Version>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="UIAutomationClient" />
-    <Reference Include="UIAutomationTypes" />
-  </ItemGroup>
 </Project>

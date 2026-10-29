@@ -10,7 +10,7 @@ Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicia
 
 Barra e ilha sem barras de rolagem, ajuste proporcional e paginação, expansão limitada, mídia integrada às sessões do Windows, bandeja por acessibilidade, controles em blocos e sliders renovados. A personalização mantém sua janela independente e atualiza a aparência sem forçar a expansão da ilha. Detalhes e limites em [REFINAMENTOS-0.03.md](REFINAMENTOS-0.03.md).
 
-**Testes, type check, build e publish não foram executados nesta atualização, conforme a preferência do usuário. Nenhum instalador foi gerado. O executável local permanece na compilação anterior e ainda não contém a v0.03.**
+**Compilação Release da v0.03 realizada a pedido do usuário: zero erros e zero avisos. Testes e publish não foram executados; nenhum instalador foi gerado.** Executável atualizado: `src/ThinkWind/bin/Release/net10.0-windows10.0.19041.0/ThinkWind.exe`. As verificações do compilador fazem parte do build autorizado; não foi executado type check separado.
 
 ## Atualização anterior: v0.21
 

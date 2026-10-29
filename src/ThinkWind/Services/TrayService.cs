@@ -79,7 +79,6 @@ internal static class TrayService
         {
             if (context) { if (!SetForegroundWindow(GetAncestor(entry.Host, 2))) return false; entry.Element.SetFocus(); Desktop.Chord(0x10, 0x79); return true; }
             if (entry.Element.TryGetCurrentPattern(InvokePattern.Pattern, out var invoke)) { ((InvokePattern)invoke).Invoke(); return true; }
-            if (entry.Element.TryGetCurrentPattern(LegacyIAccessiblePattern.Pattern, out var legacy)) { ((LegacyIAccessiblePattern)legacy).DoDefaultAction(); return true; }
         }
         catch (Exception e) when (Unavailable(e)) { }
         return false;

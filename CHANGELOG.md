@@ -8,7 +8,7 @@
 - Área de processos substituída por controles acessíveis da bandeja, ícones visíveis e acesso a ações/menus nativos quando expostos pelo Explorer.
 - Blocos arredondados, sliders preenchidos na cor de destaque e brilho via DDC/CI em monitores compatíveis.
 - Atualização seletiva de preferências e janela de configurações independente, sem expansão automática da ilha ao personalizar.
-- Revisão por leitura de código e diff. Testes, type check, build e publish não executados. Nenhum instalador gerado; executável anterior preservado.
+- Compilação Release posteriormente solicitada pelo usuário: zero erros e zero avisos. Corrigidas referências de UI Automation e removido fallback LegacyIAccessiblePattern incompatível. Testes, type check separado e publish não executados; nenhum instalador gerado.
 
 Detalhes e limites em `REFINAMENTOS-0.03.md`.
 

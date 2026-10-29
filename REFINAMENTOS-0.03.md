@@ -24,13 +24,15 @@ Alterações no código em `developer`, sobre a composição Acrylic existente. 
 
 A listagem de processos e o atalho de tarefas foram retirados da ilha. O módulo utiliza UI Automation para os ícones expostos pela área de notificação do Explorer. Os ícones visíveis são obtidos por captura da região original do controle, quando disponível; não são extraídos da memória do Explorer e podem conservar o fundo da bandeja nativa.
 
-O clique usa InvokePattern ou a ação padrão de acessibilidade. O botão direito solicita foco no controle original e o menu nativo por Shift+F10. Disponibilidade depende do provedor de acessibilidade e da versão do Explorer. Ícones ocultos só podem ser consultados quando o overflow nativo estiver aberto. Não há enumeração completa de todos os ícones ocultos nem garantia de menu para todos os aplicativos. O botão “Bandeja do Windows” mantém o acesso nativo por Win+B.
+O clique usa InvokePattern quando exposto pelo controle. O botão direito solicita foco no controle original e o menu nativo por Shift+F10. Disponibilidade depende do provedor de acessibilidade e da versão do Explorer. Ícones ocultos só podem ser consultados quando o overflow nativo estiver aberto. Não há enumeração completa de todos os ícones ocultos nem garantia de menu para todos os aplicativos. O botão “Bandeja do Windows” mantém o acesso nativo por Win+B.
 
 As consultas usam uma chamada pendente por vez, em thread de trabalho, para não bloquear a interface nem acumular chamadas se o Explorer estiver ocupado. A exibição usa páginas de até oito ícones.
 
 ## Estado da entrega
 
-Revisão somente por leitura do código e dos diffs. **Testes, type check, build, publish e verificação visual em execução não foram realizados nesta atualização**, conforme a preferência permanente do usuário. Os resultados históricos da v0.21 não validam estas alterações. Nenhum instalador foi gerado; o executável local continua sendo o da compilação anterior.
+Revisão inicial por leitura do código e dos diffs. Em seguida, o usuário solicitou explicitamente a compilação: **build Release concluído com zero erros e zero avisos**, usando o SDK .NET 10.0.403. Foram removidas referências redundantes de UI Automation e o fallback LegacyIAccessiblePattern, indisponível no cliente gerenciado utilizado.
+
+O executável atualizado está em `src/ThinkWind/bin/Release/net10.0-windows10.0.19041.0/ThinkWind.exe`. **Testes, type check separado, publish e verificação visual não foram executados. Nenhum instalador foi gerado.** As verificações do compilador estão incluídas no build autorizado; os resultados históricos da v0.21 não validam o funcionamento desta versão.
 
 Integrações novas de mídia, bandeja, brilho e comportamento em DPI/resoluções diferentes ainda precisam de validação em execução quando solicitada.
 
