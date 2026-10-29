@@ -27,6 +27,7 @@ internal sealed class SettingsWindow : Window
         var hide = new CheckBox { Content = "Recolher a barra quando estiver ociosa", IsChecked = store.Value.AutoHide }; panel.Children.Add(hide);
         var ram = new CheckBox { Content = "Mostrar uso real de memória RAM", IsChecked = store.Value.ShowMemory }; panel.Children.Add(ram);
         var battery = new CheckBox { Content = "Mostrar bateria quando disponível", IsChecked = store.Value.ShowBattery }; panel.Children.Add(battery);
+        var audio = new CheckBox { Content = "Mostrar controles de saída e microfone na ilha", IsChecked = store.Value.ShowAudio }; panel.Children.Add(audio);
         var startup = new CheckBox { Content = "Iniciar junto com o Windows" };
         try { startup.IsChecked = SystemActions.StartupEnabled(); }
         catch (Exception e) when (e is System.Security.SecurityException or UnauthorizedAccessException or IOException) { startup.IsEnabled = false; }
@@ -48,6 +49,7 @@ internal sealed class SettingsWindow : Window
                 store.Value.DockScale = scale.Value; store.Value.TintOpacity = opacity.Value;
                 store.Value.AutoHide = hide.IsChecked == true; store.Value.ShowMemory = ram.IsChecked == true;
                 store.Value.ShowBattery = battery.IsChecked == true; store.Value.MonitorIndex = monitor.SelectedIndex;
+                store.Value.ShowAudio = audio.IsChecked == true;
                 store.Save(); apply(); Close();
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)

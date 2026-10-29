@@ -60,6 +60,7 @@ internal abstract class FloatingWindow : Window
     protected void AnimateHeight(double value)
     {
         var from = ActualHeight > 0 ? ActualHeight : Height;
+        if (!double.IsFinite(from)) from = value;
         Height = value;
         BeginAnimation(HeightProperty, new DoubleAnimation(from, value, TimeSpan.FromMilliseconds(240)) { FillBehavior = FillBehavior.Stop, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut } });
     }

@@ -1,5 +1,5 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.2.0"
 [Setup]
 AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
 AppName=Think Wind

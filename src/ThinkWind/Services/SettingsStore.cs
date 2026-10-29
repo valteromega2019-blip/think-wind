@@ -13,6 +13,7 @@ public sealed class Preferences
     public bool AutoHide { get; set; }
     public bool ShowMemory { get; set; } = true;
     public bool ShowBattery { get; set; } = true;
+    public bool ShowAudio { get; set; } = true;
     public int MonitorIndex { get; set; }
     public List<Shortcut> Shortcuts { get; set; } = new() { new("Explorador", "explorer.exe"), new("Configurações", "ms-settings:") };
 }
