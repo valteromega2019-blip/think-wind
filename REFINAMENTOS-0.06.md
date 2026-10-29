@@ -6,6 +6,19 @@ Implementação revisada por leitura de código e diff. **Testes, type check, co
 
 ## Bandeja e acessos
 
+### Refinamento posterior — bandeja própria e barra exclusiva
+
+- A área de segundo plano permanece na grade/mini-ilha do Think Wind. Removidos Win+B, foco na barra original e encaminhamento para a bandeja do Windows dos menus e mensagens deste componente. Falhas de integração são informadas no próprio painel.
+- Atualização lê também os hosts de overflow existentes sem abri-los. Recuperação de imagem por renderização do host, uma vez por leitura, e cache de ícones reais. Quando o host não renderiza, captura da tela só é permitida com o ícone visível e sem outra janela cobrindo os pontos verificados. Não há ícones genéricos para simular aplicativos indisponíveis.
+- Invocação pela acessibilidade; expansão do menu nativo somente quando o provedor expõe esse padrão. Não é garantido reproduzir menus de todos os aplicativos sem revelar a interface original.
+- Nova opção em **Personalização → Sistema → Usar somente a barra do Think Wind (ocultar a barra do Windows)**, desativada por padrão e salva automaticamente. Oculta barras principal/secundárias sem encerrar Explorer nem alterar permanentemente a configuração da barra. A tecla Windows e a área de trabalho nativa são preservadas; não é um bloqueio do teclado/menu Iniciar do sistema.
+- Antes de ocultar, tenta recuperar os ícones expostos em segundo plano. Um processo auxiliar do mesmo executável monitora o processo principal e restaura as janelas que ocultou ao sair/desativar ou detectar o encerramento do launcher. Nenhum script, tarefa agendada, serviço ou instalador é criado. Se o auxiliar também for encerrado à força, sua restauração não pode ser garantida.
+- O espaço reservado pelo Windows para sua barra não é alterado nesta etapa. O auxiliar verifica as barras a cada 250 ms; o Explorer ainda pode exibi-las brevemente antes da próxima ocultação.
+
+**Limite importante:** ícones escondidos que o Explorer não materializou não podem ser enumerados por UI Automation apenas por ocultar a barra. A grade mostra os ícones reais que o sistema disponibiliza; esta mudança não implementa um substituto completo do host de notificações do Explorer. Fonte: [Microsoft — enumeração de ícones ocultos](https://devblogs.microsoft.com/oldnewthing/20250929-00/?p=111637). As referências a Win+B nos itens históricos abaixo descrevem o comportamento anterior, substituído neste refinamento.
+
+Revisão somente por leitura de código/diff. Não foram executados testes, type check, build, aplicativo, helper ou publish. O executável existente continua na v0.05; o recurso ainda requer compilação e validação autorizadas.
+
 - Grade fixa de 6 colunas × 4 linhas, até 24 aplicativos por página, com ícone e nome reduzido. Paginação aparece somente quando necessária.
 - Botão direito chama o menu nativo quando o Explorer o disponibiliza. Ctrl + botão direito oferece fixar/desafixar; Ctrl + F também alterna o favorito no item focado. Favoritos ficam antes dos demais.
 - Ordenação considera frequência de ações realizadas pelo launcher e recência de uso/primeira observação. Não representa estatísticas globais de uso do Windows. Preferências e histórico limitado são salvos localmente.

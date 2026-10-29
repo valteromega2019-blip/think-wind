@@ -16,12 +16,14 @@ public partial class App : Application
     private DockWindow? dock;
     private IslandWindow? island;
     private SettingsWindow? settings;
+    private WindowsTaskbar? windowsTaskbar;
     private SettingsStore store = null!;
     private PreferenceStamp? preferenceStamp;
     internal bool IsExiting { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (WindowsTaskbar.RunGuard(e.Args)) { Shutdown(); return; }
         instance = new Mutex(true, @"Local\ThinkWind.Launcher", out var first);
         if (!first) { MessageBox.Show("O Think Wind já está em execução. Use o ícone na bandeja do Windows.", "Think Wind"); Shutdown(); return; }
         store = new SettingsStore();
@@ -42,6 +44,12 @@ public partial class App : Application
         tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = System.Drawing.SystemIcons.Application, ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
         dock.Show(); island.Show();
+        windowsTaskbar = new WindowsTaskbar(message =>
+        {
+            if (IsExiting) return;
+            Dispatcher.BeginInvoke(new Action(() => { store.Update(p => p.HideWindowsTaskbar = false); MessageBox.Show(message, "Think Wind"); }));
+        });
+        windowsTaskbar.Apply(store.Value.HideWindowsTaskbar);
         if (e.Args.Contains("--settings")) OpenSettings();
         if (store.LoadWarning is not null) MessageBox.Show(store.LoadWarning, "Think Wind");
     }
@@ -55,6 +63,7 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        windowsTaskbar?.Dispose();
         SystemEvents.UserPreferenceChanged -= WindowsPreferencesChanged;
         if (store is not null) { store.Changed -= PreferencesChanged; store.Flush(); }
         if (tray is not null) { tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
@@ -65,6 +74,7 @@ public partial class App : Application
     private void PreferencesChanged(object? sender, EventArgs e)
     {
         if (IsExiting) return;
+        windowsTaskbar?.Apply(store.Value.HideWindowsTaskbar);
         ThemeService.Apply(store.Value);
         var next = PreferenceStamp.Capture(store);
         bool editing = preferenceStamp?.Editing != next.Editing;

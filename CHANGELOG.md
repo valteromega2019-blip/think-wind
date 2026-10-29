@@ -2,6 +2,9 @@
 
 ## v0.06 (0.6.0-dev) — 2026-10-29
 
+- Refinamento posterior: removido o encaminhamento da área de segundo plano à bandeja do Windows; imagens reais com cache/renderização do host e ações de acessibilidade quando disponíveis.
+- Opção persistente para ocultar as barras originais em todos os monitores, com auxiliar de restauração ao encerrar/desativar ou detectar saída do launcher. Não encerra Explorer nem bloqueia a tecla Windows. Limites da enumeração de ícones ocultos documentados.
+
 - Bandeja 6 × 4 com paginação, nomes compactos, favoritos persistentes e prioridade por uso local/recência.
 - Calendário mensal aberto no painel completo e configuração do Windows no cabeçalho compacto; personalização do launcher somente no painel completo.
 - Mini-ilha WLAN com redes, conexão/desconexão, senha segura e rádio conforme suporte/permissões do Windows.

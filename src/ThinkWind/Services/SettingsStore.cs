@@ -13,6 +13,7 @@ public sealed class Preferences
     public double DockScale { get; set; } = 1;
     public double TintOpacity { get; set; } = .72;
     public bool AutoHide { get; set; } = true;
+    public bool HideWindowsTaskbar { get; set; }
     public double DockCollapseSeconds { get; set; } = .8;
     public string DockSearchMode { get; set; } = "Bar";
     public List<Shortcut> StartPins { get; set; } = new() { new("Explorador", "explorer.exe"), new("Configurações", "ms-settings:") };

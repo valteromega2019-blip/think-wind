@@ -128,6 +128,8 @@ internal sealed class SettingsWindow : Window
         layout.Children.Add(resets);
 
         var system = Section("Sistema", "Os recursos nativos do Windows permanecem disponíveis.");
+        Check(system, "Usar somente a barra do Think Wind (ocultar a barra do Windows)", store.Value.HideWindowsTaskbar, value => Change(p => p.HideWindowsTaskbar = value));
+        Note(system, "Oculta a barra original em todos os monitores enquanto o Think Wind estiver aberto. Ao desativar ou sair, ela é restaurada. O Explorador e a tecla Windows continuam funcionando.");
         var screens = System.Windows.Forms.Screen.AllScreens;
         int monitorIndex = Array.FindIndex(screens, s => s.DeviceName.Equals(store.Value.MonitorDeviceName, StringComparison.OrdinalIgnoreCase));
         if (monitorIndex < 0) monitorIndex = Math.Clamp(store.Value.MonitorIndex, 0, screens.Length - 1);

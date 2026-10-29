@@ -29,11 +29,10 @@ internal sealed class TrayCard : StackPanel
     {
         store = settings; MinWidth = 288;
         Children.Add(grid); Children.Add(navigation); Children.Add(status);
-        var menu = new ContextMenu(); var original = new MenuItem { Header = "Abrir bandeja original do Windows (Win+B)" }; original.Click += (_, _) => Desktop.Chord(0x5B, 0x42); menu.Items.Add(original); ContextMenu = menu;
-        menu.Opened += (_, _) => menus++; menu.Closed += (_, _) => menus = Math.Max(0, menus - 1);
+        var menu = new ContextMenu(); var refresh = new MenuItem { Header = "Atualizar ícones aqui" }; refresh.Click += (_, _) => { nextRefresh = DateTime.MinValue; Refresh(); }; menu.Items.Add(refresh); ContextMenu = menu;
+        menu.Opened += (_, _) => menus++; menu.Closed += (_, _) => { menus = Math.Max(0, menus - 1); if (nextRefresh == DateTime.MinValue) Refresh(); };
         Loaded += (_, _) => { store.Changed += PreferencesChanged; Render(); };
         Unloaded += (_, _) => store.Changed -= PreferencesChanged;
-        PreviewKeyDown += (_, e) => { if (e.Key == Key.B && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { Desktop.Chord(0x5B, 0x42); e.Handled = true; } };
     }
     private void PreferencesChanged(object? sender, EventArgs args) { if (IsVisible && !IsInteracting) Render(); }
     internal async void Refresh()
@@ -43,15 +42,15 @@ internal sealed class TrayCard : StackPanel
         try
         {
             var pending = TrayService.ReadAsync();
-            if (await Task.WhenAny(pending, Task.Delay(1800)) != pending) ShowError("Bandeja ocupada. Win+B abre o acesso original.");
+            if (await Task.WhenAny(pending, Task.Delay(1800)) != pending) ShowError("Aguardando os ícones dos aplicativos…");
             entries = (await pending).DistinctBy(entry => entry.Key).ToList();
             var unseen = entries.Where(entry => !store.Value.TrayActivity.ContainsKey(entry.Key)).ToArray();
             if (unseen.Length > 0) store.Update(p => { foreach (var entry in unseen) p.TrayActivity.TryAdd(entry.Key, new(0, DateTime.MinValue, DateTime.UtcNow)); });
-            status.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed; status.Text = "Nenhum ícone exposto pelo Explorer. Win+B abre a bandeja original.";
+            status.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed; status.Text = "O Explorer ainda não disponibilizou ícones para esta área. A atualização é automática.";
             Render();
         }
         catch (Exception error) when (error is System.Runtime.InteropServices.COMException or InvalidOperationException or UnauthorizedAccessException)
-        { ShowError("Bandeja indisponível. Use Win+B para acessar a original."); }
+        { ShowError("Não foi possível atualizar os ícones. Tentaremos novamente automaticamente."); }
         finally { reading = false; }
     }
     private void ShowError(string text) { status.Text = text; status.Visibility = Visibility.Visible; LayoutChanged?.Invoke(); }
@@ -107,7 +106,7 @@ internal sealed class TrayCard : StackPanel
     private async Task Invoke(string key, bool context)
     {
         var entry = entries.FirstOrDefault(candidate => candidate.Key == key); if (entry is null) return;
-        if (!await TrayService.InvokeAsync(entry, context)) { ShowError("O aplicativo não expôs esta ação. Use a bandeja original com Win+B."); return; }
+        if (!await TrayService.InvokeAsync(entry, context)) { ShowError(context ? "Este aplicativo não disponibiliza seu menu por acessibilidade." : "Este aplicativo não disponibiliza esta ação por acessibilidade."); return; }
         store.Update(p => { var activity = p.TrayActivity.GetValueOrDefault(key) ?? new(0, DateTime.MinValue, DateTime.UtcNow); p.TrayActivity[key] = activity with { Count = Math.Min(1_000_000, activity.Count + 1), LastUsedUtc = DateTime.UtcNow }; });
     }
     private void ToggleFavorite(string key) => store.Update(p => { if (!p.TrayFavorites.Remove(key)) p.TrayFavorites.Add(key); });
@@ -116,7 +115,6 @@ internal sealed class TrayCard : StackPanel
         var menu = new ContextMenu { PlacementTarget = button };
         var pin = new MenuItem { Header = store.Value.TrayFavorites.Contains(key) ? "Desafixar do início" : "Fixar no início da grade" }; pin.Click += (_, _) => ToggleFavorite(key); menu.Items.Add(pin);
         var native = new MenuItem { Header = "Menu original do aplicativo" }; native.Click += async (_, _) => await Invoke(key, true); menu.Items.Add(native);
-        var original = new MenuItem { Header = "Bandeja original do Windows" }; original.Click += (_, _) => Desktop.Chord(0x5B, 0x42); menu.Items.Add(original);
         menu.Opened += (_, _) => menus++; menu.Closed += (_, _) => { menus = Math.Max(0, menus - 1); signature = ""; Render(); }; menu.IsOpen = true;
     }
 }

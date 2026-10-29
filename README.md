@@ -12,6 +12,8 @@ Bandeja 6 × 4 com favoritos e paginação, calendário mensal aberto no painel 
 
 **Testes, type check, build, execução e publish não realizados nesta etapa. Nenhum instalador gerado. O executável existente continua na v0.05.**
 
+Refinamento adicional: bandeja sem redirecionamento automático ao Windows e opção **Sistema → Usar somente a barra do Think Wind**, com ocultação temporária da barra original e auxiliar de restauração. Ícones ocultos não expostos pelo Explorer continuam sujeitos às limitações descritas no documento da v0.06.
+
 ## Atualização anterior: v0.05
 
 Menu Iniciar próprio, biblioteca de aplicativos por AppsFolder/atalhos do Windows, pesquisa em painel próprio com Windows Search, bandeja superior em mini-ilha e Drag & Drop OLE. A barra recolhida usa uma faixa visível na borda física inferior, independente do layout expandido, com espera configurável. Detalhes de uso, compatibilidade e limites em [REFINAMENTOS-0.05.md](REFINAMENTOS-0.05.md).
