@@ -11,14 +11,17 @@ namespace ThinkWind.Views;
 
 internal sealed class AudioEndpointControl : Border
 {
-    private sealed record Choice(string? Id, string Label);
+    private sealed record Choice(string? Id, string Label)
+    {
+        public override string ToString() => Label;
+    }
     private readonly AudioService audio;
     private readonly CoreAudio.Flow flow;
     private readonly ComboBox devices = new() { DisplayMemberPath = nameof(Choice.Label), Margin = new Thickness(0, 8, 0, 6), MinHeight = 28 };
     private readonly Slider level = new() { Minimum = 0, Maximum = 100, SmallChange = 1, LargeChange = 5, VerticalAlignment = VerticalAlignment.Center, IsEnabled = false };
     private readonly TextBlock percent = new() { Width = 42, TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap, FontSize = 11, Opacity = .8, Margin = new Thickness(0, 6, 0, 0) };
-    private readonly Button mute = new() { Content = "Mudo", IsEnabled = false, MinWidth = 78, Padding = new Thickness(8, 6) };
+    private readonly Button mute = new() { Content = "Mudo", IsEnabled = false, MinWidth = 78, Padding = new Thickness(8, 6, 8, 6) };
     private AudioState? current;
     private string deviceSignature = "";
     private bool updating;

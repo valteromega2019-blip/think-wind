@@ -69,7 +69,7 @@ internal sealed class DockWindow : FloatingWindow
         if (next == signature) return;
         signature = next;
         items.Children.Clear();
-        items.Children.Add(ActionButton("⊞", () => Desktop.Key(0x5B), "Abrir Iniciar do Windows"));
+        items.Children.Add(ActionButton("Iniciar", () => Desktop.Key(0x5B), "Abrir Iniciar do Windows"));
         foreach (var shortcut in Store.Value.Shortcuts)
         {
             var match = windows.FirstOrDefault(w => string.Equals(w.Executable, shortcut.Target, StringComparison.OrdinalIgnoreCase));
@@ -100,7 +100,7 @@ internal sealed class DockWindow : FloatingWindow
     private Button AppButton(string title, string? path, bool active, bool running, Action action)
     {
         var panel = new StackPanel();
-        var icon = Icon(path);
+        var icon = LoadIcon(path);
         if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = 26, Height = 26 });
         else panel.Children.Add(new TextBlock { Text = title.Length > 0 ? title[..1].ToUpperInvariant() : "□", FontSize = 20, TextAlignment = TextAlignment.Center });
         panel.Children.Add(new Border { Height = 3, Width = active ? 20 : 6, CornerRadius = new CornerRadius(2), Background = running ? new SolidColorBrush(active ? Color.FromRgb(164, 187, 255) : Color.FromRgb(115, 123, 150)) : Brushes.Transparent, Margin = new Thickness(0, 5, 0, 0) });
@@ -109,7 +109,7 @@ internal sealed class DockWindow : FloatingWindow
         button.Width = 54 * Store.Value.DockScale;
         return button;
     }
-    private ImageSource? Icon(string? path)
+    private ImageSource? LoadIcon(string? path)
     {
         if (path is null || !System.IO.File.Exists(path)) return null;
         if (icons.TryGetValue(path, out var cached)) return cached;

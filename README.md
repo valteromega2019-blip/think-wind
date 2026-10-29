@@ -37,25 +37,27 @@ O manifesto solicita DPI por monitor V2. A seleção de monitor e os eventos de 
 
 ## Execução e empacotamento
 
-Pré-requisitos: Windows 11, SDK .NET 10 com ferramentas de desktop e, para o instalador, Inno Setup 6. O ambiente de desenvolvimento inspecionado tem o host `dotnet`, mas não apresentou SDK instalado.
+Para usar a versão experimental: Windows 11 x64. O executável distribuído incorpora o runtime .NET; não exige instalação separada do .NET. Para desenvolver: SDK .NET 10 com ferramentas de desktop e, para gerar o instalador, Inno Setup 6.
 
-Os comandos abaixo compilam o aplicativo. **Não foram executados**: a preferência atual do usuário proíbe testes e type check, inclusive por build, sem solicitação explícita. Eles são apenas documentação para quando essa execução for solicitada.
+Em 29/10/2026, o usuário autorizou os testes e a entrega da primeira versão. A compilação Release, os 18 checks automatizados, o publish independente e a geração do instalador foram executados com sucesso. Essa autorização vale para esta entrega; execuções futuras continuam dependendo de pedido explícito, conforme `AGENTS.md`. Veja [TESTES.md](TESTES.md) para os resultados e limites.
 
 ```powershell
 dotnet run --project '.\src\ThinkWind\ThinkWind.csproj'
-dotnet publish '.\src\ThinkWind\ThinkWind.csproj' -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o '.\artifacts\publish'
+dotnet publish '.\src\ThinkWind\ThinkWind.csproj' -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o '.\artifacts\publish'
 ISCC.exe '.\installer\ThinkWind.iss'
 ```
 
-O script Inno Setup prepara um instalador `.exe` por usuário e remove a entrada de inicialização ao desinstalar. Atualizações manuais podem usar o mesmo AppId, com o aplicativo encerrado. Não há executável ou instalador gerado nesta entrega. As configurações pessoais são preservadas na desinstalação.
+O instalador desta entrega está em `artifacts/installer/ThinkWind-Setup-0.2.0.exe`. Alternativamente, execute `artifacts/publish/ThinkWind.exe` sem instalar. São artefatos locais, ainda sem assinatura digital nem publicação de release no GitHub.
+
+O script Inno Setup prepara um instalador por usuário e remove a entrada de inicialização ao desinstalar. Atualizações manuais podem usar o mesmo AppId, com o aplicativo encerrado. As configurações pessoais são preservadas na desinstalação. A instalação e a desinstalação completas ainda não foram verificadas nesta entrega.
 
 ## Próximas etapas
 
-Esta é a estrutura inicial implementada em código, ainda sem compilação ou execução verificada. Não representa todos os recursos do produto final.
+Esta é uma primeira versão experimental com compilação, checks automatizados e abertura do executável verificados. Não representa todos os recursos do produto final.
 
-1. Verificação autorizada de compilação e funcionamento no Windows 11, incluindo DPI misto, múltiplos monitores e acessibilidade.
+1. Ampliar a verificação em Windows 11: DPI misto, múltiplos monitores, acessibilidade, instalação/desinstalação e todas as ações interativas.
 2. Ocultação reversível da barra original com processo supervisor e restauração após falhas. Nesta etapa ela permanece visível; o launcher não altera o Explorer.
-3. Sessões de mídia com metadados; conectividade com estado real e permissões apropriadas. Volume e mudo de endpoints já estão implementados em código, aguardando verificação em execução autorizada.
+3. Sessões de mídia com metadados; conectividade com estado real e permissões apropriadas. A integração de volume e mudo foi verificada nos dispositivos locais por leitura e regravação dos valores atuais, sem alterar o áudio do usuário.
 4. Notificações com consentimento, integração da bandeja respeitando limitações oficiais, CPU/GPU/rede e atalhos personalizados.
 5. Temas claros/escuros/automáticos, cores, perfis, cantos e posicionamento livre, arrastar atalhos, animação de ocultação e múltiplas barras simultâneas.
 6. Atualizador com manifesto autenticado, assinatura e verificação de integridade do pacote, rollback e distribuição assinada. Não baixar nem executar atualizações sem essa cadeia de confiança.

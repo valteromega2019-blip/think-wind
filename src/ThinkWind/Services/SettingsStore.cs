@@ -19,11 +19,13 @@ public sealed class Preferences
 }
 public sealed class SettingsStore
 {
-    private readonly string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThinkWind", "settings.json");
+    private readonly string path;
     public Preferences Value { get; private set; } = new();
     public string? LoadWarning { get; private set; }
-    public SettingsStore()
+    public SettingsStore() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThinkWind", "settings.json")) { }
+    internal SettingsStore(string settingsPath)
     {
+        path = Path.GetFullPath(settingsPath);
         try
         {
             if (File.Exists(path)) Value = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(path)) ?? new();

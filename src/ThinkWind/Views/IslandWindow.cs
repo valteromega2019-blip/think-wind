@@ -14,7 +14,7 @@ internal sealed class IslandWindow : FloatingWindow
     private readonly TextBlock metrics = new() { FontSize = 12, Margin = new Thickness(8) };
     private readonly StackPanel details = new() { Visibility = Visibility.Collapsed };
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly Calendar calendar = new() { Margin = new Thickness(8), Visibility = Visibility.Collapsed };
+    private readonly System.Windows.Controls.Calendar calendar = new() { Margin = new Thickness(8), Visibility = Visibility.Collapsed };
     private readonly StackPanel audioPanel = new();
     private readonly AudioEndpointControl output;
     private readonly AudioEndpointControl microphone;
@@ -26,6 +26,11 @@ internal sealed class IslandWindow : FloatingWindow
         var audio = new AudioService();
         output = new AudioEndpointControl(audio, CoreAudio.Flow.Render);
         microphone = new AudioEndpointControl(audio, CoreAudio.Flow.Capture);
+        // The stock calendar uses a light surface; isolate it from the overlay's
+        // white text/button styles so dates and navigation remain readable.
+        calendar.Foreground = System.Windows.Media.Brushes.Black;
+        calendar.Resources.Add(typeof(TextBlock), new Style(typeof(TextBlock)));
+        calendar.Resources.Add(typeof(Button), new Style(typeof(Button)));
         var root = new DockPanel();
         var header = new DockPanel { LastChildFill = false };
         header.Children.Add(ActionButton("◉", () => Toggle(!expanded), "Expandir ou recolher a ilha"));
@@ -42,9 +47,9 @@ internal sealed class IslandWindow : FloatingWindow
         connections.Children.Add(ActionButton("Microfone", () => SystemActions.Run("ms-settings:privacy-microphone")));
         details.Children.Add(connections);
         var media = new WrapPanel();
-        media.Children.Add(ActionButton("⏮", () => Desktop.Key(0xB1), "Mídia anterior"));
-        media.Children.Add(ActionButton("⏯", () => Desktop.Key(0xB3), "Reproduzir ou pausar mídia"));
-        media.Children.Add(ActionButton("⏭", () => Desktop.Key(0xB0), "Próxima mídia"));
+        media.Children.Add(ActionButton("Anterior", () => Desktop.Key(0xB1), "Mídia anterior"));
+        media.Children.Add(ActionButton("Reproduzir / pausar", () => Desktop.Key(0xB3), "Reproduzir ou pausar mídia"));
+        media.Children.Add(ActionButton("Próxima", () => Desktop.Key(0xB0), "Próxima mídia"));
         details.Children.Add(media);
         audioPanel.Children.Add(output);
         audioPanel.Children.Add(microphone);

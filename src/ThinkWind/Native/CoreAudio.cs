@@ -32,6 +32,13 @@ internal static class CoreAudio
         if (value is not null && Marshal.IsComObject(value)) Marshal.ReleaseComObject(value);
     }
 
+    internal static void Check(int result)
+    {
+        // Keep native HRESULT failures uniform. ThrowExceptionForHR can map an
+        // invalid/disconnected endpoint to ArgumentException instead of COMException.
+        if (result < 0) throw new COMException("A operação de áudio do Windows falhou.", result);
+    }
+
     [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IDeviceEnumerator
     {

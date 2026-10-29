@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using ThinkWind.Services;
@@ -23,6 +24,9 @@ public partial class App : Application
         store = new SettingsStore();
         dock = new DockWindow(store, OpenSettings);
         island = new IslandWindow(store, OpenSettings);
+        // Expose both overlay windows to desktop inspection tools during manual QA.
+        // Normal launches keep the launcher out of the native taskbar.
+        if (e.Args.Contains("--inspect")) { dock.ShowInTaskbar = true; island.ShowInTaskbar = true; }
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Personalizar", null, (_, _) => Dispatcher.Invoke(OpenSettings));
         menu.Items.Add("Mostrar barra e ilha", null, (_, _) => Dispatcher.Invoke(() => { dock.Show(); island.Show(); dock.RefreshSettings(); island.RefreshSettings(); }));
@@ -30,6 +34,7 @@ public partial class App : Application
         tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = System.Drawing.SystemIcons.Application, ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
         dock.Show(); island.Show();
+        if (e.Args.Contains("--settings")) OpenSettings();
         if (store.LoadWarning is not null) MessageBox.Show(store.LoadWarning, "Think Wind");
     }
     private void OpenSettings()

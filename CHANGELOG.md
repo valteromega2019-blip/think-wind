@@ -9,7 +9,7 @@
 - Rolagem do conteúdo expandido e limite de altura pela área útil do monitor.
 - Atualização da versão do aplicativo e do script do instalador.
 
-Revisão por leitura de código e diff. Testes, type check, build e execução não realizados, conforme preferência do usuário. Ainda não há binários publicados.
+Primeira distribuição experimental local, gerada após autorização explícita para testes: 18 checks aprovados, compilação Release sem avisos/erros, publish independente e instalador compilado. Corrigidas ambiguidades de tipo, espaçamento inválido, identificação legível no seletor de áudio, contraste local do calendário e tratamento de HRESULT de endpoints inválidos. Detalhes e limites em `TESTES.md`. Ainda sem release publicado no GitHub.
 
 ## 0.1.0 — 2026-10-29
 
