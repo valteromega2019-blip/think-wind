@@ -177,7 +177,7 @@ internal sealed partial class DockWindow : FloatingWindow
         iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 10 + magnificationHeadroom, 10 + magnificationReserve / 2, 10);
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Children.Clear();
-        var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(); start.Width = 40; start.Height = 38; start.Padding = new Thickness(4); items.Children.Add(start);
+        var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = 40; start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
         items.Children.Add(SearchSlot(searchWidth));
         if (Store.IsEditing)
         {
@@ -194,17 +194,17 @@ internal sealed partial class DockWindow : FloatingWindow
         if (pages > 1) items.Children.Add(PageButton(1, pages));
         items.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         contentWidth = items.DesiredSize.Width; contentHeight = items.DesiredSize.Height;
-        foreach (FrameworkElement child in items.Children) child.VerticalAlignment = VerticalAlignment.Bottom;
+        foreach (FrameworkElement child in items.Children) child.VerticalAlignment = VerticalAlignment.Center;
         magnifier.Bind(magnified, p, magnificationReserve);
     }
-    private static FrameworkElement WindowsStartIcon()
+    private static FrameworkElement WindowsStartIcon(double size)
     {
         // Four equal panes: a crisp Windows symbol at every display scale,
         // independent of installed icon-font versions and without a tile behind it.
         var icon = new System.Windows.Shapes.Path
         {
             Data = Geometry.Parse("M0,0 H10 V10 H0 Z M12,0 H22 V10 H12 Z M0,12 H10 V22 H0 Z M12,12 H22 V22 H12 Z"),
-            Width = 23, Height = 23, Stretch = Stretch.Uniform,
+            Width = size, Height = size, Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
             IsHitTestVisible = false
         };
@@ -230,8 +230,8 @@ internal sealed partial class DockWindow : FloatingWindow
         var focused = item.Windows.FirstOrDefault(w => w.Handle == active);
         var selected = focused ?? item.Windows.FirstOrDefault(w => !w.Minimized) ?? item.Windows.FirstOrDefault();
         bool minimized = item.Windows.Count > 0 && item.Windows.All(w => w.Minimized);
-        var panel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         var size = fit.Icon;
+        var panel = new Grid { Height = size + 14, VerticalAlignment = VerticalAlignment.Center };
         var icon = item.Glyph is null ? icons.Get(item.Target, selected?.Handle ?? 0) : null;
         if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = size, Height = size, Stretch = Stretch.Uniform });
         else panel.Children.Add(new Viewbox { Width = size, Height = size, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? "\uE8A5", 32) });
@@ -239,12 +239,12 @@ internal sealed partial class DockWindow : FloatingWindow
         {
             Height = 3,
             Width = focused is not null ? 18 : minimized ? 10 : 5,
-            CornerRadius = new CornerRadius(2), Margin = new Thickness(0, 6, 0, 0),
+            CornerRadius = new CornerRadius(2), Margin = new Thickness(0, 0, 0, 4), VerticalAlignment = VerticalAlignment.Bottom,
             Opacity = item.Windows.Count == 0 ? 0 : minimized ? .45 : 1
         };
         indicator.SetResourceReference(Border.BackgroundProperty, focused is not null ? "Think.Accent" : "Think.Muted");
         panel.Children.Add(indicator);
-        var dropIndicator = new Border { Height = 2, Width = 20, CornerRadius = new CornerRadius(1), Margin = new Thickness(0, 2, 0, 0), Visibility = Visibility.Hidden };
+        var dropIndicator = new Border { Height = 2, Width = 20, CornerRadius = new CornerRadius(1), VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Hidden };
         dropIndicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent"); panel.Children.Add(dropIndicator);
         var button = ActionButton(item.Name, () =>
         {
@@ -277,7 +277,7 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private FrameworkElement SearchSlot(double width)
     {
-        var slot = new Border { Width = width, Height = 36, CornerRadius = new CornerRadius(14), Padding = new Thickness(3), Margin = new Thickness(0) };
+        var slot = new Border { Width = width, Height = Math.Max(36, fit.Icon + 8), VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(14), Padding = new Thickness(3), Margin = new Thickness(0) };
         slot.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
         var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) }); grid.ColumnDefinitions.Add(new ColumnDefinition());
         var magnify = ActionButton("Pesquisar aplicativos, arquivos e configurações", () => ShowPanel(LauncherPanelMode.Search)); magnify.Style = (Style)FindResource("Think.IconButton"); magnify.Content = Glyph("\uE721", 16); magnify.Padding = new Thickness(2); magnify.Margin = new Thickness(0); grid.Children.Add(magnify);
