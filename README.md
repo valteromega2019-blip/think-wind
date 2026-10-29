@@ -1,5 +1,9 @@
 # Think Wind
 
+[Página de apresentação](https://valteromega2019-blip.github.io/think-wind-site/) · [Release 0.07 Alfa — acesso autorizado](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.7.0-alpha)
+
+O código e o instalador deste projeto permanecem privados. A página pública contém somente a apresentação do aplicativo, publicada separadamente em `think-wind-site`.
+
 ## 0.07 Alfa — 0.7.0-alpha
 
 Microfone também na primeira expansão da ilha e tecla Windows isolada integrada ao Iniciar do Think Wind enquanto o app estiver em execução. Compilação/verificação de tipos C#/XAML sem erros ou avisos; sem suíte de testes nesta etapa. Instalador solicitado em `artifacts/installer/ThinkWind-Setup-0.7.0-alpha.exe`. [Detalhes e limites](REFINAMENTOS-0.07-ALFA.md).
