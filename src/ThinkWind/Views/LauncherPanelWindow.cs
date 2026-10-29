@@ -124,9 +124,9 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     }
     private void UpdateCategories()
     {
-        string selected = category.SelectedItem as string ?? "Todas as categorias"; updating = true;
-        category.ItemsSource = new[] { "Todas as categorias", "Ordem alfabética" }.Concat(catalog.Items.Select(app => app.Category).Distinct().OrderBy(name => name)).ToArray();
-        category.SelectedItem = category.Items.Cast<string>().Contains(selected) ? selected : "Todas as categorias"; updating = false;
+        string selected = category.SelectedItem as string ?? "Relevância · instalados primeiro"; updating = true;
+        category.ItemsSource = new[] { "Relevância · instalados primeiro", "Todas as categorias", "Ordem alfabética" }.Concat(catalog.Items.Select(app => app.Category).Distinct().OrderBy(name => name)).ToArray();
+        category.SelectedItem = category.Items.Cast<string>().Contains(selected) ? selected : "Relevância · instalados primeiro"; updating = false;
     }
     private AppEntry FromShortcut(Shortcut shortcut)
     {
@@ -148,9 +148,9 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         if (term.Length == 0 && (section is "Todos" or "Biblioteca"))
         {
             string filter = category.SelectedItem as string ?? "Todas as categorias";
-            if (filter is not ("Todas as categorias" or "Ordem alfabética")) source = source.Where(app => app.Category == filter);
-            source = filter == "Todas as categorias" ? source.OrderBy(app => app.Category).ThenBy(app => app.Name) : source.OrderBy(app => app.Name);
+            if (filter is not ("Relevância · instalados primeiro" or "Todas as categorias" or "Ordem alfabética")) source = source.Where(app => app.Category == filter);
         }
+        if (section is "Todos" or "Biblioteca" || term.Length > 0) source = OrderApplications(source, term);
         results = source.DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList();
         notice.Text = catalog.Warning ?? (results.Count == 0 ? "Nenhum item nesta seção. Use Todos ou Biblioteca para fixar aplicativos." : "Botão direito: fixar, remover atalho e reorganizar.");
         if (term.Length >= 2 && mode != LauncherPanelMode.Library) { notice.Text = "Consultando também o índice de arquivos do Windows…"; debounce.Start(); }
@@ -163,9 +163,24 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         {
             var batch = await search.FilesAsync(term, token);
             if (disposed || !IsVisible || current != generation || token.IsCancellationRequested) return;
-            results = results.Concat(batch.Items).DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList(); notice.Text = batch.Notice ?? notice.Text; RenderRows();
+            results = OrderApplications(results.Concat(batch.Items), term).DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList(); notice.Text = batch.Notice ?? notice.Text; RenderRows();
         }
         catch (OperationCanceledException) { }
+    }
+    private IEnumerable<AppEntry> OrderApplications(IEnumerable<AppEntry> source, string term)
+    {
+        var installed = catalog.Items.Select(app => app.Target).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var pins = Store.Value.StartPins.Concat(Store.Value.Shortcuts).Select(pin => pin.Target).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var recency = Store.Value.RecentLaunches.Select((app, index) => (app.Target, Index: index))
+            .DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToDictionary(app => app.Target, app => app.Index, StringComparer.OrdinalIgnoreCase);
+        var ordered = source.OrderBy(app => installed.Contains(app.Target) ? 0 : 1);
+        if (term.Length == 0 && category.SelectedItem as string == "Ordem alfabética")
+            return ordered.ThenBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase);
+        return ordered
+            .ThenBy(app => term.Length == 0 ? 0 : app.Name.Equals(term, StringComparison.CurrentCultureIgnoreCase) ? 0 : app.Name.StartsWith(term, StringComparison.CurrentCultureIgnoreCase) ? 1 : 2)
+            .ThenBy(app => pins.Contains(app.Target) ? 0 : 1)
+            .ThenBy(app => recency.GetValueOrDefault(app.Target, int.MaxValue))
+            .ThenBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase);
     }
     private void RenderRows()
     {
