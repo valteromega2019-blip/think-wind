@@ -1,5 +1,9 @@
 # Publicação — 2026-10-29
 
+## Mudança para acesso público
+
+Por solicitação explícita posterior do usuário, o repositório `think-wind` foi tornado público, incluindo código e releases existentes. Página e README atualizados com download direto da 0.08 Alfa, sem exigência de conta autorizada. Não houve nova compilação, teste ou alteração do instalador nesta mudança. As referências a acesso privado abaixo são históricas e foram superadas por esta decisão.
+
 ## Atualização 0.08 Alfa
 
 Código enviado a `developer`; pré-release privada `v0.8.0-alpha` publicada com instalador e SHA-256. Correções do recorte de ícones grandes e transparência de controles validadas pela bateria de 37 checks; escopo em `VALIDACAO-0.08-ALFA.md`. Página pública sincronizada no commit `fb8987a` de `think-wind-site`, mantendo os downloads restritos. A publicação 0.07 abaixo permanece como histórico.
