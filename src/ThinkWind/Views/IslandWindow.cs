@@ -311,6 +311,7 @@ internal sealed class IslandWindow : FloatingWindow
     }
     private void RefreshAudio()
     {
+        if (IsPositionAnimating) return;
         if (!IsVisible || Stage == IslandStage.Compact || !Store.ModuleVisible("audio")) return;
         bool refresh = DateTime.UtcNow >= nextDeviceRefresh;
         if (refresh) nextDeviceRefresh = DateTime.UtcNow.AddSeconds(5);
@@ -321,7 +322,7 @@ internal sealed class IslandWindow : FloatingWindow
         var before = motion.Capture(MotionElements());
         var previous = Stage; change();
         if (previous == Stage) return;
-        BuildHeader(); UpdateStageVisibility(); Resize(true); UpdateHoverStatus(); UpdateClock(); RefreshAudio();
+        BuildHeader(); UpdateStageVisibility(); Resize(true); UpdateClock();
         motion.Arrange(this, before, MotionElements(), Store.Value.AnimationMilliseconds);
         if (!PointerInsideGroup) ScheduleCollapse();
     }
@@ -344,7 +345,7 @@ internal sealed class IslandWindow : FloatingWindow
         hoverModules.ColumnDefinitions[0].Width = new GridLength(Store.ModuleVisible("media") ? 1.35 : 0, GridUnitType.Star);
         hoverModules.ColumnDefinitions[1].Width = new GridLength(Store.ModuleVisible("audio") ? 1 : 0, GridUnitType.Star);
         media.SetActive(IsVisible && Stage != IslandStage.Compact && Store.ModuleVisible("media"));
-        if (Stage == IslandStage.Full && IsVisible)
+        if (Stage == IslandStage.Full && IsVisible && !IsPositionAnimating)
         { if (Store.ModuleVisible("background")) trayCard.Refresh(); if (Store.ModuleVisible("connections")) brightness.Refresh(); }
     }
     private static void Rehost(FrameworkElement element, Border slot)
@@ -357,6 +358,7 @@ internal sealed class IslandWindow : FloatingWindow
     private IEnumerable<FrameworkElement> MotionElements() => Stage == IslandStage.Full ? cards.Values.Cast<FrameworkElement>() : new FrameworkElement[] { media, output };
     private void ModuleSizeChanged()
     {
+        if (IsPositionAnimating) { contentResizePending = true; return; }
         if (updatingLayout || resizeQueued || !IsVisible || Stage == IslandStage.Compact || LayoutDrag.Active) return;
         if (ControlsBusy) { contentResizePending = true; return; }
         contentResizePending = false;
@@ -495,6 +497,12 @@ internal sealed class IslandWindow : FloatingWindow
         moduleViewport.Measure(new Size(inner, moduleViewport.MaxHeight));
         hoverPanel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
         double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? Math.Min(limit, headerHeight + hoverPanel.DesiredSize.Height + 12) : Math.Min(limit, headerHeight + moduleViewport.DesiredSize.Height + 16);
+        // Keep the destination content layout stable while the native frame
+        // reveals it; do not reflow the entire module tree on every frame.
+        root.Width = inner;
+        root.Height = Math.Max(1, height - Surface.Padding.Top - Surface.Padding.Bottom);
+        root.HorizontalAlignment = HorizontalAlignment.Center;
+        root.VerticalAlignment = VerticalAlignment.Top;
         Place(width, height, animate);
     }
 }

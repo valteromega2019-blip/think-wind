@@ -27,6 +27,7 @@ internal abstract class FloatingWindow : Window
     private BackdropHost? backdrop;
     internal nint BackdropHandle => backdrop?.Handle ?? 0;
     internal bool HasNativeMaterial => backdrop?.MaterialAvailable == true;
+    protected bool IsPositionAnimating => animation.IsRunning;
     private double radius;
     private double animationDuration;
     private readonly Border centerGuide = new() { Width = 1, Opacity = .35, IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed };

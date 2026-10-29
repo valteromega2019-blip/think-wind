@@ -166,7 +166,7 @@ internal sealed partial class DockWindow : FloatingWindow
     {
         fittedWidth = Display.Width;
         double searchWidth = Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36;
-        double available = Math.Max(60, fittedWidth - 16 - 20 - 40 - searchWidth - (Store.IsEditing ? 30 : 0));
+        double available = Math.Max(60, fittedWidth - 16 - 20 - 48 - searchWidth - (Store.IsEditing ? 30 : 0));
         var p = Store.Value;
         bool magnify = p.DockMagnification && SystemParameters.ClientAreaAnimation && !Store.IsEditing;
         magnificationReserve = magnify ? Math.Min(available * .32, (p.IconSize * p.DockScale + 20) * p.DockMagnificationAmount * (p.DockMagnificationNeighbors + 1) * 1.12) : 0;
@@ -180,6 +180,7 @@ internal sealed partial class DockWindow : FloatingWindow
         items.Children.Clear();
         var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = 40; start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
         items.Children.Add(SearchSlot(searchWidth));
+        start.Margin = new Thickness(0, 0, 8, 0);
         if (Store.IsEditing)
         {
             var grip = Glyph("\uE784", 16); grip.Width = 22; grip.Margin = new Thickness(4);
