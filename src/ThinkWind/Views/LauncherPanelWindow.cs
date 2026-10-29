@@ -66,6 +66,9 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         var navigation = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         previous.Click += (_, _) => { page--; RenderRows(); }; next.Click += (_, _) => { page++; RenderRows(); };
         navigation.Children.Add(previous); navigation.Children.Add(pagination); navigation.Children.Add(next); content.Children.Add(navigation); content.Children.Add(notice);
+        resultsGrid.Background = Brushes.Transparent;
+        foreach (var area in new UIElement[] { resultsGrid, navigation })
+            PageWheel.Attach(area, () => Math.Max(1, (results.Count + perPage - 1) / perPage), () => page, value => { page = value; RenderRows(); }, () => menus > 0 || LayoutDrag.Active);
         var footer = new DockPanel { Margin = new Thickness(4, 6, 4, 0) };
         var power = ActionButton("Energia", () => { }); power.Content = Glyph("\uE7E8", 18); power.Width = 38; power.Height = 34; power.Padding = new Thickness(4);
         var powerMenu = new ContextMenu();

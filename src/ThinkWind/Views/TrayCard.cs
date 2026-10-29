@@ -29,6 +29,9 @@ internal sealed class TrayCard : StackPanel
     {
         store = settings; MinWidth = 288;
         Children.Add(grid); Children.Add(navigation); Children.Add(status);
+        grid.Background = Brushes.Transparent;
+        foreach (var area in new UIElement[] { grid, navigation })
+            PageWheel.Attach(area, () => Math.Max(1, (entries.Count + 23) / 24), () => page, value => { page = value; Render(); }, () => IsInteracting || LayoutDrag.Active);
         var menu = new ContextMenu(); var refresh = new MenuItem { Header = "Atualizar ícones aqui" }; refresh.Click += (_, _) => { nextRefresh = DateTime.MinValue; Refresh(); }; menu.Items.Add(refresh); ContextMenu = menu;
         menu.Opened += (_, _) => menus++; menu.Closed += (_, _) => { menus = Math.Max(0, menus - 1); if (nextRefresh == DateTime.MinValue) Refresh(); };
         Loaded += (_, _) => { store.Changed += PreferencesChanged; Render(); };

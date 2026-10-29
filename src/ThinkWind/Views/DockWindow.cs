@@ -59,6 +59,7 @@ internal sealed partial class DockWindow : FloatingWindow
         Title = "Think Wind — Dock";
         items.VerticalAlignment = VerticalAlignment.Bottom;
         items.Background = Brushes.Transparent;
+        PageWheel.Attach(items, () => fit.Pages(entries.Count), () => page, value => { page = value; RenderPage(); Position(); }, () => fileDragging || MenuOpen || LayoutDrag.Active || Store.IsEditing || dockSearch.IsMouseOver);
         magnifier = new DockMagnifier(items, () => !hidden && !Store.IsEditing && !LayoutDrag.Active && !fileDragging && !MenuOpen);
         catalog = new ApplicationCatalog(Dispatcher);
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
