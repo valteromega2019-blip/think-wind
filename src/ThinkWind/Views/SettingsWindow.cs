@@ -22,6 +22,7 @@ internal sealed class SettingsWindow : Window
     {
         store = settings;
         Title = "Think Wind · Personalização";
+        SizeToContent = SizeToContent.Manual;
         Width = 700; Height = Math.Min(850, SystemParameters.WorkArea.Height - 40);
         MinWidth = 480; MinHeight = 420; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         SetResourceReference(BackgroundProperty, "Think.Background");
@@ -96,7 +97,7 @@ internal sealed class SettingsWindow : Window
         Select(island, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));
         Slider(island, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.IslandOpacity ?? store.Value.TintOpacity, v => Change(p => p.IslandOpacity = v), "P0");
         Slider(island, "Escala dos acessos rápidos", .8, 1.4, store.Value.IslandScale, v => Change(p => p.IslandScale = v), "P0");
-        Slider(island, "Largura expandida", 400, 900, store.Value.IslandExpandedWidth, v => Change(p => p.IslandExpandedWidth = v));
+        Slider(island, "Largura expandida", 400, 640, store.Value.IslandExpandedWidth, v => Change(p => p.IslandExpandedWidth = v));
         Slider(island, "Espaçamento", 0, 20, store.Value.IslandSpacing, v => Change(p => p.IslandSpacing = v));
         Slider(island, "Arredondamento inferior", 0, 48, store.Value.IslandRadius, v => Change(p => p.IslandRadius = v));
         Slider(island, "Posição horizontal", -4000, 4000, store.Value.IslandHorizontalOffset, v => Change(p => p.IslandHorizontalOffset = v));

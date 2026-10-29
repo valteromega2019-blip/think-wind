@@ -3,6 +3,7 @@ using System.Net.NetworkInformation;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using ThinkWind.Native;
@@ -16,7 +17,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     protected override bool UsesIslandAppearance => true;
     private readonly Func<OverlayChrome.PixelRect> anchor;
     private readonly StackPanel panel = new();
-    private readonly ScrollViewer viewport = new() { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+    private readonly Viewbox viewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     private readonly AudioEndpointControl? audio;
     private readonly TextBlock network = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 8, 6, 12) };
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -46,7 +47,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
             shortcuts.Children.Add(ActionButton("Rede e internet", () => SystemActions.Run("ms-settings:network")));
             panel.Children.Add(shortcuts);
         }
-        viewport.Content = panel; Surface.Child = viewport;
+        viewport.Child = panel; Surface.Child = viewport;
         Deactivated += (_, _) => Dismiss();
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
         Loaded += (_, _) => { RefreshContent(true); timer.Start(); };
@@ -88,8 +89,10 @@ internal sealed class MiniIslandWindow : FloatingWindow
     public override void Position()
     {
         double width = Math.Min(390, Display.Width - 16);
-        viewport.MaxHeight = Math.Max(60, Display.Height - 40);
+        viewport.Width = Math.Max(1, width - Surface.Padding.Left - Surface.Padding.Right);
+        viewport.MaxHeight = Math.Max(60, CompactLayout.PanelHeight(Display.Height) - 24);
+        panel.Width = viewport.Width;
         panel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
-        PlaceNear(width, Math.Min(panel.DesiredSize.Height + 24, Display.Height - 16), anchor(), false);
+        PlaceNear(width, Math.Min(panel.DesiredSize.Height, viewport.MaxHeight) + 24, anchor(), false);
     }
 }

@@ -1,5 +1,17 @@
 # Histórico do Think Wind
 
+## v0.03 (0.3.0-dev) — 2026-10-29
+
+- Dimensionamento proporcional e paginação da barra inferior, sem ScrollViewer ou deformação dos ícones.
+- Ilha com três estados preservados, seções paginadas e limites de altura/largura; mini-ilhas sem rolagem.
+- Cartão de mídia por sessões nativas do Windows, com metadados, capa, transporte e linha do tempo quando disponibilizados pelo player.
+- Área de processos substituída por controles acessíveis da bandeja, ícones visíveis e acesso a ações/menus nativos quando expostos pelo Explorer.
+- Blocos arredondados, sliders preenchidos na cor de destaque e brilho via DDC/CI em monitores compatíveis.
+- Atualização seletiva de preferências e janela de configurações independente, sem expansão automática da ilha ao personalizar.
+- Revisão por leitura de código e diff. Testes, type check, build e publish não executados. Nenhum instalador gerado; executável anterior preservado.
+
+Detalhes e limites em `REFINAMENTOS-0.03.md`.
+
 ## 0.21.0-dev — 2026-10-29
 
 - Conteúdo WPF com transparência por pixel, template sem fundo de tema e máscara alfa; material separado em HWND nativo sem bitmap GDI.

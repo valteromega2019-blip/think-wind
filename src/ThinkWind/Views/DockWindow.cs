@@ -21,9 +21,13 @@ internal sealed class DockWindow : FloatingWindow
     private string signature = "";
     private bool hidden, rebuilding;
     private int layoutRevision;
-    private double contentWidth, contentHeight = 48;
+    private double contentWidth, contentHeight = 48, fittedWidth;
+    private List<Item> entries = new();
+    private DockFit fit = new(1, 32, 10, 4, 0);
+    private int page;
+    private nint activeWindow;
     private double TotalWidth => contentWidth + Surface.Padding.Left + Surface.Padding.Right;
-    private double ExpandedHeight => Math.Max(44, contentHeight + Surface.Padding.Top + Surface.Padding.Bottom) + (TotalWidth > Display.Width - 16 ? SystemParameters.HorizontalScrollBarHeight : 0);
+    private double ExpandedHeight => Math.Max(44, contentHeight + Surface.Padding.Top + Surface.Padding.Bottom);
     private DateTime lastHover = DateTime.UtcNow;
     private sealed record Item(string Key, string Name, string? Target, string? Glyph, List<Desktop.RunningWindow> Windows, Shortcut? Pin, Action? Action);
     public DockWindow(SettingsStore store, Action openSettings) : base(store)
@@ -31,7 +35,7 @@ internal sealed class DockWindow : FloatingWindow
         settings = openSettings;
         Title = "Think Wind — Dock";
         SourceInitialized += (_, _) => HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(NoActivate);
-        Surface.Child = new AdornerDecoratorHost(new ScrollViewer { Content = items, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        Surface.Child = new AdornerDecoratorHost(items);
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
         timer.Tick += (_, _) => { if (IsVisible) { RefreshApps(); UpdateVisibility(); } };
         MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); };
@@ -42,7 +46,11 @@ internal sealed class DockWindow : FloatingWindow
     private void DragCompleted() { signature = ""; RefreshApps(); }
     private nint NoActivate(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     { if (message == 0x0021) { handled = true; return 3; } return 0; }
-    public override void Position() => Place(TotalWidth, hidden ? 7 : ExpandedHeight);
+    public override void Position()
+    {
+        if (!rebuilding && Math.Abs(fittedWidth - Display.Width) > .5 && entries.Count > 0) RenderPage();
+        Place(TotalWidth, hidden ? 7 : ExpandedHeight);
+    }
     public override void RefreshSettings()
     {
         if (LayoutDrag.Active || rebuilding) return;
@@ -103,20 +111,42 @@ internal sealed class DockWindow : FloatingWindow
             }
             entries = entries.OrderBy(i => order.FindIndex(k => k.Equals(i.Key, StringComparison.OrdinalIgnoreCase))).ToList();
             visibleOrder.Clear(); visibleOrder.AddRange(entries.Select(i => i.Key));
-            items.Children.Clear();
-            if (Store.IsEditing)
-            {
-                var grip = Glyph("\uE784", 16); grip.Width = 22; grip.Margin = new Thickness(4);
-                grip.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent");
-                AttachPositionGrip(grip); items.Children.Add(grip);
-            }
-            foreach (var entry in entries) items.Children.Add(CreateButton(entry, active));
-            items.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            contentWidth = items.DesiredSize.Width;
-            contentHeight = items.DesiredSize.Height;
+            this.entries = entries; activeWindow = active;
+            RenderPage();
             Position();
         }
         finally { rebuilding = false; }
+    }
+    private void RenderPage()
+    {
+        fittedWidth = Display.Width;
+        double available = Math.Max(60, fittedWidth - 16 - Surface.Padding.Left - Surface.Padding.Right - (Store.IsEditing ? 30 : 0));
+        fit = CompactLayout.FitDock(entries.Count, available, Store.Value.IconSize * Store.Value.DockScale, Store.Value.DockSpacing);
+        int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
+        items.Children.Clear();
+        if (Store.IsEditing)
+        {
+            var grip = Glyph("\uE784", 16); grip.Width = 22; grip.Margin = new Thickness(4);
+            grip.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); AttachPositionGrip(grip); items.Children.Add(grip);
+        }
+        if (pages > 1) items.Children.Add(PageButton(-1, pages));
+        foreach (var entry in entries.Skip(page * fit.PerPage).Take(fit.PerPage)) items.Children.Add(CreateButton(entry, activeWindow));
+        if (pages > 1) items.Children.Add(PageButton(1, pages));
+        items.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        contentWidth = items.DesiredSize.Width; contentHeight = items.DesiredSize.Height;
+    }
+    private Button PageButton(int direction, int pages)
+    {
+        var button = ActionButton(direction < 0 ? "Página anterior" : "Próxima página", () => { page += direction; RenderPage(); Position(); }, $"Página {page + 1} de {pages}");
+        button.Style = (Style)FindResource("Think.IconButton"); button.Content = Glyph(direction < 0 ? "\uE76B" : "\uE76C", 12);
+        button.Width = fit.NavigationWidth / 2; button.Height = 36; button.Padding = new Thickness(0); button.Margin = new Thickness(0);
+        button.IsEnabled = direction < 0 ? page > 0 : page + 1 < pages;
+        if (button.IsEnabled)
+        {
+            int target = direction < 0 ? page * fit.PerPage - 1 : (page + 1) * fit.PerPage;
+            LayoutDrag.Attach(button, "dock", entries[target].Key, () => Store.IsEditing, Reorder);
+        }
+        return button;
     }
     private Button CreateButton(Item item, nint active)
     {
@@ -124,10 +154,10 @@ internal sealed class DockWindow : FloatingWindow
         var selected = focused ?? item.Windows.FirstOrDefault(w => !w.Minimized) ?? item.Windows.FirstOrDefault();
         bool minimized = item.Windows.Count > 0 && item.Windows.All(w => w.Minimized);
         var panel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        var size = Store.Value.IconSize * Store.Value.DockScale;
+        var size = fit.Icon;
         var icon = item.Glyph is null ? icons.Get(item.Target, selected?.Handle ?? 0) : null;
         if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = size, Height = size, Stretch = Stretch.Uniform });
-        else panel.Children.Add(Glyph(item.Glyph ?? "\uE8A5", size));
+        else panel.Children.Add(new Viewbox { Width = size, Height = size, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? "\uE8A5", 32) });
         var indicator = new Border
         {
             Height = 3,
@@ -145,8 +175,8 @@ internal sealed class DockWindow : FloatingWindow
             else if (item.Target is not null) SystemActions.Run(item.Target);
         }, item.Name + (minimized ? " · minimizado" : focused is not null ? " · ativo" : item.Windows.Count > 0 ? " · em execução" : ""));
         button.Style = (Style)FindResource("Think.IconButton");
-        button.Content = panel; button.Width = size + 20;
-        button.Margin = new Thickness(Store.Value.DockSpacing / 2, 0, Store.Value.DockSpacing / 2, 0);
+        button.Content = panel; button.Width = size + 2 * fit.Padding; button.Padding = new Thickness(fit.Padding, 4, fit.Padding, 4);
+        button.Margin = new Thickness(fit.Gap / 2, 0, fit.Gap / 2, 0);
         var menu = new ContextMenu();
         foreach (var window in item.Windows) Menu(menu, (window.Minimized ? "Restaurar · " : "Abrir · ") + window.Title, () => Desktop.Activate(window.Handle));
         if (item.Pin is not null) Menu(menu, "Remover atalho", () => Store.Update(p => p.Shortcuts.Remove(item.Pin)));

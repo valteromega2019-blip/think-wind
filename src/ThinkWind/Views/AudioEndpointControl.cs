@@ -30,9 +30,9 @@ internal sealed class AudioEndpointControl : Border
     internal AudioEndpointControl(AudioService audioService, CoreAudio.Flow direction)
     {
         audio = audioService; flow = direction;
-        Margin = new Thickness(0, 4, 0, 4); Padding = new Thickness(8);
-        CornerRadius = new CornerRadius(14);
-        Background = Brushes.Transparent;
+        Margin = new Thickness(0, 4, 0, 4); Padding = new Thickness(12);
+        CornerRadius = new CornerRadius(18);
+        SetResourceReference(BackgroundProperty, "Think.GlassCard");
         var panel = new StackPanel();
         var name = direction == CoreAudio.Flow.Render ? "SAÍDA DE ÁUDIO" : "MICROFONE";
         panel.Children.Add(new TextBlock { Text = name, FontSize = 11, FontWeight = FontWeights.SemiBold });
@@ -94,6 +94,8 @@ internal sealed class AudioEndpointControl : Border
             level.Value = current.Volume;
             percent.Text = $"{current.Volume:0}%";
             mute.Content = current.Muted ? "Ativar som" : "Mudo";
+            mute.SetResourceReference(Control.BackgroundProperty, current.Muted ? "Think.Accent" : "Think.Control");
+            mute.SetResourceReference(Control.ForegroundProperty, current.Muted ? "Think.Background" : "Think.Text");
             status.Text = current.Name + (current.Muted ? " · silenciado" : "");
             level.IsEnabled = mute.IsEnabled = true;
         }

@@ -6,11 +6,17 @@ Repositório próprio: https://github.com/valteromega2019-blip/think-wind
 
 Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicial e a branch `developer` é a área de desenvolvimento. O histórico deste repositório é independente do Think Monitor.
 
-## Atualização v0.21 — em teste
+## Atualização v0.03 — código em desenvolvimento
+
+Barra e ilha sem barras de rolagem, ajuste proporcional e paginação, expansão limitada, mídia integrada às sessões do Windows, bandeja por acessibilidade, controles em blocos e sliders renovados. A personalização mantém sua janela independente e atualiza a aparência sem forçar a expansão da ilha. Detalhes e limites em [REFINAMENTOS-0.03.md](REFINAMENTOS-0.03.md).
+
+**Testes, type check, build e publish não foram executados nesta atualização, conforme a preferência do usuário. Nenhum instalador foi gerado. O executável local permanece na compilação anterior e ainda não contém a v0.03.**
+
+## Atualização anterior: v0.21
 
 Correção estrutural da transparência por pixel e do material nativo com `HostBackdropBrush`; ilha com estados compacto, hover e painel completo; mini-ilhas independentes para volume e rede. **29 checks aprovados e build Release sem erros/avisos** no escopo de validação solicitado. A transparência real foi confirmada pelo usuário sobre o fundo colorido de verificação. Detalhes e limites em [VALIDACAO-0.21.md](VALIDACAO-0.21.md).
 
-Executável local atualizado: `src/ThinkWind/bin/Release/net10.0-windows10.0.19041.0/ThinkWind.exe`. Nenhum instalador novo foi gerado; o conteúdo de `artifacts` continua na versão antiga.
+Executável local dessa etapa: `src/ThinkWind/bin/Release/net10.0-windows10.0.19041.0/ThinkWind.exe`. Nenhum instalador novo foi gerado; o conteúdo de `artifacts` continua na versão antiga.
 
 ## Etapa anterior: refinamentos 2.0-dev
 

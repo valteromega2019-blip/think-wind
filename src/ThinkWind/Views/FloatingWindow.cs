@@ -139,7 +139,9 @@ internal abstract class FloatingWindow : Window
         int x = (int)Math.Round(display.Work.Left + (display.Work.Width - w) / 2d + offset * display.Scale);
         x = Math.Clamp(x, display.Work.Left + (AttachedTop ? 0 : 8), Math.Max(display.Work.Left + 8, display.Work.Right - w - (AttachedTop ? 0 : 8)));
         int y = AttachedTop ? display.Bounds.Top : display.Work.Bottom - margin - h;
-        target = new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + w, Bottom = y + h };
+        var nextTarget = new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + w, Bottom = y + h };
+        if (placed && target.Left == nextTarget.Left && target.Top == nextTarget.Top && target.Right == nextTarget.Right && target.Bottom == nextTarget.Bottom) return;
+        target = nextTarget;
         animation.Stop();
         if (animate && placed && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0 && OverlayChrome.GetWindowRect(hwnd, out start)
             && Math.Abs(start.Left - target.Left) < display.Work.Width / 2 && Math.Abs(start.Top - target.Top) < display.Work.Height / 2)
@@ -200,10 +202,11 @@ internal abstract class FloatingWindow : Window
         };
         grip.LostMouseCapture += (_, _) => { if (down is not null) { down = null; Store.Update(_ => { }); } };
     }
+    public virtual void RefreshAppearance() => ApplyAppearance();
     public virtual void RefreshSettings() { ApplyAppearance(); Position(); }
     protected static Button ActionButton(string label, Action action, string? tooltip = null)
     {
-        var button = new Button { Content = label, ToolTip = tooltip ?? label };
+        var button = new Button { Content = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center }, ToolTip = tooltip ?? label };
         System.Windows.Automation.AutomationProperties.SetName(button, tooltip ?? label);
         button.Click += (_, _) =>
         {

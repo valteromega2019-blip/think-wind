@@ -133,7 +133,7 @@ public sealed class SettingsStore
         p.IconSize = Limit(p.IconSize, 20, 48, 28); p.DockBottomOffset = Limit(p.DockBottomOffset, 4, 80, 12);
         p.DockHorizontalOffset = Limit(p.DockHorizontalOffset, -4000, 4000, 0);
         p.IslandHorizontalOffset = Limit(p.IslandHorizontalOffset, -4000, 4000, 0);
-        p.IslandScale = Limit(p.IslandScale, .8, 1.4, 1); p.IslandExpandedWidth = Limit(p.IslandExpandedWidth, 400, 900, 560);
+        p.IslandScale = Limit(p.IslandScale, .8, 1.4, 1); p.IslandExpandedWidth = Limit(p.IslandExpandedWidth, 400, 640, 560);
         p.AnimationMilliseconds = Limit(p.AnimationMilliseconds, 0, 600, 220);
         p.Theme = p.Theme is "Auto" or "Dark" or "Light" ? p.Theme : "Auto";
         p.DockMaterial = Material(p.DockMaterial); p.IslandMaterial = Material(p.IslandMaterial);

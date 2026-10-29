@@ -17,6 +17,7 @@ public partial class App : Application
     private IslandWindow? island;
     private SettingsWindow? settings;
     private SettingsStore store = null!;
+    private PreferenceStamp? preferenceStamp;
     internal bool IsExiting { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -27,6 +28,7 @@ public partial class App : Application
         ThemeService.Apply(store.Value);
         dock = new DockWindow(store, OpenSettings);
         island = new IslandWindow(store, OpenSettings);
+        preferenceStamp = PreferenceStamp.Capture(store);
         store.Changed += PreferencesChanged;
         SystemEvents.UserPreferenceChanged += WindowsPreferencesChanged;
         // Expose both overlay windows to desktop inspection tools during manual QA.
@@ -64,12 +66,16 @@ public partial class App : Application
     {
         if (IsExiting) return;
         ThemeService.Apply(store.Value);
-        dock?.RefreshSettings(); island?.RefreshSettings();
+        var next = PreferenceStamp.Capture(store);
+        bool editing = preferenceStamp?.Editing != next.Editing;
+        if (editing || preferenceStamp?.Dock != next.Dock) dock?.RefreshSettings(); else dock?.RefreshAppearance();
+        if (editing || preferenceStamp?.Island != next.Island) island?.RefreshSettings(); else island?.RefreshAppearance();
+        preferenceStamp = next;
     }
     private void WindowsPreferencesChanged(object sender, UserPreferenceChangedEventArgs e)
     {
         if (!IsExiting && !Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(() =>
-        { ThemeService.Apply(store.Value, true); dock?.RefreshSettings(); island?.RefreshSettings(); }));
+        { ThemeService.Apply(store.Value, true); dock?.RefreshAppearance(); island?.RefreshAppearance(); }));
     }
     protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
     { IsExiting = true; store?.Flush(); base.OnSessionEnding(e); }
