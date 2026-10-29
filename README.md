@@ -8,6 +8,8 @@ Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicia
 
 ## Atualização v0.06 — código em desenvolvimento
 
+Refinamento posterior ao build: fundo compacto separado da camada transparente de ampliação do Dock, grades de aplicativos com ícone/nome e tentativa adicional de bandeja por MSAA. **Essas mudanças ainda não estão no executável compilado**, sem testes/type check/build nesta etapa. Consulte [REFINAMENTOS-0.06.md](REFINAMENTOS-0.06.md).
+
 Bandeja 6 × 4 com favoritos e paginação, calendário mensal aberto no painel completo, gerenciamento WLAN em mini-ilha, seleção real de saída padrão de áudio e refinamento das animações. Botão Iniciar com símbolo vetorial do Windows. Detalhes de uso e limitações em [REFINAMENTOS-0.06.md](REFINAMENTOS-0.06.md).
 
 **Compilação Release da v0.06 realizada posteriormente a pedido do usuário: zero erros e zero avisos.** Executável para teste em `artifacts/preview-v0.06/ThinkWind.exe`. Testes, type check separado, execução e publish não realizados; nenhum instalador gerado. A cópia anterior em `src/ThinkWind/bin/Release` foi preservada.

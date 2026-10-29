@@ -18,6 +18,7 @@ internal abstract class FloatingWindow : Window
     protected abstract bool AttachedTop { get; }
     protected virtual bool UsesIslandAppearance => AttachedTop;
     protected virtual bool CollapsedDock => false;
+    protected virtual Thickness TransparentInsets => new();
     protected OverlayChrome.Display Display => OverlayChrome.GetDisplay(Store.Value.MonitorIndex, Store.Value.MonitorDeviceName);
     private readonly FrameClock animation = new();
     private readonly Stopwatch elapsed = new();
@@ -99,6 +100,7 @@ internal abstract class FloatingWindow : Window
         color.A = (byte)Math.Round(255 * (backdrop?.MaterialAvailable == true ? alpha : 1));
         Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(color);
         Surface.CornerRadius = AttachedTop ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
+        Surface.Margin = TransparentInsets;
         centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;
         UpdateClip();
     }
@@ -109,6 +111,20 @@ internal abstract class FloatingWindow : Window
         var scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1;
         var next = (rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top, (int)Math.Round(radius * scale), AttachedTop, scale);
         if (next.Item1 < 1 || next.Item2 < 1) return;
+        var inset = TransparentInsets;
+        if (Surface.Margin != inset) Surface.Margin = inset;
+        if (inset != new Thickness())
+        {
+            // The foreground HWND is a transparent canvas for protruding icons.
+            // Only the compact material HWND is rounded/clipped and painted.
+            ((Grid)Content).Clip = null; lastClip = default;
+            rectangle.Left += (int)Math.Round(inset.Left * scale); rectangle.Right -= (int)Math.Round(inset.Right * scale);
+            rectangle.Top += (int)Math.Round(inset.Top * scale); rectangle.Bottom -= (int)Math.Round(inset.Bottom * scale);
+            if (rectangle.Right > rectangle.Left && rectangle.Bottom > rectangle.Top)
+                backdrop?.Synchronize(rectangle, next.Item3, AttachedTop, IsVisible);
+            else backdrop?.Hide();
+            return;
+        }
         // The foreground is per-pixel alpha; only the material HWND uses an HRGN.
         // Transparent pixels outside this WPF geometry do not receive mouse input.
         if (next != lastClip)

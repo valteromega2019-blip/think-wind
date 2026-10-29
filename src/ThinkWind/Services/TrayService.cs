@@ -9,7 +9,7 @@ using System.Windows.Media.Imaging;
 using ThinkWind.Native;
 
 namespace ThinkWind.Services;
-internal sealed record TrayEntry(string Name, ImageSource? Icon, AutomationElement Element, nint Host, string Id = "")
+internal sealed record TrayEntry(string Name, ImageSource? Icon, AutomationElement? Element, nint Host, string Id = "", Accessibility.IAccessible? Accessible = null, int Child = 0)
 {
     internal string DisplayName => Name.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? Name;
     internal string Key => Id.Length > 0 ? Id : "name:" + DisplayName;
@@ -29,6 +29,8 @@ internal static class TrayService
     [DllImport("user32.dll")] private static extern bool IsChild(nint parent, nint child);
     [StructLayout(LayoutKind.Sequential)] private struct Point { internal int X, Y; }
     [StructLayout(LayoutKind.Sequential)] private struct Rectangle { internal int Left, Top, Right, Bottom; }
+    [DllImport("oleacc.dll")] private static extern int AccessibleObjectFromWindow(nint window, uint objectId, ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out Accessibility.IAccessible accessible);
+    [DllImport("oleacc.dll")] private static extern int AccessibleChildren(Accessibility.IAccessible parent, int start, int count, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2, ArraySubType = UnmanagedType.Struct)] object[] children, out int obtained);
     internal static Task<List<TrayEntry>> ReadAsync() => Task.Run(() =>
     {
         lock (gate)
@@ -37,11 +39,14 @@ internal static class TrayService
         nint taskbar = FindWindow("Shell_TrayWnd", null);
         nint area = FindWindowEx(taskbar, 0, "TrayNotifyWnd", null);
         Read(area != 0 ? area : taskbar, result, area != 0);
+        if (area != 0) ReadLegacy(area, result);
         nint overflow = FindWindow("NotifyIconOverflowWindow", null);
         if (overflow != 0) Read(overflow, result, true);
+        if (overflow != 0) ReadLegacy(overflow, result);
         // Windows 11 uses a separate XAML overflow host on some shell builds.
         nint xamlOverflow = FindWindow("TopLevelWindowForOverflowXamlIsland", null);
         if (xamlOverflow != 0) Read(xamlOverflow, result, true);
+        if (xamlOverflow != 0) ReadLegacy(xamlOverflow, result);
         if (iconCache.Count > 512) { var live = result.Select(item => item.Key).ToHashSet(); foreach (var key in iconCache.Keys.Where(key => !live.Contains(key)).ToArray()) iconCache.Remove(key); }
         return result;
         }
@@ -84,6 +89,46 @@ internal static class TrayService
             if (Automation.Compare(parent, root)) break;
         }
         return false;
+    }
+    private static void ReadLegacy(nint host, List<TrayEntry> result)
+    {
+        try
+        {
+            var iid = new Guid("618736E0-3C3D-11CF-810C-00AA00389B71");
+            if (AccessibleObjectFromWindow(host, 0xFFFFFFFC, ref iid, out var root) < 0) return;
+            using var frame = CaptureHost(host, out var rectangle);
+            int visited = 0;
+            void Visit(Accessibility.IAccessible accessible, int child, int depth)
+            {
+                if (++visited > 512 || depth > 8) return;
+                try
+                {
+                    string? name = accessible.get_accName(child);
+                    if (accessible.get_accRole(child) is int role && role == 43 && !string.IsNullOrWhiteSpace(name))
+                    {
+                        accessible.accLocation(out int x, out int y, out int width, out int height, child);
+                        string key = "msaa:" + name.Split('\n')[0].Trim();
+                        var icon = CaptureIcon(new System.Windows.Rect(x, y, Math.Max(0, width), Math.Max(0, height)), host, frame, rectangle);
+                        if (icon is not null) iconCache[key] = icon; else iconCache.TryGetValue(key, out icon);
+                        int existing = result.FindIndex(item => item.Name == name);
+                        if (existing >= 0) result[existing] = result[existing] with { Accessible = accessible, Child = child };
+                        else if (icon is not null) result.Add(new(name, icon, null, host, key, accessible, child));
+                    }
+                    if (child != 0) return;
+                    int count = Math.Clamp(accessible.accChildCount, 0, 128); if (count == 0) return;
+                    var children = new object[count];
+                    if (AccessibleChildren(accessible, 0, count, children, out int obtained) < 0) return;
+                    foreach (var value in children.Take(Math.Clamp(obtained, 0, count)))
+                    {
+                        if (value is Accessibility.IAccessible next) Visit(next, 0, depth + 1);
+                        else if (value is int id && id > 0) Visit(accessible, id, depth + 1);
+                    }
+                }
+                catch (Exception error) when (Unavailable(error) || error is ArgumentException or NotImplementedException) { }
+            }
+            Visit(root, 0, 0);
+        }
+        catch (Exception error) when (Unavailable(error) || error is ArgumentException) { }
     }
     private static System.Drawing.Bitmap? CaptureHost(nint host, out Rectangle rectangle)
     {
@@ -165,10 +210,11 @@ internal static class TrayService
             // Never focus/reveal the Windows taskbar as an implicit fallback.
             if (context)
             {
-                if (entry.Element.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out var expand)) { ((ExpandCollapsePattern)expand).Expand(); return true; }
+                if (entry.Element is { } menuElement && menuElement.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out var expand)) { ((ExpandCollapsePattern)expand).Expand(); return true; }
                 return false;
             }
-            if (entry.Element.TryGetCurrentPattern(InvokePattern.Pattern, out var invoke)) { ((InvokePattern)invoke).Invoke(); return true; }
+            if (entry.Element is { } element && element.TryGetCurrentPattern(InvokePattern.Pattern, out var invoke)) { ((InvokePattern)invoke).Invoke(); return true; }
+            if (entry.Accessible is not null) { entry.Accessible.accDoDefaultAction(entry.Child); return true; }
         }
         catch (Exception e) when (Unavailable(e)) { }
         return false;

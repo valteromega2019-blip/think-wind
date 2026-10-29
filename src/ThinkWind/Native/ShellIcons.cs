@@ -27,6 +27,38 @@ internal sealed class ShellIcons
     [DllImport("user32.dll", EntryPoint = "GetClassLongPtrW")] private static extern nint GetClassIcon(nint hwnd, int index);
     private readonly Dictionary<string, ImageSource?> cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> resolved = new(StringComparer.OrdinalIgnoreCase);
+    [StructLayout(LayoutKind.Sequential)] private struct ImageSize { internal int Width, Height; }
+    [ComImport, Guid("BCC18B79-BA16-442F-80C4-8A59C30C463B"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface ImageFactory { [PreserveSig] int GetImage(ImageSize size, uint flags, out nint bitmap); }
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern int SHCreateItemFromParsingName(string path, nint context, ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out ImageFactory factory);
+    [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint bitmap);
+    [StructLayout(LayoutKind.Sequential)] private struct NativeBitmap { internal int Type, Width, Height, Stride; internal ushort Planes, BitsPerPixel; internal nint Bits; }
+    [StructLayout(LayoutKind.Sequential)] private struct BitmapHeader { internal uint Size; internal int Width, Height; internal ushort Planes, Bits; internal uint Compression, ImageSize; internal int XPixels, YPixels; internal uint Used, Important; }
+    [DllImport("gdi32.dll", EntryPoint = "GetObjectW")] private static extern int GetBitmapObject(nint bitmap, int size, out NativeBitmap info);
+    [DllImport("gdi32.dll")] private static extern int GetDIBits(nint dc, nint bitmap, uint start, uint lines, [Out] byte[] pixels, ref BitmapHeader info, uint usage);
+    [DllImport("user32.dll")] private static extern nint GetDC(nint window);
+    [DllImport("user32.dll")] private static extern int ReleaseDC(nint window, nint dc);
+    // Called only by an STA worker: extracting a shell icon may perform disk I/O.
+    internal static ImageSource? ReadLarge(string target)
+    {
+        ImageFactory? factory = null; nint bitmap = 0;
+        try
+        {
+            string path = new ShellIcons().Resolve(target); var iid = typeof(ImageFactory).GUID;
+            if (SHCreateItemFromParsingName(path, 0, ref iid, out factory) < 0 || factory.GetImage(new ImageSize { Width = 96, Height = 96 }, 5, out bitmap) < 0 || bitmap == 0) return null;
+            if (GetBitmapObject(bitmap, Marshal.SizeOf<NativeBitmap>(), out var info) == 0 || info.Width is < 1 or > 512 || info.Height is < 1 or > 512) return null;
+            var pixels = new byte[info.Width * info.Height * 4];
+            var header = new BitmapHeader { Size = 40, Width = info.Width, Height = -info.Height, Planes = 1, Bits = 32 };
+            nint dc = GetDC(0);
+            try { if (GetDIBits(dc, bitmap, 0, (uint)info.Height, pixels, ref header, 0) != info.Height) return null; }
+            finally { if (dc != 0) ReleaseDC(0, dc); }
+            bool alpha = false; for (int i = 3; i < pixels.Length; i += 4) if (pixels[i] != 0) { alpha = true; break; }
+            if (!alpha) for (int i = 3; i < pixels.Length; i += 4) pixels[i] = 255;
+            var image = BitmapSource.Create(info.Width, info.Height, 96, 96, PixelFormats.Pbgra32, null, pixels, info.Width * 4); image.Freeze(); return image;
+        }
+        catch (Exception error) when (error is COMException or ArgumentException or IOException or UnauthorizedAccessException) { return null; }
+        finally { if (bitmap != 0) DeleteObject(bitmap); CoreAudio.Release(factory); }
+    }
 
     internal string Resolve(string target)
     {

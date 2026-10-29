@@ -1,5 +1,17 @@
 # Think Wind — v0.06 (0.6.0-dev)
 
+## Refinamento posterior à compilação — fundo compacto e gaveta de aplicativos
+
+- Dock agora separa o material/tintura da camada de ícones: o HWND transparente reserva espaço acima e nas laterais, mas o HWND Acrylic e a superfície colorida ocupam somente a barra compacta. Os ícones são irmãos da superfície no contêiner transparente, sem o recorte arredondado do fundo. Movimento do cursor altera apenas transformações dos botões; não altera tamanho/posição do fundo.
+- Fixados, Recentes, Todos e Biblioteca usam o mesmo item sem cartão: ícone de 40 DIP, nome centralizado em duas linhas de 15 DIP com reticências, célula de 100 DIP e uma a seis colunas conforme a largura. Os painéis mantêm sua própria superfície Acrylic. Arquivos/configurações encontrados pela pesquisa seguem a mesma apresentação com o ícone do Shell.
+- Extração de ícones maiores (96 px quando oferecidos pelo Shell) em worker STA, cache limitado, transparência do bitmap preservada e interpolação de alta qualidade. Ícone original existente permanece enquanto a extração acontece; ausência de recurso não é substituída por um desenho genérico inventado.
+- Clique abre o item; menus mantêm fixação/remoção/reordenação; arraste dos fixados preservado. Na Biblioteca, o comando de adicionar à barra continua em um clique, visível no hover, e no menu de contexto.
+- Bandeja de segundo plano recebe uma segunda tentativa por MSAA (`AccessibleObjectFromWindow`/`AccessibleChildren`/`IAccessible`), além de UI Automation, com enumeração limitada e deduplicação. Quando o provedor oferece a ação padrão, o launcher a invoca sem revelar a barra original. Isso não torna disponíveis ícones ocultos que o Explorer não materializou e não garante menus nativos de todos os programas.
+
+Revisão somente por leitura de código/diff. **Estas alterações posteriores ainda não foram compiladas, executadas ou testadas; não houve type check.** A versão em `artifacts/preview-v0.06` corresponde à compilação anterior e não inclui este refinamento. Nenhum instalador gerado.
+
+Referências: [MSAA](https://learn.microsoft.com/en-us/windows/desktop/api/Oleacc/nf-oleacc-accessibleobjectfromwindow), [ícones pelo Shell](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ishellitemimagefactory-getimage).
+
 ## Compilação posterior autorizada — 2026-10-29
 
 Compilação Release concluída com **zero erros e zero avisos**, solicitada pelo usuário após os refinamentos da bandeja/barra exclusiva e ampliação Dock. Comando direto `dotnet build src/ThinkWind/ThinkWind.csproj -c Release -o artifacts/preview-v0.06 --nologo`; não executa o projeto de checks.

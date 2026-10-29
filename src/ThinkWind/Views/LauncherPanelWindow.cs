@@ -22,6 +22,9 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     private readonly ApplicationCatalog catalog;
     private readonly LauncherSearch search = new();
     private readonly ShellIcons icons = new();
+    private readonly StaWorker imageWorker = new("Think Wind — ícones da gaveta");
+    private readonly Dictionary<string, ImageSource> largeIcons = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Task<ImageSource?>> pendingIcons = new(StringComparer.OrdinalIgnoreCase);
     private readonly Func<OverlayChrome.PixelRect> anchor;
     private readonly Func<bool> dockHasFocus;
     private readonly StackPanel content = new();
@@ -82,7 +85,7 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         refresh.Tick += async (_, _) => { if (IsVisible) await catalog.RefreshAsync(true); };
         catalog.Changed += CatalogChanged; Store.Changed += PreferencesChanged;
         LayoutDrag.Completed += LayoutCompleted;
-        Closed += (_, _) => { disposed = true; cancellation?.Cancel(); debounce.Stop(); visibility.Stop(); refresh.Stop(); search.Dispose(); catalog.Changed -= CatalogChanged; Store.Changed -= PreferencesChanged; LayoutDrag.Completed -= LayoutCompleted; };
+        Closed += (_, _) => { disposed = true; imageWorker.Dispose(); cancellation?.Cancel(); debounce.Stop(); visibility.Stop(); refresh.Stop(); search.Dispose(); catalog.Changed -= CatalogChanged; Store.Changed -= PreferencesChanged; LayoutDrag.Completed -= LayoutCompleted; };
     }
     internal async void Present(LauncherPanelMode requested, string text = "", bool focusSearch = true)
     {
@@ -171,19 +174,26 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     }
     private FrameworkElement ResultRow(AppEntry entry)
     {
-        var row = new DockPanel();
+        var main = ActionButton(entry.Name, () => Launch(entry)); main.Style = (Style)FindResource("Think.IconButton"); main.Padding = new Thickness(6); main.ToolTip = entry.Name;
+        var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        var icon = entry.Icon ?? icons.Get(entry.Target);
+        var image = new Image { Source = icon, Width = 40, Height = 40, Stretch = Stretch.Uniform };
+        RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality); inside.Children.Add(image);
+        LoadLargeIcon(image, entry.Target);
+        inside.Children.Add(new TextBlock { Text = entry.Name, FontSize = 11, LineHeight = 15, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Height = 30, Width = 84, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 7, 0, 0) });
+        main.Content = inside;
+        var card = new Border { Child = main, Margin = new Thickness(4), Height = 100 };
         if (mode == LauncherPanelMode.Library)
         {
+            card.Child = null; var tile = new Grid(); tile.Children.Add(main); card.Child = tile;
             bool pinned = Store.Value.Shortcuts.Any(pin => SameTarget(pin.Target, entry.Target));
-            var add = ActionButton(pinned ? "Já está na barra" : "Adicionar à barra", () => PinDock(entry)); add.Content = Glyph(pinned ? "\uE73E" : "\uE710", 14); add.IsEnabled = !pinned; add.Width = 28; add.Padding = new Thickness(2); DockPanel.SetDock(add, Dock.Right); row.Children.Add(add);
+            var add = ActionButton(pinned ? "Já está na barra" : "Adicionar à barra", () => PinDock(entry));
+            add.Style = (Style)FindResource("Think.IconButton"); add.Content = Glyph(pinned ? "\uE73E" : "\uE710", 13);
+            add.IsEnabled = !pinned; add.Padding = new Thickness(2); add.Width = add.Height = 22;
+            add.HorizontalAlignment = HorizontalAlignment.Right; add.VerticalAlignment = VerticalAlignment.Top;
+            add.SetBinding(VisibilityProperty, new System.Windows.Data.Binding(nameof(IsMouseOver)) { Source = card, Converter = new BooleanToVisibilityConverter() });
+            tile.Children.Add(add);
         }
-        var main = ActionButton(entry.Name, () => Launch(entry)); main.Style = (Style)FindResource("Think.IconButton"); main.Padding = new Thickness(6);
-        var inside = new Grid(); inside.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) }); inside.ColumnDefinitions.Add(new ColumnDefinition());
-        var icon = entry.Icon ?? icons.Get(entry.Target);
-        if (icon is not null) inside.Children.Add(new Image { Source = icon, Width = 28, Height = 28, Stretch = Stretch.Uniform }); else inside.Children.Add(Glyph("\uE8A5", 24));
-        var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; labels.Children.Add(new TextBlock { Text = entry.Name, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
-        var description = new TextBlock { Text = entry.Category, FontSize = 10, TextTrimming = TextTrimming.CharacterEllipsis }; description.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); labels.Children.Add(description); Grid.SetColumn(labels, 1); inside.Children.Add(labels); main.Content = inside; main.HorizontalContentAlignment = HorizontalAlignment.Stretch; row.Children.Add(main);
-        var card = new Border { Child = row, Margin = new Thickness(4), Height = 52, CornerRadius = new CornerRadius(12) }; card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
         var menu = new ContextMenu(); AddMenu(menu, "Abrir", () => Launch(entry)); AddMenu(menu, "Fixar na barra", () => PinDock(entry));
         bool startPinned = Store.Value.StartPins.Any(pin => SameTarget(pin.Target, entry.Target));
         AddMenu(menu, startPinned ? "Remover dos fixados do Iniciar" : "Fixar no Iniciar", () => Store.Update(p => { if (startPinned) p.StartPins.RemoveAll(pin => SameTarget(pin.Target, entry.Target)); else p.StartPins.Add(new(entry.Name, entry.Target)); }));
@@ -198,6 +208,19 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         if (left.Equals(right, StringComparison.OrdinalIgnoreCase)) return true;
         if (left.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) || right.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)) return false;
         return icons.Resolve(left).Equals(icons.Resolve(right), StringComparison.OrdinalIgnoreCase);
+    }
+    private async void LoadLargeIcon(Image image, string target)
+    {
+        if (largeIcons.TryGetValue(target, out var cached)) { image.Source = cached; return; }
+        if (!pendingIcons.TryGetValue(target, out var pending)) { pending = imageWorker.Run(() => ShellIcons.ReadLarge(target)); pendingIcons[target] = pending; }
+        try
+        {
+            var result = await pending;
+            if (disposed || result is null) return;
+            if (largeIcons.Count > 256) largeIcons.Clear(); largeIcons[target] = result; image.Source = result;
+        }
+        catch (TaskCanceledException) { }
+        finally { pendingIcons.Remove(target); }
     }
     private void PinDock(AppEntry app) => Store.Update(p => { if (!p.Shortcuts.Any(pin => SameTarget(pin.Target, app.Target))) p.Shortcuts.Add(new(app.Name, app.Target)); });
     private void Launch(AppEntry entry)
@@ -228,7 +251,10 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     {
         double width = Math.Min(660, Display.Width - 16); var rect = anchor();
         double available = Math.Max(160, (rect.Top - Display.Work.Top) / Display.Scale - 24);
-        double height = Math.Min(620, available); int size = Math.Clamp((int)((height - 250) / 60), 1, 6) * 2;
+        double height = Math.Min(620, available);
+        int columns = Math.Clamp((int)((width - 28) / 100), 1, 6);
+        resultsGrid.Columns = columns;
+        int size = Math.Clamp((int)((height - 280) / 108), 1, 3) * columns;
         if (perPage != size) { perPage = size; Dispatcher.BeginInvoke(new Action(() => { if (IsVisible) RenderRows(); })); }
         content.Width = Math.Max(1, width - 28); viewport.Width = content.Width; viewport.MaxHeight = Math.Max(60, height - 28);
         content.Measure(new Size(content.Width, double.PositiveInfinity));

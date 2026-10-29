@@ -19,6 +19,21 @@ internal sealed partial class DockWindow : FloatingWindow
     private readonly StackPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly DockMagnifier magnifier;
     private double magnificationReserve;
+    private double magnificationHeadroom;
+    private readonly AdornerDecoratorHost iconLayer;
+    protected override Thickness TransparentInsets
+    {
+        get
+        {
+            double progress = 1;
+            if (hidden)
+            {
+                var bounds = Bounds;
+                progress = Math.Clamp(((bounds.Bottom - bounds.Top) / Display.Scale - 6) / Math.Max(1, ExpandedHeight - 6), 0, 1);
+            }
+            return new Thickness(magnificationReserve / 2 * progress, magnificationHeadroom * progress, magnificationReserve / 2 * progress, 0);
+        }
+    }
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private readonly ApplicationCatalog catalog;
     private LauncherPanelWindow? launcher;
@@ -35,8 +50,8 @@ internal sealed partial class DockWindow : FloatingWindow
     private DockFit fit = new(1, 32, 10, 4, 0);
     private int page;
     private nint activeWindow;
-    private double TotalWidth => contentWidth + Surface.Padding.Left + Surface.Padding.Right;
-    private double ExpandedHeight => Math.Max(44, contentHeight + Surface.Padding.Top + Surface.Padding.Bottom);
+    private double TotalWidth => contentWidth + 20 + magnificationReserve;
+    private double ExpandedHeight => Math.Max(44, contentHeight + 20) + magnificationHeadroom;
     private DateTime lastHover = DateTime.UtcNow;
     private sealed record Item(string Key, string Name, string? Target, string? Glyph, List<Desktop.RunningWindow> Windows, Shortcut? Pin, Action? Action);
     public DockWindow(SettingsStore store) : base(store)
@@ -59,7 +74,8 @@ internal sealed partial class DockWindow : FloatingWindow
             else if (e.Key == Key.Escape) { launcher?.Dismiss(); Keyboard.ClearFocus(); e.Handled = true; }
         };
         SourceInitialized += (_, _) => HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(NoActivate);
-        Surface.Child = new AdornerDecoratorHost(items);
+        iconLayer = new AdornerDecoratorHost(items);
+        ((Grid)Content).Children.Add(iconLayer);
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
         timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
         MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); };
@@ -156,8 +172,9 @@ internal sealed partial class DockWindow : FloatingWindow
         fit = CompactLayout.FitDock(entries.Count, available - magnificationReserve, p.IconSize * p.DockScale, p.DockSpacing);
         // Fixed headroom belongs to the expanded layout, never to mouse frames.
         // The same alpha-clipped Acrylic surface encloses every enlarged icon.
-        double headroom = magnify ? (fit.Icon + 26) * p.DockMagnificationAmount * 1.08 : 0;
-        Surface.Padding = new Thickness(10 + magnificationReserve / 2, 10 + headroom, 10 + magnificationReserve / 2, 10);
+        magnificationHeadroom = magnify ? (fit.Icon + 26) * p.DockMagnificationAmount * 1.08 : 0;
+        Surface.Padding = new Thickness(10); Surface.Margin = TransparentInsets;
+        iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 10 + magnificationHeadroom, 10 + magnificationReserve / 2, 10);
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Children.Clear();
         var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(); start.Width = 40; start.Height = 38; start.Padding = new Thickness(4); items.Children.Add(start);
