@@ -130,7 +130,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         IsVisibleChanged += (_, _) => RefreshApplicationInset();
         Closed += (_, _) => applicationInset.Dispose();
         Closed += (_, _) => { weather.ReadingChanged -= RefreshHeaderWeather; weather.Dispose(); };
-        IsVisibleChanged += (_, _) => { if (!IsVisible) { weather.SetActive(false); weather.SetHeaderActive(false); if (systemTools is not null) systemTools.IsOpen = false; } };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { weather.SetActive(false); weather.SetHeaderActive(false); systemTools?.Close(); } };
     }
     private void DragCompleted() { RefreshSettings(); ScheduleCollapse(); }
     private Border HoverCard(string title, UIElement child)

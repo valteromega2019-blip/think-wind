@@ -10,8 +10,8 @@ internal sealed partial class IslandWindow
 {
     private TextBlock? headerWeather, stripWeather;
     private Button? stripWeatherButton;
-    private ContextMenu? systemTools;
-    private bool SystemToolsOpen => systemTools?.IsOpen == true;
+    private SystemToolsWindow? systemTools;
+    private bool SystemToolsOpen => systemTools?.IsVisible == true;
 
     private Button WeatherButton(bool strip)
     {
@@ -20,7 +20,7 @@ internal sealed partial class IslandWindow
         button.Style = (Style)FindResource("Think.IconButton");
         button.Content = reading; button.Padding = new Thickness(5, 0, 5, 0);
         button.Height = strip ? 24 : 32; button.Width = strip ? 72 : 78;
-        button.Margin = new Thickness(4, 0, 4, 0);
+        button.Margin = strip ? new Thickness(0, 0, 8, 0) : new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
         if (strip) { stripWeather = reading; stripWeatherButton = button; }
         else headerWeather = reading;
         RefreshHeaderWeather();
@@ -48,13 +48,14 @@ internal sealed partial class IslandWindow
         button.Width = strip ? 28 : 32 * Store.Value.IslandScale;
         button.Height = strip ? 24 : 32 * Store.Value.IslandScale;
         button.Padding = new Thickness(3);
+        button.Margin = strip ? new Thickness(0, 0, 8, 0) : new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
         button.Click += (_, _) =>
         {
-            if (systemTools is not null) systemTools.IsOpen = false;
-            systemTools = SystemToolsMenu.Create(button);
-            systemTools.Opened += (_, _) => CancelCollapse();
-            systemTools.Closed += (_, _) => ScheduleCollapse();
-            systemTools.IsOpen = true;
+            if (systemTools is not null) { systemTools.Close(); return; }
+            var popup = new SystemToolsWindow(Store, button) { Owner = this };
+            systemTools = popup;
+            popup.Closed += (_, _) => { if (ReferenceEquals(systemTools, popup)) systemTools = null; ScheduleCollapse(); };
+            CancelCollapse(); popup.Show(); popup.Position(); popup.Activate();
         };
         return button;
     }

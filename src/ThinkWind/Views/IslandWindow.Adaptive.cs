@@ -59,7 +59,7 @@ internal sealed partial class IslandWindow
         if (statusBuilt) return;
         statusBuilt = true;
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        statusClock.Margin = new Thickness(0);
+        statusClock.Margin = new Thickness(0, 0, 8, 0);
         DockPanel.SetDock(statusClock, Dock.Left);
         statusRow.Children.Add(statusClock);
         var statusWeather = WeatherButton(true);
