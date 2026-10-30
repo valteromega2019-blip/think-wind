@@ -75,7 +75,7 @@ internal static class Desktop
             }
             catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException) { }
             if (!identities.TryGetValue(pid, out var appId)) { appId = ReadAppId(pid); identities[pid] = appId; }
-            result.Add(new(hwnd, text.ToString(), executable, IsIconic(hwnd), appId)); return true;
+            result.Add(new(hwnd, text.ToString(), executable, IsIconic(hwnd), ShellAppIdentity.WindowId(hwnd) ?? appId)); return true;
         }, 0);
         return result;
     }

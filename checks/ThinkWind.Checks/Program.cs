@@ -116,6 +116,7 @@ internal static class Program
         Run("Bluetooth: adaptadores e pareados por APIs nativas, sem alterar conexões", LayoutChecks.BluetoothSnapshot);
         Run("Bluetooth: descoberta só no painel e liberação ao ocultar", LayoutChecks.BluetoothLifecycle);
         Run("Atalho: ícone sem overlay e invalidação ao editar .lnk", () => LayoutChecks.ShortcutIcons(Root));
+        Run("Identidade: AppUserModelID da janela e destino nativo do atalho", () => IdentityChecks.Check(Root));
         Run("Preferências de ampliação e barra exclusiva persistem", () =>
         {
             var preferences = Store("dock-new");

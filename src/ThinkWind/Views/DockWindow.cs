@@ -142,12 +142,21 @@ internal sealed partial class DockWindow : FloatingWindow
         if (readingWindows) { nextAppRefresh = DateTime.MinValue; return; }
         readingWindows = true;
         List<Desktop.RunningWindow> windows;
-        try { windows = await System.Threading.Tasks.Task.Run(Desktop.Windows); }
+        var pins = Store.Value.Shortcuts.ToArray();
+        Dictionary<string, LaunchIdentity> pinIdentities;
+        try
+        {
+            windows = await System.Threading.Tasks.Task.Run(Desktop.Windows);
+            pinIdentities = await catalog.ResolvePinsAsync(pins);
+        }
+        catch (System.Threading.Tasks.TaskCanceledException) { return; }
         catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { return; }
         finally { readingWindows = false; }
+        if (!pins.SequenceEqual(Store.Value.Shortcuts)) { signature = ""; nextAppRefresh = DateTime.MinValue; return; }
         if (!IsVisible || LayoutDrag.Active || fileDragging || MenuOpen) return;
         var active = Desktop.GetForegroundWindow();
-        var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}:{w.Executable}")) + active;
+        var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}:{w.Executable}")) + active
+            + string.Join("|", pins.Select(pin => $"{pin.Target}:{pinIdentities[pin.Target].Path}:{pinIdentities[pin.Target].AppId}"));
         if (next == signature) return;
         rebuilding = true;
         try
@@ -156,10 +165,11 @@ internal sealed partial class DockWindow : FloatingWindow
             var entries = new List<Item>();
             var pinnedWindows = new HashSet<nint>();
             var pinnedIdentities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var pin in Store.Value.Shortcuts)
+            foreach (var pin in pins)
             {
-                var path = DockPath(icons.Resolve(pin.Target));
-                string? appId = pin.Target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase) ? pin.Target.Substring(@"shell:AppsFolder\".Length) : catalog.Items.FirstOrDefault(app => app.Target.Equals(pin.Target, StringComparison.OrdinalIgnoreCase))?.AppId;
+                var launch = pinIdentities[pin.Target];
+                var path = DockPath(launch.Path);
+                string? appId = launch.AppId ?? catalog.Items.FirstOrDefault(app => app.Target.Equals(pin.Target, StringComparison.OrdinalIgnoreCase))?.AppId;
                 string identity = !string.IsNullOrWhiteSpace(appId) ? "id:" + appId : "path:" + path;
                 if (!pinnedIdentities.Add(identity)) continue;
                 var matching = windows.Where(w => !pinnedWindows.Contains(w.Handle) &&

@@ -14,6 +14,24 @@ internal sealed class ApplicationCatalog : IDisposable
 {
     private readonly Dispatcher dispatcher;
     private readonly StaWorker worker = new("Think Wind — aplicativos");
+    private readonly Dictionary<string, (string Version, LaunchIdentity Identity)> launchIdentities = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ShellIcons identityIcons = new();
+    internal Task<Dictionary<string, LaunchIdentity>> ResolvePinsAsync(Shortcut[] pins) => worker.Run(() =>
+    {
+        var result = new Dictionary<string, LaunchIdentity>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pin in pins)
+        {
+            string version = identityIcons.VersionedKey(pin.Target);
+            if (!launchIdentities.TryGetValue(pin.Target, out var cached) || cached.Version != version)
+            {
+                cached = (version, ShellAppIdentity.ReadLaunch(pin.Target, identityIcons));
+                launchIdentities[pin.Target] = cached;
+            }
+            result[pin.Target] = cached.Identity;
+        }
+        foreach (string old in launchIdentities.Keys.Where(key => !result.ContainsKey(key)).ToArray()) launchIdentities.Remove(old);
+        return result;
+    });
     private readonly List<FileSystemWatcher> watchers = new();
     private readonly DispatcherTimer debounce = new() { Interval = TimeSpan.FromMilliseconds(700) };
     private bool loading, refreshAgain, disposed;

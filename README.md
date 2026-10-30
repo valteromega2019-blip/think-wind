@@ -1,5 +1,12 @@
 # Think Wind
 
+## 0.015 Alfa — revisão 1 (0.15.1-alpha)
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.15.1-alpha/ThinkWind-Setup-0.15.1-alpha.exe) · [Release](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.15.1-alpha)
+
+Associação de fixados por identidade nativa da janela e do atalho, com resolução AppsFolder/.lnk em segundo plano. **44 testes aprovados, zero falhas/ignorados**, incluindo regressão do novo mecanismo. Compilação e verificação de tipos sem erros ou avisos; instalador gerado. Confirmação visual final em todos os perfis do Edge ainda pendente. [Relatório e limites](VALIDACAO-0.15.1.md).
+
+
 ## 0.015 Alfa — 0.15.0-alpha
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.15.0-alpha/ThinkWind-Setup-0.15.0-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.15.0-alpha)

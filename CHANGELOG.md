@@ -1,5 +1,12 @@
 # Histórico do Think Wind
 
+## 0.015 Alfa — revisão 1 (0.15.1-alpha)
+
+- Leitura de System.AppUserModel.ID por janela via SHGetPropertyStoreForWindow; o identificador do processo permanece como alternativa. A identidade por janela é usada pelo Shell para agrupamento e não era consultada antes.
+- Atalhos .lnk e AppsFolder resolvidos pelo Shell no worker STA já existente, com cache por versão do atalho/destino. Não depende da abertura prévia da biblioteca para conhecer a identidade de um fixado.
+- Associação usa identidade do atalho/janela e executável; atualização também considera mudanças de identidade do fixado. Sem comparação aproximada por título ou imagem.
+- 44 testes aprovados, zero falhas/ignorados. Compilação/verificação de tipos Release sem erros ou avisos e instalador gerado. Conferência visual final no Edge ainda pendente; consulte VALIDACAO-0.15.1.md.
+
 ## 0.015 Alfa — 0.15.0-alpha
 
 - Publicação das alterações detalhadas abaixo: Dock, ilha, tema, fontes, instalação e detecção de jogos.
