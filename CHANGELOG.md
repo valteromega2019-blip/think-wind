@@ -1,4 +1,48 @@
+## 0.16 Alfa — revisão 2 (0.16.2-alpha)
+
+- Publicação com melhorias de ativação, ícones, alça inferior, teclado virtual opcional e reconhecimento do enquadramento compatível ao restaurar. Veja RELEASE-0.16.2-ALFA.md para escopo e limitações.
+- Publish Release e instalador concluídos. Sem testes automatizados ou type check separado; últimas correções de margem/restauração aguardam confirmação visual.
+
+## Em desenvolvimento — enquadramento e ativação de aplicativos
+
+- Minimizar não apaga mais o registro de enquadramento compatível: a janela não conta como maximizada enquanto minimizada, mas volta a ser reconhecida ao restaurar. Retenção também se aplica quando a ilha retorna ao modo central por ausência de aplicativos visíveis; a margem pode ser medida novamente após restaurar. PID é conferido para evitar reaproveitar handles de outro processo. Dispose continua limpando os registros. Sem compilação, testes ou type check nesta etapa.
+
+- Atalho opcional Teclado virtual na barra principal da ilha e barra superior de status, usando osk.exe. Oculto por padrão em perfis novos e anteriores; ativação pelo controle existente em Personalizar, com salvamento e atualização imediata. Sem compilação, testes ou type check nesta etapa.
+
+- Reconhecimento lógico de maximização compatível aceita margens limitadas por DPI e aguarda 750 ms pela normalização assíncrona, evitando perder o modo superior por igualdade estrita de retângulos. Ajustes posteriores preservam largura/base efetivamente aceitas pelo aplicativo.
+- Área cliente só aciona compatibilidade quando o deslocamento ultrapassa a tolerância de uma borda comum (16 DIP ou metade da barra); pequenas diferenças não devem normalizar Configurações. Alteração ainda pendente de confirmação visual; sem compilação, testes ou type check.
+
+- Abertura elevada: menu Executar como administrador em atalhos/programas compatíveis na barra e biblioteca/Iniciar, usando o verbo runas com UAC. Erro 740 tenta elevação somente para o aplicativo solicitado; cancelar UAC não gera erro adicional. Launcher mantém manifesto asInvoker para preservar Drag & Drop. Isto não concede controle irrestrito sobre janelas já elevadas. Sem compilação, testes ou type check nesta etapa.
+
+- Ícones do Dock: prioriza imagem do catálogo e identidade AppsFolder para aplicativos empacotados; Configurações também é reconhecido pelo executável. Imagens HICON totalmente transparentes não são consideradas sucesso nem entram no cache. Acrescentadas fontes ICON_SMALL2 e ícone pequeno da classe, preservando os handles emprestados. Engrenagem nativa serve como alternativa final para Configurações.
+- Sem compilação, testes ou type check nesta revisão de ícones; resultado visual pendente.
+
+- Nova revisão de enquadramento: margem visível DWM é conferida após o ajuste e corrigida no máximo duas vezes, em vez de depender exclusivamente da margem inicial. Negociação alternativa agora exige área cliente acima do próprio HWND, evitando acioná-la por uma borda invisível comum.
+- Para área cliente ainda inválida após negociação, incluído fallback de janela normal dimensionada como maximizada, sem ativação (SW_SHOWNOACTIVATE), conservando o reconhecimento lógico pelo launcher. Limitação: nesse fallback, a janela deixa de estar maximizada nativamente; ao desativar o ajuste, restaura-se o retângulo original sem forçar maximização/foco. Requer conferência visual no Illustrator; não é correção validada.
+- Diagnóstico passivo: Illustrator HWND top=28, cliente top=-1, maximizado; Configurações HWND/cliente top=8, não maximizado. Sem compilação, testes ou type check nesta etapa.
+
+- Dock permanece aberto enquanto o cursor estiver na área da alça de ativação, inclusive após expandir. Essa região renova o tempo de interação e impede o recolhimento; o atraso configurado começa ao sair dela e do Dock. Sem compilação, testes ou type check nesta etapa.
+
+- Alça inferior recolhida mantém 96 × 6 DIP e a posição anterior, com realce claro e contorno discreto para fundos escuros. Área de aproximação passa a 176 × 32 DIP, detectada pelo temporizador existente sem janela invisível bloqueando cliques. Sem compilação, testes ou type check nesta etapa.
+
+- Illustrator: leitura da janela em execução mostrou HWND no topo 28 e área cliente ainda no topo -1. Incluída tentativa limitada de negociação normal do redimensionamento quando ClientToScreen identifica conteúdo acima da barra após o primeiro ajuste. Resultado visual ainda não confirmado; sem compilação ou testes nesta etapa.
+
+- Abertura pela barra e menu de contexto usa o mesmo fluxo: restauração assíncrona com tentativas limitadas de ativação, reaproveitamento do atalho quando a janela anterior já fechou e prevenção de chamadas simultâneas. Recusa de ativação não cria outra instância silenciosamente.
+- Execução de programas expande variáveis de ambiente, aceita caminhos entre aspas e usa a pasta do executável como diretório de trabalho. Sem compilação, testes ou type check nesta etapa.
+
+- Ajuste superior solicita SWP_FRAMECHANGED para recalcular a área cliente, inclusive na primeira observação de uma janela já posicionada. Margem invisível do DWM é medida e mantida por ajuste para alinhar a borda visível sem acumular deslocamentos.
+- Enumeração da barra aceita janelas WS_EX_APPWINDOW com proprietário. Ativação considera o último popup visível e solicita restauração assíncrona sem bloquear a interface; teclado osk.exe usa sua própria ativação pelo shell.
+- Sem novos hooks, timers ou mudanças na área útil do desktop. Aplicativos elevados, UIAccess e aplicativos que impõem limites próprios ainda dependem de confirmação prática.
+- Alterações revisadas por leitura e diff. Sem compilação, testes ou type check nesta etapa; a versão aberta permanece anterior.
+
 # Histórico do Think Wind
+
+## Em desenvolvimento — limite superior para molduras próprias
+
+- Ajuste posiciona o HWND inteiro abaixo da barra, sem descontar a moldura invisível do DWM que podia deixar controles de títulos próprios sob a faixa.
+- Considera janelas que ocupam a área útil sem estado IsZoomed e janelas explícitas WS_EX_APPWINDOW mesmo com proprietário. Mantém a identidade de janelas ajustadas para não alternar a ilha ao centro após o redimensionamento.
+- Restauração respeita alteração manual dos limites e libera ajustes ao mudar o monitor da ilha. Não altera a área útil do desktop.
+- Relato: Illustrator e outros aplicativos com corte superior. Revisão apenas por código; sem compilação, testes ou type check, e sem confirmação interativa nesses aplicativos nesta etapa. Aplicativos elevados ou que rejeitam limites continuam sujeitos às restrições do Windows.
 
 ## 0.16 Alfa — revisão 1 (0.16.1-alpha)
 

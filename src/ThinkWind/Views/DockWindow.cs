@@ -174,15 +174,36 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private void UpdateVisibility()
     {
+        bool pointerInsideReveal = PointerInsideRevealArea();
+        if (hidden && !IsPositionAnimating && pointerInsideReveal)
+        {
+            lastHover = DateTime.UtcNow;
+            SetHidden(false);
+        }
         if (activeContextMenu is { IsOpen: false } stale && DateTime.UtcNow - contextMenuRequested > TimeSpan.FromMilliseconds(250))
             FinishContextMenu(stale);
-        bool pointerInside = PointerInsideDock;
+        // Keep the activation region valid after expansion too: the dock may
+        // float above a cursor that is still resting on the original handle.
+        bool pointerInside = pointerInsideReveal || PointerInsideDock;
         if (pointerInside) lastHover = DateTime.UtcNow;
         if (preview?.IsVisible == true && !preview.IsMouseOver && !pointerInside
             && DateTime.UtcNow - lastHover >= TimeSpan.FromMilliseconds(350)) StopPreviews();
         // An ordinary focused button isn't an ongoing interaction. In particular,
         // activating the owner for a right-click must not pin the dock forever.
         if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !pointerInside && !IsMouseCaptureWithin && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
+    }
+    private bool PointerInsideRevealArea()
+    {
+        if (!IsVisible) return false;
+        var display = Display;
+        var cursor = System.Windows.Forms.Cursor.Position;
+        // Passive detection uses the existing timer, not a transparent window
+        // over other applications. The visible handle remains 96 x 6 DIP.
+        int halfWidth = (int)Math.Round(88 * display.Scale);
+        int height = (int)Math.Round(32 * display.Scale);
+        int center = display.Bounds.Left + display.Bounds.Width / 2;
+        return cursor.X >= center - halfWidth && cursor.X < center + halfWidth
+            && cursor.Y >= display.Bounds.Bottom - height && cursor.Y < display.Bounds.Bottom;
     }
     private void SetHidden(bool value, bool animate = true)
     {
@@ -245,8 +266,9 @@ internal sealed partial class DockWindow : FloatingWindow
                 string identity = !string.IsNullOrWhiteSpace(appId) ? "id:" + appId : "path:" + path;
                 if (!pinnedIdentities.Add(identity)) continue;
                 var matching = windows.Where(w => !pinnedWindows.Contains(w.Handle) &&
-                    ((!string.IsNullOrWhiteSpace(w.Executable) && string.Equals(DockPath(w.Executable), path, StringComparison.OrdinalIgnoreCase))
-                    || (!string.IsNullOrWhiteSpace(appId) && string.Equals(w.AppId, appId, StringComparison.OrdinalIgnoreCase)))).ToList();
+                    ((!string.IsNullOrWhiteSpace(appId) && !string.IsNullOrWhiteSpace(w.AppId))
+                        ? string.Equals(w.AppId, appId, StringComparison.OrdinalIgnoreCase)
+                        : (!string.IsNullOrWhiteSpace(w.Executable) && string.Equals(DockPath(w.Executable), path, StringComparison.OrdinalIgnoreCase)))).ToList();
                 foreach (var window in matching) pinnedWindows.Add(window.Handle);
                 entries.Add(new("pin:" + pin.Target, pin.Name, pin.Target, null, matching, pin, null));
             }
@@ -365,9 +387,17 @@ internal sealed partial class DockWindow : FloatingWindow
         bool minimized = item.Windows.Count > 0 && item.Windows.All(w => w.Minimized);
         var size = fit.Icon;
         var panel = new Grid { Height = size + 14, VerticalAlignment = VerticalAlignment.Center };
-        var icon = item.Glyph is null ? icons.Get(item.Target, selected?.Handle ?? 0) : null;
+        var catalogApp = item.Glyph is null ? catalog.Items.FirstOrDefault(app =>
+            (!string.IsNullOrWhiteSpace(selected?.AppId) && string.Equals(app.AppId, selected?.AppId, StringComparison.OrdinalIgnoreCase))
+            || (item.Target is not null && app.Target.Equals(item.Target, StringComparison.OrdinalIgnoreCase))) : null;
+        var icon = item.Glyph is null ? catalogApp?.Icon ?? icons.Get(item.Target, selected?.Handle ?? 0, selected?.AppId) : null;
         if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform });
-        else panel.Children.Add(new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? "\uE8A5", 32) });
+        else
+        {
+            bool settingsIcon = item.Target?.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) == true
+                || string.Equals(System.IO.Path.GetFileName(selected?.Executable ?? item.Target ?? ""), "SystemSettings.exe", StringComparison.OrdinalIgnoreCase);
+            panel.Children.Add(new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? (settingsIcon ? "\uE713" : "\uE8A5"), 32) });
+        }
         var indicator = new Border
         {
             Height = 3,
@@ -385,14 +415,15 @@ internal sealed partial class DockWindow : FloatingWindow
         {
             if (Store.IsEditing && item.Key != "system:add") return;
             if (item.Action is not null) item.Action();
-            else if (selected is not null) Desktop.Activate(selected.Handle);
-            else if (item.Target is not null) SystemActions.Run(item.Target);
+            else OpenDockItem(item, selected, true);
         }, item.Name + (minimized ? " · minimizado" : focused is not null ? " · ativo" : item.Windows.Count > 0 ? " · em execução" : ""));
         button.Style = (Style)FindResource("Think.IconButton");
         button.Content = panel; button.Width = size + 2 * fit.Padding; button.Padding = new Thickness(fit.Padding, 4, fit.Padding, 4);
         button.Margin = new Thickness(fit.Gap / 2, 0, fit.Gap / 2, 0);
         var menu = new ContextMenu();
-        foreach (var window in item.Windows) Menu(menu, (window.Minimized ? "Restaurar · " : "Abrir · ") + window.Title, () => Desktop.Activate(window.Handle));
+        if (item.Action is null && item.Target is string adminTarget && SystemActions.CanRunAsAdministrator(adminTarget))
+            Menu(menu, "Executar como administrador…", () => SystemActions.RunAsAdministrator(adminTarget));
+        foreach (var window in item.Windows) Menu(menu, (window.Minimized ? "Restaurar · " : "Abrir · ") + window.Title, () => OpenDockItem(item, window, false));
         if (item.Pin is not null) Menu(menu, "Remover atalho", () => Store.Update(p => p.Shortcuts.Remove(item.Pin)));
         else if (selected?.Executable is string executable) Menu(menu, "Fixar aplicativo", () => Store.Update(p =>
         {
@@ -420,6 +451,34 @@ internal sealed partial class DockWindow : FloatingWindow
         AttachPreview(button, item);
         if (item.Key == "system:add") Menu(menu, "Adicionar executável manualmente…", AddShortcut);
         return button;
+    }
+    private bool openingDockItem;
+    private async void OpenDockItem(Item item, Desktop.RunningWindow? selected, bool minimizeIfActive)
+    {
+        if (openingDockItem) return;
+        openingDockItem = true;
+        try
+        {
+            // OSK is a UIAccess application: let its own shell activation
+            // restore the existing instance instead of forcing foreground.
+            if (selected?.Executable is string keyboard
+                && System.IO.Path.GetFileName(keyboard).Equals("osk.exe", StringComparison.OrdinalIgnoreCase))
+            { SystemActions.Run(keyboard); return; }
+            if (selected is not null && Desktop.WindowExists(selected.Handle))
+            {
+                if (await Desktop.ActivateFromDock(selected.Handle, minimizeIfActive)) return;
+                // A denied foreground request must not start another instance.
+                if (Desktop.WindowExists(selected.Handle))
+                {
+                    MessageBox.Show("O Windows não permitiu ativar esta janela. Se o aplicativo estiver sendo executado como administrador, suas permissões podem impedir a ativação pelo launcher.", "Think Wind");
+                    return;
+                }
+            }
+            // The HWND captured by the previous refresh may already be gone.
+            // In that case use the original pinned shortcut, not a stale handle.
+            if (item.Target is not null) SystemActions.Run(item.Target);
+        }
+        finally { openingDockItem = false; }
     }
     private FrameworkElement SearchSlot(double width)
     {

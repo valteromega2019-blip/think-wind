@@ -32,7 +32,9 @@ internal static class Desktop
         catch (EntryPointNotFoundException) { arrangedAvailable = false; return false; }
     }
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(nint hwnd, StringBuilder name, int count);
-    [DllImport("user32.dll")] private static extern bool ShowWindow(nint hwnd, int command);
+    [DllImport("user32.dll")] private static extern bool ShowWindowAsync(nint hwnd, int command);
+    [DllImport("user32.dll")] private static extern bool IsWindow(nint hwnd);
+    [DllImport("user32.dll")] private static extern nint GetLastActivePopup(nint hwnd);
     [DllImport("user32.dll")] private static extern uint SendInput(uint count, INPUT[] input, int size);
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(nint hwnd, int attribute, out int value, int size);
     [DllImport("kernel32.dll")] private static extern bool GlobalMemoryStatusEx(ref MEMORY status);
@@ -54,7 +56,9 @@ internal static class Desktop
         var identities = new Dictionary<uint, string?>();
         EnumWindows((hwnd, _) =>
         {
-            if (!IsWindowVisible(hwnd) || GetWindow(hwnd, 4) != 0 || (GetWindowLong(hwnd, -20) & 0x80) != 0) return true;
+            int extendedStyle = GetWindowLong(hwnd, -20);
+            if (!IsWindowVisible(hwnd) || ((extendedStyle & 0x40000) == 0
+                && (GetWindow(hwnd, 4) != 0 || (extendedStyle & 0x80) != 0))) return true;
             GetWindowThreadProcessId(hwnd, out var pid);
             if (pid == Environment.ProcessId) return true;
             if (DwmGetWindowAttribute(hwnd, 14, out var cloaked, 4) == 0 && cloaked != 0) return true;
@@ -91,11 +95,42 @@ internal static class Desktop
     }
     internal static void Activate(nint hwnd)
     {
-        if (GetForegroundWindow() == hwnd) ShowWindow(hwnd, 6);
-        else { if (IsIconic(hwnd)) ShowWindow(hwnd, 9); SetForegroundWindow(hwnd); }
+        if (!IsWindow(hwnd)) return;
+        nint popup = GetLastActivePopup(hwnd);
+        if (popup != 0 && popup != hwnd && IsWindowVisible(popup)) { RestoreAndActivate(hwnd); return; }
+        if (GetForegroundWindow() == hwnd && !IsIconic(hwnd)) ShowWindowAsync(hwnd, 6);
+        else RestoreAndActivate(hwnd);
+    }
+    internal static bool WindowExists(nint hwnd) => hwnd != 0 && IsWindow(hwnd);
+    internal static async System.Threading.Tasks.Task<bool> ActivateFromDock(nint hwnd, bool minimizeIfActive)
+    {
+        if (!WindowExists(hwnd)) return false;
+        nint popup = GetLastActivePopup(hwnd);
+        if (minimizeIfActive && GetForegroundWindow() == hwnd && !IsIconic(hwnd)
+            && (popup == 0 || popup == hwnd || !IsWindowVisible(popup)))
+            return ShowWindowAsync(hwnd, 6);
+        // Restoration is queued on the application's thread. Activation can
+        // arrive too early; retry briefly without blocking either UI thread.
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            if (!WindowExists(hwnd)) return false;
+            RestoreAndActivate(hwnd);
+            popup = GetLastActivePopup(hwnd);
+            nint target = popup != 0 && IsWindowVisible(popup) ? popup : hwnd;
+            if (!IsIconic(hwnd) && IsWindowVisible(target) && GetForegroundWindow() == target) return true;
+            if (attempt < 3) await System.Threading.Tasks.Task.Delay(80 * (attempt + 1));
+        }
+        return false;
     }
     internal static bool RestoreAndActivate(nint hwnd)
-    { if (IsIconic(hwnd)) ShowWindow(hwnd, 9); return GetForegroundWindow() == hwnd || SetForegroundWindow(hwnd); }
+    {
+        if (!IsWindow(hwnd)) return false;
+        if (IsIconic(hwnd)) ShowWindowAsync(hwnd, 9);
+        else if (!IsWindowVisible(hwnd)) ShowWindowAsync(hwnd, 5);
+        nint popup = GetLastActivePopup(hwnd);
+        nint target = popup != 0 && IsWindowVisible(popup) ? popup : hwnd;
+        return GetForegroundWindow() == target || SetForegroundWindow(target);
+    }
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
     internal static bool LeftButtonDown => (GetAsyncKeyState(1) & 0x8000) != 0;
     internal static bool EscapeDown => (GetAsyncKeyState(0x1B) & 0x8000) != 0;
@@ -148,7 +183,8 @@ internal static class Desktop
             // Evaluate coverage as well so a small foreground window cannot
             // erase a fullscreen application still visible behind it.
             if (window == 0 || !IsWindowVisible(window) || IsIconic(window)) return false;
-            if ((GetWindowLong(window, -20) & 0x80) != 0 || GetWindow(window, 4) != 0) return false;
+            int style = GetWindowLong(window, -20);
+            if ((style & 0x40000) == 0 && ((style & 0x80) != 0 || GetWindow(window, 4) != 0)) return false;
             GetWindowThreadProcessId(window, out var pid); if (pid == Environment.ProcessId) return false;
             if (DwmGetWindowAttribute(window, 14, out var cloaked, 4) >= 0 && cloaked != 0) return false;
             return WindowCoversDisplay(window, display) == true;
@@ -175,10 +211,12 @@ internal static class Desktop
         if (!OverlayChrome.GetWindowRect(window, out var rect)) return null;
         // The appbar changes the working area asynchronously. The native
         // maximized state remains authoritative during that resize.
-        if (IsZoomed(window)) return true;
+        if (IsZoomed(window) || MaximizedWindowInset.IsAdjustedWindow(window)) return true;
         var bounds = display.Bounds;
         bool fullscreen = rect.Left <= bounds.Left + 2 && rect.Right >= bounds.Right - 2 && rect.Top <= bounds.Top + 2 && rect.Bottom >= bounds.Bottom - 2;
-        return fullscreen;
+        var work = display.Work;
+        bool fillsWork = rect.Left <= work.Left + 2 && rect.Right >= work.Right - 2 && rect.Top <= work.Top + 2 && rect.Bottom >= work.Bottom - 2;
+        return fullscreen || fillsWork;
     }
     internal static void Key(ushort key)
     {

@@ -251,6 +251,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             var grip = Glyph("\uE784", 15); grip.Width = 22; AttachPositionGrip(grip); header.Children.Add(grip);
         }
         var standard = new[] { "clock", "wifi", "audio" }.Concat(Store.Value.HiddenQuickControls.Contains("tray") ? Array.Empty<string>() : new[] { "tray" });
+        standard = standard.Concat(Store.Value.HiddenQuickControls.Contains("keyboard") ? Array.Empty<string>() : new[] { "keyboard" });
         var headerIds = Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing ? new[] { "settings" } : (Store.IsEditing ? Store.Value.QuickOrder.Where(id => id is not ("settings" or "windows-settings") && !Store.Value.HiddenQuickControls.Contains(id)) : standard)
             .Concat(new[] { "windows-settings" }).Concat(Stage == IslandStage.Full ? new[] { "settings" } : Array.Empty<string>()).Distinct();
         header.HorizontalAlignment = Stage == IslandStage.Full && maximizedOnDisplay ? HorizontalAlignment.Right : HorizontalAlignment.Center;
@@ -309,7 +310,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             var expand = ActionButton("Abrir painel completo", OpenFull);
             expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(expand);
         }
-        foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "wifi" or "audio" or "tray" or "settings" or "windows-settings") && !Store.Value.HiddenQuickControls.Contains(id)))
+        foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "wifi" or "audio" or "tray" or "keyboard" or "settings" or "windows-settings") && !Store.Value.HiddenQuickControls.Contains(id)))
         {
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
             var quick = ActionButton(control.Name, () =>

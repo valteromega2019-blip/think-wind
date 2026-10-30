@@ -113,6 +113,15 @@ internal abstract class FloatingWindow : Window
         var color = MaterialTint;
         color.A = (byte)Math.Round(255 * (backdrop?.MaterialAvailable == true ? alpha : 1));
         Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(color);
+        Surface.BorderThickness = new Thickness(CollapsedDock ? .75 : 0);
+        Surface.BorderBrush = SystemParameters.HighContrast ? SystemColors.WindowTextBrush
+            : new SolidColorBrush(MaterialLight ? Color.FromArgb(110, 28, 40, 54) : Color.FromArgb(185, 215, 228, 242));
+        if (CollapsedDock && !SystemParameters.HighContrast && !MaterialLight)
+        {
+            // Subtle luminous ridge stays inside the existing handle geometry.
+            Surface.Background = new LinearGradientBrush(
+                Color.FromArgb(235, 132, 149, 168), Color.FromArgb(220, 76, 91, 110), 90);
+        }
         Surface.CornerRadius = AttachedTop ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
         Surface.Margin = TransparentInsets;
         centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;

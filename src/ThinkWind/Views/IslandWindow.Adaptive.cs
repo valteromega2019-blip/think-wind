@@ -24,6 +24,7 @@ internal sealed partial class IslandWindow
     private void SyncStatusSurface()
     {
         BuildStatusRow();
+        if (statusKeyboard is not null) statusKeyboard.Visibility = Store.Value.HiddenQuickControls.Contains("keyboard") ? Visibility.Collapsed : Visibility.Visible;
         if (edgeReduced || (Stage == Services.IslandStage.Full && maximizedOnDisplay))
         {
             if (ReferenceEquals(Surface.Child, statusRow)) Surface.Child = null;
@@ -52,6 +53,7 @@ internal sealed partial class IslandWindow
     private readonly DockPanel statusRow = new() { LastChildFill = false };
     private readonly TextBlock statusClock = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private bool statusBuilt;
+    private Button? statusKeyboard;
     private void BuildStatusRow()
     {
         if (statusBuilt) return;
@@ -75,6 +77,11 @@ internal sealed partial class IslandWindow
         }
         AddMini("Rede", "\uE701", MiniIslandKind.Network);
         AddMini("Volume", "\uE767", MiniIslandKind.Volume);
+        statusKeyboard = ActionButton("Teclado virtual", () => Services.SystemActions.Run("osk.exe"));
+        statusKeyboard.Style = (Style)FindResource("Think.IconButton");
+        statusKeyboard.Content = Glyph("\uE765", 13); statusKeyboard.Width = 28; statusKeyboard.Height = 24; statusKeyboard.Padding = new Thickness(3);
+        statusKeyboard.Visibility = Store.Value.HiddenQuickControls.Contains("keyboard") ? Visibility.Collapsed : Visibility.Visible;
+        controls.Children.Add(statusKeyboard);
         Add("Notificações", "\uE7F4", () => Desktop.Chord(0x5B, 0x4E));
         Add("Expandir central de controle", "\uE70D", OpenFull);
         DockPanel.SetDock(controls, Dock.Right); statusRow.Children.Add(controls);

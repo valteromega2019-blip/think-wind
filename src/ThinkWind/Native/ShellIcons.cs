@@ -120,19 +120,38 @@ internal sealed class ShellIcons
         if (resolved.Count > 256) { resolved.Clear(); resolvedVersions.Clear(); resolvedVersions[target] = version; }
         resolved[target] = path; return path;
     }
-    internal ImageSource? Get(string? target, nint window = 0)
+    internal ImageSource? Get(string? target, nint window = 0, string? appId = null)
     {
+        // Packaged apps may expose a blank window/host icon. Their registered
+        // AppsFolder identity is a better source than the host executable.
+        bool settings = target is not null && (target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)
+            || Path.GetFileName(target).Equals("SystemSettings.exe", StringComparison.OrdinalIgnoreCase));
+        string? registeredTarget = settings ? @"shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+            : !string.IsNullOrWhiteSpace(appId) && appId.Contains('!') ? @"shell:AppsFolder\" + appId : null;
+        if (registeredTarget is not null && !registeredTarget.Equals(target, StringComparison.OrdinalIgnoreCase))
+        {
+            var registered = Get(registeredTarget);
+            if (registered is not null) return registered;
+        }
         // Borrowed window icons belong to their process and must not be destroyed.
         if (window != 0)
         {
-            var key = "window:" + window;
+            var key = "window:" + window + "|" + target + "|" + appId;
             if (cache.TryGetValue(key, out var existing)) return existing;
             try
             {
-                SendMessageTimeout(window, 0x007F, 1, 0, 2, 80, out var icon);
-                if (icon == 0) SendMessageTimeout(window, 0x007F, 0, 0, 2, 80, out icon);
-                if (icon == 0) icon = GetClassIcon(window, -14);
-                if (icon != 0) { var image = FromIcon(icon); Remember(key, image); return image; }
+                foreach (nuint kind in new nuint[] { 1, 0, 2 })
+                {
+                    SendMessageTimeout(window, 0x007F, kind, 0, 2, 80, out var icon);
+                    var image = icon == 0 ? null : FromIcon(icon);
+                    if (image is not null) { Remember(key, image); return image; }
+                }
+                foreach (int index in new[] { -14, -34 })
+                {
+                    var icon = GetClassIcon(window, index);
+                    var image = icon == 0 ? null : FromIcon(icon);
+                    if (image is not null) { Remember(key, image); return image; }
+                }
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
         }
@@ -168,9 +187,19 @@ internal sealed class ShellIcons
     }
     private void Remember(string key, ImageSource? image) { if (image is null) return; if (cache.Count > 256) cache.Clear(); cache[key] = image; }
     internal string VersionedKey(string target) => target + "|" + Stamp(target) + "|" + Stamp(Resolve(target));
-    private static ImageSource FromIcon(nint icon)
+    private static ImageSource? FromIcon(nint icon)
     {
         var image = Imaging.CreateBitmapSourceFromHIcon(icon, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+        // A valid HICON can still contain no visible pixels. Do not cache it
+        // as a successful result or prevent the remaining sources from trying.
+        var rgba = new FormatConvertedBitmap(image, PixelFormats.Bgra32, null, 0);
+        int stride = rgba.PixelWidth * 4;
+        var pixels = new byte[stride * rgba.PixelHeight];
+        rgba.CopyPixels(pixels, stride, 0);
+        bool visible = false;
+        for (int i = 3; i < pixels.Length; i += 4)
+            if (pixels[i] != 0) { visible = true; break; }
+        if (!visible) return null;
         image.Freeze(); return image;
     }
 }

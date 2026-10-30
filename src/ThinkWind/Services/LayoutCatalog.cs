@@ -13,6 +13,7 @@ internal static class LayoutCatalog
         new("wifi", "Wi-Fi", "\uE701", "ms-settings:network-wifi"),
         new("bluetooth", "Bluetooth", "\uE702", "ms-settings:bluetooth"),
         new("audio", "Áudio", "\uE767", null),
+        new("keyboard", "Teclado virtual", "\uE765", "osk.exe"),
         new("tray", "Bandeja de aplicativos", "\uE712", null),
         new("notifications", "Notificações", "\uE7F4", "ms-settings:notifications"),
         new("calendar", "Calendário", "\uE787", null),

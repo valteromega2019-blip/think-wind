@@ -9,18 +9,45 @@ internal static class SystemActions
 {
     internal static void Run(string target)
     { Launch(target); }
-    internal static bool Launch(string target)
+    internal static bool CanRunAsAdministrator(string target)
+    {
+        target = Environment.ExpandEnvironmentVariables(target.Trim().Trim('"'));
+        if (target.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) || target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)) return false;
+        string extension = Path.GetExtension(target);
+        return extension.Equals(".exe", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".com", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".lnk", StringComparison.OrdinalIgnoreCase);
+    }
+    internal static void RunAsAdministrator(string target) => Launch(target, true);
+    internal static bool Launch(string target, bool administrator = false)
     {
         try
         {
+            target = Environment.ExpandEnvironmentVariables(target.Trim());
+            if (target.Length >= 2 && target[0] == '"' && target[^1] == '"') target = target[1..^1];
+            if (administrator && !CanRunAsAdministrator(target)) return false;
             if (target.StartsWith("shell:AppsFolder\\", StringComparison.OrdinalIgnoreCase))
             {
                 var info = new ProcessStartInfo("explorer.exe") { UseShellExecute = true }; info.ArgumentList.Add(target); Process.Start(info);
             }
-            else Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+            else
+            {
+                var info = new ProcessStartInfo(target) { UseShellExecute = true };
+                if (administrator) info.Verb = "runas";
+                // Executables may depend on resources relative to their own
+                // directory, rather than the launcher's current directory.
+                if (Path.IsPathFullyQualified(target) && File.Exists(target)
+                    && Path.GetExtension(target).Equals(".exe", StringComparison.OrdinalIgnoreCase))
+                    info.WorkingDirectory = Path.GetDirectoryName(target)!;
+                Process.Start(info);
+            }
             return true;
         }
-        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        catch (System.ComponentModel.Win32Exception error) when (error.NativeErrorCode == 1223)
+        { return false; } // User cancelled the Windows elevation prompt.
+        catch (System.ComponentModel.Win32Exception error) when (!administrator && error.NativeErrorCode == 740 && CanRunAsAdministrator(target))
+        { return Launch(target, true); }
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException or ArgumentException or NotSupportedException)
         { MessageBox.Show("Não foi possível abrir: " + target + "\n" + e.Message, "Think Wind"); return false; }
     }
     internal static void Power(string action)

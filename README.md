@@ -1,5 +1,12 @@
 # Think Wind
 
+## 0.16 Alfa — revisão 2 (0.16.2-alpha)
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.16.2-alpha/ThinkWind-Setup-0.16.2-alpha.exe) · [Notas e limitações](RELEASE-0.16.2-ALFA.md)
+
+Melhorias no enquadramento e restauração de janelas, ícones, abertura com UAC e ativação da barra inferior. Teclado virtual opcional na ilha, oculto por padrão. As últimas correções de restauração do Illustrator e margem de Configurações ainda precisam de confirmação visual. Sem novos testes automatizados ou type check separado.
+
+
 ## 0.16 Alfa — revisão 1 (0.16.1-alpha)
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.16.1-alpha/ThinkWind-Setup-0.16.1-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.16.1-alpha)

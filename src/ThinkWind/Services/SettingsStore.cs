@@ -68,7 +68,7 @@ public sealed class Preferences
     public double AnimationMilliseconds { get; set; } = 220;
     public List<string> DockOrder { get; set; } = new();
     public List<string> QuickOrder { get; set; } = new() { "clock", "wifi", "bluetooth", "audio", "tray", "notifications", "calendar", "airplane", "settings" };
-    public List<string> HiddenQuickControls { get; set; } = new() { "calendar", "airplane", "settings" };
+    public List<string> HiddenQuickControls { get; set; } = new() { "calendar", "airplane", "settings", "keyboard" };
     public List<string> ModuleOrder { get; set; } = new() { "connections", "media", "audio", "metrics", "calendar" };
     public List<string> HiddenModules { get; set; } = new();
     public List<Shortcut> Shortcuts { get; set; } = new() { new("Explorador", "explorer.exe"), new("Configurações", "ms-settings:") };
@@ -197,6 +197,13 @@ public sealed class SettingsStore
         p.Shortcuts = (p.Shortcuts ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).ToList();
         p.DockOrder = (p.DockOrder ?? new()).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).Take(256).ToList();
         var quickIds = LayoutCatalog.QuickControls.Select(q => q.Id).ToArray();
+        // Existing profiles did not have this optional control. Introduce it
+        // hidden once; subsequent saves preserve the user's chosen visibility.
+        if (p.QuickOrder?.Contains("keyboard") != true)
+        {
+            p.HiddenQuickControls ??= new();
+            if (!p.HiddenQuickControls.Contains("keyboard")) p.HiddenQuickControls.Add("keyboard");
+        }
         p.QuickOrder = LayoutCatalog.Complete(p.QuickOrder, quickIds);
         p.ModuleOrder = LayoutCatalog.Complete(p.ModuleOrder, LayoutCatalog.Modules);
         p.HiddenQuickControls = (p.HiddenQuickControls ?? new()).Where(quickIds.Contains).Distinct().ToList();

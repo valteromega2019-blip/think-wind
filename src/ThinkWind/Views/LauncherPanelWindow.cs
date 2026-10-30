@@ -252,6 +252,8 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
             tile.Children.Add(add);
         }
         var menu = new ContextMenu(); AddMenu(menu, "Abrir", () => Launch(entry)); AddMenu(menu, "Fixar na barra", () => PinDock(entry));
+        if (SystemActions.CanRunAsAdministrator(entry.Target))
+            AddMenu(menu, "Executar como administrador…", () => { Dismiss(); SystemActions.RunAsAdministrator(entry.Target); });
         bool startPinned = Store.Value.StartPins.Any(pin => SameTarget(pin.Target, entry.Target));
         AddMenu(menu, startPinned ? "Remover dos fixados do Iniciar" : "Fixar no Iniciar", () => Store.Update(p => { if (startPinned) p.StartPins.RemoveAll(pin => SameTarget(pin.Target, entry.Target)); else p.StartPins.Add(new(entry.Name, entry.Target)); }));
         if (startPinned) { AddMenu(menu, "Mover fixado para a esquerda", () => MovePin(entry.Target, -1)); AddMenu(menu, "Mover fixado para a direita", () => MovePin(entry.Target, 1)); }
