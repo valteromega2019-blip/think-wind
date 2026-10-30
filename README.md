@@ -24,7 +24,7 @@ Launcher independente para Windows, sem dependências de código, serviços ou c
 
 Repositório próprio: https://github.com/valteromega2019-blip/think-wind
 
-Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a base inicial e a branch `developer` é a área de desenvolvimento. O histórico deste repositório é independente do Think Monitor.
+Pasta de desenvolvimento: `D:\think-wind`. A branch `main` contém a versão publicada e a branch `developer` é a área de desenvolvimento. O histórico deste repositório é independente do Think Monitor.
 
 ## Atualização v0.06 — código em desenvolvimento
 
