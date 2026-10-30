@@ -41,15 +41,18 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
     {
         if (!Available) return false;
         var next = new Rect { Left = (int)Math.Round(topLeft.X), Top = (int)Math.Round(topLeft.Y), Right = (int)Math.Round(topLeft.X + size.Width), Bottom = (int)Math.Round(topLeft.Y + size.Height) };
-        if (placed && next.Left == previous.Left && next.Top == previous.Top && next.Right == previous.Right && next.Bottom == previous.Bottom) return true;
         int width = Math.Max(1, next.Right - next.Left), height = Math.Max(1, next.Bottom - next.Top);
-        var destination = new Rect { Right = width, Bottom = height };
         if (DwmQueryThumbnailSourceSize(thumbnail, out var source) >= 0 && source.Width > 0 && source.Height > 0)
         {
             double scale = Math.Min(width / (double)source.Width, height / (double)source.Height);
             int w = Math.Max(1, (int)(source.Width * scale)), h = Math.Max(1, (int)(source.Height * scale));
-            destination = new Rect { Left = (width - w) / 2, Top = (height - h) / 2, Right = (width + w) / 2, Bottom = (height + h) / 2 };
+            // Fit the native destination HWND itself, not just its DWM image.
+            // Unused space belongs to the transparent WPF card, never a black HWND.
+            next.Left += (width - w) / 2; next.Top += (height - h) / 2;
+            width = w; height = h; next.Right = next.Left + w; next.Bottom = next.Top + h;
         }
+        if (placed && next.Left == previous.Left && next.Top == previous.Top && next.Right == previous.Right && next.Bottom == previous.Bottom) return true;
+        var destination = new Rect { Right = width, Bottom = height };
         var properties = new Properties { Flags = 1 | 4 | 8 | 16, Destination = destination, Opacity = 255, Visible = true, ClientOnly = false };
         SetWindowPos(Handle, 0, next.Left, next.Top, width, height, 0x0010);
         if (DwmUpdateThumbnailProperties(thumbnail, ref properties) < 0) { SetWindowPos(Handle, 0, 0, 0, 0, 0, 0x0013 | 0x0080); return false; }

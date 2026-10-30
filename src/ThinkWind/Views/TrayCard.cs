@@ -94,7 +94,7 @@ internal sealed class TrayCard : StackPanel
             var image = new Image { Source = entry.Icon, Width = 25, Height = 25, Stretch = Stretch.Uniform };
             var label = new TextBlock { Text = entry.DisplayName, FontSize = 9, MaxWidth = 58, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
             var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; content.Children.Add(image); content.Children.Add(label);
-            var button = new Button { Content = content, Margin = new Thickness(2), Padding = new Thickness(2), ToolTip = entry.Name + "\nCtrl + botão direito: fixar ou desafixar" };
+            var button = new Button { Content = content, Margin = new Thickness(2), Padding = new Thickness(2), ToolTip = entry.Name + "\nCtrl + botão direito: fixar, abrir ou encerrar aplicativo" };
             button.SetResourceReference(StyleProperty, "Think.IconButton"); System.Windows.Automation.AutomationProperties.SetName(button, entry.DisplayName);
             button.Click += async (_, _) => await Invoke(key, false, button);
             button.PreviewMouseRightButtonUp += async (_, e) => { e.Handled = true; if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) FavoritesMenu(button, key); else await Invoke(key, true, button); };
@@ -150,6 +150,28 @@ internal sealed class TrayCard : StackPanel
                 finally { menus = Math.Max(0, menus - 1); }
             };
             menu.Items.Add(uninstall);
+            var end = new MenuItem { Header = "Encerrar aplicativo…", IsEnabled = false, ToolTip = "Verificando se é um aplicativo comum do usuário…" };
+            BackgroundAppExit.Target[] targets = Array.Empty<BackgroundAppExit.Target>();
+            end.Click += async (_, _) =>
+            {
+                menus++;
+                try
+                {
+                    if (MessageBox.Show($"Encerrar {entry.DisplayName}?\n\nO aplicativo será fechado, incluindo processos auxiliares do mesmo executável. Dados não salvos podem ser perdidos. Prefira Sair no menu original quando disponível.", "Think Wind", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+                    var result = await BackgroundAppExit.End(targets);
+                    if (result.Error is not null) ShowError(result.Error);
+                    nextRefresh = DateTime.MinValue; signature = ""; Refresh();
+                }
+                finally { menus = Math.Max(0, menus - 1); }
+            };
+            menu.Items.Add(end);
+            menu.Opened += async (_, _) =>
+            {
+                targets = await BackgroundAppExit.Find(executable);
+                if (!menu.IsOpen) return;
+                end.IsEnabled = targets.Length > 0;
+                end.ToolTip = targets.Length > 0 ? "Encerrar somente este aplicativo, após confirmação" : "Indisponível para componentes do Windows, serviços, aplicativos elevados ou processos sem identificação segura";
+            };
         }
         menu.Opened += (_, _) => menus++; menu.Closed += (_, _) => { menus = Math.Max(0, menus - 1); signature = ""; Render(); }; menu.IsOpen = true;
     }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Media;
@@ -34,6 +35,7 @@ internal sealed class MediaService : IDisposable
     private ImageSource? art;
     private bool metadataDirty = true;
     private string playerId = "", playerName = "";
+    private readonly HashSet<GlobalSystemMediaTransportControlsSession> watched = new();
     internal MediaState? State { get; private set; }
     internal string? Error { get; private set; }
     internal event Action? Changed;
@@ -74,9 +76,10 @@ internal sealed class MediaService : IDisposable
             do
             {
                 refreshAgain = false;
-                var next = manager.GetCurrentSession();
-                if (next is null || next.GetPlaybackInfo().PlaybackStatus is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed or GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped)
-                    next = manager.GetSessions().FirstOrDefault(s => s.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing) ?? next;
+                var candidates = manager.GetSessions().Where(s => !BrowserSource(s.SourceAppUserModelId)).ToArray();
+                Watch(candidates);
+                var next = await SelectMusic(candidates);
+                if (!active || disposed) return;
                 if (!ReferenceEquals(next, session)) { DetachSession(); session = next; AttachSession(); metadataDirty = true; }
                 var selected = session;
                 if (selected is null) { State = null; Error = null; Changed?.Invoke(); continue; }
@@ -155,14 +158,45 @@ internal sealed class MediaService : IDisposable
         catch (Exception e) when (Unavailable(e) || e is ArgumentException) { }
         return string.IsNullOrWhiteSpace(id) ? "Player de mídia" : id;
     }
+    private static bool BrowserSource(string id)
+    {
+        string source = id.ToLowerInvariant();
+        return new[] { "chrome", "msedge", "microsoftedge", "firefox", "brave", "opera", "vivaldi", "browser", "youtube" }
+            .Any(source.Contains);
+    }
+    private async Task<GlobalSystemMediaTransportControlsSession?> SelectMusic(GlobalSystemMediaTransportControlsSession[] candidates)
+    {
+        foreach (var candidate in candidates.OrderByDescending(s => s.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing))
+        {
+            try
+            {
+                var playback = candidate.GetPlaybackInfo();
+                if (playback.PlaybackStatus is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed or GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped) continue;
+                var properties = await candidate.TryGetMediaPropertiesAsync();
+                if (!active || disposed) return null;
+                if (properties.PlaybackType == Windows.Media.MediaPlaybackType.Music) return candidate;
+                string source = candidate.SourceAppUserModelId.ToLowerInvariant();
+                if (properties.PlaybackType is null && new[] { "spotify", "musicbee", "foobar", "aimp", "itunes", "applemusic", "zunemusic", "tidal", "deezer", "qobuz", "winamp" }.Any(source.Contains)) return candidate;
+            }
+            catch (Exception e) when (Unavailable(e)) { /* A disappearing player must not hide another music session. */ }
+        }
+        return null;
+    }
+    private void Watch(GlobalSystemMediaTransportControlsSession[] candidates)
+    {
+        foreach (var old in watched.Where(s => !candidates.Contains(s)).ToArray())
+        { old.MediaPropertiesChanged -= PropertiesChanged; old.PlaybackInfoChanged -= PlaybackChanged; watched.Remove(old); }
+        foreach (var candidate in candidates)
+            if (watched.Add(candidate)) { candidate.MediaPropertiesChanged += PropertiesChanged; candidate.PlaybackInfoChanged += PlaybackChanged; }
+    }
     private void AttachSession()
-    { if (session is not null) { session.MediaPropertiesChanged += PropertiesChanged; session.PlaybackInfoChanged += PlaybackChanged; session.TimelinePropertiesChanged += TimelineChanged; } }
+    { if (session is not null) session.TimelinePropertiesChanged += TimelineChanged; }
     private void DetachSession()
     {
-        if (session is not null) { session.MediaPropertiesChanged -= PropertiesChanged; session.PlaybackInfoChanged -= PlaybackChanged; session.TimelinePropertiesChanged -= TimelineChanged; }
+        if (session is not null) session.TimelinePropertiesChanged -= TimelineChanged;
         session = null; metadata = null; art = null;
     }
-    private void UnsubscribeManager() { if (manager is not null) { manager.CurrentSessionChanged -= CurrentChanged; manager.SessionsChanged -= SessionsChanged; } }
+    private void UnsubscribeManager() { Watch(Array.Empty<GlobalSystemMediaTransportControlsSession>()); if (manager is not null) { manager.CurrentSessionChanged -= CurrentChanged; manager.SessionsChanged -= SessionsChanged; } }
     private static bool Unavailable(Exception e) => e is COMException or UnauthorizedAccessException or InvalidOperationException or NotSupportedException or ArgumentException;
     public void Dispose() { disposed = true; active = false; UnsubscribeManager(); DetachSession(); }
 }
