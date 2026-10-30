@@ -38,6 +38,7 @@ internal static class Desktop
     [DllImport("kernel32.dll")] private static extern bool GlobalMemoryStatusEx(ref MEMORY status);
     [DllImport("kernel32.dll")] private static extern nint OpenProcess(uint access, bool inherit, uint process);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool QueryFullProcessImageName(nint process, uint flags, StringBuilder path, ref uint size);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)] private static extern int GetApplicationUserModelId(nint process, ref uint length, StringBuilder? id);
     [StructLayout(LayoutKind.Sequential)] private struct MEMORY
     { public uint Length, Load; public ulong TotalPhysical, AvailablePhysical, TotalPage, AvailablePage, TotalVirtual, AvailableVirtual, AvailableExtended; }
@@ -60,7 +61,18 @@ internal static class Desktop
             var text = new StringBuilder(512); GetWindowText(hwnd, text, text.Capacity);
             if (text.Length == 0) return true;
             string? executable = null;
-            try { using var process = Process.GetProcessById((int)pid); executable = process.MainModule?.FileName; }
+            try
+            {
+                // Limited-query access also works across process bitness and
+                // avoids MainModule's stronger process-memory permissions.
+                nint process = OpenProcess(0x1000, false, pid);
+                if (process != 0) try
+                {
+                    var path = new StringBuilder(32768); uint length = (uint)path.Capacity;
+                    if (QueryFullProcessImageName(process, 0, path, ref length)) executable = path.ToString();
+                }
+                finally { CloseHandle(process); }
+            }
             catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException) { }
             if (!identities.TryGetValue(pid, out var appId)) { appId = ReadAppId(pid); identities[pid] = appId; }
             result.Add(new(hwnd, text.ToString(), executable, IsIconic(hwnd), appId)); return true;
@@ -113,7 +125,8 @@ internal static class Desktop
         if (name.ToString() is "Progman" or "WorkerW")
         {
             if (!display.Bounds.Contains(System.Windows.Forms.Cursor.Position)) return LastIslandCoverage(display);
-            lastIslandApplication = 0; lastIslandMonitor = display.Bounds; return false;
+            lastIslandApplication = 0; lastIslandMonitor = display.Bounds;
+            return HasMaximizedApplication(display);
         }
         if (System.Windows.Forms.Screen.FromHandle(window).Bounds != display.Bounds) return LastIslandCoverage(display);
         lastIslandApplication = window; lastIslandMonitor = display.Bounds;
@@ -131,7 +144,10 @@ internal static class Desktop
         { maximizedIslandMonitor = display.Bounds; maximizedIslandWindow = 0; nextMaximizedSearch = DateTime.MinValue; }
         bool Eligible(nint window)
         {
-            if (window == 0 || !IsWindowVisible(window) || IsIconic(window) || (!IsZoomed(window) && !IsSnapped(window))) return false;
+            // Borderless fullscreen windows are neither zoomed nor snapped.
+            // Evaluate coverage as well so a small foreground window cannot
+            // erase a fullscreen application still visible behind it.
+            if (window == 0 || !IsWindowVisible(window) || IsIconic(window)) return false;
             if ((GetWindowLong(window, -20) & 0x80) != 0 || GetWindow(window, 4) != 0) return false;
             GetWindowThreadProcessId(window, out var pid); if (pid == Environment.ProcessId) return false;
             if (DwmGetWindowAttribute(window, 14, out var cloaked, 4) >= 0 && cloaked != 0) return false;
@@ -157,10 +173,12 @@ internal static class Desktop
         // but must keep the island in the same application/status-strip mode.
         if (IsSnapped(window)) return true;
         if (!OverlayChrome.GetWindowRect(window, out var rect)) return null;
-        var bounds = display.Bounds; var work = display.Work;
-        bool coversWork = rect.Left <= work.Left + 2 && rect.Right >= work.Right - 2 && rect.Top <= work.Top + 2 && rect.Bottom >= work.Bottom - 2;
+        // The appbar changes the working area asynchronously. The native
+        // maximized state remains authoritative during that resize.
+        if (IsZoomed(window)) return true;
+        var bounds = display.Bounds;
         bool fullscreen = rect.Left <= bounds.Left + 2 && rect.Right >= bounds.Right - 2 && rect.Top <= bounds.Top + 2 && rect.Bottom >= bounds.Bottom - 2;
-        return (IsZoomed(window) && coversWork) || fullscreen;
+        return fullscreen;
     }
     internal static void Key(ushort key)
     {

@@ -23,6 +23,8 @@ internal sealed class StatusBarReservation : IDisposable
     private OverlayChrome.Display? display;
     private int height;
     private bool registered, updating, disposed;
+    private OverlayChrome.PixelRect reservedRect;
+    private bool hasReservedRect;
     internal StatusBarReservation(HwndSource owner)
     { source = owner; data.Size = (uint)Marshal.SizeOf<AppBarData>(); data.Window = source.Handle; data.Callback = Callback; data.Edge = 1; source.AddHook(Message); }
     internal void Set(OverlayChrome.Display screen, int pixels)
@@ -32,10 +34,11 @@ internal sealed class StatusBarReservation : IDisposable
         display = screen; height = pixels;
         if (pixels <= 0)
         {
+            hasReservedRect = false;
             if (registered) { registered = false; SHAppBarMessage(1, ref data); }
             return;
         }
-        if (!registered) registered = SHAppBarMessage(0, ref data) != 0;
+        if (!registered) { hasReservedRect = false; registered = SHAppBarMessage(0, ref data) != 0; }
         else if (same) return;
         if (registered) Update();
     }
@@ -49,7 +52,13 @@ internal sealed class StatusBarReservation : IDisposable
             data.Rect = new OverlayChrome.PixelRect { Left = bounds.Left, Right = bounds.Right, Top = bounds.Top, Bottom = bounds.Top + height };
             SHAppBarMessage(2, ref data);
             data.Rect.Bottom = data.Rect.Top + height;
+            // ABN_POSCHANGED can be caused by another overlay reacting to our
+            // reservation. Do not broadcast another work-area change when
+            // the negotiated rectangle is already the one we reserved.
+            if (hasReservedRect && reservedRect.Left == data.Rect.Left && reservedRect.Top == data.Rect.Top
+                && reservedRect.Right == data.Rect.Right && reservedRect.Bottom == data.Rect.Bottom) return;
             SHAppBarMessage(3, ref data);
+            reservedRect = data.Rect; hasReservedRect = true;
         }
         finally { updating = false; }
     }

@@ -1,5 +1,49 @@
 # Histórico do Think Wind
 
+## 0.015 Alfa — 0.15.0-alpha
+
+- Publicação das alterações detalhadas abaixo: Dock, ilha, tema, fontes, instalação e detecção de jogos.
+- Publish Release win-x64 self-contained com avisos tratados como erros e instalador Inno Setup compilados. Sem novos testes ou type check separado nesta entrega. As notas Em desenvolvimento abaixo registram as etapas de implementação anteriores à publicação.
+
+
+## Em desenvolvimento — tamanho das fontes
+
+- Controle Tamanho das fontes em Personalizar → Aparência, de 80% a 130%, com pré-visualização imediata e salvamento automático.
+- Escala aplicada aos textos das janelas do launcher, incluindo elementos criados depois; mantém tamanhos de ícones em fontes de símbolos. Usa tamanhos originais para evitar ampliação acumulada, sem polling ou redimensionar a janela de personalização.
+- Sem compilação, testes ou type check nesta etapa; alteração ainda não está na versão aberta.
+
+## Em desenvolvimento — tema do Windows e launcher
+
+- Botão claro/escuro da ilha e seletor da personalização aplicam a preferência aos aplicativos e ao sistema Windows (AppsUseLightTheme/SystemUsesLightTheme em HKCU), com notificação WM_SETTINGCHANGE fora do dispatcher e sem reiniciar Explorer.
+- Automático continua acompanhando o Windows sem alterar sua preferência. Escrita apenas em ações explícitas do usuário, nunca ao iniciar/atualizar aparência; falhas de acesso são informadas e alterações parciais têm tentativa de restauração.
+- Sem compilação, testes, type check ou execução nesta etapa. A versão aberta ainda não contém essa integração.
+
+## Em desenvolvimento — alinhamento e fixados do Dock
+
+- Ícones, Iniciar e pesquisa centralizados verticalmente no fundo Acrylic; indicadores deslocados para baixo sem puxar o centro visual dos ícones para cima.
+- Associação de janelas a fixados compara caminhos normalizados e AppUserModelID, evita aliases repetidos e reavalia alterações de identidade/catálogo. Consulta do executável usa acesso limitado em lugar de leitura de MainModule.
+- Sem compilação, testes ou type check nesta etapa; mudanças ainda não estão no aplicativo aberto.
+
+## Em desenvolvimento — barras ao alternar janelas comuns
+
+- Removida a regra que tratava qualquer aplicativo em primeiro plano como jogo. O perfil inspecionado mantinha GameModeProtectAllForeground=true; esse campo legado não participa mais da decisão, inclusive na sondagem inicial.
+- Removida a opção Proteção ampla da personalização. Mantidos reconhecimento por instalação, tela cheia, lista complementar e exceções.
+- Revisão por leitura; sem compilação, testes ou type check nesta etapa. A versão instalada ainda usa a regra anterior.
+
+## Em desenvolvimento — convivência e estado da ilha
+
+- Think Monitor (processos ThinkExplode/ThinkMonitor) não ativa Modo Jogo, inclusive em perfis existentes com proteção ampla habilitada. Essa opção estava ativa no perfil inspecionado e podia ocultar/restaurar o launcher ao alternar o foco. Isso não demonstra a causa dos crashes internos do Think Monitor registrados pelo Windows.
+- Estado maximizado nativo passa a prevalecer sobre divergências temporárias da área útil. A busca de janelas em segundo plano também considera tela cheia sem bordas; uma janela menor à frente não deve retornar a ilha ao centro enquanto houver maximizada/Snap/tela cheia no mesmo monitor.
+- Reserva da barra superior evita reenviar ABM_SETPOS para um retângulo negociado idêntico, reduzindo notificações redundantes a outros aplicativos.
+- Revisão por código e registros existentes; sem compilação, testes, type check ou novo instalador nesta etapa. Alterações ainda não estão na versão instalada.
+
+## Em desenvolvimento — configuração na instalação
+
+- Instalador executa `ThinkWind.exe --configure-installation` antes de oferecer a abertura do launcher, inclusive na instalação silenciosa.
+- Ativa a preferência Usar somente a barra do Think Wind e a ocultação automática nativa via SHAppBarMessage (ABM_GETSTATE/ABM_SETSTATE), preservando demais preferências e sem reiniciar o Explorer.
+- Comando executa sem overlays, hooks ou serviços do launcher. Instância aberta ou falha de leitura/configuração é reportada; configurações ilegíveis não são sobrescritas. Se a gravação falhar, desfaz a alteração de ocultação automática realizada pelo comando.
+- A ocultação automática é uma preferência do Windows e pode ser desativada nas configurações da barra. Esta etapa altera somente o código; sem compilação, testes, type check, novo instalador ou publicação.
+
 ## 0.11 Alfa — 0.11.0-alpha
 
 - Corrigida falha de inicialização com aplicativo maximizado: criar o HWND da ilha antes de atribuir a janela de status como dependente.

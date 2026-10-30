@@ -1,5 +1,13 @@
 # Think Wind
 
+## 0.015 Alfa — 0.15.0-alpha
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.15.0-alpha/ThinkWind-Setup-0.15.0-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.15.0-alpha)
+
+Inclui ajustes do alinhamento e associação de fixados no Dock, permanência da ilha no modo superior com janelas menores à frente, convivência com Think Monitor, tema claro/escuro do launcher e Windows, controle de fontes de 80% a 130% e configuração automática das barras durante a instalação.
+
+Distribuição Release independente e instalador gerados. **Não foram executados novos testes nem type check separado nesta entrega**. Alterações recentes de fontes e tema precisam de confirmação interativa; limitações Bluetooth anteriores permanecem. Identificador técnico: `0.15.0-alpha`; nome de apresentação solicitado: **0.015 Alfa**.
+
 ## 0.11 Alfa — 0.11.0-alpha
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.11.0-alpha/ThinkWind-Setup-0.11.0-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.11.0-alpha)

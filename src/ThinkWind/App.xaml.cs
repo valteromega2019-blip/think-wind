@@ -32,7 +32,13 @@ public partial class App : Application
     {
         base.OnStartup(e);
         if (WindowsTaskbar.RunGuard(e.Args)) { Shutdown(); return; }
+        bool configuringInstallation = e.Args.Contains("--configure-installation");
         instance = new Mutex(true, @"Local\ThinkWind.Launcher", out var first);
+        if (configuringInstallation)
+        {
+            Shutdown(first ? InstallationSetup.Run() : 2);
+            return;
+        }
         if (!first) { MessageBox.Show("O Think Wind já está em execução. Use o ícone na bandeja do Windows.", "Think Wind"); Shutdown(); return; }
         diagnosing = e.Args.Contains("--diagnostic");
         int reportIndex = Array.IndexOf(e.Args, "--diagnostic-report");

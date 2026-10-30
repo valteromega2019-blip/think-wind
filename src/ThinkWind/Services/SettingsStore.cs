@@ -14,6 +14,8 @@ public sealed class Preferences
     public double TintOpacity { get; set; } = .72;
     public double InnerSurfaceOpacity { get; set; } = .5;
     public bool GameModeEnabled { get; set; } = true;
+    // Legacy preference retained for reading older profiles; no longer used
+    // to classify ordinary foreground applications as games.
     public bool GameModeProtectAllForeground { get; set; }
     public bool StartHotkeyEnabled { get; set; }
     public bool WindowsKeyOpensLauncher { get; set; } = true;
@@ -39,6 +41,7 @@ public sealed class Preferences
     public int MonitorIndex { get; set; }
     public string? MonitorDeviceName { get; set; }
     public string Theme { get; set; } = "Auto";
+    public double FontScale { get; set; } = 1;
     public string AccentColor { get; set; } = "#60CDFF";
     public double? DockOpacity { get; set; }
     public double? IslandOpacity { get; set; }
@@ -187,6 +190,7 @@ public sealed class SettingsStore
         p.IslandPanelSide = p.IslandPanelSide is "Left" or "Right" ? p.IslandPanelSide : "Right";
         p.AnimationMilliseconds = Limit(p.AnimationMilliseconds, 0, 600, 220);
         p.Theme = p.Theme is "Auto" or "Dark" or "Light" ? p.Theme : "Auto";
+        p.FontScale = Limit(p.FontScale, .8, 1.3, 1);
         p.DockMaterial = Material(p.DockMaterial); p.IslandMaterial = Material(p.IslandMaterial);
         try { if (System.Windows.Media.ColorConverter.ConvertFromString(p.AccentColor) is not System.Windows.Media.Color c || c.A != 255) p.AccentColor = "#60CDFF"; }
         catch (Exception e) when (e is FormatException or NotSupportedException or ArgumentException) { p.AccentColor = "#60CDFF"; }

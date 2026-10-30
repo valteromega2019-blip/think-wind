@@ -68,6 +68,7 @@ internal sealed partial class DockWindow : FloatingWindow
         PageWheel.Attach(items, () => fit.Pages(entries.Count), () => page, value => { page = value; RenderPage(); Position(); }, () => fileDragging || MenuOpen || LayoutDrag.Active || Store.IsEditing || dockSearch.IsMouseOver);
         magnifier = new DockMagnifier(items, () => !hidden && !IsPositionAnimating && !Store.IsEditing && !LayoutDrag.Active && !fileDragging && !MenuOpen);
         catalog = new ApplicationCatalog(Dispatcher);
+        catalog.Changed += () => { signature = ""; nextAppRefresh = DateTime.MinValue; };
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
         System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Think Wind");
         dockSearch.TextChanged += (_, _) => { if (dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); } };
@@ -146,7 +147,7 @@ internal sealed partial class DockWindow : FloatingWindow
         finally { readingWindows = false; }
         if (!IsVisible || LayoutDrag.Active || fileDragging || MenuOpen) return;
         var active = Desktop.GetForegroundWindow();
-        var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}")) + active;
+        var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}:{w.Executable}")) + active;
         if (next == signature) return;
         rebuilding = true;
         try
@@ -154,16 +155,21 @@ internal sealed partial class DockWindow : FloatingWindow
             signature = next;
             var entries = new List<Item>();
             var pinnedWindows = new HashSet<nint>();
+            var pinnedIdentities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var pin in Store.Value.Shortcuts)
             {
-                var path = icons.Resolve(pin.Target);
+                var path = DockPath(icons.Resolve(pin.Target));
                 string? appId = pin.Target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase) ? pin.Target.Substring(@"shell:AppsFolder\".Length) : catalog.Items.FirstOrDefault(app => app.Target.Equals(pin.Target, StringComparison.OrdinalIgnoreCase))?.AppId;
-                var matching = windows.Where(w => string.Equals(w.Executable, path, StringComparison.OrdinalIgnoreCase) || (appId is not null && string.Equals(w.AppId, appId, StringComparison.OrdinalIgnoreCase))).ToList();
+                string identity = !string.IsNullOrWhiteSpace(appId) ? "id:" + appId : "path:" + path;
+                if (!pinnedIdentities.Add(identity)) continue;
+                var matching = windows.Where(w => !pinnedWindows.Contains(w.Handle) &&
+                    ((!string.IsNullOrWhiteSpace(w.Executable) && string.Equals(DockPath(w.Executable), path, StringComparison.OrdinalIgnoreCase))
+                    || (!string.IsNullOrWhiteSpace(appId) && string.Equals(w.AppId, appId, StringComparison.OrdinalIgnoreCase)))).ToList();
                 foreach (var window in matching) pinnedWindows.Add(window.Handle);
                 entries.Add(new("pin:" + pin.Target, pin.Name, pin.Target, null, matching, pin, null));
             }
             foreach (var group in windows.Where(w => !pinnedWindows.Contains(w.Handle))
-                .GroupBy(w => w.AppId ?? w.Executable ?? "window:" + w.Handle, StringComparer.OrdinalIgnoreCase))
+                .GroupBy(w => !string.IsNullOrWhiteSpace(w.AppId) ? "id:" + w.AppId : !string.IsNullOrWhiteSpace(w.Executable) ? "path:" + DockPath(w.Executable) : "window:" + w.Handle, StringComparer.OrdinalIgnoreCase))
             {
                 var groupWindows = group.ToList();
                 var first = groupWindows[0];
@@ -186,6 +192,14 @@ internal sealed partial class DockWindow : FloatingWindow
             Position();
         }
         finally { rebuilding = false; }
+    }
+    private static string DockPath(string path)
+    {
+        path = Environment.ExpandEnvironmentVariables(path.Trim().Trim('"'));
+        if (path.StartsWith(@"\\?\", StringComparison.Ordinal)) path = path[4..];
+        try { if (System.IO.Path.IsPathFullyQualified(path)) return System.IO.Path.GetFullPath(path); }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException or System.IO.PathTooLongException) { }
+        return path;
     }
     private void RenderPage()
     {
@@ -240,7 +254,7 @@ internal sealed partial class DockWindow : FloatingWindow
         var icon = new System.Windows.Shapes.Path
         {
             Data = Geometry.Parse("M0,0 H10 V10 H0 Z M12,0 H22 V10 H12 Z M0,12 H10 V22 H0 Z M12,12 H22 V22 H12 Z"),
-            Width = size, Height = size, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 0, 14),
+            Width = size, Height = size, Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
             IsHitTestVisible = false
         };
@@ -269,8 +283,8 @@ internal sealed partial class DockWindow : FloatingWindow
         var size = fit.Icon;
         var panel = new Grid { Height = size + 14, VerticalAlignment = VerticalAlignment.Center };
         var icon = item.Glyph is null ? icons.Get(item.Target, selected?.Handle ?? 0) : null;
-        if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Top, Stretch = Stretch.Uniform });
-        else panel.Children.Add(new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Top, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? "\uE8A5", 32) });
+        if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform });
+        else panel.Children.Add(new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? "\uE8A5", 32) });
         var indicator = new Border
         {
             Height = 3,
@@ -278,9 +292,11 @@ internal sealed partial class DockWindow : FloatingWindow
             CornerRadius = new CornerRadius(2), Margin = new Thickness(0, 0, 0, 4), VerticalAlignment = VerticalAlignment.Bottom,
             Opacity = item.Windows.Count == 0 ? 0 : minimized ? .45 : 1
         };
+        indicator.RenderTransform = new TranslateTransform(0, 7);
         indicator.SetResourceReference(Border.BackgroundProperty, focused is not null ? "Think.Accent" : "Think.Muted");
         panel.Children.Add(indicator);
         var dropIndicator = new Border { Height = 2, Width = 20, CornerRadius = new CornerRadius(1), VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Hidden };
+        dropIndicator.RenderTransform = new TranslateTransform(0, 7);
         dropIndicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent"); panel.Children.Add(dropIndicator);
         var button = ActionButton(item.Name, () =>
         {
@@ -315,7 +331,7 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private FrameworkElement SearchSlot(double width)
     {
-        var slot = new Border { Width = width, Height = Math.Max(36, fit.Icon + 8), VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(14), Padding = new Thickness(3), Margin = new Thickness(0, 0, 0, 14) };
+        var slot = new Border { Width = width, Height = Math.Max(36, fit.Icon + 8), VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(14), Padding = new Thickness(3) };
         slot.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
         var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) }); grid.ColumnDefinitions.Add(new ColumnDefinition());
         var magnify = ActionButton("Pesquisar aplicativos, arquivos e configurações", () => ShowPanel(LauncherPanelMode.Search)); magnify.Style = (Style)FindResource("Think.IconButton"); magnify.Content = Glyph("\uE721", 16); magnify.Padding = new Thickness(2); magnify.Margin = new Thickness(0); grid.Children.Add(magnify);

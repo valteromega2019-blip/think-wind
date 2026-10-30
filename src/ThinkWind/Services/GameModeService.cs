@@ -31,7 +31,7 @@ internal sealed class GameModeService : IDisposable
     private readonly nint foregroundHook;
     private int reading;
     private volatile bool disposed;
-    private bool enabled = true, protectAll;
+    private bool enabled = true;
     private string[] include = Array.Empty<string>(), exclude = Array.Empty<string>();
     internal bool Active { get; private set; }
     internal event Action? ForegroundChanged;
@@ -43,14 +43,18 @@ internal sealed class GameModeService : IDisposable
         foregroundHook = SetWinEventHook(3, 3, 0, foregroundEvent, 0, 0, 2);
         timer = new Timer(_ => Read(), null, 1500, 1500);
     }
-    internal static bool Probe(Preferences p) => Eligible(Snapshot(), p.GameModeEnabled, p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), p.GameModeProtectAllForeground);
+    internal static bool Probe(Preferences p) => Eligible(Snapshot(), p.GameModeEnabled, p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
     internal void Configure(Preferences p)
-    { enabled = p.GameModeEnabled; protectAll = p.GameModeProtectAllForeground; include = p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); exclude = p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); Read(); }
-    internal static bool Eligible(ForegroundGame game, bool enabled, string[] include, string[] exclude, bool protectAll = false)
+    { enabled = p.GameModeEnabled; include = p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); exclude = p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); Read(); }
+    internal static bool Eligible(ForegroundGame game, bool enabled, string[] include, string[] exclude)
     {
         string Key(string value) => Path.GetFileNameWithoutExtension(value);
+        // Companion desktop tools must not toggle shell visibility just by
+        // gaining focus, even on existing profiles with broad protection on.
+        if (game.Process.Equals("ThinkExplode", StringComparison.OrdinalIgnoreCase)
+            || game.Process.Equals("ThinkMonitor", StringComparison.OrdinalIgnoreCase)) return false;
         if (!enabled || game.Shell || exclude.Any(value => Key(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase))) return false;
-        return protectAll || game.Fullscreen || game.InstalledGame || include.Any(value => Key(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase));
+        return game.Fullscreen || game.InstalledGame || include.Any(value => Key(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase));
     }
     private void Read()
     {
@@ -60,7 +64,7 @@ internal sealed class GameModeService : IDisposable
             bool posted = false;
             try
             {
-                var game = Snapshot(); bool active = Eligible(game, enabled, include, exclude, protectAll);
+                var game = Snapshot(); bool active = Eligible(game, enabled, include, exclude);
                 if (disposed || dispatcher.HasShutdownStarted) return;
                 dispatcher.BeginInvoke(DispatcherPriority.Send, new Action(() =>
                 {

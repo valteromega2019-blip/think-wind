@@ -229,10 +229,21 @@ internal sealed partial class IslandWindow : FloatingWindow
         motion.Arrange(this, before, MotionElements(), Store.Value.AnimationMilliseconds);
         foreach (var mini in minis.Values) if (mini.IsVisible) mini.RefreshSettings();
     }
+    private Button? themeToggle;
+    private void RefreshThemeToggle()
+    {
+        if (themeToggle is null) return;
+        bool light = ThemeService.IsLight(Store.Value);
+        string label = light ? "Ativar tema escuro no Windows e launcher" : "Ativar tema claro no Windows e launcher";
+        themeToggle.Content = Glyph(light ? "\uE708" : "\uE706", 17 * Store.Value.IslandScale);
+        themeToggle.ToolTip = label;
+        System.Windows.Automation.AutomationProperties.SetName(themeToggle, label);
+    }
     private void BuildHeader()
     {
         foreach (var old in header.Children.OfType<Button>()) if (ReferenceEquals(old.Content, clock)) old.Content = null;
         header.Children.Clear();
+        themeToggle = null;
         hoverQuick.Children.Clear();
         var scale = Store.Value.IslandScale;
         if (Store.IsEditing)
@@ -279,6 +290,15 @@ internal sealed partial class IslandWindow : FloatingWindow
         }
         if (Stage == IslandStage.Full || Store.IsEditing)
         {
+            if (Stage == IslandStage.Full)
+            {
+                themeToggle = ActionButton("Alternar tema do Windows e do launcher", async () =>
+                    await ThemeService.SelectTheme(Store, ThemeService.IsLight(Store.Value) ? "Dark" : "Light"));
+                themeToggle.Style = (Style)FindResource("Think.IconButton");
+                themeToggle.Width = themeToggle.Height = 32 * scale;
+                themeToggle.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
+                RefreshThemeToggle(); header.Children.Add(themeToggle);
+            }
             var close = ActionButton(Store.IsEditing ? "Concluir edição" : "Fechar painel completo", () =>
             { if (Store.IsEditing) Store.SetEditing(false); Transition(() => interaction.CloseFull()); });
             close.Style = (Style)FindResource("Think.IconButton"); close.Content = Glyph("\uE70E", 13);
@@ -399,6 +419,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     public override void RefreshAppearance()
     {
         base.RefreshAppearance();
+        RefreshThemeToggle();
         RefreshCollapsePolicy();
         RefreshForegroundLayout();
         statusWindow?.RefreshAppearance();

@@ -101,6 +101,7 @@ internal abstract class FloatingWindow : Window
     }
     protected void ApplyAppearance()
     {
+        FontSizing.Apply(this, Store.Value.FontScale);
         var p = Store.Value;
         radius = CollapsedDock ? 3 : FullWidthTop ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
         var material = MaterialOverride ?? (UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial);

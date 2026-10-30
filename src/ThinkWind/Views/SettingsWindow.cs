@@ -95,7 +95,8 @@ internal sealed class SettingsWindow : FloatingWindow
     {
         building = true; content.Children.Clear();
         var general = Section("Aparência", "Grafite, ciano e superfícies limpas — identidade Think.");
-        Select(general, "Tema", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, value => Change(p => p.Theme = value));
+        Slider(general, "Tamanho das fontes", .8, 1.3, store.Value.FontScale, value => Change(p => p.FontScale = value), "P0", .05);
+        Select(general, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
         Slider(general, "Opacidade dos blocos e controles", .1, .9, store.Value.InnerSurfaceOpacity, v => Change(p => p.InnerSurfaceOpacity = v), "P0", .05);
         var accent = new DockPanel { Margin = new Thickness(0, 10, 0, 14) };
         var color = new TextBox { Text = store.Value.AccentColor, Width = 100, Padding = new Thickness(10, 7, 10, 7), VerticalContentAlignment = VerticalAlignment.Center };
@@ -182,8 +183,7 @@ internal sealed class SettingsWindow : FloatingWindow
         Check(system, "Abrir Iniciar com Ctrl+Alt+Espaço (desativado durante jogos)", store.Value.StartHotkeyEnabled, value => Change(p => p.StartHotkeyEnabled = value));
         Check(system, "Tecla Windows abre o Iniciar do Think Wind (desativado no Modo Jogo)", store.Value.WindowsKeyOpensLauncher, value => Change(p => p.WindowsKeyOpensLauncher = value));
         Note(system, "Detecção automática por tela cheia e pastas de instalação Steam, Epic e GOG, inclusive jogos em janela. A lista abaixo é apenas complementar. Aplicativos instalados nessas pastas também podem ser reconhecidos; use as exceções quando necessário.");
-        Check(system, "Proteção ampla: ativar para qualquer aplicativo em primeiro plano", store.Value.GameModeProtectAllForeground, value => Change(p => p.GameModeProtectAllForeground = value));
-        Note(system, "A proteção ampla cobre jogos não reconhecidos, mas também oculta o launcher ao usar outros aplicativos. As exceções continuam valendo. No Modo Jogo, a interceptação da tecla Windows é desativada.");
+        Note(system, "Aplicativos comuns em janela não acionam o Modo Jogo apenas por receberem foco. Para jogos não reconhecidos, use a lista complementar. Think Monitor é tratado como ferramenta de desktop. No Modo Jogo, a interceptação da tecla Windows é desativada.");
         void ProcessList(string label, string value, Action<string> change)
         {
             system.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 8, 4, 4) });

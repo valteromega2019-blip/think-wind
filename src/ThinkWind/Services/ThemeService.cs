@@ -1,12 +1,60 @@
 using System;
 using System.Windows;
 using System.Windows.Media;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 
 namespace ThinkWind.Services;
 
 internal static class ThemeService
 {
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern nint SendMessageTimeout(nint window, uint message, nuint parameter, string setting, uint flags, uint timeout, out nuint result);
+    private static readonly System.Threading.SemaphoreSlim themeChanges = new(1, 1);
+    internal static async Task SelectTheme(SettingsStore store, string theme)
+    {
+        if (theme is not ("Auto" or "Light" or "Dark")) return;
+        await themeChanges.WaitAsync();
+        try
+        {
+            if (theme == "Auto") { store.Update(p => p.Theme = theme); return; }
+            // Only explicit user theme changes write Windows preferences.
+            // Startup and ordinary appearance refreshes never change the OS.
+            await Task.Run(() => SetWindowsTheme(theme == "Light"));
+            store.Update(p => p.Theme = theme);
+        }
+        catch (Exception error) when (error is UnauthorizedAccessException or System.Security.SecurityException or System.IO.IOException)
+        {
+            MessageBox.Show("Não foi possível alterar o tema do Windows. " + error.Message, "Think Wind");
+        }
+        finally { themeChanges.Release(); }
+    }
+    private static void SetWindowsTheme(bool light)
+    {
+        // Windows personalization values: AppsUseLightTheme + SystemUsesLightTheme.
+        using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", true);
+        string[] names = { "AppsUseLightTheme", "SystemUsesLightTheme" };
+        var old = new object?[2]; var kinds = new RegistryValueKind[2];
+        for (int i = 0; i < names.Length; i++)
+        { old[i] = key.GetValue(names[i]); if (old[i] is not null) kinds[i] = key.GetValueKind(names[i]); }
+        try
+        {
+            foreach (string name in names) key.SetValue(name, light ? 1 : 0, RegistryValueKind.DWord);
+        }
+        catch
+        {
+            for (int i = 0; i < names.Length; i++)
+            {
+                try { if (old[i] is null) key.DeleteValue(names[i], false); else key.SetValue(names[i], old[i]!, kinds[i]); }
+                catch (Exception rollback) when (rollback is UnauthorizedAccessException or System.Security.SecurityException or System.IO.IOException) { }
+            }
+            throw;
+        }
+        // Inform Explorer and applications. A hung recipient cannot block the UI;
+        // a timeout doesn't undo preferences successfully saved by Windows.
+        SendMessageTimeout((nint)0xFFFF, 0x001A, 0, "ImmersiveColorSet", 2, 100, out _);
+    }
     private static (string Theme, string Accent, bool Light, bool Contrast, double InnerOpacity)? current;
     internal static bool Light { get; private set; }
     internal static bool IsLight(Preferences p)
