@@ -10,7 +10,7 @@ using ThinkWind.Native;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
-internal sealed class SettingsWindow : FloatingWindow
+internal sealed partial class SettingsWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
     protected override bool HideOnClose => false;
@@ -19,6 +19,7 @@ internal sealed class SettingsWindow : FloatingWindow
     private readonly SettingsStore store;
     private readonly WeatherWidget weatherSettings;
     private FrameworkElement? weatherSectionTarget;
+    private CheckBox? weatherVisibilityCheck;
     private readonly StackPanel content = new() { Margin = new Thickness(24, 8, 24, 24) };
     private readonly StackPanel quickRows = new(), moduleRows = new();
     private readonly TextBlock status = new() { Margin = new Thickness(24, 12, 24, 16), FontSize = 12, TextWrapping = TextWrapping.Wrap };
@@ -51,11 +52,12 @@ internal sealed class SettingsWindow : FloatingWindow
         titleBar.Children.Add(new Image { Source = AppBrand.WindowIcon, Width = 28, Height = 28, HorizontalAlignment = HorizontalAlignment.Left });
         titleBar.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 1 && !close.IsMouseOver) DragMove(); };
         heading.Children.Add(titleBar);
-        heading.Children.Add(new TextBlock { Text = "THINK WIND", FontSize = 11, FontWeight = FontWeights.SemiBold });
-        heading.Children.Add(new TextBlock { Text = "Seu desktop. Seu ritmo.", FontSize = 24, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 8) });
-        heading.Children.Add(new TextBlock { Text = "As mudanças aparecem na hora e são salvas automaticamente.", TextWrapping = TextWrapping.Wrap, Opacity = .9 });
+        heading.Children.Add(new TextBlock { Text = "Personalizar Think Wind", FontSize = 21, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 4) });
+        heading.Children.Add(new TextBlock { Text = "Ajustes em tempo real, com salvamento automático.", FontSize = 11, TextWrapping = TextWrapping.Wrap, Opacity = .8 });
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
-        var scroll = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, PanningMode = PanningMode.VerticalOnly };
+        DockPanel.SetDock(tabNavigation, Dock.Top); root.Children.Add(tabNavigation);
+        var scroll = settingsScroll;
+        scroll.Content = content;
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
         root.Children.Add(new AdornerDecoratorHost(scroll));
         Surface.Child = root;
@@ -67,6 +69,7 @@ internal sealed class SettingsWindow : FloatingWindow
     }
     internal void ShowWeatherSection()
     {
+        SelectSettingsTab("Clima");
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
         {
             if (!IsVisible || weatherSectionTarget is null) return;
@@ -75,6 +78,12 @@ internal sealed class SettingsWindow : FloatingWindow
     }
     private void StoreChanged(object? sender, EventArgs e)
     {
+        if (weatherVisibilityCheck is not null && weatherVisibilityCheck.IsChecked != store.Value.ShowWeatherInHeader)
+        {
+            bool previous = building; building = true;
+            try { weatherVisibilityCheck.IsChecked = store.Value.ShowWeatherInHeader; }
+            finally { building = previous; }
+        }
         weatherSettings.Configure();
         RefreshAppearance();
         editing.Content = store.IsEditing ? "Concluir edição visual" : "Editar layout na tela";
@@ -92,7 +101,7 @@ internal sealed class SettingsWindow : FloatingWindow
             Bottom = screen.Work.Top + gap + (int)Math.Round(Height * screen.Scale)
         });
     }
-    private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio;
+    private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio + store.Value.ShowWeatherInHeader;
     private void PersistenceChanged(object? sender, EventArgs e) => UpdateStatus();
     private void UpdateStatus()
     {
@@ -102,7 +111,7 @@ internal sealed class SettingsWindow : FloatingWindow
     private void Change(Action<Preferences> change) { if (!building) store.Update(change); }
     private void Build()
     {
-        building = true; content.Children.Clear();
+        building = true; content.Children.Clear(); ClearSettingsTabs();
         var general = Section("Aparência", "Grafite, ciano e superfícies limpas — identidade Think.");
         Slider(general, "Tamanho das fontes", .8, 1.3, store.Value.FontScale, value => Change(p => p.FontScale = value), "P0", .05);
         Select(general, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
@@ -166,7 +175,7 @@ internal sealed class SettingsWindow : FloatingWindow
         Note(island, "Acrylic usa o fundo real através da composição do Windows. Mica é um material opaco baseado no papel de parede. A intensidade acima controla a tonalidade; o raio do desfoque é definido pelo sistema.");
         var weatherSection = Section("Clima", "Após a primeira escolha no widget, altere a cidade somente aqui. A seleção é salva automaticamente.");
         weatherSectionTarget = weatherSection;
-        Check(weatherSection, "Mostrar clima ao lado do relógio", store.Value.ShowWeatherInHeader, value => Change(p => p.ShowWeatherInHeader = value));
+        weatherVisibilityCheck = Check(weatherSection, "Mostrar clima ao lado do relógio", store.Value.ShowWeatherInHeader, value => Change(p => p.ShowWeatherInHeader = value));
         if (weatherSettings.Parent is Panel oldWeather) oldWeather.Children.Remove(weatherSettings);
         weatherSection.Children.Add(weatherSettings);
 
@@ -176,9 +185,11 @@ internal sealed class SettingsWindow : FloatingWindow
         layout.Children.Add(editing);
         Note(layout, "Na barra, arraste os ícones. Na ilha, arraste os acessos rápidos ou o título de cada módulo. O puxador lateral ajusta a posição horizontal. Esc conclui a edição.");
         Note(layout, "Os três primeiros módulos visíveis ficam em destaque. Calendário e bandeja têm áreas detalhadas. A engrenagem do Windows fica no compacto; a personalização do Think Wind aparece apenas no painel completo.");
-        layout.Children.Add(new TextBlock { Text = "ACESSOS RÁPIDOS", FontSize = 11, Margin = new Thickness(0, 16, 0, 8) });
+        var islandIcons = Section("Ícones da ilha", "Marque os controles que devem aparecer e ajuste sua ordem pelas setas ou arrastando. A personalização e o botão de expansão permanecem acessíveis.");
+        Note(islandIcons, "No modo barra, relógio e clima ficam à esquerda, seguidos por desempenho e ferramentas. Os demais ícones aparecem à direita na ordem escolhida.");
+        islandIcons.Children.Add(Button("Configurar ícone e cidade do clima", ShowWeatherSection));
         if (quickRows.Parent is Panel oldQuick) oldQuick.Children.Remove(quickRows);
-        layout.Children.Add(quickRows);
+        islandIcons.Children.Add(quickRows);
         layout.Children.Add(new TextBlock { Text = "MÓDULOS DA ILHA", FontSize = 11, Margin = new Thickness(0, 18, 0, 8) });
         if (moduleRows.Parent is Panel oldModules) oldModules.Children.Remove(moduleRows);
         layout.Children.Add(moduleRows);
@@ -190,26 +201,28 @@ internal sealed class SettingsWindow : FloatingWindow
         layout.Children.Add(resets);
 
         var system = Section("Sistema", "Os recursos nativos do Windows permanecem disponíveis.");
-        Check(system, "Modo Jogo automático: ocultar launcher e suspender tarefas", store.Value.GameModeEnabled, value => Change(p => p.GameModeEnabled = value));
+        var games = Section("Jogos", "Proteção de tela cheia, detecção de jogos e exceções.");
+        Check(games, "Modo Jogo automático: ocultar launcher e suspender tarefas", store.Value.GameModeEnabled, value => Change(p => p.GameModeEnabled = value));
         Check(system, "Abrir Iniciar com Ctrl+Alt+Espaço (desativado durante jogos)", store.Value.StartHotkeyEnabled, value => Change(p => p.StartHotkeyEnabled = value));
         Check(system, "Tecla Windows abre o Iniciar do Think Wind (desativado no Modo Jogo)", store.Value.WindowsKeyOpensLauncher, value => Change(p => p.WindowsKeyOpensLauncher = value));
-        Note(system, "Detecção automática por tela cheia e pastas de instalação Steam, Epic e GOG, inclusive jogos em janela. A lista abaixo é apenas complementar. Aplicativos instalados nessas pastas também podem ser reconhecidos; use as exceções quando necessário.");
-        Note(system, "Aplicativos comuns em janela não acionam o Modo Jogo apenas por receberem foco. Para jogos não reconhecidos, use a lista complementar. Think Monitor é tratado como ferramenta de desktop. No Modo Jogo, a interceptação da tecla Windows é desativada.");
+        Note(games, "Detecção automática por tela cheia e pastas de instalação Steam, Epic e GOG, inclusive jogos em janela. A lista abaixo é apenas complementar. Aplicativos instalados nessas pastas também podem ser reconhecidos; use as exceções quando necessário.");
+        Note(games, "Aplicativos comuns em janela não acionam o Modo Jogo apenas por receberem foco. Para jogos não reconhecidos, use a lista complementar. Think Monitor é tratado como ferramenta de desktop. No Modo Jogo, a interceptação da tecla Windows é desativada.");
         void ProcessList(string label, string value, Action<string> change)
         {
-            system.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 8, 4, 4) });
+            games.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 8, 4, 4) });
             var field = new TextBox { Text = value, Padding = new Thickness(8), Margin = new Thickness(4) };
             field.SetResourceReference(Control.BackgroundProperty, "Think.Control"); field.SetResourceReference(Control.ForegroundProperty, "Think.Text");
-            field.TextChanged += (_, _) => { if (!building) change(field.Text); }; system.Children.Add(field);
+            field.TextChanged += (_, _) => { if (!building) change(field.Text); }; games.Children.Add(field);
         }
         ProcessList("Jogos adicionais (opcional): executáveis separados por ;", store.Value.GameModeInclude, value => Change(p => p.GameModeInclude = value));
         ProcessList("Exceções do Modo Jogo (separadas por ;)", store.Value.GameModeExclude, value => Change(p => p.GameModeExclude = value));
         Check(system, "Usar somente a barra do Think Wind (ocultar a barra do Windows)", store.Value.HideWindowsTaskbar, value => Change(p => p.HideWindowsTaskbar = value));
         Note(system, "Oculta a barra original em todos os monitores enquanto o Think Wind estiver aberto. Ao desativar ou sair, ela é restaurada. O Explorador e a tecla Windows continuam funcionando.");
         var screens = System.Windows.Forms.Screen.AllScreens;
+        var monitors = Section("Monitores", "Escolha onde exibir a barra e a ilha, em uma ou várias telas.");
         int monitorIndex = Array.FindIndex(screens, s => s.DeviceName.Equals(store.Value.MonitorDeviceName, StringComparison.OrdinalIgnoreCase));
         if (monitorIndex < 0) monitorIndex = Math.Clamp(store.Value.MonitorIndex, 0, screens.Length - 1);
-        Select(system, "Monitor da barra e da ilha", monitorIndex.ToString(), screens.Select((s, i) => new Choice(i.ToString(), $"{s.DeviceName} · {s.Bounds.Width} × {s.Bounds.Height}")).ToArray(), value => Change(p =>
+        Select(monitors, "Monitor da barra e da ilha", monitorIndex.ToString(), screens.Select((s, i) => new Choice(i.ToString(), $"{s.DeviceName} · {s.Bounds.Width} × {s.Bounds.Height}")).ToArray(), value => Change(p =>
         { p.MonitorIndex = int.Parse(value); p.MonitorDeviceName = screens[p.MonitorIndex].DeviceName; }));
         Check(system, "Mostrar uso de RAM", store.Value.ShowMemory, value => Change(p => p.ShowMemory = value));
         Check(system, "Mostrar bateria quando disponível", store.Value.ShowBattery, value => Change(p => p.ShowBattery = value));
@@ -230,13 +243,14 @@ internal sealed class SettingsWindow : FloatingWindow
         Note(about, "As preferências ficam neste usuário do Windows. Alterações de tema e ocultação automática afetam as preferências do sistema. Desinstalação de aplicativos usa os mecanismos registrados no Windows. Rede, áudio e Bluetooth dependem das permissões do sistema.");
         about.Children.Add(Button("Downloads oficiais", () => SystemActions.Run("https://github.com/valteromega2019-blip/think-wind/releases")));
         about.Children.Add(Button("Informações de segurança", () => SystemActions.Run("https://github.com/valteromega2019-blip/think-wind/blob/main/SECURITY.md")));
-        building = false; StoreChanged(this, EventArgs.Empty);
+        building = false; FinishSettingsTabs(); StoreChanged(this, EventArgs.Empty);
     }
     private void RebuildLayoutRows()
     {
         layoutSignature = LayoutSignature();
         quickRows.Children.Clear(); moduleRows.Children.Clear();
-        foreach (var id in store.Value.QuickOrder.Where(id => id is not ("settings" or "windows-settings")).ToArray())
+        Check(quickRows, "Clima ao lado do relógio", store.Value.ShowWeatherInHeader, value => Change(p => p.ShowWeatherInHeader = value));
+        foreach (var id in store.Value.QuickOrder.Where(id => id != "settings").ToArray())
         {
             string label = LayoutCatalog.QuickControls.First(q => q.Id == id).Name;
             LayoutRow(quickRows, "quick-settings", id, label, !store.Value.HiddenQuickControls.Contains(id), store.Value.QuickOrder,
@@ -282,7 +296,7 @@ internal sealed class SettingsWindow : FloatingWindow
         var card = new Border { Child = panel, CornerRadius = new CornerRadius(16), Padding = new Thickness(20), Margin = new Thickness(0, 0, 0, 16) };
         card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
         card.BorderThickness = new Thickness(1); card.SetResourceReference(Border.BorderBrushProperty, "Think.GlassCard");
-        content.Children.Add(card); return panel;
+        content.Children.Add(card); RegisterSettingsTab(title, card); return panel;
     }
     private static void Note(Panel parent, string text)
     { var note = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 0, 0, 14) }; note.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); parent.Children.Add(note); }
@@ -305,10 +319,11 @@ internal sealed class SettingsWindow : FloatingWindow
         System.Windows.Automation.AutomationProperties.SetName(combo, label);
         combo.SelectionChanged += (_, _) => { if (combo.SelectedItem is Choice choice) changed(choice.Id); }; parent.Children.Add(combo);
     }
-    private static void Check(Panel parent, string label, bool value, Action<bool> changed)
+    private static CheckBox Check(Panel parent, string label, bool value, Action<bool> changed)
     {
-        var check = new CheckBox { Content = label, IsChecked = value, Margin = new Thickness(0, 9, 0, 9) };
-        check.Checked += (_, _) => changed(true); check.Unchecked += (_, _) => changed(false); parent.Children.Add(check);
+        var check = new CheckBox { Content = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap }, IsChecked = value, Margin = new Thickness(0, 9, 0, 9) };
+        System.Windows.Automation.AutomationProperties.SetName(check, label);
+        check.Checked += (_, _) => changed(true); check.Unchecked += (_, _) => changed(false); parent.Children.Add(check); return check;
     }
     private static Button Button(string label, Action action)
     { var button = new Button { Content = label }; button.Click += (_, _) => action(); return button; }

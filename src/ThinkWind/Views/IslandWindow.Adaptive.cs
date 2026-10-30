@@ -1,5 +1,6 @@
 using System.Windows;
 using System;
+using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using ThinkWind.Native;
@@ -24,7 +25,6 @@ internal sealed partial class IslandWindow
     private void SyncStatusSurface()
     {
         BuildStatusRow();
-        if (statusKeyboard is not null) statusKeyboard.Visibility = Store.Value.HiddenQuickControls.Contains("keyboard") ? Visibility.Collapsed : Visibility.Visible;
         if (edgeReduced || (Stage == Services.IslandStage.Full && maximizedOnDisplay))
         {
             if (ReferenceEquals(Surface.Child, statusRow)) Surface.Child = null;
@@ -53,19 +53,25 @@ internal sealed partial class IslandWindow
     private readonly DockPanel statusRow = new() { LastChildFill = false };
     private readonly TextBlock statusClock = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private bool statusBuilt;
-    private Button? statusKeyboard;
+    private string statusControlsSignature = "";
     private void BuildStatusRow()
     {
-        if (statusBuilt) return;
+        string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls);
+        if (statusBuilt && statusControlsSignature == signature) return;
+        if (statusBuilt) { DismissMinis(); systemTools?.Close(); }
+        statusControlsSignature = signature;
         statusBuilt = true;
+        statusRow.Children.Clear();
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         statusClock.Margin = new Thickness(0, 0, 8, 0);
+        statusClock.Visibility = IsQuickVisible("clock") ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(statusClock, Dock.Left);
         statusRow.Children.Add(statusClock);
         var statusWeather = WeatherButton(true);
         statusWeather.Visibility = Store.Value.ShowWeatherInHeader ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(statusWeather, Dock.Left); statusRow.Children.Add(statusWeather);
         var tools = SystemToolsButton(true);
+        tools.Visibility = IsQuickVisible("tools") ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(tools, Dock.Left); statusRow.Children.Add(tools);
         void Add(string label, string glyph, Action action)
         {
@@ -80,14 +86,20 @@ internal sealed partial class IslandWindow
             button.Click += (_, _) => ShowMini(kind, button);
             controls.Children.Add(button);
         }
-        AddMini("Rede", "\uE701", MiniIslandKind.Network);
-        AddMini("Volume", "\uE767", MiniIslandKind.Volume);
-        statusKeyboard = ActionButton("Teclado virtual", () => Services.SystemActions.Run("osk.exe"));
-        statusKeyboard.Style = (Style)FindResource("Think.IconButton");
-        statusKeyboard.Content = Glyph("\uE765", 13); statusKeyboard.Width = 28; statusKeyboard.Height = 24; statusKeyboard.Padding = new Thickness(3);
-        statusKeyboard.Visibility = Store.Value.HiddenQuickControls.Contains("keyboard") ? Visibility.Collapsed : Visibility.Visible;
-        controls.Children.Add(statusKeyboard);
-        Add("Notificações", "\uE7F4", () => Desktop.Chord(0x5B, 0x4E));
+        foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "monitor" or "tools" or "settings") && IsQuickVisible(id)))
+        {
+            var control = Services.LayoutCatalog.QuickControls.First(q => q.Id == id);
+            switch (id)
+            {
+                case "wifi": AddMini(control.Name, control.Glyph, MiniIslandKind.Network); break;
+                case "audio": AddMini(control.Name, control.Glyph, MiniIslandKind.Volume); break;
+                case "bluetooth": AddMini(control.Name, control.Glyph, MiniIslandKind.Bluetooth); break;
+                case "calendar": AddMini(control.Name, control.Glyph, MiniIslandKind.Calendar); break;
+                case "tray": AddMini(control.Name, control.Glyph, MiniIslandKind.Tray); break;
+                case "notifications": Add(control.Name, control.Glyph, () => Desktop.Chord(0x5B, 0x4E)); break;
+                default: if (control.Target is string target) Add(control.Name, control.Glyph, () => Services.SystemActions.Run(target)); break;
+            }
+        }
         Add("Expandir central de controle", "\uE70D", OpenFull);
         DockPanel.SetDock(controls, Dock.Right); statusRow.Children.Add(controls);
     }
