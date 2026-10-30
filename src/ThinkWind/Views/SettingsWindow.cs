@@ -181,7 +181,9 @@ internal sealed class SettingsWindow : FloatingWindow
         Check(system, "Modo Jogo automático: ocultar launcher e suspender tarefas", store.Value.GameModeEnabled, value => Change(p => p.GameModeEnabled = value));
         Check(system, "Abrir Iniciar com Ctrl+Alt+Espaço (desativado durante jogos)", store.Value.StartHotkeyEnabled, value => Change(p => p.StartHotkeyEnabled = value));
         Check(system, "Tecla Windows abre o Iniciar do Think Wind (desativado no Modo Jogo)", store.Value.WindowsKeyOpensLauncher, value => Change(p => p.WindowsKeyOpensLauncher = value));
-        Note(system, "A tecla Windows isolada voltou ao comportamento nativo: o hook global foi removido para proteger a resposta do teclado. Tela cheia não pertencente ao Shell ativa o Modo Jogo; ajuste as exceções para navegadores e players.");
+        Note(system, "Detecção automática por tela cheia e pastas de instalação Steam, Epic e GOG, inclusive jogos em janela. A lista abaixo é apenas complementar. Aplicativos instalados nessas pastas também podem ser reconhecidos; use as exceções quando necessário.");
+        Check(system, "Proteção ampla: ativar para qualquer aplicativo em primeiro plano", store.Value.GameModeProtectAllForeground, value => Change(p => p.GameModeProtectAllForeground = value));
+        Note(system, "A proteção ampla cobre jogos não reconhecidos, mas também oculta o launcher ao usar outros aplicativos. As exceções continuam valendo. No Modo Jogo, a interceptação da tecla Windows é desativada.");
         void ProcessList(string label, string value, Action<string> change)
         {
             system.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 8, 4, 4) });
@@ -189,7 +191,7 @@ internal sealed class SettingsWindow : FloatingWindow
             field.SetResourceReference(Control.BackgroundProperty, "Think.Control"); field.SetResourceReference(Control.ForegroundProperty, "Think.Text");
             field.TextChanged += (_, _) => { if (!building) change(field.Text); }; system.Children.Add(field);
         }
-        ProcessList("Jogos em janela: nomes de executáveis separados por ;", store.Value.GameModeInclude, value => Change(p => p.GameModeInclude = value));
+        ProcessList("Jogos adicionais (opcional): executáveis separados por ;", store.Value.GameModeInclude, value => Change(p => p.GameModeInclude = value));
         ProcessList("Exceções do Modo Jogo (separadas por ;)", store.Value.GameModeExclude, value => Change(p => p.GameModeExclude = value));
         Check(system, "Usar somente a barra do Think Wind (ocultar a barra do Windows)", store.Value.HideWindowsTaskbar, value => Change(p => p.HideWindowsTaskbar = value));
         Note(system, "Oculta a barra original em todos os monitores enquanto o Think Wind estiver aberto. Ao desativar ou sair, ela é restaurada. O Explorador e a tecla Windows continuam funcionando.");

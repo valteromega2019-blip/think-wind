@@ -8,7 +8,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/ThinkWind.ico</ApplicationIcon>
-    <Version>0.10.0-alpha</Version>
+    <Version>0.11.0-alpha</Version>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Assets/ThinkWind.ico" />

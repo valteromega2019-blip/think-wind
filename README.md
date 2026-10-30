@@ -1,5 +1,13 @@
 # Think Wind
 
+## 0.11 Alfa — 0.11.0-alpha
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.11.0-alpha/ThinkWind-Setup-0.11.0-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.11.0-alpha)
+
+Modo Jogo com reconhecimento por instalações Steam, Epic e GOG, inclusive em janela. Lista manual opcional e proteção ampla configurável para aplicativos não reconhecidos. A proteção ampla também oculta o launcher em aplicativos comuns fora das exceções. Jogos de outras origens podem precisar dessa opção ou da lista complementar; identificação por pasta pode incluir software instalado nas mesmas bibliotecas.
+
+Distribuição Release e instalador gerados a pedido do usuário. Sem novos testes ou type check separado nesta entrega; resultados da 0.10 abaixo são históricos.
+
 ## 0.10 Alfa — 0.10.0-alpha
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.10.0-alpha/ThinkWind-Setup-0.10.0-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.10.0-alpha)

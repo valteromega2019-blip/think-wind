@@ -14,11 +14,12 @@ public sealed class Preferences
     public double TintOpacity { get; set; } = .72;
     public double InnerSurfaceOpacity { get; set; } = .5;
     public bool GameModeEnabled { get; set; } = true;
+    public bool GameModeProtectAllForeground { get; set; }
     public bool StartHotkeyEnabled { get; set; }
     public bool WindowsKeyOpensLauncher { get; set; } = true;
     public bool WindowPreviewsEnabled { get; set; } = true;
     public double WindowPreviewDelayMilliseconds { get; set; } = 400;
-    public string GameModeInclude { get; set; } = "WardogsClient-Win64-Shipping";
+    public string GameModeInclude { get; set; } = "";
     public string GameModeExclude { get; set; } = "msedge;chrome;firefox;Code;steam;steamwebhelper";
     public bool AutoHide { get; set; } = true;
     public bool DockMagnification { get; set; } = true;

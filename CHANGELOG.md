@@ -1,5 +1,12 @@
 # Histórico do Think Wind
 
+## 0.11 Alfa — 0.11.0-alpha
+
+- Modo Jogo reconhece executáveis nas instalações Steam (incluindo bibliotecas adicionais), Epic e GOG, além da detecção existente de tela cheia. A lista manual passa a ser complementar e novos perfis não contêm um jogo específico.
+- Opção de proteção ampla cobre qualquer aplicativo em primeiro plano fora do Shell e das exceções, para jogos não reconhecidos; também oculta o launcher em aplicativos comuns quando ativada.
+- Metadados locais somente para leitura, com cache de um minuto, sem varredura recursiva, novos hooks ou temporizadores. Caminhos de instalação são heurística: software instalado nas mesmas bibliotecas pode ser reconhecido, e jogos portáteis/de outras lojas podem precisar da proteção ampla ou lista complementar.
+- Distribuição Release win-x64 independente e instalador gerados para publicação. Sem novos testes nem type check separado nesta entrega, conforme preferência do usuário.
+
 ## 0.10 Alfa — 0.10.0-alpha
 
 - Tecla Windows isolada abre o launcher por hook em thread dedicada, desativado durante jogos. Atalho Ctrl+Alt+Espaço opcional.
