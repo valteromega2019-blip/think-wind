@@ -44,6 +44,7 @@ internal sealed partial class DockWindow
     }
     private void BeginFileDrag()
     {
+        StopPreviews();
         magnifier.Reset();
         fileDragging = true; lastHover = DateTime.UtcNow;
         launcher?.Dismiss();

@@ -16,7 +16,7 @@ using ThinkWind.Services;
 
 namespace ThinkWind.Views;
 internal enum LauncherPanelMode { Start, Library, Search }
-internal sealed class LauncherPanelWindow : FloatingWindow
+internal sealed partial class LauncherPanelWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
     private readonly ApplicationCatalog catalog;
@@ -46,6 +46,9 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     private AppEntry[] recent = Array.Empty<AppEntry>();
     private int page, perPage = 8, generation, menus;
     private bool updating, disposed, rowsQueued, modal;
+    private bool foregroundClaimed;
+    private nint openingForeground;
+    private OutsideClickObserver? outsideClicks;
     internal bool Busy => IsVisible || menus > 0 || modal;
     internal event Action? Dismissed;
     internal LauncherPanelWindow(SettingsStore store, ApplicationCatalog apps, Func<OverlayChrome.PixelRect> getAnchor, Func<bool> hasDockFocus) : base(store)
@@ -59,7 +62,8 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         var tabs = new WrapPanel();
         foreach (string name in new[] { "Fixados", "Biblioteca", "Recentes", "Todos" })
         {
-            var button = ActionButton(name, () => { section = name; mode = name == "Biblioteca" ? LauncherPanelMode.Library : LauncherPanelMode.Start; query.Text = ""; page = 0; Reload(); });
+            var button = ActionButton(name, () => { if (section == name && query.Text.Length == 0) return; section = name; mode = name == "Biblioteca" ? LauncherPanelMode.Library : LauncherPanelMode.Start; updating = true; query.Text = ""; updating = false; page = 0; Reload(); });
+            tabButtons.Add(name, button);
             button.Padding = new Thickness(10, 6, 10, 6); tabs.Children.Add(button);
         }
         content.Children.Add(tabs); content.Children.Add(category); content.Children.Add(new AdornerDecoratorHost(resultsGrid));
@@ -83,21 +87,40 @@ internal sealed class LauncherPanelWindow : FloatingWindow
         category.SelectionChanged += (_, _) => { if (!updating) { page = 0; Reload(); } };
         debounce.Tick += async (_, _) => { debounce.Stop(); await ReadFiles(); };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
-        Deactivated += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() => { if (!IsActive && !dockHasFocus() && menus == 0 && !modal) Dismiss(); }));
-        visibility.Tick += (_, _) => { if (IsVisible && menus == 0 && !modal && !Desktop.ForegroundIsOurs()) Dismiss(); };
+        Deactivated += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() => { if (foregroundClaimed && !IsActive && !dockHasFocus() && menus == 0 && !modal) Dismiss(); }));
+        visibility.Tick += (_, _) =>
+        {
+            if (!IsVisible || menus > 0 || modal) return;
+            // A brief activation during Show is not enough: only consider the
+            // focus acquired after observing the visible menu in its normal tick.
+            if (Desktop.ForegroundIsOurs()) { foregroundClaimed |= IsActive; return; }
+            if (foregroundClaimed || Desktop.GetForegroundWindow() != openingForeground) Dismiss();
+        };
         refresh.Tick += async (_, _) => { if (IsVisible) await catalog.RefreshAsync(true); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { CancelDrawerMotion(); debounce.Stop(); visibility.Stop(); refresh.Stop(); cancellation?.Cancel(); } };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+            {
+                outsideClicks ??= new OutsideClickObserver(this, () => { if (menus == 0 && !modal) Dismiss(); });
+                outsideClicks.Start();
+            }
+            else outsideClicks?.Stop();
+        };
+        Closed += (_, _) => outsideClicks?.Dispose();
         catalog.Changed += CatalogChanged; Store.Changed += PreferencesChanged;
         LayoutDrag.Completed += LayoutCompleted;
         Closed += (_, _) => { disposed = true; imageWorker.Dispose(); cancellation?.Cancel(); debounce.Stop(); visibility.Stop(); refresh.Stop(); search.Dispose(); catalog.Changed -= CatalogChanged; Store.Changed -= PreferencesChanged; LayoutDrag.Completed -= LayoutCompleted; };
     }
     internal async void Present(LauncherPanelMode requested, string text = "", bool focusSearch = true)
     {
+        openingForeground = Desktop.GetForegroundWindow(); foregroundClaimed = IsActive;
         mode = requested; section = requested == LauncherPanelMode.Library ? "Biblioteca" : requested == LauncherPanelMode.Start ? "Fixados" : "Todos";
         updating = true; query.Text = text; updating = false; page = 0;
         UpdateCategories(); Reload(); ShowActivated = focusSearch;
         Show(); RefreshSettings(); visibility.Start(); refresh.Start();
         if (focusSearch) { Activate(); query.Focus(); query.CaretIndex = query.Text.Length; }
-        if (SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0) content.BeginAnimation(OpacityProperty, new DoubleAnimation(.75, 1, TimeSpan.FromMilliseconds(120)));
+        AnimateDrawerOpening();
         await catalog.RefreshAsync();
         try { var items = await search.RecentAsync(); if (!disposed) { recent = items; if (IsVisible) Reload(false); } }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or COMException or TaskCanceledException) { }
@@ -186,10 +209,25 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     private void RenderRows()
     {
         int pages = Math.Max(1, (results.Count + perPage - 1) / perPage); page = Math.Clamp(page, 0, pages - 1);
+        var visible = results.Skip(page * perPage).Take(perPage).ToArray();
+        string stamp = section + ":" + mode + ":" + page + ":" + perPage + ":" + query.Text + ":"
+            + string.Join("|", visible.Select(entry => entry.Target + ":" + entry.Name)) + ":"
+            + string.Join("|", Store.Value.Shortcuts.Concat(Store.Value.StartPins).Select(pin => pin.Target));
+        UpdateDrawerTabs();
+        if (stamp == renderedStamp)
+        {
+            pagination.Text = $"{page + 1} / {pages} · {results.Count} itens";
+            previous.IsEnabled = page > 0; next.IsEnabled = page + 1 < pages;
+            Position(); return;
+        }
+        int direction = DrawerDirection();
         resultsGrid.Children.Clear();
-        foreach (var entry in results.Skip(page * perPage).Take(perPage)) resultsGrid.Children.Add(ResultRow(entry));
+        foreach (var entry in visible) resultsGrid.Children.Add(ResultRow(entry));
+        bool hadRows = renderedStamp.Length > 0;
+        renderedStamp = stamp; renderedSection = section; renderedPage = page;
         pagination.Text = $"{page + 1} / {pages} · {results.Count} itens"; previous.IsEnabled = page > 0; next.IsEnabled = page + 1 < pages;
         Position();
+        AnimateDrawerRows(direction, hadRows);
     }
     private FrameworkElement ResultRow(AppEntry entry)
     {
@@ -230,16 +268,17 @@ internal sealed class LauncherPanelWindow : FloatingWindow
     }
     private async void LoadLargeIcon(Image image, string target)
     {
-        if (largeIcons.TryGetValue(target, out var cached)) { image.Source = cached; return; }
-        if (!pendingIcons.TryGetValue(target, out var pending)) { pending = imageWorker.Run(() => ShellIcons.ReadLarge(target)); pendingIcons[target] = pending; }
+        string key = icons.VersionedKey(target);
+        if (largeIcons.TryGetValue(key, out var cached)) { image.Source = cached; return; }
+        if (!pendingIcons.TryGetValue(key, out var pending)) { pending = imageWorker.Run(() => ShellIcons.ReadLarge(target)); pendingIcons[key] = pending; }
         try
         {
             var result = await pending;
             if (disposed || result is null) return;
-            if (largeIcons.Count > 256) largeIcons.Clear(); largeIcons[target] = result; image.Source = result;
+            if (largeIcons.Count > 256) largeIcons.Clear(); largeIcons[key] = result; image.Source = result;
         }
         catch (TaskCanceledException) { }
-        finally { pendingIcons.Remove(target); }
+        finally { pendingIcons.Remove(key); }
     }
     private void PinDock(AppEntry app) => Store.Update(p => { if (!p.Shortcuts.Any(pin => SameTarget(pin.Target, app.Target))) p.Shortcuts.Add(new(app.Name, app.Target)); });
     private void Launch(AppEntry entry)

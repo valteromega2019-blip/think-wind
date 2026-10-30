@@ -1,10 +1,13 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.8.0-alpha"
+#define MyAppVersion "0.10.0-alpha"
+#ifndef PublishDir
+#define PublishDir "..\artifacts\publish-v0.10-alpha"
+#endif
 [Setup]
 AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
 AppName=Think Wind
 AppVersion={#MyAppVersion}
-VersionInfoVersion=0.8.0.0
+VersionInfoVersion=0.10.0.0
 DefaultDirName={localappdata}\Programs\ThinkWind
 PrivilegesRequired=lowest
 DefaultGroupName=Think Wind
@@ -19,7 +22,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
 [Files]
-Source: "..\artifacts\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
 Name: "{group}\Think Wind"; Filename: "{app}\ThinkWind.exe"
 [Run]

@@ -1,5 +1,9 @@
 # Relatórios de validação
 
+## Validação mais recente — 0.10 Alfa
+
+Entrega 0.10.0-alpha: 42 checks aprovados, 1 falha (timeout na enumeração Bluetooth), zero ignorados. Publish Release com avisos tratados como erros e instalador Inno Setup concluídos. Comparação com Wardogs em primeiro plano nos cenários encerrado/normal/Modo Jogo; medições de CPU/memória e confirmação do usuário. WPR indisponível por permissão; sem alegação de latência física medida. Bluetooth restrito a adaptador/listagem por escolha do usuário. [Relatório completo](VALIDACAO-0.10.md).
+
 ## Validação mais recente — 0.08 Alfa
 
 Pedido explícito de ajustar, testar e publicar: **37 checks aprovados, zero falhos/ignorados**, publicação com avisos tratados como erros e instalador. Novas regressões de recorte dos ícones, reserva geométrica e transparência de superfícies. [Escopo e limites](VALIDACAO-0.08-ALFA.md).

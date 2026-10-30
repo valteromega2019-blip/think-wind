@@ -9,7 +9,7 @@ using System.Windows.Media.Imaging;
 using ThinkWind.Native;
 
 namespace ThinkWind.Services;
-internal sealed record TrayEntry(string Name, ImageSource? Icon, AutomationElement? Element, nint Host, string Id = "", Accessibility.IAccessible? Accessible = null, int Child = 0)
+internal sealed record TrayEntry(string Name, ImageSource? Icon, AutomationElement? Element, nint Host, string Id = "", Accessibility.IAccessible? Accessible = null, int Child = 0, string? Executable = null, Action<bool>? LocalAction = null)
 {
     internal string DisplayName => Name.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? Name;
     internal string Key => Id.Length > 0 ? Id : "name:" + DisplayName;
@@ -19,46 +19,102 @@ internal sealed record TrayEntry(string Name, ImageSource? Icon, AutomationEleme
 internal static class TrayService
 {
     private static readonly object gate = new();
+    private static readonly object readGate = new();
+    private static Task<List<TrayEntry>>? pendingRead;
+    private static readonly object localGate = new();
+    private static TrayEntry? localIcon;
+    internal static void RegisterLocal(TrayEntry? entry) { lock (localGate) localIcon = entry; }
+    internal static TrayEntry[] LocalEntries() { lock (localGate) return localIcon is null ? Array.Empty<TrayEntry>() : new[] { localIcon }; }
+    private static Task<List<TrayEntry>>? accessibilityRead;
+    private static List<TrayEntry> accessibilityCache = new();
+    private static DateTime accessibilityUpdated;
     private static readonly Dictionary<string, ImageSource> iconCache = new();
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern nint FindWindow(string className, string? title);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern nint FindWindowEx(nint parent, nint after, string? className, string? title);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
-    [DllImport("user32.dll")] private static extern bool PrintWindow(nint window, nint dc, uint flags);
-    [DllImport("user32.dll")] private static extern bool GetWindowRect(nint window, out Rectangle rectangle);
     [DllImport("user32.dll")] private static extern nint WindowFromPoint(Point point);
     [DllImport("user32.dll")] private static extern bool IsChild(nint parent, nint child);
     [StructLayout(LayoutKind.Sequential)] private struct Point { internal int X, Y; }
-    [StructLayout(LayoutKind.Sequential)] private struct Rectangle { internal int Left, Top, Right, Bottom; }
     [DllImport("oleacc.dll")] private static extern int AccessibleObjectFromWindow(nint window, uint objectId, ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out Accessibility.IAccessible accessible);
     [DllImport("oleacc.dll")] private static extern int AccessibleChildren(Accessibility.IAccessible parent, int start, int count, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2, ArraySubType = UnmanagedType.Struct)] object[] children, out int obtained);
-    internal static Task<List<TrayEntry>> ReadAsync() => Task.Run(() =>
+    internal static Task<List<TrayEntry>> ReadAsync()
+    {
+        lock (readGate)
+        {
+            if (pendingRead is null || pendingRead.IsCompleted) pendingRead = Task.Run(ReadCore);
+            return pendingRead;
+        }
+    }
+    private static List<TrayEntry> ReadCore()
     {
         lock (gate)
         {
         var result = new List<TrayEntry>();
-        nint taskbar = FindWindow("Shell_TrayWnd", null);
-        nint area = FindWindowEx(taskbar, 0, "TrayNotifyWnd", null);
-        Read(area != 0 ? area : taskbar, result, area != 0);
-        if (area != 0) ReadLegacy(area, result);
-        nint overflow = FindWindow("NotifyIconOverflowWindow", null);
-        if (overflow != 0) Read(overflow, result, true);
-        if (overflow != 0) ReadLegacy(overflow, result);
-        // Windows 11 uses a separate XAML overflow host on some shell builds.
-        nint xamlOverflow = FindWindow("TopLevelWindowForOverflowXamlIsland", null);
-        if (xamlOverflow != 0) Read(xamlOverflow, result, true);
-        if (xamlOverflow != 0) ReadLegacy(xamlOverflow, result);
-        if (iconCache.Count > 512) { var live = result.Select(item => item.Key).ToHashSet(); foreach (var key in iconCache.Keys.Where(key => !live.Contains(key)).ToArray()) iconCache.Remove(key); }
+        var metadata = TrayIconCatalog.Read();
+        foreach (var item in metadata.Where(item => item.Guid != Guid.Empty && TrayIconCatalog.IsLive(item)))
+        {
+            int existing = result.FindIndex(entry => entry.DisplayName.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
+            if (existing >= 0) result[existing] = result[existing] with { Executable = item.Executable };
+            else result.Add(new(item.Name, item.Icon, null, 0, "guid:" + item.Guid, Executable: item.Executable));
+        }
+        foreach (var live in LegacyTrayIcons.Read(metadata))
+        {
+            int existing = result.FindIndex(entry => entry.DisplayName.Equals(live.Icon.Name, StringComparison.OrdinalIgnoreCase));
+            if (existing >= 0) result[existing] = result[existing] with { Executable = live.Icon.Executable };
+            else result.Add(new(live.Icon.Name, live.Icon.Icon, null, live.Window,
+                $"uid:{live.Icon.Executable}:{live.Icon.Id}:{live.Process}", Executable: live.Icon.Executable));
+        }
+        // A stuck accessibility provider must not hide independent native/local
+        // icons. Keep at most one UIA read in flight and bound the wait here.
+        if (accessibilityRead is null || accessibilityRead.IsCompleted)
+        {
+            if (accessibilityRead?.IsCompletedSuccessfully == true)
+            { accessibilityCache = accessibilityRead.Result; accessibilityUpdated = DateTime.UtcNow; }
+            accessibilityRead = Task.Run(() => ReadAccessible(metadata));
+        }
+        try
+        {
+            if (accessibilityRead.Wait(350))
+            { accessibilityCache = accessibilityRead.Result; accessibilityUpdated = DateTime.UtcNow; }
+        }
+        catch (AggregateException) { /* Native/local results remain usable. */ }
+        if (DateTime.UtcNow - accessibilityUpdated < TimeSpan.FromSeconds(15))
+            foreach (var item in accessibilityCache)
+            {
+                int existing = result.FindIndex(entry => entry.DisplayName.Equals(item.DisplayName, StringComparison.OrdinalIgnoreCase));
+                if (existing < 0) result.Add(item);
+                else result[existing] = result[existing] with { Element = item.Element, Accessible = item.Accessible, Child = item.Child };
+            }
+        lock (localGate)
+        {
+            if (localIcon is not null)
+            { result.RemoveAll(entry => entry.DisplayName.Equals(localIcon.DisplayName, StringComparison.OrdinalIgnoreCase)); result.Add(localIcon); }
+        }
         return result;
         }
-    });
-    private static void Read(nint host, List<TrayEntry> result, bool trayRoot)
+    }
+    private static List<TrayEntry> ReadAccessible(List<TrayIconMetadata> metadata)
+    {
+        var result = new List<TrayEntry>();
+        nint taskbar = FindWindow("Shell_TrayWnd", null);
+        nint area = FindWindowEx(taskbar, 0, "TrayNotifyWnd", null);
+        Read(area != 0 ? area : taskbar, result, area != 0, metadata);
+        if (area != 0) ReadLegacy(area, result, metadata);
+        foreach (string type in new[] { "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland" })
+        {
+            nint overflow = FindWindow(type, null);
+            if (overflow != 0) { Read(overflow, result, true, metadata, true); ReadLegacy(overflow, result, metadata); }
+        }
+        if (iconCache.Count > 512) { var live = result.Select(item => item.Key).ToHashSet(); foreach (var key in iconCache.Keys.Where(key => !live.Contains(key)).ToArray()) iconCache.Remove(key); }
+        return result;
+    }
+    private static void Read(nint host, List<TrayEntry> result, bool trayRoot, List<TrayIconMetadata> metadata, bool overflowRoot = false)
     {
         if (host == 0) return;
         try
         {
             var root = AutomationElement.FromHandle(host);
             var elements = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button));
-            using var frame = CaptureHost(host, out var rectangle);
             foreach (AutomationElement element in elements)
             {
                 try
@@ -66,14 +122,15 @@ internal static class TrayService
                     var info = element.Current;
                     if (!info.IsEnabled || string.IsNullOrWhiteSpace(info.Name)) continue;
                     // A taskbar-wide fallback must not mistake running app buttons for tray icons.
-                    bool notification = info.ClassName.Contains("NotifyIcon", StringComparison.OrdinalIgnoreCase) || info.AutomationId.Contains("NotifyItem", StringComparison.OrdinalIgnoreCase) || (trayRoot && InNotificationToolbar(element, root));
+                    bool notification = info.ClassName.Contains("NotifyIcon", StringComparison.OrdinalIgnoreCase) || info.AutomationId.Contains("NotifyItem", StringComparison.OrdinalIgnoreCase) || info.AutomationId.Contains("TrayIcon", StringComparison.OrdinalIgnoreCase) || (trayRoot && (overflowRoot || InNotificationToolbar(element, root) || TrayIconCatalog.Match(metadata, info.Name) is not null));
                     if (!notification || result.Exists(e => e.Name == info.Name)) continue;
                     string firstLine = info.Name.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? info.Name;
                     string key = info.ClassName + ":" + info.AutomationId + ":" + firstLine;
-                    var icon = CaptureIcon(info.BoundingRectangle, host, frame, rectangle);
+                    var original = TrayIconCatalog.Match(metadata, info.Name);
+                    var icon = original?.Icon ?? CaptureIcon(info.BoundingRectangle, host);
                     if (icon is not null) iconCache[key] = icon; else iconCache.TryGetValue(key, out icon);
                     // Do not replace real icons with a generic program tile.
-                    if (icon is not null) result.Add(new(info.Name, icon, element, host, key));
+                    if (icon is not null) result.Add(new(info.Name, icon, element, host, key, Executable: original?.Executable));
                 }
                 catch (Exception e) when (Unavailable(e)) { }
             }
@@ -90,13 +147,12 @@ internal static class TrayService
         }
         return false;
     }
-    private static void ReadLegacy(nint host, List<TrayEntry> result)
+    private static void ReadLegacy(nint host, List<TrayEntry> result, List<TrayIconMetadata> metadata)
     {
         try
         {
             var iid = new Guid("618736E0-3C3D-11CF-810C-00AA00389B71");
             if (AccessibleObjectFromWindow(host, 0xFFFFFFFC, ref iid, out var root) < 0) return;
-            using var frame = CaptureHost(host, out var rectangle);
             int visited = 0;
             void Visit(Accessibility.IAccessible accessible, int child, int depth)
             {
@@ -108,11 +164,12 @@ internal static class TrayService
                     {
                         accessible.accLocation(out int x, out int y, out int width, out int height, child);
                         string key = "msaa:" + name.Split('\n')[0].Trim();
-                        var icon = CaptureIcon(new System.Windows.Rect(x, y, Math.Max(0, width), Math.Max(0, height)), host, frame, rectangle);
+                        var original = TrayIconCatalog.Match(metadata, name);
+                        var icon = original?.Icon ?? CaptureIcon(new System.Windows.Rect(x, y, Math.Max(0, width), Math.Max(0, height)), host);
                         if (icon is not null) iconCache[key] = icon; else iconCache.TryGetValue(key, out icon);
                         int existing = result.FindIndex(item => item.Name == name);
                         if (existing >= 0) result[existing] = result[existing] with { Accessible = accessible, Child = child };
-                        else if (icon is not null) result.Add(new(name, icon, null, host, key, accessible, child));
+                        else if (icon is not null) result.Add(new(name, icon, null, host, key, accessible, child, original?.Executable));
                     }
                     if (child != 0) return;
                     int count = Math.Clamp(accessible.accChildCount, 0, 128); if (count == 0) return;
@@ -130,35 +187,13 @@ internal static class TrayService
         }
         catch (Exception error) when (Unavailable(error) || error is ArgumentException) { }
     }
-    private static System.Drawing.Bitmap? CaptureHost(nint host, out Rectangle rectangle)
-    {
-        rectangle = default;
-        if (!GetWindowRect(host, out rectangle)) return null;
-        int width = rectangle.Right - rectangle.Left, height = rectangle.Bottom - rectangle.Top;
-        if (width < 1 || height < 1 || width > 8192 || height > 2048) return null;
-        var bitmap = new System.Drawing.Bitmap(width, height);
-        try
-        {
-            using var graphics = System.Drawing.Graphics.FromImage(bitmap); nint dc = graphics.GetHdc();
-            bool rendered;
-            try { rendered = PrintWindow(host, dc, 2); } finally { graphics.ReleaseHdc(dc); }
-            if (rendered) return bitmap;
-        }
-        catch (Exception error) when (error is ExternalException or ArgumentException) { }
-        bitmap.Dispose(); return null;
-    }
-    private static ImageSource? CaptureIcon(System.Windows.Rect bounds, nint host, System.Drawing.Bitmap? source, Rectangle rectangle)
+    private static ImageSource? CaptureIcon(System.Windows.Rect bounds, nint host)
     {
         if (bounds.Width < 16 || bounds.Height < 16 || bounds.Width > 160 || bounds.Height > 160) return null;
         try
         {
             int size = Math.Min(24, (int)Math.Min(bounds.Width, bounds.Height));
             using var bitmap = new System.Drawing.Bitmap(size, size);
-            // Ask the host to render into a bitmap instead of copying the desktop:
-            // launcher overlays and hidden taskbars must not become fake icons.
-            int x = (int)(bounds.X - rectangle.Left + (bounds.Width - size) / 2), y = (int)(bounds.Y - rectangle.Top + (bounds.Height - size) / 2);
-            if (source is not null && x >= 0 && y >= 0 && x + size <= source.Width && y + size <= source.Height)
-                using (var graphics = System.Drawing.Graphics.FromImage(bitmap)) graphics.DrawImage(source, new System.Drawing.Rectangle(0, 0, size, size), new System.Drawing.Rectangle(x, y, size, size), System.Drawing.GraphicsUnit.Pixel);
             bool Detailed()
             {
                 var corner = bitmap.GetPixel(0, 0);
@@ -168,7 +203,7 @@ internal static class TrayService
             }
             if (!Detailed())
             {
-                // Some XAML hosts do not render with PrintWindow. Copy only when
+                // Copy exposed pixels only as a last resort, and only when
                 // the exposed icon is genuinely under the cursor-free sample,
                 // with no other window covering its corners/centre.
                 if (!IsWindowVisible(host)) return null;
@@ -207,6 +242,7 @@ internal static class TrayService
     {
         try
         {
+            if (entry.LocalAction is not null) { entry.LocalAction(context); return true; }
             // Never focus/reveal the Windows taskbar as an implicit fallback.
             if (context)
             {
@@ -219,5 +255,5 @@ internal static class TrayService
         catch (Exception e) when (Unavailable(e)) { }
         return false;
     });
-    private static bool Unavailable(Exception e) => e is ElementNotAvailableException or ElementNotEnabledException or InvalidOperationException or COMException or UnauthorizedAccessException;
+    private static bool Unavailable(Exception e) => e is ElementNotAvailableException or ElementNotEnabledException or InvalidOperationException or COMException or UnauthorizedAccessException or NotSupportedException or ArgumentException;
 }

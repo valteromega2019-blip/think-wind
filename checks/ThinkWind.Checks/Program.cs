@@ -12,6 +12,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         if (args.Contains("--visual-background")) return VisualBackground.Run();
+        if (args.Contains("--performance-comparison")) return PerformanceComparison.Run();
         Directory.CreateDirectory(Root);
         Run("Configuração ausente usa valores padrão", () =>
         {
@@ -109,6 +110,12 @@ internal static class Program
         Run("Dock: reserva para ícones de 18 a 72 DIP e mola até 60%", LayoutChecks.DockHeadroom);
         Run("Dock: ícone ampliado renderiza fora do fundo Acrylic", () => OverlayChecks.DockOverflow(PathFor("dock-overflow")));
         Run("Superfícies internas seguem opacidade em claro/escuro sem apagar texto", LayoutChecks.SurfaceOpacity);
+        Run("Modo Jogo: Wardogs em janela, tela cheia, Shell e exceções", LayoutChecks.GamePolicy);
+        Run("Dock: 5/10/15/20 itens cabem ou paginam sem exceder largura", LayoutChecks.DockCapacity);
+        Run("DWM: múltiplas janelas, minimizada, WM_CLOSE individual e liberação", () => OverlayChecks.ThumbnailsAndClose(PathFor("native-previews")));
+        Run("Bluetooth: adaptadores e pareados por APIs nativas, sem alterar conexões", LayoutChecks.BluetoothSnapshot);
+        Run("Bluetooth: descoberta só no painel e liberação ao ocultar", LayoutChecks.BluetoothLifecycle);
+        Run("Atalho: ícone sem overlay e invalidação ao editar .lnk", () => LayoutChecks.ShortcutIcons(Root));
         Run("Preferências de ampliação e barra exclusiva persistem", () =>
         {
             var preferences = Store("dock-new");

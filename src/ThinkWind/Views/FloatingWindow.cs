@@ -18,6 +18,12 @@ internal abstract class FloatingWindow : Window
     protected abstract bool AttachedTop { get; }
     protected virtual bool UsesIslandAppearance => AttachedTop;
     protected virtual bool CollapsedDock => false;
+    protected virtual bool FullWidthTop => false;
+    protected virtual string? TopPanelSide => null;
+    protected virtual double TopEdgeOffset => 0;
+    protected virtual bool SuppressMaterial => false;
+    protected virtual Color MaterialTint => ThemeService.BaseColor;
+    protected virtual bool MaterialLight => ThemeService.Light;
     protected virtual Thickness TransparentInsets => new();
     protected virtual bool HideOnClose => true;
     protected virtual string? MaterialOverride => null;
@@ -96,11 +102,11 @@ internal abstract class FloatingWindow : Window
     protected void ApplyAppearance()
     {
         var p = Store.Value;
-        radius = CollapsedDock ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
+        radius = CollapsedDock ? 3 : FullWidthTop ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
         var material = MaterialOverride ?? (UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial);
         var alpha = (UsesIslandAppearance ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
-        backdrop?.SetMaterial(SystemParameters.HighContrast ? "Solid" : material, ThemeService.Light);
-        var color = ThemeService.BaseColor;
+        backdrop?.SetMaterial(SystemParameters.HighContrast ? "Solid" : material, MaterialLight);
+        var color = MaterialTint;
         color.A = (byte)Math.Round(255 * (backdrop?.MaterialAvailable == true ? alpha : 1));
         Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(color);
         Surface.CornerRadius = AttachedTop ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
@@ -112,6 +118,7 @@ internal abstract class FloatingWindow : Window
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd == 0 || !OverlayChrome.GetWindowRect(hwnd, out var rectangle)) return;
+        if (SuppressMaterial) { backdrop?.Hide(); return; }
         var scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1;
         var next = (rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top, (int)Math.Round(radius * scale), AttachedTop, scale);
         if (next.Item1 < 1 || next.Item2 < 1) return;
@@ -164,14 +171,32 @@ internal abstract class FloatingWindow : Window
         double offset = AttachedTop ? Store.Value.IslandHorizontalOffset : Store.Value.DockHorizontalOffset;
         int x = (int)Math.Round(display.Work.Left + (display.Work.Width - w) / 2d + offset * display.Scale);
         x = Math.Clamp(x, display.Work.Left + (AttachedTop ? 0 : 8), Math.Max(display.Work.Left + 8, display.Work.Right - w - (AttachedTop ? 0 : 8)));
-        int y = AttachedTop ? display.Bounds.Top : display.Work.Bottom - margin - h;
-        if (CollapsedDock) { x = display.Bounds.Left; w = display.Bounds.Width; h = Math.Max(1, (int)Math.Round(6 * display.Scale)); y = display.Bounds.Bottom - h; }
+        int y = AttachedTop ? display.Bounds.Top + (int)Math.Round(TopEdgeOffset * display.Scale) : display.Work.Bottom - margin - h;
+        if (AttachedTop && (TopPanelSide is "Left" or "Right"))
+            x = TopPanelSide == "Left" ? display.Work.Left + 8 : display.Work.Right - w - 8;
+        else if (AttachedTop && TopPanelSide == "Center")
+            x = display.Work.Left + (display.Work.Width - w) / 2;
+        if (AttachedTop && FullWidthTop) { x = display.Bounds.Left; w = display.Bounds.Width; }
+        if (CollapsedDock)
+        {
+            w = Math.Min(display.Bounds.Width, (int)Math.Round(96 * display.Scale));
+            h = Math.Max(1, (int)Math.Round(6 * display.Scale));
+            x = display.Bounds.Left + (display.Bounds.Width - w) / 2;
+            y = display.Bounds.Bottom - h - 4;
+        }
         var nextTarget = new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + w, Bottom = y + h };
-        if (placed && target.Left == nextTarget.Left && target.Top == nextTarget.Top && target.Right == nextTarget.Right && target.Bottom == nextTarget.Bottom) return;
+        if (placed && target.Left == nextTarget.Left && target.Top == nextTarget.Top && target.Right == nextTarget.Right && target.Bottom == nextTarget.Bottom)
+        {
+            // The shell/WPF may move a registered appbar after Show. A cached
+            // target is not proof that the actual native rectangle is still there.
+            if (!animation.IsRunning && OverlayChrome.GetWindowRect(hwnd, out var actual)
+                && (actual.Left != target.Left || actual.Top != target.Top || actual.Right != target.Right || actual.Bottom != target.Bottom)) Move(target);
+            return;
+        }
         target = nextTarget;
         animation.Stop();
         if (animate && placed && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0 && OverlayChrome.GetWindowRect(hwnd, out start)
-            && Math.Abs(start.Left - target.Left) < display.Work.Width / 2 && Math.Abs(start.Top - target.Top) < display.Work.Height / 2)
+            && ((AttachedTop && TopPanelSide is not null) || Math.Abs(start.Left - target.Left) < display.Work.Width / 2) && Math.Abs(start.Top - target.Top) < display.Work.Height / 2)
         { animationDuration = Store.Value.AnimationMilliseconds; elapsed.Restart(); animation.Start(); }
         else Move(target);
         placed = true;

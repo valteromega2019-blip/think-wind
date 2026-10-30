@@ -91,6 +91,27 @@ internal static class OverlayChecks
         finally { other.Close(); mini.Close(); }
     }
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+    internal static void ThumbnailsAndClose(string path)
+    {
+        Application.Current.Resources["Think.IconButton"] = new Style(typeof(System.Windows.Controls.Button));
+        var first = new Window { Title = "Think Wind Check — janela 1", Width = 220, Height = 140, ShowInTaskbar = false, Background = Brushes.Red };
+        var second = new Window { Title = "Think Wind Check — janela 2", Width = 220, Height = 140, ShowInTaskbar = false, Background = Brushes.Blue };
+        var store = new SettingsStore(path); var preview = new WindowPreview(store, () => new OverlayChrome.PixelRect { Left = 100, Right = 600, Top = 800, Bottom = 850 });
+        bool firstClosed = false, secondClosed = false; first.Closed += (_, _) => firstClosed = true; second.Closed += (_, _) => secondClosed = true;
+        try
+        {
+            first.Show(); second.Show(); first.WindowState = WindowState.Minimized;
+            nint one = new WindowInteropHelper(first).Handle, two = new WindowInteropHelper(second).Handle;
+            preview.Present(new[] { new Desktop.RunningWindow(one, first.Title, null, true), new Desktop.RunningWindow(two, second.Title, null, false) }); preview.UpdateLayout();
+            Require(WindowThumbnail.ActiveCount == 2, "DWM deve registrar as duas janelas, inclusive minimizada.");
+            Require(WindowThumbnail.CloseWindow(one), "WM_CLOSE deve ser enfileirado.");
+            var frame = new System.Windows.Threading.DispatcherFrame(); var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+            timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; }; timer.Start(); System.Windows.Threading.Dispatcher.PushFrame(frame);
+            Require(firstClosed && !secondClosed && WindowThumbnail.IsWindow(two), "Fechamento individual não pode afetar a segunda janela.");
+            preview.Hide(); Require(WindowThumbnail.ActiveCount == 0, "Ocultar preview deve liberar todas as miniaturas nativas.");
+        }
+        finally { preview.Close(); if (!firstClosed) first.Close(); if (!secondClosed) second.Close(); }
+    }
     internal static void DockOverflow(string path)
     {
         var store = new SettingsStore(path); ThemeService.Apply(store.Value);

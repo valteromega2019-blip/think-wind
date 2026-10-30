@@ -67,25 +67,31 @@ internal sealed class AudioService
         Check(volume.SetMute(muted, ref context));
         return true;
     });
-    internal void SetDefaultOutput(string id) => WithEnumerator(enumerator =>
+    internal void SetDefaultOutput(string id) => SetDefault(Flow.Render, id, false);
+    internal void SetDefaultInput(string id) => SetDefault(Flow.Capture, id, true);
+    private void SetDefault(Flow flow, string id, bool communications) => WithEnumerator(enumerator =>
     {
         string Before(Role role)
         {
             IDevice? endpoint = null;
-            try { Check(enumerator.GetDefaultAudioEndpoint(Flow.Render, role, out endpoint)); Check(endpoint.GetId(out var value)); return value; }
+            try { Check(enumerator.GetDefaultAudioEndpoint(flow, role, out endpoint)); Check(endpoint.GetId(out var value)); return value; }
             finally { Release(endpoint); }
         }
-        string console = Before(Role.Console), multimedia = Before(Role.Multimedia);
+        var roles = communications ? new[] { Role.Console, Role.Multimedia, Role.Communications } : new[] { Role.Console, Role.Multimedia };
+        var previous = new Dictionary<Role, string>();
+        foreach (var role in roles) previous[role] = Before(role);
         // Validate that the requested device still exists and is active before changing policy.
-        Read(Flow.Render, id);
+        Read(flow, id);
         try
         {
-            DefaultAudioPolicy.Set(id, Role.Console); DefaultAudioPolicy.Set(id, Role.Multimedia);
-            if (Before(Role.Console) != id || Before(Role.Multimedia) != id) throw new COMException("O Windows não confirmou a saída padrão solicitada.");
+            foreach (var role in roles) DefaultAudioPolicy.Set(id, role);
+            foreach (var role in roles)
+                if (Before(role) != id) throw new COMException("O Windows não confirmou o dispositivo padrão solicitado.");
         }
         catch (Exception error) when (error is COMException or InvalidCastException or UnauthorizedAccessException)
         {
-            try { DefaultAudioPolicy.Set(console, Role.Console); DefaultAudioPolicy.Set(multimedia, Role.Multimedia); } catch (Exception restore) when (restore is COMException or InvalidCastException or UnauthorizedAccessException) { }
+            foreach (var role in roles)
+                try { DefaultAudioPolicy.Set(previous[role], role); } catch (Exception restore) when (restore is COMException or InvalidCastException or UnauthorizedAccessException) { }
             throw new AudioUnavailableException(error);
         }
         return true;

@@ -14,6 +14,14 @@
   <SolidColorBrush x:Key="Think.AccentInk" Color="#60CDFF"/>
   <SolidColorBrush x:Key="Think.AccentSurface" Color="#2660CDFF"/>
   <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="FontFamily" Value="Segoe UI Variable Text"/></Style>
+  <Style TargetType="ToolTip">
+   <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/>
+   <Setter Property="Background" Value="{DynamicResource Think.Popup}"/>
+   <Setter Property="BorderThickness" Value="0"/>
+   <Setter Property="Padding" Value="10,6"/>
+   <Setter Property="HasDropShadow" Value="False"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToolTip"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="8"><ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/></Border></ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style TargetType="ContextMenu">
    <Setter Property="Background" Value="{DynamicResource Think.Popup}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="6"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ContextMenu"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="12"><ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/></ScrollViewer></Border></ControlTemplate></Setter.Value></Setter>

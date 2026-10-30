@@ -12,11 +12,16 @@ using ThinkWind.Native;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
+internal sealed class DockItemsPanel : StackPanel
+{
+    protected override Geometry? GetLayoutClip(Size layoutSlotSize) => null;
+}
+
 internal sealed partial class DockWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
     protected override bool CollapsedDock => hidden;
-    private readonly StackPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+    private readonly DockItemsPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly DockMagnifier magnifier;
     private double magnificationReserve;
     private double magnificationHeadroom;
@@ -26,7 +31,7 @@ internal sealed partial class DockWindow : FloatingWindow
         get
         {
             double progress = 1;
-            if (hidden)
+            if (IsPositionAnimating || hidden)
             {
                 var bounds = Bounds;
                 progress = Math.Clamp(((bounds.Bottom - bounds.Top) / Display.Scale - 6) / Math.Max(1, ExpandedHeight - 6), 0, 1);
@@ -44,6 +49,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private readonly List<string> visibleOrder = new();
     private string signature = "";
     private bool hidden, rebuilding;
+    private bool readingWindows;
     private int layoutRevision;
     private double contentWidth, contentHeight = 48, fittedWidth;
     private List<Item> entries = new();
@@ -60,7 +66,7 @@ internal sealed partial class DockWindow : FloatingWindow
         items.VerticalAlignment = VerticalAlignment.Bottom;
         items.Background = Brushes.Transparent;
         PageWheel.Attach(items, () => fit.Pages(entries.Count), () => page, value => { page = value; RenderPage(); Position(); }, () => fileDragging || MenuOpen || LayoutDrag.Active || Store.IsEditing || dockSearch.IsMouseOver);
-        magnifier = new DockMagnifier(items, () => !hidden && !Store.IsEditing && !LayoutDrag.Active && !fileDragging && !MenuOpen);
+        magnifier = new DockMagnifier(items, () => !hidden && !IsPositionAnimating && !Store.IsEditing && !LayoutDrag.Active && !fileDragging && !MenuOpen);
         catalog = new ApplicationCatalog(Dispatcher);
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
         System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Think Wind");
@@ -76,22 +82,35 @@ internal sealed partial class DockWindow : FloatingWindow
         };
         SourceInitialized += (_, _) => HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(NoActivate);
         iconLayer = new AdornerDecoratorHost(items, true);
+        iconLayer.VerticalAlignment = VerticalAlignment.Bottom;
+        LayoutUpdated += (_, _) =>
+        {
+            // Keep the row at its measured height while the native canvas grows.
+            // Reveal only when there is room, rather than clipping scaled icons.
+            if (!IsVisible) return;
+            iconLayer.Opacity = hidden ? 0 : Math.Clamp((ActualHeight - ExpandedHeight + 8) / 8, 0, 1);
+        };
         ((Grid)Content).Children.Add(iconLayer);
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
+        IsVisibleChanged += (_, _) => { if (IsVisible) timer.Start(); else { timer.Stop(); magnifier.Reset(); launcher?.Dismiss(); } };
         timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
         MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); };
         MouseLeave += (_, _) => lastHover = DateTime.UtcNow;
         LayoutDrag.Completed += DragCompleted;
         InitializeFileDrop();
+        InitializePreviews();
+        IsVisibleChanged += (_, _) => { if (!IsVisible) StopPreviews(); };
         Closed += (_, _) => { magnifier.Dispose(); timer.Stop(); DisposeFileDrop(); catalog.Dispose(); LayoutDrag.Completed -= DragCompleted; };
     }
     private void DragCompleted() { signature = ""; RefreshApps(); }
+    internal void SuspendForGame(bool active)
+    { catalog.SetSuspended(active); if (active) { StopPreviews(); magnifier.Reset(); timer.Stop(); launcher?.Dismiss(); FinishFileDrag(); } }
     private nint NoActivate(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     { if (message == 0x0021 && !dockSearch.IsMouseOver) { handled = true; return 3; } return 0; }
     public override void Position()
     {
         if (!rebuilding && Math.Abs(fittedWidth - Display.Width) > .5 && entries.Count > 0) RenderPage();
-        Place(TotalWidth, hidden ? 6 : ExpandedHeight);
+        Place(TotalWidth, hidden ? 6 : ExpandedHeight, IsVisible && !hidden);
         if (launcher?.IsVisible == true) launcher.Position();
     }
     public override void RefreshSettings()
@@ -107,7 +126,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private bool MenuOpen => items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
     private void UpdateVisibility()
     {
-        if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && !MenuOpen && !IsMouseOver && (!IsKeyboardFocusWithin || !Desktop.ForegroundIsOurs()) && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
+        if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !IsMouseOver && (!IsKeyboardFocusWithin || !Desktop.ForegroundIsOurs()) && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
     }
     private void SetHidden(bool value, bool animate = true)
     {
@@ -116,10 +135,16 @@ internal sealed partial class DockWindow : FloatingWindow
         if (value) magnifier.Reset(); else magnifier.Wake();
         ApplyAppearance(); Place(TotalWidth, hidden ? 6 : ExpandedHeight, animate);
     }
-    private void RefreshApps()
+    private async void RefreshApps()
     {
-        if (LayoutDrag.Active || fileDragging || MenuOpen || rebuilding || dockSearch.IsKeyboardFocusWithin || (items.IsMouseOver && entries.Count > 0 && signature.Length > 0)) return;
-        var windows = Desktop.Windows();
+        if (LayoutDrag.Active || fileDragging || MenuOpen || rebuilding || dockSearch.IsKeyboardFocusWithin) return;
+        if (readingWindows) { nextAppRefresh = DateTime.MinValue; return; }
+        readingWindows = true;
+        List<Desktop.RunningWindow> windows;
+        try { windows = await System.Threading.Tasks.Task.Run(Desktop.Windows); }
+        catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { return; }
+        finally { readingWindows = false; }
+        if (!IsVisible || LayoutDrag.Active || fileDragging || MenuOpen) return;
         var active = Desktop.GetForegroundWindow();
         var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}")) + active;
         if (next == signature) return;
@@ -172,11 +197,12 @@ internal sealed partial class DockWindow : FloatingWindow
         magnificationReserve = magnify ? Math.Min(available * .32, (p.IconSize * p.DockScale + 20) * p.DockMagnificationAmount * (p.DockMagnificationNeighbors + 1) * 1.12) : 0;
         fit = CompactLayout.FitDock(entries.Count, available - magnificationReserve, p.IconSize * p.DockScale, p.DockSpacing);
         // Fixed headroom belongs to the expanded layout, never to mouse frames.
-        // The same alpha-clipped Acrylic surface encloses every enlarged icon.
+        // The independent transparent canvas encloses every enlarged icon.
         magnificationHeadroom = magnify ? (fit.Icon + 26) * p.DockMagnificationAmount * 1.08 : 0;
         Surface.Padding = new Thickness(10); Surface.Margin = TransparentInsets;
-        iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 10 + magnificationHeadroom, 10 + magnificationReserve / 2, 10);
+        iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 0, 10 + magnificationReserve / 2, 10);
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
+        items.Width = double.NaN;
         items.Children.Clear();
         var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
         items.Children.Add(SearchSlot(searchWidth));
@@ -195,10 +221,15 @@ internal sealed partial class DockWindow : FloatingWindow
         }
         if (pages > 1) items.Children.Add(PageButton(1, pages));
         items.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        contentWidth = items.DesiredSize.Width; contentHeight = items.DesiredSize.Height;
+        // Measure the individual slots, including their margins, independently
+        // of the previous HWND width. The row must not keep its old layout slot.
+        contentWidth = items.Children.OfType<FrameworkElement>().Sum(child => child.DesiredSize.Width);
+        contentHeight = items.Children.OfType<FrameworkElement>().Select(child => child.DesiredSize.Height).DefaultIfEmpty(44).Max();
+        items.Width = contentWidth;
         magnificationHeadroom = magnify ? DockGeometry.Headroom(contentHeight, p.DockMagnificationAmount) : 0;
+        iconLayer.Height = contentHeight;
         Surface.Margin = TransparentInsets;
-        iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 10 + magnificationHeadroom, 10 + magnificationReserve / 2, 10);
+        iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 0, 10 + magnificationReserve / 2, 10);
         foreach (FrameworkElement child in items.Children) child.VerticalAlignment = VerticalAlignment.Center;
         magnifier.Bind(magnified, p, magnificationReserve);
     }
@@ -209,7 +240,7 @@ internal sealed partial class DockWindow : FloatingWindow
         var icon = new System.Windows.Shapes.Path
         {
             Data = Geometry.Parse("M0,0 H10 V10 H0 Z M12,0 H22 V10 H12 Z M0,12 H10 V22 H0 Z M12,12 H22 V22 H12 Z"),
-            Width = size, Height = size, Stretch = Stretch.Uniform,
+            Width = size, Height = size, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 0, 14),
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
             IsHitTestVisible = false
         };
@@ -238,8 +269,8 @@ internal sealed partial class DockWindow : FloatingWindow
         var size = fit.Icon;
         var panel = new Grid { Height = size + 14, VerticalAlignment = VerticalAlignment.Center };
         var icon = item.Glyph is null ? icons.Get(item.Target, selected?.Handle ?? 0) : null;
-        if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = size, Height = size, Stretch = Stretch.Uniform });
-        else panel.Children.Add(new Viewbox { Width = size, Height = size, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? "\uE8A5", 32) });
+        if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Top, Stretch = Stretch.Uniform });
+        else panel.Children.Add(new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Top, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? "\uE8A5", 32) });
         var indicator = new Border
         {
             Height = 3,
@@ -274,15 +305,17 @@ internal sealed partial class DockWindow : FloatingWindow
         Menu(menu, "Mover para a direita", () => MoveOne(item.Key, 1));
         Menu(menu, Store.IsEditing ? "Concluir edição" : "Editar layout", () => Store.SetEditing(!Store.IsEditing));
         button.ContextMenu = menu;
+        menu.Opened += (_, _) => StopPreviews();
         menu.Closed += (_, _) => { signature = ""; Dispatcher.BeginInvoke(new Action(RefreshApps)); };
         LayoutDrag.Attach(button, "dock", item.Key, () => Store.IsEditing, Reorder);
         AttachFileTarget(button, item, dropIndicator);
+        AttachPreview(button, item);
         if (item.Key == "system:add") Menu(menu, "Adicionar executável manualmente…", AddShortcut);
         return button;
     }
     private FrameworkElement SearchSlot(double width)
     {
-        var slot = new Border { Width = width, Height = Math.Max(36, fit.Icon + 8), VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(14), Padding = new Thickness(3), Margin = new Thickness(0) };
+        var slot = new Border { Width = width, Height = Math.Max(36, fit.Icon + 8), VerticalAlignment = VerticalAlignment.Center, CornerRadius = new CornerRadius(14), Padding = new Thickness(3), Margin = new Thickness(0, 0, 0, 14) };
         slot.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
         var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) }); grid.ColumnDefinitions.Add(new ColumnDefinition());
         var magnify = ActionButton("Pesquisar aplicativos, arquivos e configurações", () => ShowPanel(LauncherPanelMode.Search)); magnify.Style = (Style)FindResource("Think.IconButton"); magnify.Content = Glyph("\uE721", 16); magnify.Padding = new Thickness(2); magnify.Margin = new Thickness(0); grid.Children.Add(magnify);
@@ -308,7 +341,7 @@ internal sealed partial class DockWindow : FloatingWindow
         launcher.Dismissed += () => { lastHover = DateTime.UtcNow; AnimateSearch(false); };
     }
     private void ShowPanel(LauncherPanelMode mode)
-    { SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); }
+    { StopPreviews(); SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); }
     private void ToggleStart()
     { if (launcher?.IsVisible == true && panelMode == LauncherPanelMode.Start) launcher.Dismiss(); else ShowPanel(LauncherPanelMode.Start); }
     internal void ToggleStartFromKeyboard() { if (!IsVisible) Show(); ToggleStart(); }

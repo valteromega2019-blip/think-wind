@@ -1,5 +1,15 @@
 # Histórico do Think Wind
 
+## 0.10 Alfa — 0.10.0-alpha
+
+- Tecla Windows isolada abre o launcher por hook em thread dedicada, desativado durante jogos. Atalho Ctrl+Alt+Espaço opcional.
+- Modo Jogo por primeiro plano, tela cheia e lista de jogos/exceções; esconde interfaces e suspende tarefas não essenciais.
+- Enumeração de janelas assíncrona e atualizações coalescidas.
+- Miniaturas DWM sob demanda, hover configurável e `WM_CLOSE` individual.
+- Painel Bluetooth nativo com descoberta Classic/LE, estado, rádio e pareamento; fallback explícito para perfis sem conexão genérica.
+- Ícones `.lnk` recuperados do destino/recurso, sem overlay, com invalidação de cache.
+- Distribuição e instalador 0.10.0-alpha publicados. Bateria atual: 42 aprovados, 1 falha por timeout na consulta Bluetooth. Comparação histórica curta no Wardogs: usuário sem atraso percebido no Modo Jogo; sem medição física de latência.
+
 ## 0.08 Alfa (0.8.0-alpha) — 2026-10-29
 
 - Reserva superior medida, camada de ícones sem recorte e botão Iniciar dimensionado para ícones grandes.

@@ -17,6 +17,7 @@ internal sealed class ApplicationCatalog : IDisposable
     private readonly List<FileSystemWatcher> watchers = new();
     private readonly DispatcherTimer debounce = new() { Interval = TimeSpan.FromMilliseconds(700) };
     private bool loading, refreshAgain, disposed;
+    private bool suspended;
     private DateTime refreshed;
     internal IReadOnlyList<AppEntry> Items { get; private set; } = Array.Empty<AppEntry>();
     internal string? Warning { get; private set; }
@@ -39,10 +40,16 @@ internal sealed class ApplicationCatalog : IDisposable
     private static string[] StartFolders() => new[] { Environment.GetFolderPath(Environment.SpecialFolder.Programs), Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms) };
     private void OnFilesChanged(object sender, FileSystemEventArgs args) => RequestRefresh();
     private void RequestRefresh()
-    { if (!disposed && !dispatcher.HasShutdownStarted) dispatcher.BeginInvoke(new Action(() => { if (disposed) return; debounce.Stop(); debounce.Start(); })); }
+    { if (!disposed && !suspended && !dispatcher.HasShutdownStarted) dispatcher.BeginInvoke(new Action(() => { if (disposed || suspended) return; debounce.Stop(); debounce.Start(); })); }
+    internal void SetSuspended(bool value)
+    {
+        if (suspended == value) return; suspended = value; debounce.Stop();
+        foreach (var watcher in watchers) watcher.EnableRaisingEvents = !value;
+        if (!value) RequestRefresh();
+    }
     internal async Task RefreshAsync(bool force = false)
     {
-        if (disposed || (!force && DateTime.UtcNow - refreshed < TimeSpan.FromSeconds(30))) return;
+        if (disposed || suspended || (!force && DateTime.UtcNow - refreshed < TimeSpan.FromSeconds(30))) return;
         if (loading) { refreshAgain |= force; return; } loading = true;
         try
         {
@@ -77,7 +84,8 @@ internal sealed class ApplicationCatalog : IDisposable
                         string extension = Path.GetExtension(resolved).ToLowerInvariant();
                         if (id.Length == 0 && extension is not (".exe" or ".com" or ".bat" or ".cmd" or ".msc" or ".lnk" or ".appref-ms")) continue;
                         string key = id.Length > 0 ? "id:" + id : "name:" + name + "|" + resolved;
-                        result.TryAdd(key, new(name, path, category.Length > 0 ? category : "Aplicativos", icons.Get(path), id.Length > 0 ? id : null));
+                        string launchTarget = id.Contains('!') ? @"shell:AppsFolder\" + id : path;
+                        result.TryAdd(key, new(name, launchTarget, category.Length > 0 ? category : "Aplicativos", icons.Get(launchTarget), id.Length > 0 ? id : null));
                     }
                     catch (Exception error) when (error is COMException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or IOException or UnauthorizedAccessException) { }
                     finally { CoreAudio.Release(item); CoreAudio.Release(directory); }

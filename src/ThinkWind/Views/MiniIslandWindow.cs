@@ -10,7 +10,7 @@ using ThinkWind.Native;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
-internal enum MiniIslandKind { Volume, Network, Calendar, Tray }
+internal enum MiniIslandKind { Volume, Network, Calendar, Tray, Bluetooth }
 internal sealed class MiniIslandWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
@@ -19,27 +19,33 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly StackPanel panel = new();
     private readonly Viewbox viewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     private readonly AudioEndpointControl? audio;
+    private readonly AudioEndpointControl? microphone;
     private readonly TrayCard? tray;
     private readonly WifiControl? wifi;
+    private readonly BluetoothControl? bluetooth;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private DateTime nextRefresh;
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
-    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true;
+    internal int ActiveBluetoothWatchers => bluetooth?.ActiveWatchers ?? 0;
+    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true;
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
-        Title = kind switch { MiniIslandKind.Volume => "Think Wind — Mini volume", MiniIslandKind.Calendar => "Think Wind — Calendário", MiniIslandKind.Tray => "Think Wind — Bandeja", _ => "Think Wind — Mini rede" };
+        Title = kind switch { MiniIslandKind.Bluetooth => "Think Wind — Bluetooth", MiniIslandKind.Volume => "Think Wind — Mini volume", MiniIslandKind.Calendar => "Think Wind — Calendário", MiniIslandKind.Tray => "Think Wind — Bandeja", _ => "Think Wind — Mini rede" };
         ShowActivated = true;
         var heading = new DockPanel();
         var close = ActionButton("Fechar", Dismiss); close.Padding = new Thickness(8, 4, 8, 4);
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
-        heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Volume => "Volume", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
+        heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Bluetooth => "Bluetooth", MiniIslandKind.Volume => "Áudio e microfone", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
         panel.Children.Add(heading);
         if (kind == MiniIslandKind.Volume)
         {
-            audio = new AudioEndpointControl(new AudioService(), CoreAudio.Flow.Render); panel.Children.Add(audio);
+            var service = new AudioService();
+            audio = new AudioEndpointControl(service, CoreAudio.Flow.Render); panel.Children.Add(audio);
+            microphone = new AudioEndpointControl(service, CoreAudio.Flow.Capture); panel.Children.Add(microphone);
             audio.LayoutChanged += Position;
+            microphone.LayoutChanged += Position;
             panel.Children.Add(ActionButton("Configurações de som", () => SystemActions.Run("ms-settings:sound")));
         }
         else if (kind == MiniIslandKind.Tray)
@@ -51,6 +57,10 @@ internal sealed class MiniIslandWindow : FloatingWindow
             var calendar = new System.Windows.Controls.Calendar(); calendar.SetResourceReference(StyleProperty, "Think.Calendar");
             calendar.DisplayModeChanged += (_, _) => Position(); panel.Children.Add(calendar);
         }
+        else if (kind == MiniIslandKind.Bluetooth)
+        {
+            bluetooth = new BluetoothControl(); bluetooth.LayoutChanged += Position; panel.Children.Add(bluetooth);
+        }
         else
         {
             wifi = new WifiControl(); wifi.LayoutChanged += Position; panel.Children.Add(wifi);
@@ -60,8 +70,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
         Loaded += (_, _) => { RefreshContent(true); timer.Start(); };
         timer.Tick += (_, _) => { if (IsVisible) RefreshContent(false); };
-        IsVisibleChanged += (_, _) => { wifi?.SetActive(IsVisible); if (!IsVisible) { timer.Stop(); Dismissed?.Invoke(); } };
-        Closed += (_, _) => { timer.Stop(); wifi?.Dispose(); };
+        IsVisibleChanged += (_, _) => { wifi?.SetActive(IsVisible); bluetooth?.SetActive(IsVisible); if (!IsVisible) { timer.Stop(); Dismissed?.Invoke(); } };
+        Closed += (_, _) => { timer.Stop(); wifi?.Dispose(); bluetooth?.Dispose(); };
     }
     internal void Present()
     {
@@ -82,7 +92,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     {
         bool refresh = force || DateTime.UtcNow >= nextRefresh;
         if (refresh) nextRefresh = DateTime.UtcNow.AddSeconds(5);
-        if (audio is not null) audio.Poll(refresh);
+        if (audio is not null) { audio.Poll(refresh); microphone?.Poll(refresh); }
         else if (tray is not null) tray.Refresh();
         Position();
     }

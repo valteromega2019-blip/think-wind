@@ -7,6 +7,11 @@ using System.Text;
 namespace ThinkWind.Native;
 internal static class Desktop
 {
+    private static nint lastIslandApplication;
+    private static System.Drawing.Rectangle lastIslandMonitor;
+    private static nint maximizedIslandWindow;
+    private static System.Drawing.Rectangle maximizedIslandMonitor;
+    private static DateTime nextMaximizedSearch;
     private delegate bool EnumProc(nint hwnd, nint param);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc callback, nint param);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint hwnd);
@@ -17,6 +22,16 @@ internal static class Desktop
     [DllImport("user32.dll")] internal static extern nint GetForegroundWindow();
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(nint hwnd);
     [DllImport("user32.dll")] private static extern bool IsIconic(nint hwnd);
+    [DllImport("user32.dll")] private static extern bool IsZoomed(nint hwnd);
+    [DllImport("user32.dll")] private static extern bool IsWindowArranged(nint hwnd);
+    private static bool arrangedAvailable = true;
+    private static bool IsSnapped(nint window)
+    {
+        if (!arrangedAvailable) return false;
+        try { return IsWindowArranged(window); }
+        catch (EntryPointNotFoundException) { arrangedAvailable = false; return false; }
+    }
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(nint hwnd, StringBuilder name, int count);
     [DllImport("user32.dll")] private static extern bool ShowWindow(nint hwnd, int command);
     [DllImport("user32.dll")] private static extern uint SendInput(uint count, INPUT[] input, int size);
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(nint hwnd, int attribute, out int value, int size);
@@ -74,6 +89,79 @@ internal static class Desktop
     internal static bool EscapeDown => (GetAsyncKeyState(0x1B) & 0x8000) != 0;
     internal static bool ForegroundIsOurs()
     { GetWindowThreadProcessId(GetForegroundWindow(), out var process); return process == Environment.ProcessId; }
+    internal static bool? ForegroundHasApplication(OverlayChrome.Display display)
+    {
+        var window = GetForegroundWindow(); if (window == 0) return null;
+        GetWindowThreadProcessId(window, out var process);
+        if (process == Environment.ProcessId) return null;
+        var name = new StringBuilder(64); GetClassName(window, name, name.Capacity);
+        if (name.ToString() is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return null;
+        if (name.ToString() is "Progman" or "WorkerW")
+            return display.Bounds.Contains(System.Windows.Forms.Cursor.Position) ? false : null;
+        if (System.Windows.Forms.Screen.FromHandle(window).Bounds != display.Bounds) return null;
+        if (IsIconic(window) || !IsWindowVisible(window)) return null;
+        return true;
+    }
+    internal static bool? ForegroundCoversDisplay(OverlayChrome.Display display)
+    {
+        var window = GetForegroundWindow();
+        if (window == 0) return LastIslandCoverage(display);
+        GetWindowThreadProcessId(window, out var process);
+        if (process == Environment.ProcessId) return LastIslandCoverage(display);
+        var name = new StringBuilder(64); GetClassName(window, name, name.Capacity);
+        if (name.ToString() is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return LastIslandCoverage(display);
+        if (name.ToString() is "Progman" or "WorkerW")
+        {
+            if (!display.Bounds.Contains(System.Windows.Forms.Cursor.Position)) return LastIslandCoverage(display);
+            lastIslandApplication = 0; lastIslandMonitor = display.Bounds; return false;
+        }
+        if (System.Windows.Forms.Screen.FromHandle(window).Bounds != display.Bounds) return LastIslandCoverage(display);
+        lastIslandApplication = window; lastIslandMonitor = display.Bounds;
+        return WindowCoversDisplay(window, display) == true || HasMaximizedApplication(display);
+    }
+    private static bool? LastIslandCoverage(OverlayChrome.Display display)
+    {
+        if (lastIslandMonitor == display.Bounds && lastIslandApplication != 0
+            && WindowCoversDisplay(lastIslandApplication, display) == true) return true;
+        return HasMaximizedApplication(display);
+    }
+    private static bool HasMaximizedApplication(OverlayChrome.Display display)
+    {
+        if (maximizedIslandMonitor != display.Bounds)
+        { maximizedIslandMonitor = display.Bounds; maximizedIslandWindow = 0; nextMaximizedSearch = DateTime.MinValue; }
+        bool Eligible(nint window)
+        {
+            if (window == 0 || !IsWindowVisible(window) || IsIconic(window) || (!IsZoomed(window) && !IsSnapped(window))) return false;
+            if ((GetWindowLong(window, -20) & 0x80) != 0 || GetWindow(window, 4) != 0) return false;
+            GetWindowThreadProcessId(window, out var pid); if (pid == Environment.ProcessId) return false;
+            if (DwmGetWindowAttribute(window, 14, out var cloaked, 4) >= 0 && cloaked != 0) return false;
+            return WindowCoversDisplay(window, display) == true;
+        }
+        // Reuse a confirmed maximized HWND even when a small window takes focus.
+        if (Eligible(maximizedIslandWindow)) return true;
+        maximizedIslandWindow = 0;
+        if (DateTime.UtcNow < nextMaximizedSearch) return false;
+        nextMaximizedSearch = DateTime.UtcNow.AddMilliseconds(250);
+        EnumWindows((window, _) =>
+        {
+            if (!Eligible(window)) return true;
+            maximizedIslandWindow = window; return false;
+        }, 0);
+        return maximizedIslandWindow != 0;
+    }
+    private static bool? WindowCoversDisplay(nint window, OverlayChrome.Display display)
+    {
+        if (!IsWindowVisible(window) || IsIconic(window)) return false;
+        if (System.Windows.Forms.Screen.FromHandle(window).Bounds != display.Bounds) return false;
+        // Windows Snap is a distinct state: arranged windows are not maximized,
+        // but must keep the island in the same application/status-strip mode.
+        if (IsSnapped(window)) return true;
+        if (!OverlayChrome.GetWindowRect(window, out var rect)) return null;
+        var bounds = display.Bounds; var work = display.Work;
+        bool coversWork = rect.Left <= work.Left + 2 && rect.Right >= work.Right - 2 && rect.Top <= work.Top + 2 && rect.Bottom >= work.Bottom - 2;
+        bool fullscreen = rect.Left <= bounds.Left + 2 && rect.Right >= bounds.Right - 2 && rect.Top <= bounds.Top + 2 && rect.Bottom >= bounds.Bottom - 2;
+        return (IsZoomed(window) && coversWork) || fullscreen;
+    }
     internal static void Key(ushort key)
     {
         var inputs = new[] { new INPUT { Type = 1, Data = new INPUTUNION { Keyboard = new KEYBOARD { Key = key } } }, new INPUT { Type = 1, Data = new INPUTUNION { Keyboard = new KEYBOARD { Key = key, Flags = 2 } } } };

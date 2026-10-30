@@ -27,6 +27,26 @@ internal sealed class ShellIcons
     [DllImport("user32.dll", EntryPoint = "GetClassLongPtrW")] private static extern nint GetClassIcon(nint hwnd, int index);
     private readonly Dictionary<string, ImageSource?> cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> resolved = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, long> resolvedVersions = new(StringComparer.OrdinalIgnoreCase);
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern uint ExtractIconEx(string file, int index, out nint large, out nint small, uint count);
+    private static long Stamp(string path)
+    { try { return File.Exists(path) ? File.GetLastWriteTimeUtc(path).Ticks : 0; } catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { return 0; } }
+    private static ImageSource? ShortcutIcon(string target)
+    {
+        if (!Path.GetExtension(target).Equals(".lnk", StringComparison.OrdinalIgnoreCase) || !File.Exists(target)) return null;
+        object? shell = null, shortcut = null; nint large = 0, small = 0;
+        try
+        {
+            shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!); shortcut = ((dynamic)shell!).CreateShortcut(target);
+            string location = ((dynamic)shortcut).IconLocation; int comma = location.LastIndexOf(',');
+            string file = Environment.ExpandEnvironmentVariables((comma >= 0 ? location[..comma] : location).Trim().Trim('"'));
+            int index = comma >= 0 && int.TryParse(location[(comma + 1)..], out int number) ? number : 0;
+            if (file.Length > 0 && File.Exists(file) && ExtractIconEx(file, index, out large, out small, 1) > 0 && large != 0) return FromIcon(large);
+        }
+        catch (Exception error) when (error is COMException or ArgumentException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException) { }
+        finally { if (large != 0) DestroyIcon(large); if (small != 0) DestroyIcon(small); CoreAudio.Release(shortcut); CoreAudio.Release(shell); }
+        return null;
+    }
     [StructLayout(LayoutKind.Sequential)] private struct ImageSize { internal int Width, Height; }
     [ComImport, Guid("BCC18B79-BA16-442F-80C4-8A59C30C463B"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface ImageFactory { [PreserveSig] int GetImage(ImageSize size, uint flags, out nint bitmap); }
@@ -41,6 +61,7 @@ internal sealed class ShellIcons
     // Called only by an STA worker: extracting a shell icon may perform disk I/O.
     internal static ImageSource? ReadLarge(string target)
     {
+        var shortcutIcon = ShortcutIcon(target); if (shortcutIcon is not null) return shortcutIcon;
         ImageFactory? factory = null; nint bitmap = 0;
         try
         {
@@ -62,7 +83,9 @@ internal sealed class ShellIcons
 
     internal string Resolve(string target)
     {
-        if (resolved.TryGetValue(target, out var cached)) return cached;
+        long version = Stamp(target);
+        if (resolved.TryGetValue(target, out var cached) && resolvedVersions.GetValueOrDefault(target) == version) return cached;
+        resolvedVersions[target] = version;
         if (target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase))
         {
             string settings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "ImmersiveControlPanel", "SystemSettings.exe");
@@ -94,7 +117,7 @@ internal sealed class ShellIcons
                 catch (ArgumentException) { }
             }
         }
-        if (resolved.Count > 256) resolved.Clear();
+        if (resolved.Count > 256) { resolved.Clear(); resolvedVersions.Clear(); resolvedVersions[target] = version; }
         resolved[target] = path; return path;
     }
     internal ImageSource? Get(string? target, nint window = 0)
@@ -114,7 +137,10 @@ internal sealed class ShellIcons
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
         }
         if (string.IsNullOrWhiteSpace(target)) return null;
-        if (cache.TryGetValue(target, out var value)) return value;
+        string targetKey = VersionedKey(target);
+        if (cache.TryGetValue(targetKey, out var value)) return value;
+        var shortcutIcon = ShortcutIcon(target);
+        if (shortcutIcon is not null) { Remember(targetKey, shortcutIcon); return shortcutIcon; }
         FileInfo info = default;
         try
         {
@@ -131,16 +157,17 @@ internal sealed class ShellIcons
             }
             else
             {
-                var path = File.Exists(target) ? target : Resolve(target);
+                var path = Resolve(target);
                 SHGetFileInfo(path, 0, out info, (uint)Marshal.SizeOf<FileInfo>(), 0x100);
             }
             value = info.Icon == 0 ? null : FromIcon(info.Icon);
         }
         catch (Exception e) when (e is ArgumentException or IOException or System.ComponentModel.Win32Exception) { value = null; }
         finally { if (info.Icon != 0) DestroyIcon(info.Icon); }
-        Remember(target, value); return value;
+        Remember(targetKey, value); return value;
     }
     private void Remember(string key, ImageSource? image) { if (image is null) return; if (cache.Count > 256) cache.Clear(); cache[key] = image; }
+    internal string VersionedKey(string target) => target + "|" + Stamp(target) + "|" + Stamp(Resolve(target));
     private static ImageSource FromIcon(nint icon)
     {
         var image = Imaging.CreateBitmapSourceFromHIcon(icon, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());

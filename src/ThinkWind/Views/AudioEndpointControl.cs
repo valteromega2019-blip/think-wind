@@ -49,7 +49,8 @@ internal sealed class AudioEndpointControl : Border
         System.Windows.Automation.AutomationProperties.SetName(devices, "Dispositivo a controlar · " + name);
         System.Windows.Automation.AutomationProperties.SetName(level, "Volume · " + name);
         System.Windows.Automation.AutomationProperties.SetName(mute, "Alternar mudo · " + name);
-        devices.ToolTip = direction == CoreAudio.Flow.Render ? "Altera a saída padrão do Windows para sons do sistema e multimídia." : "Seleciona o microfone a controlar.";
+        devices.ToolTip = direction == CoreAudio.Flow.Render ? "Altera a saída padrão do Windows para sons do sistema e multimídia." : "Altera o microfone padrão do Windows e das comunicações.";
+        devicePicker.ToolTip = devices.ToolTip;
         panel.Children.Add(devices);
         var row = new DockPanel();
         DockPanel.SetDock(mute, Dock.Right); row.Children.Add(mute);
@@ -59,10 +60,12 @@ internal sealed class AudioEndpointControl : Border
         {
             if (updating) return;
             selectionError = null;
-            if (flow == CoreAudio.Flow.Render && devices.SelectedItem is Choice choice && choice.Id is not null)
+            if (devices.SelectedItem is Choice choice && choice.Id is not null)
             {
-                try { audio.SetDefaultOutput(choice.Id); }
-                catch (AudioUnavailableException) { selectionError = "O Windows não confirmou a troca de saída. A seleção foi sincronizada novamente com o sistema."; }
+                try { if (flow == CoreAudio.Flow.Render) audio.SetDefaultOutput(choice.Id); else audio.SetDefaultInput(choice.Id); }
+                catch (AudioUnavailableException) { selectionError = flow == CoreAudio.Flow.Render
+                    ? "O Windows não confirmou a troca de saída. A seleção foi sincronizada novamente com o sistema."
+                    : "O Windows não confirmou a troca do microfone. A seleção foi sincronizada novamente com o sistema."; }
             }
             observer?.Rebind(); Poll(true); LayoutChanged?.Invoke();
         };
@@ -76,7 +79,7 @@ internal sealed class AudioEndpointControl : Border
             if (updating || target is null) return;
             Execute(() =>
             {
-                var actual = flow == CoreAudio.Flow.Render ? audio.Read(flow, null) : target;
+                var actual = audio.Read(flow, null);
                 audio.SetVolume(flow, actual.Id, level.Value); current = audio.Read(flow, actual.Id); percent.Text = $"{current.Volume:0}%";
             });
         };
@@ -85,7 +88,7 @@ internal sealed class AudioEndpointControl : Border
             var target = current;
             if (target is null) return;
             // Read again to avoid toggling a stale mute state changed elsewhere.
-            Execute(() => { var latest = audio.Read(flow, flow == CoreAudio.Flow.Render ? null : target.Id); audio.SetMuted(flow, latest.Id, !latest.Muted); });
+            Execute(() => { var latest = audio.Read(flow, null); audio.SetMuted(flow, latest.Id, !latest.Muted); });
             Poll(false);
         };
     }
@@ -96,27 +99,25 @@ internal sealed class AudioEndpointControl : Border
         try
         {
             updating = true;
-            var systemDefault = flow == CoreAudio.Flow.Render ? audio.Read(flow, null) : null;
-            if (refreshDevices || devices.Items.Count == 0 || (systemDefault is not null && !devices.Items.Cast<Choice>().Any(choice => choice.Id == systemDefault.Id)))
+            var systemDefault = audio.Read(flow, null);
+            if (refreshDevices || devices.Items.Count == 0 || !devices.Items.Cast<Choice>().Any(choice => choice.Id == systemDefault.Id))
             {
                 var available = audio.Devices(flow);
                 var signature = string.Join("|", available.Select(d => d.Id + ":" + d.Name));
                 if (devices.Items.Count == 0 || signature != deviceSignature)
                 {
-                    var selected = systemDefault?.Id ?? (devices.SelectedItem as Choice)?.Id;
+                    var selected = systemDefault.Id;
                     devices.Items.Clear();
-                    if (flow == CoreAudio.Flow.Capture) devices.Items.Add(new Choice(null, "Seguir padrão do Windows"));
                     foreach (var device in available) devices.Items.Add(new Choice(device.Id, device.Name));
-                    // Keep the user's explicit target even when it disconnects.
-                    // Never silently redirect a volume/mute action to another device.
-                    if (selected is not null && !available.Any(d => d.Id == selected))
+                    // Always show the endpoint actually reported by Windows.
+                    if (!available.Any(d => d.Id == selected))
                         devices.Items.Add(new Choice(selected, "Dispositivo desconectado"));
                     devices.SelectedItem = devices.Items.Cast<Choice>().FirstOrDefault(c => c.Id == selected) ?? (devices.Items.Count > 0 ? devices.Items[0] : null);
                     deviceSignature = signature;
                 }
             }
-            current = systemDefault ?? audio.Read(flow, (devices.SelectedItem as Choice)?.Id);
-            if (systemDefault is not null) devices.SelectedItem = devices.Items.Cast<Choice>().FirstOrDefault(choice => choice.Id == systemDefault.Id);
+            current = systemDefault;
+            devices.SelectedItem = devices.Items.Cast<Choice>().FirstOrDefault(choice => choice.Id == systemDefault.Id);
             // Programmatic refresh must never write back to the endpoint.
             // Mouse drags are excluded above; keyboard input runs synchronously.
             level.Value = current.Volume;
@@ -136,7 +137,7 @@ internal sealed class AudioEndpointControl : Border
     private void Observe()
     {
         if (!IsLoaded || !IsVisible) { observer?.Dispose(); observer = null; return; }
-        observer ??= new AudioObserver(Dispatcher, flow, () => flow == CoreAudio.Flow.Render ? null : (devices.SelectedItem as Choice)?.Id, refresh => Poll(refresh));
+        observer ??= new AudioObserver(Dispatcher, flow, () => null, refresh => Poll(refresh));
         Poll(true);
     }
     internal void SetCompact(bool value)
@@ -175,6 +176,7 @@ internal sealed class AudioEndpointControl : Border
     private void Unavailable(string message)
     {
         current = null; status.Text = message; ToolTip = message; percent.Text = "—";
+        status.Visibility = Visibility.Visible;
         level.IsEnabled = mute.IsEnabled = false;
     }
 }

@@ -40,20 +40,30 @@ internal sealed class TrayCard : StackPanel
     private void PreferencesChanged(object? sender, EventArgs args) { if (IsVisible && !IsInteracting) Render(); }
     internal async void Refresh()
     {
+        var local = TrayService.LocalEntries();
+        if (IsVisible && local.Length > 0)
+        {
+            var names = local.Select(item => item.DisplayName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            entries = entries.Where(item => !names.Contains(item.DisplayName)).Concat(local).ToList();
+            Render();
+        }
         if (reading || IsInteracting || DateTime.UtcNow < nextRefresh) return;
         reading = true; nextRefresh = DateTime.UtcNow.AddSeconds(5);
         try
         {
             var pending = TrayService.ReadAsync();
-            if (await Task.WhenAny(pending, Task.Delay(1800)) != pending) ShowError("Aguardando os ícones dos aplicativos…");
-            entries = (await pending).DistinctBy(entry => entry.Key).ToList();
+            if (await Task.WhenAny(pending, Task.Delay(1800)) != pending)
+            { if (IsVisible) ShowError("Alguns ícones ainda não responderam. Tentaremos novamente; os ícones disponíveis continuam acessíveis."); return; }
+            var available = await pending;
+            if (!IsVisible) return;
+            entries = available.DistinctBy(entry => entry.Key).ToList();
             var unseen = entries.Where(entry => !store.Value.TrayActivity.ContainsKey(entry.Key)).ToArray();
             if (unseen.Length > 0) store.Update(p => { foreach (var entry in unseen) p.TrayActivity.TryAdd(entry.Key, new(0, DateTime.MinValue, DateTime.UtcNow)); });
             status.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed; status.Text = "O Explorer ainda não disponibilizou ícones para esta área. A atualização é automática.";
             Render();
         }
         catch (Exception error) when (error is System.Runtime.InteropServices.COMException or InvalidOperationException or UnauthorizedAccessException)
-        { ShowError("Não foi possível atualizar os ícones. Tentaremos novamente automaticamente."); }
+        { if (IsVisible) ShowError("Não foi possível atualizar os ícones. Tentaremos novamente automaticamente."); }
         finally { reading = false; }
     }
     private void ShowError(string text) { status.Text = text; status.Visibility = Visibility.Visible; LayoutChanged?.Invoke(); }
@@ -86,12 +96,12 @@ internal sealed class TrayCard : StackPanel
             var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; content.Children.Add(image); content.Children.Add(label);
             var button = new Button { Content = content, Margin = new Thickness(2), Padding = new Thickness(2), ToolTip = entry.Name + "\nCtrl + botão direito: fixar ou desafixar" };
             button.SetResourceReference(StyleProperty, "Think.IconButton"); System.Windows.Automation.AutomationProperties.SetName(button, entry.DisplayName);
-            button.Click += async (_, _) => await Invoke(key, false);
-            button.PreviewMouseRightButtonUp += async (_, e) => { e.Handled = true; if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) FavoritesMenu(button, key); else await Invoke(key, true); };
+            button.Click += async (_, _) => await Invoke(key, false, button);
+            button.PreviewMouseRightButtonUp += async (_, e) => { e.Handled = true; if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) FavoritesMenu(button, key); else await Invoke(key, true, button); };
             button.PreviewKeyDown += async (_, e) =>
             {
                 if (e.Key == Key.F && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { ToggleFavorite(key); e.Handled = true; }
-                else if (e.Key == Key.Apps || e.Key == Key.F10 && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) { e.Handled = true; if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) FavoritesMenu(button, key); else await Invoke(key, true); }
+                else if (e.Key == Key.Apps || e.Key == Key.F10 && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) { e.Handled = true; if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) FavoritesMenu(button, key); else await Invoke(key, true, button); }
             };
             visuals[key] = (image, label); grid.Children.Add(button);
         }
@@ -106,10 +116,19 @@ internal sealed class TrayCard : StackPanel
         }
         LayoutChanged?.Invoke();
     }
-    private async Task Invoke(string key, bool context)
+    private async Task Invoke(string key, bool context, Button? anchor = null)
     {
         var entry = entries.FirstOrDefault(candidate => candidate.Key == key); if (entry is null) return;
-        if (!await TrayService.InvokeAsync(entry, context)) { ShowError(context ? "Este aplicativo não disponibiliza seu menu por acessibilidade." : "Este aplicativo não disponibiliza esta ação por acessibilidade."); return; }
+        bool invoked;
+        menus++;
+        try { invoked = await TrayService.InvokeAsync(entry, context); }
+        finally { menus = Math.Max(0, menus - 1); }
+        if (!invoked)
+        {
+            ShowError(context ? "Menu nativo não exposto por este aplicativo. Use as ações disponíveis." : "Ação de bandeja não exposta. Você pode abrir o aplicativo pelas ações disponíveis.");
+            if (anchor is not null && IsVisible) FavoritesMenu(anchor, key);
+            return;
+        }
         store.Update(p => { var activity = p.TrayActivity.GetValueOrDefault(key) ?? new(0, DateTime.MinValue, DateTime.UtcNow); p.TrayActivity[key] = activity with { Count = Math.Min(1_000_000, activity.Count + 1), LastUsedUtc = DateTime.UtcNow }; });
     }
     private void ToggleFavorite(string key) => store.Update(p => { if (!p.TrayFavorites.Remove(key)) p.TrayFavorites.Add(key); });
@@ -118,6 +137,12 @@ internal sealed class TrayCard : StackPanel
         var menu = new ContextMenu { PlacementTarget = button };
         var pin = new MenuItem { Header = store.Value.TrayFavorites.Contains(key) ? "Desafixar do início" : "Fixar no início da grade" }; pin.Click += (_, _) => ToggleFavorite(key); menu.Items.Add(pin);
         var native = new MenuItem { Header = "Menu original do aplicativo" }; native.Click += async (_, _) => await Invoke(key, true); menu.Items.Add(native);
+        var entry = entries.FirstOrDefault(item => item.Key == key);
+        native.IsEnabled = entry?.Element is not null || entry?.LocalAction is not null;
+        if (entry?.Executable is string executable && !string.IsNullOrWhiteSpace(executable) && System.IO.File.Exists(executable))
+        {
+            var open = new MenuItem { Header = "Abrir aplicativo" }; open.Click += (_, _) => SystemActions.Launch(executable); menu.Items.Add(open);
+        }
         menu.Opened += (_, _) => menus++; menu.Closed += (_, _) => { menus = Math.Max(0, menus - 1); signature = ""; Render(); }; menu.IsOpen = true;
     }
 }

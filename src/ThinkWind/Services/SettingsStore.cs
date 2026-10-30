@@ -13,6 +13,13 @@ public sealed class Preferences
     public double DockScale { get; set; } = 1;
     public double TintOpacity { get; set; } = .72;
     public double InnerSurfaceOpacity { get; set; } = .5;
+    public bool GameModeEnabled { get; set; } = true;
+    public bool StartHotkeyEnabled { get; set; }
+    public bool WindowsKeyOpensLauncher { get; set; } = true;
+    public bool WindowPreviewsEnabled { get; set; } = true;
+    public double WindowPreviewDelayMilliseconds { get; set; } = 400;
+    public string GameModeInclude { get; set; } = "WardogsClient-Win64-Shipping";
+    public string GameModeExclude { get; set; } = "msedge;chrome;firefox;Code;steam;steamwebhelper";
     public bool AutoHide { get; set; } = true;
     public bool DockMagnification { get; set; } = true;
     public double DockMagnificationAmount { get; set; } = .5;
@@ -45,8 +52,14 @@ public sealed class Preferences
     public double IslandHorizontalOffset { get; set; }
     public double IslandScale { get; set; } = 1;
     public double IslandExpandedWidth { get; set; } = 780;
+    public string IslandPanelSide { get; set; } = "Right";
     public double IslandSpacing { get; set; } = 6;
     public bool IslandAutoCollapse { get; set; } = true;
+    public bool IslandReduceOverMaximized { get; set; } = true;
+    public bool IslandMatchAppColor { get; set; } = true;
+    public string WeatherCity { get; set; } = "";
+    public double? WeatherLatitude { get; set; }
+    public double? WeatherLongitude { get; set; }
     public double IslandCollapseSeconds { get; set; } = .45;
     public double AnimationMilliseconds { get; set; } = 220;
     public List<string> DockOrder { get; set; } = new();
@@ -121,6 +134,7 @@ public sealed class SettingsStore
             p.DockHorizontalOffset = 0; p.DockBottomOffset = defaults.DockBottomOffset;
             p.DockMaterial = defaults.DockMaterial; p.DockOpacity = .72; p.AutoHide = defaults.AutoHide;
             p.DockCollapseSeconds = defaults.DockCollapseSeconds; p.DockSearchMode = defaults.DockSearchMode;
+            p.WindowPreviewsEnabled = defaults.WindowPreviewsEnabled; p.WindowPreviewDelayMilliseconds = defaults.WindowPreviewDelayMilliseconds;
             p.DockMagnification = defaults.DockMagnification; p.DockMagnificationAmount = defaults.DockMagnificationAmount;
             p.DockMagnificationSpeed = defaults.DockMagnificationSpeed; p.DockMagnificationNeighbors = defaults.DockMagnificationNeighbors;
         });
@@ -134,6 +148,8 @@ public sealed class SettingsStore
             p.QuickOrder = defaults.QuickOrder; p.HiddenQuickControls = defaults.HiddenQuickControls;
             p.IslandScale = 1; p.IslandExpandedWidth = defaults.IslandExpandedWidth; p.IslandSpacing = defaults.IslandSpacing;
             p.IslandRadius = defaults.IslandRadius; p.IslandHorizontalOffset = 0;
+            p.IslandPanelSide = defaults.IslandPanelSide;
+            p.IslandMatchAppColor = defaults.IslandMatchAppColor;
             p.IslandAutoCollapse = defaults.IslandAutoCollapse; p.IslandCollapseSeconds = defaults.IslandCollapseSeconds;
             p.IslandMaterial = defaults.IslandMaterial; p.IslandOpacity = .72;
             p.ShowAudio = p.ShowMemory = p.ShowBattery = true;
@@ -147,6 +163,8 @@ public sealed class SettingsStore
         p.DockScale = Limit(p.DockScale, .75, 1.5, 1); p.TintOpacity = Limit(p.TintOpacity, .2, 1, .72);
         p.DockCollapseSeconds = Limit(p.DockCollapseSeconds, 0, 10, .8);
         p.InnerSurfaceOpacity = Limit(p.InnerSurfaceOpacity, .1, .9, .5);
+        p.WindowPreviewDelayMilliseconds = Limit(p.WindowPreviewDelayMilliseconds, 150, 1500, 400);
+        p.GameModeInclude = (p.GameModeInclude ?? "").Trim(); p.GameModeExclude = (p.GameModeExclude ?? "").Trim();
         p.DockMagnificationAmount = Limit(p.DockMagnificationAmount, .4, .6, .5);
         p.DockMagnificationSpeed = Limit(p.DockMagnificationSpeed, .5, 2, 1);
         p.DockMagnificationNeighbors = Math.Clamp(p.DockMagnificationNeighbors, 0, 4);
@@ -165,6 +183,7 @@ public sealed class SettingsStore
         p.IslandHorizontalOffset = Limit(p.IslandHorizontalOffset, -4000, 4000, 0);
         p.IslandScale = Limit(p.IslandScale, .8, 1.4, 1); p.IslandExpandedWidth = Limit(p.IslandExpandedWidth, 400, 900, 780);
         p.IslandCollapseSeconds = Limit(p.IslandCollapseSeconds, 0, 10, .45);
+        p.IslandPanelSide = p.IslandPanelSide is "Left" or "Right" ? p.IslandPanelSide : "Right";
         p.AnimationMilliseconds = Limit(p.AnimationMilliseconds, 0, 600, 220);
         p.Theme = p.Theme is "Auto" or "Dark" or "Light" ? p.Theme : "Auto";
         p.DockMaterial = Material(p.DockMaterial); p.IslandMaterial = Material(p.IslandMaterial);

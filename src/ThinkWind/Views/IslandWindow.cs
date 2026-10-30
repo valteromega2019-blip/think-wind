@@ -12,7 +12,7 @@ using ThinkWind.Native;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
-internal sealed class IslandWindow : FloatingWindow
+internal sealed partial class IslandWindow : FloatingWindow
 {
     protected override bool AttachedTop => true;
     private readonly IslandInteraction interaction = new();
@@ -35,6 +35,7 @@ internal sealed class IslandWindow : FloatingWindow
     private readonly Viewbox hoverViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     private readonly BrightnessControl brightness;
     private readonly MediaCard media = new();
+    private readonly WeatherWidget weather;
     private readonly TrayCard trayCard;
     private readonly System.Windows.Controls.Calendar calendar = new() { IsTodayHighlighted = true, SelectionMode = CalendarSelectionMode.SingleDate };
     private readonly TextBlock connectionStatus = new() { FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4) };
@@ -61,6 +62,7 @@ internal sealed class IslandWindow : FloatingWindow
     public IslandWindow(SettingsStore store, Action settings) : base(store)
     {
         Title = "Think Wind — Dynamic Island"; openSettings = settings;
+        weather = new WeatherWidget(store);
         brightness = new BrightnessControl(() => Display.Bounds);
         trayCard = new TrayCard(store);
         calendar.SetResourceReference(StyleProperty, "Think.Calendar");
@@ -86,12 +88,12 @@ internal sealed class IslandWindow : FloatingWindow
         BuildBodies();
         Loaded += (_, _) => { RefreshSettings(); UpdateClock(); timer.Start(); };
         activation.Tick += (_, _) => { if (NearActivationZone && !interaction.MiniOpen) { if (!hoverEnter.IsEnabled) hoverEnter.Start(); } else if (!IsMouseOver) hoverEnter.Stop(); };
-        timer.Tick += (_, _) => { UpdateClock(); RefreshAudio(); UpdateHoverStatus(); if (contentResizePending && !ControlsBusy) ModuleSizeChanged(); if (IsVisible && Stage == IslandStage.Full) { if (Store.ModuleVisible("background")) trayCard.Refresh(); if (Store.ModuleVisible("connections")) brightness.Refresh(); } };
-        hoverEnter.Tick += (_, _) => { hoverEnter.Stop(); if ((IsMouseOver || NearActivationZone) && !interaction.MiniOpen) Transition(() => interaction.Enter()); };
+        timer.Tick += (_, _) => { RefreshAdaptiveReveal(); UpdateClock(); RefreshAudio(); UpdateHoverStatus(); weather.Poll(); if (contentResizePending && !ControlsBusy) ModuleSizeChanged(); if (IsVisible && Stage == IslandStage.Full) { if (Store.ModuleVisible("background")) trayCard.Refresh(); if (Store.ModuleVisible("connections")) brightness.Refresh(); } };
+        hoverEnter.Tick += (_, _) => { hoverEnter.Stop(); if (!edgeReduced && (IsMouseOver || NearActivationZone) && !interaction.MiniOpen) Transition(() => interaction.Enter()); };
         hoverLeave.Tick += (_, _) =>
         {
             hoverLeave.Stop();
-            if (!Store.Value.IslandAutoCollapse || (Stage == IslandStage.Compact && !interaction.MiniOpen) || !IsVisible) return;
+            if (!AdaptiveCollapse || (Stage == IslandStage.Compact && !interaction.MiniOpen) || !IsVisible) return;
             if (PointerInsideGroup) { CancelCollapse(); return; }
             if (PointerInsideBridge) { WaitForBridge(); return; }
             if (InteractionInProgress) { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(100); hoverLeave.Start(); return; }
@@ -103,7 +105,7 @@ internal sealed class IslandWindow : FloatingWindow
         MouseEnter += (_, _) =>
         {
             CancelCollapse();
-            if (Stage == IslandStage.Compact && !interaction.MiniOpen) { hoverEnter.Stop(); hoverEnter.Start(); }
+            if (!edgeReduced && Stage == IslandStage.Compact && !interaction.MiniOpen) { hoverEnter.Stop(); hoverEnter.Start(); }
         };
         MouseLeave += (_, _) => { hoverEnter.Stop(); ScheduleCollapse(); };
         LostMouseCapture += (_, _) => { if (contentResizePending) Dispatcher.BeginInvoke(new Action(ModuleSizeChanged)); };
@@ -121,7 +123,13 @@ internal sealed class IslandWindow : FloatingWindow
         brightness.LayoutChanged += ModuleSizeChanged;
         LayoutDrag.Completed += DragCompleted;
         Closed += (_, _) => { timer.Stop(); activation.Stop(); hoverEnter.Stop(); hoverLeave.Stop(); motion.Cancel(MotionElements()); LayoutDrag.Completed -= DragCompleted; media.Dispose(); };
-        IsVisibleChanged += (_, _) => { if (!IsVisible) { activation.Stop(); hoverEnter.Stop(); CancelCollapse(); DismissMinis(); motion.Cancel(MotionElements()); media.SetActive(false); } else UpdateStageVisibility(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { timer.Stop(); activation.Stop(); hoverEnter.Stop(); CancelCollapse(); DismissMinis(); motion.Cancel(MotionElements()); media.SetActive(false); } else { timer.Start(); UpdateStageVisibility(); } };
+        IsVisibleChanged += (_, _) => RefreshStatusReservation();
+        Closed += (_, _) => statusReservation?.Dispose();
+        IsVisibleChanged += (_, _) => { if (!IsVisible) statusWindow?.Hide(); else SyncStatusSurface(); };
+        Closed += (_, _) => statusWindow?.Close();
+        Closed += (_, _) => weather.Dispose();
+        IsVisibleChanged += (_, _) => { if (!IsVisible) weather.SetActive(false); };
     }
     private void DragCompleted() { RefreshSettings(); ScheduleCollapse(); }
     private Border HoverCard(string title, UIElement child)
@@ -135,7 +143,7 @@ internal sealed class IslandWindow : FloatingWindow
         var connections = new WrapPanel();
         foreach (var control in LayoutCatalog.QuickControls.Where(q => q.Id is "wifi" or "bluetooth" or "airplane"))
         {
-            var tile = ActionButton(control.Name, () => { if (control.Id == "wifi") ShowMini(MiniIslandKind.Network); else SystemActions.Run(control.Target!); }, control.Id == "wifi" ? "Gerenciar redes Wi-Fi" : "Abrir configurações de " + control.Name);
+            var tile = ActionButton(control.Name, () => { if (control.Id == "wifi") ShowMini(MiniIslandKind.Network); else if (control.Id == "bluetooth") ShowMini(MiniIslandKind.Bluetooth); else SystemActions.Run(control.Target!); }, control.Id == "wifi" ? "Gerenciar redes Wi-Fi" : "Abrir configurações de " + control.Name);
             var content = new StackPanel(); content.Children.Add(Glyph(control.Glyph, 22));
             content.Children.Add(new TextBlock { Text = control.Name, FontSize = 11, Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
             tile.Content = content; tile.Width = 42; tile.Height = 56; tile.Padding = new Thickness(2); tile.Margin = new Thickness(2);
@@ -164,11 +172,13 @@ internal sealed class IslandWindow : FloatingWindow
         var alerts = ActionButton("Abrir notificações", () => Desktop.Chord(0x5B, 0x4E)); alerts.Content = Glyph("\uE7F4", 20); alerts.Width = 36; alerts.Height = 36; alerts.Padding = new Thickness(4); notifications.Children.Add(alerts);
         var alertSettings = ActionButton("Configurar notificações", () => SystemActions.Run("ms-settings:notifications")); alertSettings.Content = Glyph("\uE713", 16); alertSettings.Width = 36; alertSettings.Height = 36; alertSettings.Padding = new Thickness(4); notifications.Children.Add(alertSettings);
         bodies["notifications"] = notifications;
+        bodies["widgets"] = weather;
     }
     public override void RefreshSettings()
     {
         if (LayoutDrag.Active) return;
         ApplyAppearance();
+        weather.Configure();
         RefreshCollapsePolicy();
         var before = motion.Capture(MotionElements());
         updatingLayout = true;
@@ -230,8 +240,9 @@ internal sealed class IslandWindow : FloatingWindow
             var grip = Glyph("\uE784", 15); grip.Width = 22; AttachPositionGrip(grip); header.Children.Add(grip);
         }
         var standard = new[] { "clock", "wifi", "audio" }.Concat(Store.Value.HiddenQuickControls.Contains("tray") ? Array.Empty<string>() : new[] { "tray" });
-        var headerIds = (Store.IsEditing ? Store.Value.QuickOrder.Where(id => id is not ("settings" or "windows-settings") && !Store.Value.HiddenQuickControls.Contains(id)) : standard)
+        var headerIds = Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing ? new[] { "settings" } : (Store.IsEditing ? Store.Value.QuickOrder.Where(id => id is not ("settings" or "windows-settings") && !Store.Value.HiddenQuickControls.Contains(id)) : standard)
             .Concat(new[] { "windows-settings" }).Concat(Stage == IslandStage.Full ? new[] { "settings" } : Array.Empty<string>()).Distinct();
+        header.HorizontalAlignment = Stage == IslandStage.Full && maximizedOnDisplay ? HorizontalAlignment.Right : HorizontalAlignment.Center;
         foreach (var id in headerIds)
         {
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
@@ -252,7 +263,7 @@ internal sealed class IslandWindow : FloatingWindow
             {
                 if (Store.IsEditing && id is not ("settings" or "windows-settings")) return;
                 if (id == "audio") ShowMini(MiniIslandKind.Volume);
-                else if (id == "wifi") ShowMini(MiniIslandKind.Network);
+                else if (id == "wifi") ShowMini(MiniIslandKind.Network); else if (id == "bluetooth") ShowMini(MiniIslandKind.Bluetooth);
                 else if (id == "tray") ShowMini(MiniIslandKind.Tray);
                 else if (id == "calendar") ShowMini(MiniIslandKind.Calendar);
                 else if (id == "settings") openSettings();
@@ -284,6 +295,7 @@ internal sealed class IslandWindow : FloatingWindow
             var quick = ActionButton(control.Name, () =>
             {
                 if (id == "calendar") ShowMini(MiniIslandKind.Calendar);
+                else if (id == "bluetooth") ShowMini(MiniIslandKind.Bluetooth);
                 else if (id == "notifications") Desktop.Chord(0x5B, 0x4E);
                 else if (control.Target is not null) SystemActions.Run(control.Target);
             });
@@ -323,12 +335,23 @@ internal sealed class IslandWindow : FloatingWindow
         var before = motion.Capture(MotionElements());
         var previous = Stage; change();
         if (previous == Stage) return;
+        if (Stage == IslandStage.Full)
+        {
+            // Begin the panel's reveal below the persistent strip. Never animate
+            // the strip's full-width rectangle into the panel's rectangle.
+            preparingFullReveal = true; Surface.Visibility = Visibility.Hidden; ApplyAppearance();
+            Place(Math.Min(Display.Width - 16, Store.Value.IslandExpandedWidth), 6, false);
+            preparingFullReveal = false;
+        }
+        UpdateAdaptiveState();
+        RefreshStatusReservation();
         BuildHeader(); UpdateStageVisibility(); Resize(true); UpdateClock();
         motion.Arrange(this, before, MotionElements(), Store.Value.AnimationMilliseconds);
         if (!PointerInsideGroup) ScheduleCollapse();
     }
     private void OpenFull()
     {
+        RefreshForegroundLayout();
         calendar.DisplayMode = CalendarMode.Month; calendar.DisplayDate = DateTime.Today;
         DismissMinis(); hoverEnter.Stop(); CancelCollapse();
         Transition(() => interaction.OpenFull());
@@ -347,6 +370,7 @@ internal sealed class IslandWindow : FloatingWindow
         hoverModules.ColumnDefinitions[0].Width = new GridLength(Store.ModuleVisible("media") ? 1.35 : 0, GridUnitType.Star);
         hoverModules.ColumnDefinitions[1].Width = new GridLength(Store.ModuleVisible("audio") ? 1 : 0, GridUnitType.Star);
         media.SetActive(IsVisible && Stage != IslandStage.Compact && Store.ModuleVisible("media"));
+        weather.SetActive(IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("widgets"));
     }
     private static void Rehost(FrameworkElement element, Border slot)
     {
@@ -376,14 +400,16 @@ internal sealed class IslandWindow : FloatingWindow
     {
         base.RefreshAppearance();
         RefreshCollapsePolicy();
+        RefreshForegroundLayout();
+        statusWindow?.RefreshAppearance();
         foreach (var mini in minis.Values) if (mini.IsVisible) mini.RefreshAppearance();
     }
-    private bool PointerInsideGroup => IsMouseOver || minis.Values.Any(mini => mini.IsVisible && mini.IsMouseOver);
+    private bool PointerInsideGroup => IsMouseOver || statusWindow?.IsMouseOver == true || minis.Values.Any(mini => mini.IsVisible && mini.IsMouseOver);
     private bool NearActivationZone
     {
         get
         {
-            if (!IsVisible || Stage != IslandStage.Compact) return false;
+            if (!IsVisible || edgeReduced || Stage != IslandStage.Compact) return false;
             var bounds = TargetBounds; var pointer = System.Windows.Forms.Cursor.Position; double margin = 8 * Display.Scale;
             return pointer.X >= bounds.Left - margin && pointer.X <= bounds.Right + margin && pointer.Y >= bounds.Top && pointer.Y <= bounds.Bottom + margin;
         }
@@ -393,6 +419,13 @@ internal sealed class IslandWindow : FloatingWindow
         get
         {
             var cursor = System.Windows.Forms.Cursor.Position; var main = Bounds;
+            if (statusWindow?.IsVisible == true)
+            {
+                var strip = statusWindow.Bounds;
+                if (main.Top >= strip.Bottom && main.Top - strip.Bottom <= 24 * Display.Scale
+                    && cursor.Y >= strip.Bottom - 1 && cursor.Y <= main.Top + 1
+                    && cursor.X >= Math.Max(strip.Left, main.Left) && cursor.X <= Math.Min(strip.Right, main.Right)) return true;
+            }
             foreach (var mini in minis.Values.Where(mini => mini.IsVisible))
             {
                 var popup = mini.Bounds;
@@ -403,14 +436,14 @@ internal sealed class IslandWindow : FloatingWindow
             return false;
         }
     }
-    private bool ControlsBusy => IsMouseCaptureWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || trayCard.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
+    private bool ControlsBusy => IsMouseCaptureWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || trayCard.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
     private bool InteractionInProgress => Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
     private void CancelCollapse() { hoverLeave.Stop(); outsideSince = null; }
     private void WaitForBridge() { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(50); hoverLeave.Start(); }
     private void ScheduleCollapse()
     {
         hoverLeave.Stop();
-        if (dismissingMinis || !IsVisible || (Stage == IslandStage.Compact && !interaction.MiniOpen) || !Store.Value.IslandAutoCollapse) { outsideSince = null; return; }
+        if (dismissingMinis || !IsVisible || (Stage == IslandStage.Compact && !interaction.MiniOpen) || !AdaptiveCollapse) { outsideSince = null; return; }
         if (PointerInsideGroup) { outsideSince = null; return; }
         if (PointerInsideBridge) { WaitForBridge(); return; }
         if (InteractionInProgress) { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(100); hoverLeave.Start(); return; }
@@ -425,12 +458,14 @@ internal sealed class IslandWindow : FloatingWindow
         collapseEnabled = Store.Value.IslandAutoCollapse; collapseSeconds = Store.Value.IslandCollapseSeconds;
         if (changed || (outsideSince is null && !PointerInsideGroup)) ScheduleCollapse();
     }
-    private void ShowMini(MiniIslandKind kind)
+    private FrameworkElement? miniTrigger;
+    private void ShowMini(MiniIslandKind kind, FrameworkElement? trigger = null)
     {
         hoverEnter.Stop(); CancelCollapse();
         if (lastMiniKind == kind && DateTime.UtcNow - lastMiniDismissed < TimeSpan.FromMilliseconds(200)) return;
         if (minis.TryGetValue(kind, out var existing) && existing.IsVisible) { existing.Dismiss(); return; }
         DismissMinis(); interaction.OpenMini();
+        miniTrigger = trigger;
         if (!minis.TryGetValue(kind, out var mini))
         {
             mini = new MiniIslandWindow(Store, kind, MiniAnchor) { Owner = this, ShowInTaskbar = ShowInTaskbar };
@@ -449,6 +484,12 @@ internal sealed class IslandWindow : FloatingWindow
     }
     private OverlayChrome.PixelRect MiniAnchor()
     {
+        if (miniTrigger is { IsVisible: true } source && PresentationSource.FromVisual(source) is not null)
+        {
+            var top = source.PointToScreen(new Point());
+            var bottom = source.PointToScreen(new Point(source.ActualWidth, source.ActualHeight));
+            return new OverlayChrome.PixelRect { Left = (int)Math.Floor(top.X), Top = (int)Math.Floor(top.Y), Right = (int)Math.Ceiling(bottom.X), Bottom = (int)Math.Ceiling(bottom.Y) };
+        }
         var anchor = TargetBounds;
         if (Stage != IslandStage.Compact) anchor.Bottom = anchor.Top + (int)((Math.Max(40, 36 * Store.Value.IslandScale) + 10) * Display.Scale);
         return anchor;
@@ -479,6 +520,15 @@ internal sealed class IslandWindow : FloatingWindow
     public override void Position() => Resize(false);
     private void Resize(bool animate)
     {
+        UpdateAdaptiveState();
+        if (edgeReduced)
+        {
+            Surface.Padding = new Thickness(12, 2, 12, 2);
+            statusRow.Width = Math.Max(1, Display.Bounds.Width / Display.Scale - 24);
+            statusRow.Height = 24;
+            Place(Display.Bounds.Width / Display.Scale, 28, animate);
+            return;
+        }
         var p = Store.Value;
         Surface.Padding = new Thickness(12, 5, 12, Stage == IslandStage.Compact ? 5 : 12);
         header.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));

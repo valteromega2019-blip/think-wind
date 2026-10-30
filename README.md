@@ -1,5 +1,13 @@
 # Think Wind
 
+## 0.10 Alfa — 0.10.0-alpha
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.10.0-alpha/ThinkWind-Setup-0.10.0-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.10.0-alpha)
+
+Modo Jogo automático, Dock adaptativo, miniaturas DWM, áudio e microfone sincronizados com o Windows, clima configurável e melhorias da Dynamic Island em múltiplos monitores. A tecla Windows isolada abre o Iniciar do launcher por um hook em thread dedicada, suspenso durante o Modo Jogo. Corrigida a lógica de fechamento prematuro do Iniciar por perda de foco.
+
+Distribuição Release independente compilada e instalador gerado. Bateria atual: **42 aprovados, 1 falha, 0 ignorados**. A consulta de dispositivos Bluetooth excedeu o prazo; pareamento e conexão não foram validados. A correção recente do Iniciar ainda precisa de confirmação interativa. [Resultados e limites](VALIDACAO-0.10.md).
+
 ## 0.08 Alfa — 0.8.0-alpha
 
 Correção de recortes em ícones grandes no Dock e controle de opacidade dos blocos/controles internos. **37 checks aprovados**, publicação Release sem erros/avisos e instalador atualizado. [Release pública 0.08 Alfa](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.8.0-alpha) · [Relatório de validação](VALIDACAO-0.08-ALFA.md).

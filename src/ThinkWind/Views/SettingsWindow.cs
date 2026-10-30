@@ -17,6 +17,7 @@ internal sealed class SettingsWindow : FloatingWindow
     protected override string? MaterialOverride => "Acrylic";
     private sealed record Choice(string Id, string Name) { public override string ToString() => Name; }
     private readonly SettingsStore store;
+    private readonly WeatherWidget weatherSettings;
     private readonly StackPanel content = new() { Margin = new Thickness(24, 8, 24, 24) };
     private readonly StackPanel quickRows = new(), moduleRows = new();
     private readonly TextBlock status = new() { Margin = new Thickness(24, 12, 24, 16), FontSize = 12, TextWrapping = TextWrapping.Wrap };
@@ -26,6 +27,7 @@ internal sealed class SettingsWindow : FloatingWindow
     public SettingsWindow(SettingsStore settings) : base(settings)
     {
         store = settings;
+        weatherSettings = new WeatherWidget(store, true);
         Title = "Think Wind · Personalização";
         SizeToContent = SizeToContent.Manual;
         var display = OverlayChrome.GetDisplay(store.Value.MonitorIndex, store.Value.MonitorDeviceName);
@@ -59,11 +61,12 @@ internal sealed class SettingsWindow : FloatingWindow
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && store.IsEditing) { store.SetEditing(false); e.Handled = true; } };
         editing.Click += (_, _) => store.SetEditing(!store.IsEditing);
         store.Changed += StoreChanged; store.PersistenceChanged += PersistenceChanged;
-        Closed += (_, _) => { store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };
+        Closed += (_, _) => { weatherSettings.Dispose(); store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };
         Build();
     }
     private void StoreChanged(object? sender, EventArgs e)
     {
+        weatherSettings.Configure();
         RefreshAppearance();
         editing.Content = store.IsEditing ? "Concluir edição visual" : "Editar layout na tela";
         if (!building && layoutSignature != LayoutSignature()) Dispatcher.BeginInvoke(new Action(RebuildLayoutRows));
@@ -121,6 +124,8 @@ internal sealed class SettingsWindow : FloatingWindow
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");
         Slider(dock, "Tamanho dos ícones", 20, 48, store.Value.IconSize, v => Change(p => p.IconSize = v));
         Check(dock, "Ampliação dos ícones estilo Dock", store.Value.DockMagnification, v => Change(p => p.DockMagnification = v));
+        Check(dock, "Miniaturas de janelas ao passar o mouse", store.Value.WindowPreviewsEnabled, v => Change(p => p.WindowPreviewsEnabled = v));
+        Slider(dock, "Espera para abrir miniaturas", 150, 1500, store.Value.WindowPreviewDelayMilliseconds, v => Change(p => p.WindowPreviewDelayMilliseconds = v), "0 'ms'", 50);
         Slider(dock, "Intensidade da ampliação", .4, .6, store.Value.DockMagnificationAmount, v => Change(p => p.DockMagnificationAmount = v), "P0", .01);
         Slider(dock, "Velocidade da mola", .5, 2, store.Value.DockMagnificationSpeed, v => Change(p => p.DockMagnificationSpeed = v), "0.0 '×'", .1);
         Slider(dock, "Ícones vizinhos de cada lado", 0, 4, store.Value.DockMagnificationNeighbors, v => Change(p => p.DockMagnificationNeighbors = (int)Math.Round(v)), "0", 1);
@@ -131,19 +136,27 @@ internal sealed class SettingsWindow : FloatingWindow
         Check(dock, "Recolher automaticamente quando estiver ociosa", store.Value.AutoHide, v => Change(p => p.AutoHide = v));
         Slider(dock, "Espera para recolher a barra (segundos)", 0, 10, store.Value.DockCollapseSeconds, v => Change(p => p.DockCollapseSeconds = v), "0.0 's'", .1);
         Select(dock, "Pesquisa na barra", store.Value.DockSearchMode, new[] { new Choice("Bar", "Barra compacta"), new Choice("Icon", "Apenas lupa") }, v => Change(p => p.DockSearchMode = v));
-        Note(dock, "O estado recolhido é uma faixa visível de 6 DIP na borda física inferior, sem espaço. Tamanho, deslocamento e espaçamento configurados acima afetam apenas a barra expandida.");
+        Note(dock, "Recolhida, a barra é uma cápsula central arredondada de 96 × 6 DIP, a 4 pixels da borda inferior. Os ajustes de tamanho e posição acima afetam o estado expandido.");
 
         var island = Section("Dynamic Island", "Integrada à borda superior, com cantos inferiores arredondados.");
         Select(island, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));
         Slider(island, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.IslandOpacity ?? store.Value.TintOpacity, v => Change(p => p.IslandOpacity = v), "P0");
         Slider(island, "Escala dos acessos rápidos", .8, 1.4, store.Value.IslandScale, v => Change(p => p.IslandScale = v), "P0");
         Slider(island, "Largura expandida", 400, 900, store.Value.IslandExpandedWidth, v => Change(p => p.IslandExpandedWidth = v));
+        Select(island, "Lado da expansão com apps maximizados ou em tela dividida", store.Value.IslandPanelSide, new[] { new Choice("Right", "Direita"), new Choice("Left", "Esquerda") }, v => Change(p => p.IslandPanelSide = v));
+        Note(island, "No desktop e com janelas restauradas, a expansão fica centralizada. Com aplicativo maximizado ou encaixado pelo Windows Snap, abre no lado escolhido (direita por padrão).");
+        Note(island, "Sobre aplicativos, o painel abre abaixo da barra de status. O recolhimento segue o tempo configurado, preservando controles em uso e a passagem entre os painéis.");
         Check(island, "Recolher a ilha automaticamente após sair com o mouse", store.Value.IslandAutoCollapse, v => Change(p => p.IslandAutoCollapse = v));
+        Check(island, "Reduzir a ilha sobre apps maximizados ou em tela dividida", store.Value.IslandReduceOverMaximized, v => Change(p => p.IslandReduceOverMaximized = v));
+        Check(island, "Barra superior acompanha a cor do aplicativo abaixo", store.Value.IslandMatchAppColor, v => Change(p => p.IslandMatchAppColor = v));
         Slider(island, "Espera para recolher (segundos)", 0, 10, store.Value.IslandCollapseSeconds, v => Change(p => p.IslandCollapseSeconds = v), "0.0 's'", .1);
         Slider(island, "Espaçamento", 0, 20, store.Value.IslandSpacing, v => Change(p => p.IslandSpacing = v));
         Slider(island, "Arredondamento inferior", 0, 48, store.Value.IslandRadius, v => Change(p => p.IslandRadius = v));
         Slider(island, "Posição horizontal", -4000, 4000, store.Value.IslandHorizontalOffset, v => Change(p => p.IslandHorizontalOffset = v));
         Note(island, "Acrylic usa o fundo real através da composição do Windows. Mica é um material opaco baseado no papel de parede. A intensidade acima controla a tonalidade; o raio do desfoque é definido pelo sistema.");
+        var weatherSection = Section("Clima", "Após a primeira escolha no widget, altere a cidade somente aqui. A seleção é salva automaticamente.");
+        if (weatherSettings.Parent is Panel oldWeather) oldWeather.Children.Remove(weatherSettings);
+        weatherSection.Children.Add(weatherSettings);
 
         var layout = Section("Editor de layout", "Arraste pelos puxadores no desktop. As linhas ciano indicam onde o item será inserido.");
         // Detach reusable controls from their previous section when resetting.
@@ -165,6 +178,19 @@ internal sealed class SettingsWindow : FloatingWindow
         layout.Children.Add(resets);
 
         var system = Section("Sistema", "Os recursos nativos do Windows permanecem disponíveis.");
+        Check(system, "Modo Jogo automático: ocultar launcher e suspender tarefas", store.Value.GameModeEnabled, value => Change(p => p.GameModeEnabled = value));
+        Check(system, "Abrir Iniciar com Ctrl+Alt+Espaço (desativado durante jogos)", store.Value.StartHotkeyEnabled, value => Change(p => p.StartHotkeyEnabled = value));
+        Check(system, "Tecla Windows abre o Iniciar do Think Wind (desativado no Modo Jogo)", store.Value.WindowsKeyOpensLauncher, value => Change(p => p.WindowsKeyOpensLauncher = value));
+        Note(system, "A tecla Windows isolada voltou ao comportamento nativo: o hook global foi removido para proteger a resposta do teclado. Tela cheia não pertencente ao Shell ativa o Modo Jogo; ajuste as exceções para navegadores e players.");
+        void ProcessList(string label, string value, Action<string> change)
+        {
+            system.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 8, 4, 4) });
+            var field = new TextBox { Text = value, Padding = new Thickness(8), Margin = new Thickness(4) };
+            field.SetResourceReference(Control.BackgroundProperty, "Think.Control"); field.SetResourceReference(Control.ForegroundProperty, "Think.Text");
+            field.TextChanged += (_, _) => { if (!building) change(field.Text); }; system.Children.Add(field);
+        }
+        ProcessList("Jogos em janela: nomes de executáveis separados por ;", store.Value.GameModeInclude, value => Change(p => p.GameModeInclude = value));
+        ProcessList("Exceções do Modo Jogo (separadas por ;)", store.Value.GameModeExclude, value => Change(p => p.GameModeExclude = value));
         Check(system, "Usar somente a barra do Think Wind (ocultar a barra do Windows)", store.Value.HideWindowsTaskbar, value => Change(p => p.HideWindowsTaskbar = value));
         Note(system, "Oculta a barra original em todos os monitores enquanto o Think Wind estiver aberto. Ao desativar ou sair, ela é restaurada. O Explorador e a tecla Windows continuam funcionando.");
         var screens = System.Windows.Forms.Screen.AllScreens;

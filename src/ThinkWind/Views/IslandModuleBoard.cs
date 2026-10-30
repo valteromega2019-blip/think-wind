@@ -19,7 +19,9 @@ internal sealed class IslandModuleBoard : Panel
     protected override Size MeasureOverride(Size available)
     {
         double width = double.IsFinite(available.Width) ? Math.Max(1, available.Width) : 760;
-        slots.Clear(); var all = Children.Cast<UIElement>().ToArray(); var leading = all.Take(3).ToArray(); var secondary = all.Skip(3).ToArray();
+        slots.Clear(); var all = Children.Cast<UIElement>().ToArray();
+        var widgets = all.Where(item => item is FrameworkElement element && element.Tag is "widgets").ToArray();
+        var controls = all.Except(widgets).ToArray(); var leading = controls.Take(3).ToArray(); var secondary = controls.Skip(3).ToArray();
         double y = Group(leading, width, leading.Any(Detailed) ? 2 : 3, 132, 0);
         var details = secondary.Where(Detailed).ToArray(); var small = secondary.Where(item => !Detailed(item)).ToArray();
         if (details.Length > 0 && width >= 680)
@@ -54,6 +56,7 @@ internal sealed class IslandModuleBoard : Panel
             y += height + Gap;
         }
         else y = Group(secondary, width, width >= 500 ? 2 : 1, 72, y);
+        y = Group(widgets, width, 1, 140, y);
         return new Size(width, Math.Max(0, y - (all.Length > 0 ? Gap : 0)));
     }
     private double Group(UIElement[] items, double width, int columns, double minimum, double y)

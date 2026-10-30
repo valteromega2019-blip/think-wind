@@ -91,5 +91,77 @@ internal static class LayoutChecks
             Require(((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Popup"]).Color.A == 255);
         }
     }
+    internal static void GamePolicy()
+    {
+        Require(GameModeService.Eligible(new("WardogsClient-Win64-Shipping", false, false), true, new[] { "WardogsClient-Win64-Shipping.exe" }, Array.Empty<string>()));
+        Require(GameModeService.Eligible(new("game", true, false), true, Array.Empty<string>(), Array.Empty<string>()));
+        Require(!GameModeService.Eligible(new("explorer", true, true), true, Array.Empty<string>(), Array.Empty<string>()));
+        Require(!GameModeService.Eligible(new("game", true, false), false, Array.Empty<string>(), Array.Empty<string>()));
+        Require(!GameModeService.Eligible(new("player", true, false), true, Array.Empty<string>(), new[] { "player.exe" }));
+        Require(!GameModeService.Eligible(new("other", false, false), true, new[] { "game.exe" }, Array.Empty<string>()));
+    }
+    internal static void DockCapacity()
+    {
+        foreach (int count in new[] { 5, 10, 15, 20 })
+        foreach (double width in new[] { 120d, 300, 600, 1200, 1800 })
+        foreach (double icon in new[] { 18d, 28, 48, 72 })
+        {
+            var fit = CompactLayout.FitDock(count, width, icon, 8);
+            int visible = Math.Min(count, fit.PerPage);
+            double used = visible * (fit.Icon + 2 * fit.Padding + fit.Gap) + fit.NavigationWidth;
+            Require(used <= width + .01 && fit.Pages(count) * fit.PerPage >= count);
+        }
+    }
+    internal static void BluetoothSnapshot() => System.Threading.Tasks.Task.Run(async () =>
+    {
+        using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var radios = await Windows.Devices.Radios.Radio.GetRadiosAsync().AsTask(timeout.Token).ConfigureAwait(false);
+        int count = radios.Count(radio => radio.Kind == Windows.Devices.Radios.RadioKind.Bluetooth);
+        Console.WriteLine("  Adaptadores Bluetooth: " + count);
+        if (count == 0) return;
+        foreach (var selector in BluetoothControl.DeviceSelectors)
+        {
+            var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(selector, new[] { "System.Devices.Aep.IsConnected" }, Windows.Devices.Enumeration.DeviceInformationKind.AssociationEndpoint).AsTask(timeout.Token).ConfigureAwait(false);
+            Console.WriteLine("  Endpoints Bluetooth expostos: " + devices.Count);
+            Require(devices.All(device => !string.IsNullOrEmpty(device.Id)));
+        }
+    }).GetAwaiter().GetResult();
+    internal static void ShortcutIcons(string directory)
+    {
+        string target = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+        string path = System.IO.Path.Combine(directory, "icon-check.lnk"); object? shell = null, shortcut = null;
+        try
+        {
+            shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!); shortcut = ((dynamic)shell!).CreateShortcut(path); ((dynamic)shortcut!).TargetPath = target; ((dynamic)shortcut!).Save();
+            var icons = new ThinkWind.Native.ShellIcons();
+            var original = icons.Get(target) as System.Windows.Media.Imaging.BitmapSource; var linked = icons.Get(path) as System.Windows.Media.Imaging.BitmapSource;
+            Require(original is not null && linked is not null && original.PixelWidth == linked.PixelWidth && original.PixelHeight == linked.PixelHeight);
+            int stride = (original!.PixelWidth * original.Format.BitsPerPixel + 7) / 8;
+            var a = new byte[stride * original.PixelHeight]; var b = new byte[a.Length]; original.CopyPixels(a, stride, 0); linked!.CopyPixels(b, stride, 0);
+            Require(a.SequenceEqual(b)); // Exact original pixels: no shortcut overlay.
+            string firstKey = icons.VersionedKey(path);
+            string changed = System.IO.Path.Combine(Environment.SystemDirectory, "notepad.exe"); ((dynamic)shortcut!).TargetPath = changed; ((dynamic)shortcut!).Save();
+            System.IO.File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(2));
+            Require(icons.Resolve(path).Equals(changed, StringComparison.OrdinalIgnoreCase) && icons.VersionedKey(path) != firstKey);
+        }
+        finally { ThinkWind.Native.CoreAudio.Release(shortcut); ThinkWind.Native.CoreAudio.Release(shell); }
+    }
+    internal static void BluetoothLifecycle()
+    {
+        var control = new BluetoothControl();
+        try
+        {
+            control.SetActive(true); var watch = System.Diagnostics.Stopwatch.StartNew();
+            while (control.ActiveWatchers == 0 && watch.Elapsed.TotalSeconds < 6)
+            {
+                var frame = new System.Windows.Threading.DispatcherFrame(); var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+                timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; }; timer.Start(); System.Windows.Threading.Dispatcher.PushFrame(frame);
+            }
+            Console.WriteLine("  Watchers Bluetooth ativos no painel: " + control.ActiveWatchers);
+            Require(control.ActiveWatchers <= 2);
+            control.SetActive(false); Require(control.ActiveWatchers == 0);
+        }
+        finally { control.Dispose(); Require(control.ActiveWatchers == 0); }
+    }
     private static void Require(bool value) { if (!value) throw new InvalidOperationException("Geometria inconsistente."); }
 }
