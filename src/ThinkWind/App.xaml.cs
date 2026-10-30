@@ -91,6 +91,11 @@ public partial class App : Application
         if (e.Args.Contains("--settings")) OpenSettings();
         if (store.LoadWarning is not null) MessageBox.Show(store.LoadWarning, "Think Wind");
     }
+    internal void OpenWeatherSettings()
+    {
+        OpenSettings();
+        settings?.ShowWeatherSection();
+    }
     private void OpenSettings()
     {
         if (gameMode?.Active == true) return;

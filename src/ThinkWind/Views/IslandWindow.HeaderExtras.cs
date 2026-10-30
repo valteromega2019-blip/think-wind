@@ -16,7 +16,7 @@ internal sealed partial class IslandWindow
     private Button WeatherButton(bool strip)
     {
         var reading = new TextBlock { FontSize = strip ? 11 : 12, VerticalAlignment = VerticalAlignment.Center };
-        var button = ActionButton("Clima · personalizar cidade e exibição", openSettings);
+        var button = ActionButton("Clima · personalizar cidade e exibição", () => ((App)Application.Current).OpenWeatherSettings());
         button.Style = (Style)FindResource("Think.IconButton");
         button.Content = reading; button.Padding = new Thickness(5, 0, 5, 0);
         button.Height = strip ? 24 : 32; button.Width = strip ? 72 : 78;

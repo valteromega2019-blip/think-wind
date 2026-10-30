@@ -18,6 +18,7 @@ internal sealed class SettingsWindow : FloatingWindow
     private sealed record Choice(string Id, string Name) { public override string ToString() => Name; }
     private readonly SettingsStore store;
     private readonly WeatherWidget weatherSettings;
+    private FrameworkElement? weatherSectionTarget;
     private readonly StackPanel content = new() { Margin = new Thickness(24, 8, 24, 24) };
     private readonly StackPanel quickRows = new(), moduleRows = new();
     private readonly TextBlock status = new() { Margin = new Thickness(24, 12, 24, 16), FontSize = 12, TextWrapping = TextWrapping.Wrap };
@@ -63,6 +64,14 @@ internal sealed class SettingsWindow : FloatingWindow
         store.Changed += StoreChanged; store.PersistenceChanged += PersistenceChanged;
         Closed += (_, _) => { weatherSettings.Dispose(); store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };
         Build();
+    }
+    internal void ShowWeatherSection()
+    {
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (!IsVisible || weatherSectionTarget is null) return;
+            weatherSectionTarget.BringIntoView(new Rect(0, 0, weatherSectionTarget.ActualWidth, Math.Min(80, weatherSectionTarget.ActualHeight)));
+        }));
     }
     private void StoreChanged(object? sender, EventArgs e)
     {
@@ -156,6 +165,7 @@ internal sealed class SettingsWindow : FloatingWindow
         Slider(island, "Posição horizontal", -4000, 4000, store.Value.IslandHorizontalOffset, v => Change(p => p.IslandHorizontalOffset = v));
         Note(island, "Acrylic usa o fundo real através da composição do Windows. Mica é um material opaco baseado no papel de parede. A intensidade acima controla a tonalidade; o raio do desfoque é definido pelo sistema.");
         var weatherSection = Section("Clima", "Após a primeira escolha no widget, altere a cidade somente aqui. A seleção é salva automaticamente.");
+        weatherSectionTarget = weatherSection;
         Check(weatherSection, "Mostrar clima ao lado do relógio", store.Value.ShowWeatherInHeader, value => Change(p => p.ShowWeatherInHeader = value));
         if (weatherSettings.Parent is Panel oldWeather) oldWeather.Children.Remove(weatherSettings);
         weatherSection.Children.Add(weatherSettings);
