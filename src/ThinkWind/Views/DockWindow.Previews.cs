@@ -15,7 +15,7 @@ internal sealed partial class DockWindow
         previewOpen.Tick += (_, _) =>
         {
             previewOpen.Stop();
-            if (!IsVisible || fileDragging || Store.IsEditing || LayoutDrag.Active || !Store.Value.WindowPreviewsEnabled || previewItem is null) return;
+            if (!IsVisible || MenuOpen || fileDragging || Store.IsEditing || LayoutDrag.Active || !Store.Value.WindowPreviewsEnabled || previewItem is null) return;
             if (preview is null)
             {
                 preview = new WindowPreview(Store, () => TargetBounds) { Owner = this };
@@ -30,6 +30,7 @@ internal sealed partial class DockWindow
     {
         element.MouseEnter += (_, _) =>
         {
+            if (MenuOpen) return;
             if (item.Windows.Count == 0) { StopPreviews(); return; }
             previewIconHovered = true;
             previewClose.Stop(); previewOpen.Stop(); previewItem = item;

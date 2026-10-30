@@ -50,6 +50,8 @@ internal sealed partial class DockWindow : FloatingWindow
     private string signature = "";
     private bool hidden, rebuilding;
     private bool readingWindows;
+    private ContextMenu? activeContextMenu;
+    private bool settingsAfterMenu;
     private int layoutRevision;
     private double contentWidth, contentHeight = 48, fittedWidth;
     private List<Item> entries = new();
@@ -100,22 +102,39 @@ internal sealed partial class DockWindow : FloatingWindow
         LayoutDrag.Completed += DragCompleted;
         InitializeFileDrop();
         InitializePreviews();
-        IsVisibleChanged += (_, _) => { if (!IsVisible) StopPreviews(); };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible)
+            {
+                StopPreviews();
+                if (activeContextMenu is not null) activeContextMenu.IsOpen = false;
+                activeContextMenu = null;
+            }
+        };
         Closed += (_, _) => { magnifier.Dispose(); timer.Stop(); DisposeFileDrop(); catalog.Dispose(); LayoutDrag.Completed -= DragCompleted; };
     }
     private void DragCompleted() { signature = ""; RefreshApps(); }
     internal void SuspendForGame(bool active)
     { catalog.SetSuspended(active); if (active) { StopPreviews(); magnifier.Reset(); timer.Stop(); launcher?.Dismiss(); FinishFileDrag(); } }
     private nint NoActivate(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
-    { if (message == 0x0021 && !dockSearch.IsMouseOver) { handled = true; return 3; } return 0; }
+    {
+        // Keep normal hover/left-click nonactivating, but let a right-click
+        // activate the owner before WPF gives the popup mouse capture.
+        int mouseMessage = (int)((lParam.ToInt64() >> 16) & 0xFFFF);
+        if (message == 0x0021 && !dockSearch.IsMouseOver && mouseMessage != 0x0204 && !MenuOpen)
+        { handled = true; return 3; }
+        return 0;
+    }
     public override void Position()
     {
+        if (MenuOpen) return;
         if (!rebuilding && Math.Abs(fittedWidth - Display.Width) > .5 && entries.Count > 0) RenderPage();
         Place(TotalWidth, hidden ? 6 : ExpandedHeight, IsVisible && !hidden);
         if (launcher?.IsVisible == true) launcher.Position();
     }
     public override void RefreshSettings()
     {
+        if (MenuOpen) { settingsAfterMenu = true; return; }
         if (LayoutDrag.Active || rebuilding) return;
         if (layoutRevision != Store.DockLayoutRevision) { layoutRevision = Store.DockLayoutRevision; visibleOrder.Clear(); }
         signature = "";
@@ -124,13 +143,14 @@ internal sealed partial class DockWindow : FloatingWindow
         ApplyAppearance(); RefreshApps();
         launcher?.RefreshSettings();
     }
-    private bool MenuOpen => items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
+    private bool MenuOpen => activeContextMenu is not null || items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
     private void UpdateVisibility()
     {
         if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !IsMouseOver && (!IsKeyboardFocusWithin || !Desktop.ForegroundIsOurs()) && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
     }
     private void SetHidden(bool value, bool animate = true)
     {
+        if (value && MenuOpen) return;
         if (hidden == value) return;
         hidden = value; items.Visibility = value ? Visibility.Hidden : Visibility.Visible;
         if (value) magnifier.Reset(); else magnifier.Wake();
@@ -213,6 +233,7 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private void RenderPage()
     {
+        if (MenuOpen) return;
         fittedWidth = Display.Width;
         double searchWidth = Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36;
         double available = Math.Max(60, fittedWidth - 16 - 20 - DockGeometry.StartWidth(Store.Value.IconSize * Store.Value.DockScale) - 8 - searchWidth - (Store.IsEditing ? 30 : 0));
@@ -331,8 +352,24 @@ internal sealed partial class DockWindow : FloatingWindow
         Menu(menu, "Mover para a direita", () => MoveOne(item.Key, 1));
         Menu(menu, Store.IsEditing ? "Concluir edição" : "Editar layout", () => Store.SetEditing(!Store.IsEditing));
         button.ContextMenu = menu;
-        menu.Opened += (_, _) => StopPreviews();
-        menu.Closed += (_, _) => { signature = ""; Dispatcher.BeginInvoke(new Action(RefreshApps)); };
+        button.ContextMenuOpening += (_, _) =>
+        {
+            activeContextMenu = menu;
+            lastHover = DateTime.UtcNow;
+            StopPreviews(); magnifier.Reset();
+            Activate();
+        };
+        menu.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(activeContextMenu, menu)) activeContextMenu = null;
+            lastHover = DateTime.UtcNow; signature = "";
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!IsVisible) return;
+                if (settingsAfterMenu) { settingsAfterMenu = false; RefreshSettings(); }
+                else RefreshApps();
+            }));
+        };
         LayoutDrag.Attach(button, "dock", item.Key, () => Store.IsEditing, Reorder);
         AttachFileTarget(button, item, dropIndicator);
         AttachPreview(button, item);

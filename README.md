@@ -1,5 +1,12 @@
 # Think Wind
 
+## 0.16 Alfa — 0.16.0-alpha
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.16.0-alpha/ThinkWind-Setup-0.16.0-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.16.0-alpha)
+
+Corrige o menu de clique direito que abria e fechava imediatamente. A barra mantém o menu aberto durante a interação, suspendendo recolhimento, reposicionamento, reconstrução dos ícones e prévias. Funcionamento da prévia confirmado pelo usuário. Distribuição Release sem erros/avisos e instalador gerado. Não foram executados novos testes nem type check separado nesta entrega.
+
+
 ## 0.015 Alfa — revisão 1 (0.15.1-alpha)
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.15.1-alpha/ThinkWind-Setup-0.15.1-alpha.exe) · [Release](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.15.1-alpha)

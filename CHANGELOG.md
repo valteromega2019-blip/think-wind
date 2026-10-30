@@ -1,5 +1,12 @@
 # Histórico do Think Wind
 
+## 0.16 Alfa — 0.16.0-alpha
+
+- Clique direito permite ativação da janela proprietária antes de abrir o menu WPF. Mantém o comportamento sem ativação no hover e clique comum.
+- Menu em abertura/aberto protege contra recolhimento, reposicionamento e reconstrução dos botões; alterações de layout aguardam seu fechamento. Prévias são interrompidas antes da abertura e não reaparecem durante a interação.
+- Reinicia o intervalo de recolhimento ao fechar o menu, permitindo escolher as opções sem a barra desaparecer imediatamente.
+- Correção do menu confirmada pelo usuário na prévia. Publish Release sem erros/avisos e instalador gerado para publicação. Sem nova suíte de testes nem type check separado nesta entrega; os resultados da 0.15.1 são históricos.
+
 ## 0.015 Alfa — revisão 1 (0.15.1-alpha)
 
 - Leitura de System.AppUserModel.ID por janela via SHGetPropertyStoreForWindow; o identificador do processo permanece como alternativa. A identidade por janela é usada pelo Shell para agrupamento e não era consultada antes.
