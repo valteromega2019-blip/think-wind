@@ -1,5 +1,14 @@
 # Think Wind
 
+## 0.16 Alfa — revisão 1 (0.16.1-alpha)
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.16.1-alpha/ThinkWind-Setup-0.16.1-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.16.1-alpha)
+
+Inclui desinstalação no menu de aplicativos, contraste claro, recolhimento ocioso, limpeza de fixados removidos e ajuste somente da janela maximizada, mantendo o desktop fixo. Créditos e limites em Personalizar → Sobre e segurança, [COPYRIGHT.md](COPYRIGHT.md) e [SECURITY.md](SECURITY.md).
+
+Publish Release e instalador concluídos sem erros/avisos. Prévia aprovada pelo usuário; sem nova suíte de testes ou type check separado nesta entrega. Detalhes e limites nas notas da release.
+
+
 ## 0.16 Alfa — 0.16.0-alpha
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.16.0-alpha/ThinkWind-Setup-0.16.0-alpha.exe) · [Notas da versão](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.16.0-alpha)

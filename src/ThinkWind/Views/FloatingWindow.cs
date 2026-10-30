@@ -106,6 +106,9 @@ internal abstract class FloatingWindow : Window
         radius = CollapsedDock ? 3 : FullWidthTop ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
         var material = MaterialOverride ?? (UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial);
         var alpha = (UsesIslandAppearance ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
+        // Dark text needs a stable light surface over both bright and dark
+        // wallpaper; preserve Acrylic while preventing washed-out labels.
+        if (MaterialLight) alpha = Math.Max(alpha, .82);
         backdrop?.SetMaterial(SystemParameters.HighContrast ? "Solid" : material, MaterialLight);
         var color = MaterialTint;
         color.A = (byte)Math.Round(255 * (backdrop?.MaterialAvailable == true ? alpha : 1));

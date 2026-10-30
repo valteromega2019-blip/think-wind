@@ -1,5 +1,50 @@
 # Histórico do Think Wind
 
+## 0.16 Alfa — revisão 1 (0.16.1-alpha)
+
+- Publicação das correções de contraste, menu Desinstalar, recolhimento, fixados e ajuste direto da janela maximizada descritas abaixo. Prévia aprovada pelo usuário.
+- Sobre e segurança, COPYRIGHT.md e SECURITY.md adicionados; margens do ajuste direto passam a consultar o DWM para evitar acumulação ao reiniciar.
+- Publish Release e instalador concluídos; sem novos testes automatizados ou type check separado nesta entrega. As notas Em desenvolvimento abaixo registram a implementação anterior à publicação.
+
+
+## Em desenvolvimento — negociação do tamanho no navegador
+
+- Ajuste direto de janela maximizada passa a usar SWP_NOSENDCHANGING: evita renegociação por WM_WINDOWPOSCHANGING, mantendo WM_WINDOWPOSCHANGED para atualizar o conteúdo. Continua assíncrono e sem foco/alteração da área útil.
+- Relato do usuário: navegador permaneceu sem o ajuste esperado na primeira implementação. Esta mudança é uma tentativa de corrigir a negociação de limites; não foi validada no navegador nesta etapa.
+- Sem compilação, testes ou type check. A versão aberta ainda usa o comando anterior.
+
+## Em desenvolvimento — ajuste só da janela maximizada
+
+- Janela maximizada no monitor da ilha é ajustada diretamente abaixo da barra superior, preservando largura, base e estado maximizado, sem alterar a área útil do desktop ou registrar AppBar.
+- SetWindowPos assíncrono sem ativação ou alteração de ordem; reaproveita a atualização existente, sem timers/hooks novos. Guarda os limites originais e tenta restaurá-los ao ocultar/desativar a barra ou encerrar normalmente, respeitando movimentação/restauração manual.
+- Snap e jogos em tela cheia sem estado maximizado não são redimensionados por esse mecanismo. Aplicativos elevados ou que impõem seus próprios limites podem recusar o ajuste; comportamento ainda precisa de conferência interativa.
+- Sem compilação, testes ou type check nesta etapa. A versão aberta ainda não contém essa alteração.
+
+## Em desenvolvimento — área de trabalho estável
+
+- Ilha superior deixa de registrar/desregistrar reserva AppBar ao abrir, maximizar ou alternar aplicativos. A mudança dinâmica da área útil podia reorganizar os ícones do desktop e redimensionar outras janelas.
+- Barra de status e painel continuam usando suas próprias posições de overlay, sem alterar a área útil do monitor durante essas transições. Não move nem restaura manualmente ícones já deslocados pelo Windows.
+- Sem compilação, testes ou type check nesta etapa; mudança ainda não está na versão aberta.
+
+## Em desenvolvimento — limpeza de fixados removidos
+
+- Atualização existente do Dock verifica os destinos dos fixados da barra e do Iniciar no worker STA. Após ausência persistente por 30 segundos e sem janela correspondente em execução, remove o fixado inválido, sua ordem e a referência recente correspondente, salvando preferências.
+- Arquivos são verificados somente em discos locais fixos disponíveis; falta de permissão, destino de rede/removível e ausência de ícone não são tratados como desinstalação. AppsFolder é reconsultado com cache de 15 segundos; falhas de consulta não confirmam remoção.
+- Sem novos temporizadores nem exclusão de arquivos dos programas. Sem compilação, testes ou type check nesta etapa.
+
+## Em desenvolvimento — recolhimento ocioso
+
+- Removido bloqueio causado por foco de teclado residual após clique direito. Foco em um botão não mantém o Dock expandido; menus abertos, captura real, pesquisa/painel, arrasto e personalização continuam protegidos.
+- Área de interação usa posição real do cursor sobre superfície/ícones, sem contar o espaço transparente de ampliação. Libera referência de menu que não abriu/já fechou e prévia órfã após o intervalo de passagem.
+- Sem novos temporizadores. Revisão por leitura; sem compilação, testes ou type check nesta etapa.
+
+## Em desenvolvimento — desinstalação e contraste claro
+
+- Desinstalar… nos menus de aplicativos da gaveta/biblioteca e Dock, além das ações locais da bandeja de segundo plano. Abre o desinstalador registrado com confirmação; Store e identificações ambíguas usam gerenciamento nativo do Windows. Não remove arquivos ou atalhos como substituto da desinstalação.
+- Consulta de identidade e registros somente ao solicitar a ação, fora do dispatcher; não adiciona monitoramento permanente. Nenhum aplicativo desinstalado durante esta implementação.
+- Tema claro: texto principal/secundário mais escuro, subtítulo de personalização mais opaco e piso de 82% para a tinta clara da superfície Acrylic, preservando transparência e ícones.
+- Sem compilação, testes ou type check nesta etapa; implementação ainda não está no aplicativo instalado.
+
 ## 0.16 Alfa — 0.16.0-alpha
 
 - Clique direito permite ativação da janela proprietária antes de abrir o menu WPF. Mantém o comportamento sem ativação no hover e clique comum.

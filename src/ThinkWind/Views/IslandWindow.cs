@@ -124,10 +124,10 @@ internal sealed partial class IslandWindow : FloatingWindow
         LayoutDrag.Completed += DragCompleted;
         Closed += (_, _) => { timer.Stop(); activation.Stop(); hoverEnter.Stop(); hoverLeave.Stop(); motion.Cancel(MotionElements()); LayoutDrag.Completed -= DragCompleted; media.Dispose(); };
         IsVisibleChanged += (_, _) => { if (!IsVisible) { timer.Stop(); activation.Stop(); hoverEnter.Stop(); CancelCollapse(); DismissMinis(); motion.Cancel(MotionElements()); media.SetActive(false); } else { timer.Start(); UpdateStageVisibility(); } };
-        IsVisibleChanged += (_, _) => RefreshStatusReservation();
-        Closed += (_, _) => statusReservation?.Dispose();
         IsVisibleChanged += (_, _) => { if (!IsVisible) statusWindow?.Hide(); else SyncStatusSurface(); };
         Closed += (_, _) => statusWindow?.Close();
+        IsVisibleChanged += (_, _) => RefreshApplicationInset();
+        Closed += (_, _) => applicationInset.Dispose();
         Closed += (_, _) => weather.Dispose();
         IsVisibleChanged += (_, _) => { if (!IsVisible) weather.SetActive(false); };
     }
@@ -364,7 +364,6 @@ internal sealed partial class IslandWindow : FloatingWindow
             preparingFullReveal = false;
         }
         UpdateAdaptiveState();
-        RefreshStatusReservation();
         BuildHeader(); UpdateStageVisibility(); Resize(true); UpdateClock();
         motion.Arrange(this, before, MotionElements(), Store.Value.AnimationMilliseconds);
         if (!PointerInsideGroup) ScheduleCollapse();

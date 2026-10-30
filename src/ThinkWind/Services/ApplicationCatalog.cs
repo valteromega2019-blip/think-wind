@@ -16,22 +16,48 @@ internal sealed class ApplicationCatalog : IDisposable
     private readonly StaWorker worker = new("Think Wind — aplicativos");
     private readonly Dictionary<string, (string Version, LaunchIdentity Identity)> launchIdentities = new(StringComparer.OrdinalIgnoreCase);
     private readonly ShellIcons identityIcons = new();
+    private readonly Dictionary<string, DateTime> missingPins = new(StringComparer.OrdinalIgnoreCase);
     internal Task<Dictionary<string, LaunchIdentity>> ResolvePinsAsync(Shortcut[] pins) => worker.Run(() =>
     {
         var result = new Dictionary<string, LaunchIdentity>(StringComparer.OrdinalIgnoreCase);
         foreach (var pin in pins)
         {
-            string version = identityIcons.VersionedKey(pin.Target);
+            bool shellTarget = pin.Target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase);
+            string version = identityIcons.VersionedKey(pin.Target) + (shellTarget ? "|" + DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond / 15 : "");
             if (!launchIdentities.TryGetValue(pin.Target, out var cached) || cached.Version != version)
             {
                 cached = (version, ShellAppIdentity.ReadLaunch(pin.Target, identityIcons));
                 launchIdentities[pin.Target] = cached;
             }
-            result[pin.Target] = cached.Identity;
+            bool? installed = shellTarget ? cached.Identity.Installed : LocalTargetExists(cached.Identity.Path);
+            if (pin.Target.Contains("://", StringComparison.Ordinal)) installed = null;
+            if (installed == false)
+            {
+                if (!missingPins.TryGetValue(pin.Target, out var since)) missingPins[pin.Target] = since = DateTime.UtcNow;
+                // Avoid deleting pins while an update briefly replaces files.
+                if (DateTime.UtcNow - since < TimeSpan.FromSeconds(30)) installed = null;
+            }
+            else missingPins.Remove(pin.Target);
+            result[pin.Target] = cached.Identity with { Installed = installed };
         }
         foreach (string old in launchIdentities.Keys.Where(key => !result.ContainsKey(key)).ToArray()) launchIdentities.Remove(old);
+        foreach (string old in missingPins.Keys.Where(key => !result.ContainsKey(key)).ToArray()) missingPins.Remove(old);
         return result;
     });
+    private static bool? LocalTargetExists(string path)
+    {
+        try
+        {
+            if (!Path.IsPathFullyQualified(path) || path.StartsWith(@"\\", StringComparison.Ordinal)) return null;
+            if (Path.GetExtension(path).ToLowerInvariant() is not (".exe" or ".com" or ".lnk" or ".appref-ms")) return null;
+            var drive = new DriveInfo(Path.GetPathRoot(path)!);
+            if (!drive.IsReady || drive.DriveType != DriveType.Fixed) return null;
+            File.GetAttributes(path); return true;
+        }
+        catch (FileNotFoundException) { return false; }
+        catch (DirectoryNotFoundException) { return false; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or System.Security.SecurityException) { return null; }
+    }
     private readonly List<FileSystemWatcher> watchers = new();
     private readonly DispatcherTimer debounce = new() { Interval = TimeSpan.FromMilliseconds(700) };
     private bool loading, refreshAgain, disposed;

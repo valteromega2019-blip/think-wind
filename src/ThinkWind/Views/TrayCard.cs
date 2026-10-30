@@ -142,6 +142,14 @@ internal sealed class TrayCard : StackPanel
         if (entry?.Executable is string executable && !string.IsNullOrWhiteSpace(executable) && System.IO.File.Exists(executable))
         {
             var open = new MenuItem { Header = "Abrir aplicativo" }; open.Click += (_, _) => SystemActions.Launch(executable); menu.Items.Add(open);
+            var uninstall = new MenuItem { Header = "Desinstalar…" };
+            uninstall.Click += async (_, _) =>
+            {
+                menus++;
+                try { await AppUninstall.Open(entry.DisplayName, executable); }
+                finally { menus = Math.Max(0, menus - 1); }
+            };
+            menu.Items.Add(uninstall);
         }
         menu.Opened += (_, _) => menus++; menu.Closed += (_, _) => { menus = Math.Max(0, menus - 1); signature = ""; Render(); }; menu.IsOpen = true;
     }

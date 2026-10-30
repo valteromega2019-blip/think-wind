@@ -52,7 +52,7 @@ internal sealed class SettingsWindow : FloatingWindow
         heading.Children.Add(titleBar);
         heading.Children.Add(new TextBlock { Text = "THINK WIND", FontSize = 11, FontWeight = FontWeights.SemiBold });
         heading.Children.Add(new TextBlock { Text = "Seu desktop. Seu ritmo.", FontSize = 24, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 8) });
-        heading.Children.Add(new TextBlock { Text = "As mudanças aparecem na hora e são salvas automaticamente.", TextWrapping = TextWrapping.Wrap, Opacity = .7 });
+        heading.Children.Add(new TextBlock { Text = "As mudanças aparecem na hora e são salvas automaticamente.", TextWrapping = TextWrapping.Wrap, Opacity = .9 });
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         var scroll = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, PanningMode = PanningMode.VerticalOnly };
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
@@ -212,7 +212,13 @@ internal sealed class SettingsWindow : FloatingWindow
             });
         }
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { Note(system, "A opção de inicialização não está disponível para esta conta."); }
-        Note(system, "A barra original permanece visível. Não são feitas alterações no Explorer.");
+        Note(system, "A ocultação da barra original pode ser desativada nesta seção. O launcher não substitui os arquivos do Explorer.");
+        var about = Section("Sobre e segurança", "Think Wind · " + AppBrand.Version);
+        Note(about, AppBrand.Copyright);
+        Note(about, "Baixe instaladores somente da página oficial ou das releases do projeto no GitHub. Compare o SHA-256 com o arquivo publicado na mesma release. O instalador Alfa ainda não possui assinatura digital; o hash confirma a correspondência do arquivo, não garante ausência de vulnerabilidades.");
+        Note(about, "As preferências ficam neste usuário do Windows. Alterações de tema e ocultação automática afetam as preferências do sistema. Desinstalação de aplicativos usa os mecanismos registrados no Windows. Rede, áudio e Bluetooth dependem das permissões do sistema.");
+        about.Children.Add(Button("Downloads oficiais", () => SystemActions.Run("https://github.com/valteromega2019-blip/think-wind/releases")));
+        about.Children.Add(Button("Informações de segurança", () => SystemActions.Run("https://github.com/valteromega2019-blip/think-wind/blob/main/SECURITY.md")));
         building = false; StoreChanged(this, EventArgs.Empty);
     }
     private void RebuildLayoutRows()

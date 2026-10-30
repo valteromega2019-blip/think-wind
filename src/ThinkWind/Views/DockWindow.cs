@@ -51,6 +51,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private bool hidden, rebuilding;
     private bool readingWindows;
     private ContextMenu? activeContextMenu;
+    private DateTime contextMenuRequested;
     private bool settingsAfterMenu;
     private int layoutRevision;
     private double contentWidth, contentHeight = 48, fittedWidth;
@@ -144,9 +145,44 @@ internal sealed partial class DockWindow : FloatingWindow
         launcher?.RefreshSettings();
     }
     private bool MenuOpen => activeContextMenu is not null || items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
+    private bool PointerInsideDock
+    {
+        get
+        {
+            if (!IsVisible) return false;
+            var cursor = System.Windows.Forms.Cursor.Position;
+            var point = new Point(cursor.X, cursor.Y);
+            bool Inside(FrameworkElement element) => element.IsVisible && element.ActualWidth > 0 && element.ActualHeight > 0
+                && new Rect(0, 0, element.ActualWidth, element.ActualHeight).Contains(element.PointFromScreen(point));
+            if (Inside(Surface)) return true;
+            // Magnified icons can extend above the Acrylic. The transparent
+            // canvas itself must not count as an interaction surface.
+            return items.Children.OfType<FrameworkElement>().Any(Inside);
+        }
+    }
+    private void FinishContextMenu(ContextMenu menu)
+    {
+        if (!ReferenceEquals(activeContextMenu, menu)) return;
+        activeContextMenu = null;
+        lastHover = DateTime.UtcNow; signature = "";
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!IsVisible) return;
+            if (settingsAfterMenu) { settingsAfterMenu = false; RefreshSettings(); }
+            else RefreshApps();
+        }));
+    }
     private void UpdateVisibility()
     {
-        if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !IsMouseOver && (!IsKeyboardFocusWithin || !Desktop.ForegroundIsOurs()) && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
+        if (activeContextMenu is { IsOpen: false } stale && DateTime.UtcNow - contextMenuRequested > TimeSpan.FromMilliseconds(250))
+            FinishContextMenu(stale);
+        bool pointerInside = PointerInsideDock;
+        if (pointerInside) lastHover = DateTime.UtcNow;
+        if (preview?.IsVisible == true && !preview.IsMouseOver && !pointerInside
+            && DateTime.UtcNow - lastHover >= TimeSpan.FromMilliseconds(350)) StopPreviews();
+        // An ordinary focused button isn't an ongoing interaction. In particular,
+        // activating the owner for a right-click must not pin the dock forever.
+        if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !pointerInside && !IsMouseCaptureWithin && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
     }
     private void SetHidden(bool value, bool animate = true)
     {
@@ -163,17 +199,33 @@ internal sealed partial class DockWindow : FloatingWindow
         readingWindows = true;
         List<Desktop.RunningWindow> windows;
         var pins = Store.Value.Shortcuts.ToArray();
+        var startPins = Store.Value.StartPins.ToArray();
         Dictionary<string, LaunchIdentity> pinIdentities;
         try
         {
             windows = await System.Threading.Tasks.Task.Run(Desktop.Windows);
-            pinIdentities = await catalog.ResolvePinsAsync(pins);
+            pinIdentities = await catalog.ResolvePinsAsync(pins.Concat(startPins).DistinctBy(pin => pin.Target, StringComparer.OrdinalIgnoreCase).ToArray());
         }
         catch (System.Threading.Tasks.TaskCanceledException) { return; }
         catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { return; }
         finally { readingWindows = false; }
-        if (!pins.SequenceEqual(Store.Value.Shortcuts)) { signature = ""; nextAppRefresh = DateTime.MinValue; return; }
+        if (!pins.SequenceEqual(Store.Value.Shortcuts) || !startPins.SequenceEqual(Store.Value.StartPins)) { signature = ""; nextAppRefresh = DateTime.MinValue; return; }
         if (!IsVisible || LayoutDrag.Active || fileDragging || MenuOpen) return;
+        var removed = pinIdentities.Where(pair => pair.Value.Installed == false && !windows.Any(window =>
+            (!string.IsNullOrWhiteSpace(window.Executable) && DockPath(window.Executable).Equals(DockPath(pair.Value.Path), StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrWhiteSpace(pair.Value.AppId) && pair.Value.AppId.Equals(window.AppId, StringComparison.OrdinalIgnoreCase))))
+            .Select(pair => pair.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (removed.Count > 0)
+        {
+            Store.Update(p =>
+            {
+                p.Shortcuts.RemoveAll(pin => removed.Contains(pin.Target));
+                p.StartPins.RemoveAll(pin => removed.Contains(pin.Target));
+                p.RecentLaunches.RemoveAll(pin => removed.Contains(pin.Target));
+                p.DockOrder.RemoveAll(key => key.StartsWith("pin:", StringComparison.Ordinal) && removed.Contains(key[4..]));
+            });
+            return;
+        }
         var active = Desktop.GetForegroundWindow();
         var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}:{w.Executable}")) + active
             + string.Join("|", pins.Select(pin => $"{pin.Target}:{pinIdentities[pin.Target].Path}:{pinIdentities[pin.Target].AppId}"));
@@ -349,27 +401,20 @@ internal sealed partial class DockWindow : FloatingWindow
             int index = p.DockOrder.IndexOf(item.Key); if (index >= 0) p.DockOrder[index] = "pin:" + executable;
         }));
         Menu(menu, "Mover para a esquerda", () => MoveOne(item.Key, -1));
+        if (item.Target is string uninstallTarget && item.Action is null && AppUninstall.CanOffer(uninstallTarget))
+            Menu(menu, "Desinstalar…", async () => await AppUninstall.Open(item.Name, uninstallTarget));
         Menu(menu, "Mover para a direita", () => MoveOne(item.Key, 1));
         Menu(menu, Store.IsEditing ? "Concluir edição" : "Editar layout", () => Store.SetEditing(!Store.IsEditing));
         button.ContextMenu = menu;
         button.ContextMenuOpening += (_, _) =>
         {
             activeContextMenu = menu;
+            contextMenuRequested = DateTime.UtcNow;
             lastHover = DateTime.UtcNow;
             StopPreviews(); magnifier.Reset();
             Activate();
         };
-        menu.Closed += (_, _) =>
-        {
-            if (ReferenceEquals(activeContextMenu, menu)) activeContextMenu = null;
-            lastHover = DateTime.UtcNow; signature = "";
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                if (!IsVisible) return;
-                if (settingsAfterMenu) { settingsAfterMenu = false; RefreshSettings(); }
-                else RefreshApps();
-            }));
-        };
+        menu.Closed += (_, _) => FinishContextMenu(menu);
         LayoutDrag.Attach(button, "dock", item.Key, () => Store.IsEditing, Reorder);
         AttachFileTarget(button, item, dropIndicator);
         AttachPreview(button, item);

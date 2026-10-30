@@ -49,7 +49,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private bool foregroundClaimed;
     private nint openingForeground;
     private OutsideClickObserver? outsideClicks;
-    internal bool Busy => IsVisible || menus > 0 || modal;
+    internal bool Busy => IsVisible || modal;
     internal event Action? Dismissed;
     internal LauncherPanelWindow(SettingsStore store, ApplicationCatalog apps, Func<OverlayChrome.PixelRect> getAnchor, Func<bool> hasDockFocus) : base(store)
     {
@@ -257,6 +257,12 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         if (startPinned) { AddMenu(menu, "Mover fixado para a esquerda", () => MovePin(entry.Target, -1)); AddMenu(menu, "Mover fixado para a direita", () => MovePin(entry.Target, 1)); }
         if (Store.Value.Shortcuts.Any(pin => SameTarget(pin.Target, entry.Target))) AddMenu(menu, "Remover da barra", () => Store.Update(p => p.Shortcuts.RemoveAll(pin => SameTarget(pin.Target, entry.Target))));
         TrackMenu(menu); card.ContextMenu = menu;
+        if (AppUninstall.CanOffer(entry.Target)) AddMenu(menu, "Desinstalar…", async () =>
+        {
+            modal = true;
+            try { await AppUninstall.Open(entry.Name, entry.Target); }
+            finally { modal = false; Dismiss(); }
+        });
         LayoutDrag.Attach(card, "start-pins", entry.Target, () => mode == LauncherPanelMode.Start && section == "Fixados" && query.Text.Length == 0, ReorderPins);
         return card;
     }

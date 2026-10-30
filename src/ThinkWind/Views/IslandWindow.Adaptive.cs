@@ -16,6 +16,10 @@ internal sealed partial class IslandWindow
     protected override string? TopPanelSide => Stage == Services.IslandStage.Full ? (maximizedOnDisplay ? Store.Value.IslandPanelSide : "Center") : null;
     protected override double TopEdgeOffset => Stage == Services.IslandStage.Full && maximizedOnDisplay ? 36 : 0;
     private IslandStatusWindow? statusWindow;
+    private readonly MaximizedWindowInset applicationInset = new();
+    private void RefreshApplicationInset() => applicationInset.Apply(Display,
+        IsVisible && maximizedOnDisplay && Store.Value.IslandReduceOverMaximized
+            ? (int)Math.Ceiling(28 * Display.Scale) : 0);
 
     private void SyncStatusSurface()
     {
@@ -35,7 +39,7 @@ internal sealed partial class IslandWindow
             statusRow.Width = Math.Max(1, Display.Bounds.Width / Display.Scale - 24); statusRow.Height = 24;
             statusWindow.Attach(statusRow); Surface.Child = root;
             Surface.Visibility = edgeReduced ? Visibility.Hidden : Visibility.Visible;
-            if (IsVisible) { if (!statusWindow.IsVisible) statusWindow.Show(); statusWindow.Position(); statusWindow.RefreshAppTint(); RefreshStatusReservation(); }
+            if (IsVisible) { if (!statusWindow.IsVisible) statusWindow.Show(); statusWindow.Position(); statusWindow.RefreshAppTint(); }
             else statusWindow.Hide();
         }
         else
@@ -43,28 +47,11 @@ internal sealed partial class IslandWindow
             statusWindow?.Attach(null); statusWindow?.Hide();
             Surface.Child = root; Surface.Visibility = Visibility.Visible;
         }
+        RefreshApplicationInset();
     }
     private readonly DockPanel statusRow = new() { LastChildFill = false };
     private readonly TextBlock statusClock = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private bool statusBuilt;
-    private StatusBarReservation? statusReservation;
-    private nint statusReservationOwner;
-
-    private void RefreshStatusReservation()
-    {
-        // Keep the same appbar HWND in compact and expanded modes. Transferring
-        // the reservation while opening the panel made the strip jump downward.
-        if (statusWindow is null) return;
-        var handle = new WindowInteropHelper(statusWindow).Handle;
-        if (handle == 0) return;
-        if (statusReservationOwner != handle)
-        { statusReservation?.Dispose(); statusReservation = null; statusReservationOwner = handle; }
-        bool reserve = IsVisible && ((Stage == Services.IslandStage.Full && maximizedOnDisplay) || (maximizedOnDisplay && Store.Value.IslandReduceOverMaximized));
-        if (!reserve && statusReservation is null) return;
-        statusReservation ??= new StatusBarReservation(HwndSource.FromHwnd(handle));
-        statusReservation.Set(Display, reserve ? (int)Math.Ceiling(28 * Display.Scale) : 0);
-    }
-
     private void BuildStatusRow()
     {
         if (statusBuilt) return;
@@ -107,13 +94,12 @@ internal sealed partial class IslandWindow
             if (modeChanged)
             {
                 UpdateAdaptiveState(); BuildHeader(); UpdateStageVisibility();
-                RefreshStatusReservation(); Resize(true);
+                Resize(true);
             }
-            else { RefreshStatusReservation(); RefreshAdaptiveReveal(); }
+            else { RefreshAdaptiveReveal(); }
             return;
         }
         bool enteredMaximized = modeChanged && maximizedOnDisplay;
-        RefreshStatusReservation();
         if (enteredMaximized && Store.Value.IslandReduceOverMaximized && !PointerInsideGroup
             && !InteractionInProgress && !interaction.MiniOpen && Stage != Services.IslandStage.Compact)
             Transition(() => interaction.Compact());

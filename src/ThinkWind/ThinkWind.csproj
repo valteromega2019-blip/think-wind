@@ -8,10 +8,12 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/ThinkWind.ico</ApplicationIcon>
-    <Version>0.16.0-alpha</Version>
+    <Version>0.16.1-alpha</Version>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Assets/ThinkWind.ico" />
     <Resource Include="Assets/ThinkWind.png" />
+    <Content Include="../../COPYRIGHT.md" Link="COPYRIGHT.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../SECURITY.md" Link="SECURITY.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

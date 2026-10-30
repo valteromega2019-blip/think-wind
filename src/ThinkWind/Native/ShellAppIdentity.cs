@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace ThinkWind.Native;
 
-internal sealed record LaunchIdentity(string Path, string? AppId);
+internal sealed record LaunchIdentity(string Path, string? AppId, bool? Installed = null);
 internal static class ShellAppIdentity
 {
     [DllImport("shell32.dll")]
@@ -42,7 +42,7 @@ internal static class ShellAppIdentity
             folder = ((dynamic)shell!).NameSpace(id is null ? System.IO.Path.GetDirectoryName(target) : "shell:AppsFolder");
             if (folder is null) return new(path, id);
             item = ((dynamic)folder).ParseName(id ?? System.IO.Path.GetFileName(target));
-            if (item is null) return new(path, id);
+            if (item is null) return new(path, id, target.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? false : null);
             string explicitId = Convert.ToString(((dynamic)item).ExtendedProperty("System.AppUserModel.ID")) ?? "";
             if (!string.IsNullOrWhiteSpace(explicitId)) id = explicitId;
             string resolved = Convert.ToString(((dynamic)item).ExtendedProperty("System.Link.TargetParsingPath")) ?? "";
@@ -55,6 +55,6 @@ internal static class ShellAppIdentity
         }
         catch (Exception error) when (error is COMException or ArgumentException or IOException or UnauthorizedAccessException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException) { }
         finally { CoreAudio.Release(item); CoreAudio.Release(folder); CoreAudio.Release(shell); }
-        return new(path, id);
+        return new(path, id, target.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && item is not null ? true : null);
     }
 }
