@@ -15,10 +15,11 @@ internal sealed class SystemToolsWindow : FloatingWindow
     protected override bool HideOnClose => false;
     protected override string? MaterialOverride => "Acrylic";
     private readonly Button anchor;
+    private readonly bool aboveAnchor;
 
-    internal SystemToolsWindow(SettingsStore store, Button source) : base(store)
+    internal SystemToolsWindow(SettingsStore store, Button source, bool above = false) : base(store)
     {
-        anchor = source; Title = "Think Wind — Ferramentas do Windows"; ShowActivated = true;
+        anchor = source; aboveAnchor = above; Title = "Think Wind — Ferramentas do Windows"; ShowActivated = true;
         Surface.Padding = new Thickness(10);
         var root = new DockPanel();
         var heading = new DockPanel { Margin = new Thickness(6, 0, 0, 8) };
@@ -74,6 +75,8 @@ internal sealed class SystemToolsWindow : FloatingWindow
         var first = anchor.PointToScreen(new Point());
         var last = anchor.PointToScreen(new Point(anchor.ActualWidth, anchor.ActualHeight));
         var bounds = new OverlayChrome.PixelRect { Left = (int)first.X, Top = (int)first.Y, Right = (int)last.X, Bottom = (int)last.Y };
-        PlaceNear(Math.Min(300, Display.Width - 24), Math.Min(600, Display.Height - 48), bounds, false);
+        double width = Math.Min(300, Display.Width - 24), height = Math.Min(600, Display.Height - 48);
+        if (aboveAnchor) PlaceAbove(width, height, bounds, false);
+        else PlaceNear(width, height, bounds, false);
     }
 }

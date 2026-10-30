@@ -103,6 +103,7 @@ internal sealed partial class DockWindow : FloatingWindow
         LayoutDrag.Completed += DragCompleted;
         InitializeFileDrop();
         InitializePreviews();
+        InitializeStartTools();
         IsVisibleChanged += (_, _) =>
         {
             if (!IsVisible)
@@ -144,7 +145,7 @@ internal sealed partial class DockWindow : FloatingWindow
         ApplyAppearance(); RefreshApps();
         launcher?.RefreshSettings();
     }
-    private bool MenuOpen => activeContextMenu is not null || items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
+    private bool MenuOpen => startTools?.IsVisible == true || activeContextMenu is not null || items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
     private bool PointerInsideDock
     {
         get
@@ -324,6 +325,7 @@ internal sealed partial class DockWindow : FloatingWindow
         items.Width = double.NaN;
         items.Children.Clear();
         var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
+        AttachStartTools(start);
         items.Children.Add(SearchSlot(searchWidth));
         start.Margin = new Thickness(0, 0, 8, 0);
         if (Store.IsEditing)
