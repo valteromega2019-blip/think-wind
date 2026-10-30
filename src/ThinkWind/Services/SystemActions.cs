@@ -50,10 +50,10 @@ internal static class SystemActions
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException or ArgumentException or NotSupportedException)
         { MessageBox.Show("Não foi possível abrir: " + target + "\n" + e.Message, "Think Wind"); return false; }
     }
-    internal static void Power(string action)
+    internal static void Power(string action, bool confirm = true)
     {
         if (action is not ("Desligar" or "Reiniciar" or "Suspender")) return;
-        if (MessageBox.Show(action + " o computador agora?", "Think Wind", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (confirm && MessageBox.Show(action + " o computador agora?", "Think Wind", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         if (action == "Suspender")
         {
             if (!System.Windows.Forms.Application.SetSuspendState(System.Windows.Forms.PowerState.Suspend, false, false)) MessageBox.Show("O Windows não permitiu suspender o computador.", "Think Wind");

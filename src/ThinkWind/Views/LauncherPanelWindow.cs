@@ -76,7 +76,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         var footer = new DockPanel { Margin = new Thickness(4, 6, 4, 0) };
         var power = ActionButton("Energia", () => { }); power.Content = Glyph("\uE7E8", 18); power.Width = 38; power.Height = 34; power.Padding = new Thickness(4);
         var powerMenu = new ContextMenu();
-        foreach (string action in new[] { "Suspender", "Reiniciar", "Desligar" }) AddMenu(powerMenu, action, () => { modal = true; try { Store.Flush(); SystemActions.Power(action); } finally { modal = false; } });
+        foreach (string action in new[] { "Suspender", "Reiniciar", "Desligar" }) AddMenu(powerMenu, action, () => { modal = true; try { Store.Flush(); SystemActions.Power(action, confirm: action != "Desligar"); } finally { modal = false; } });
         TrackMenu(powerMenu); power.Click += (_, _) => { powerMenu.PlacementTarget = power; powerMenu.IsOpen = true; };
         DockPanel.SetDock(power, Dock.Right); footer.Children.Add(power);
         var manual = ActionButton("Executável manual…", ManualShortcut); manual.FontSize = 10; manual.Padding = new Thickness(6, 4, 6, 4); DockPanel.SetDock(manual, Dock.Right); footer.Children.Add(manual);
