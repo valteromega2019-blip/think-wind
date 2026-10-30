@@ -62,6 +62,7 @@ public sealed class Preferences
     public bool IslandReduceOverMaximized { get; set; } = true;
     public bool IslandMatchAppColor { get; set; } = true;
     public string WeatherCity { get; set; } = "";
+    public bool ShowWeatherInHeader { get; set; } = true;
     public double? WeatherLatitude { get; set; }
     public double? WeatherLongitude { get; set; }
     public double IslandCollapseSeconds { get; set; } = .45;

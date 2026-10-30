@@ -23,7 +23,10 @@ internal sealed class WeatherWidget : Grid, IDisposable
     private readonly TextBlock status = new() { FontSize = 10, TextWrapping = TextWrapping.Wrap, MaxHeight = 28, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
     private CancellationTokenSource? request;
     private string configured = "";
-    private bool active, busy, disposed;
+    private bool active, headerActive, busy, disposed;
+    internal WeatherReading? Reading { get; private set; }
+    internal event Action? ReadingChanged;
+    private bool Requested => active || headerActive;
     private int revision;
     private DateTimeOffset nextRefresh;
     internal bool IsInteracting => IsKeyboardFocusWithin || choices.IsDropDownOpen || IsMouseCaptureWithin;
@@ -62,6 +65,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
         string key = store.Value.WeatherCity + ":" + store.Value.WeatherLatitude + ":" + store.Value.WeatherLongitude;
         if (configured == key) return;
         configured = key; Cancel(); city.Text = store.Value.WeatherCity;
+        Reading = null; ReadingChanged?.Invoke();
         bool editable = configurationMode || !HasLocation;
         setupRow.Visibility = editable ? Visibility.Visible : Visibility.Collapsed;
         locationName.Text = store.Value.WeatherCity;
@@ -74,12 +78,17 @@ internal sealed class WeatherWidget : Grid, IDisposable
     internal void SetActive(bool value)
     {
         if (disposed || active == value) return;
-        active = value; if (!value) Cancel(); else Poll();
+        active = value; if (!Requested) Cancel(); else Poll();
+    }
+    internal void SetHeaderActive(bool value)
+    {
+        if (disposed || headerActive == value) return;
+        headerActive = value; if (!Requested) Cancel(); else Poll();
     }
     private void Cancel() { revision++; request?.Cancel(); request?.Dispose(); request = null; if (busy) nextRefresh = DateTimeOffset.MinValue; busy = false; }
     internal void Poll()
     {
-        if (configurationMode || disposed || !active || !IsVisible || busy || choices.Visibility == Visibility.Visible || !HasLocation || DateTimeOffset.UtcNow < nextRefresh) return;
+        if (configurationMode || disposed || !Requested || (!IsVisible && !headerActive) || busy || choices.Visibility == Visibility.Visible || !HasLocation || DateTimeOffset.UtcNow < nextRefresh) return;
         _ = Load();
     }
     private async Task Find()
@@ -107,13 +116,14 @@ internal sealed class WeatherWidget : Grid, IDisposable
         try
         {
             var weather = await WeatherService.ReadAsync(store.Value.WeatherLatitude!.Value, store.Value.WeatherLongitude!.Value, token);
-            if (current != revision || !active || !IsVisible) return;
+            if (current != revision || !Requested || (!IsVisible && !headerActive)) return;
+            Reading = weather; ReadingChanged?.Invoke();
             temperature.Text = $"{weather.Temperature:0}°C · {WeatherService.Description(weather.Code)}";
             details.Text = $"Sensação {weather.FeelsLike:0}° · mín. {weather.Minimum:0}° / máx. {weather.Maximum:0}°";
             status.Text = $"Atualizado {weather.Updated:HH:mm}";
         }
-        catch (OperationCanceledException) { if (current == revision && active) { status.Text = "Consulta interrompida. Tentaremos novamente."; nextRefresh = DateTimeOffset.UtcNow.AddMinutes(1); } }
-        catch (Exception error) when (RequestError(error)) { if (current == revision && active) { status.Text = "Clima indisponível. Tentaremos novamente."; nextRefresh = DateTimeOffset.UtcNow.AddMinutes(1); } }
+        catch (OperationCanceledException) { if (current == revision && Requested) { status.Text = "Consulta interrompida. Tentaremos novamente."; nextRefresh = DateTimeOffset.UtcNow.AddMinutes(1); } }
+        catch (Exception error) when (RequestError(error)) { if (current == revision && Requested) { status.Text = "Clima indisponível. Tentaremos novamente."; nextRefresh = DateTimeOffset.UtcNow.AddMinutes(1); } }
         finally { if (current == revision) busy = false; }
     }
     private static bool RequestError(Exception error) => error is HttpRequestException or JsonException or InvalidOperationException or KeyNotFoundException or FormatException or System.IO.IOException or IndexOutOfRangeException or ArgumentException;

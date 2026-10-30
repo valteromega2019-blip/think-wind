@@ -156,6 +156,7 @@ internal sealed class SettingsWindow : FloatingWindow
         Slider(island, "Posição horizontal", -4000, 4000, store.Value.IslandHorizontalOffset, v => Change(p => p.IslandHorizontalOffset = v));
         Note(island, "Acrylic usa o fundo real através da composição do Windows. Mica é um material opaco baseado no papel de parede. A intensidade acima controla a tonalidade; o raio do desfoque é definido pelo sistema.");
         var weatherSection = Section("Clima", "Após a primeira escolha no widget, altere a cidade somente aqui. A seleção é salva automaticamente.");
+        Check(weatherSection, "Mostrar clima ao lado do relógio", store.Value.ShowWeatherInHeader, value => Change(p => p.ShowWeatherInHeader = value));
         if (weatherSettings.Parent is Panel oldWeather) oldWeather.Children.Remove(weatherSettings);
         weatherSection.Children.Add(weatherSettings);
 

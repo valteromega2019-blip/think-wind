@@ -63,6 +63,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     {
         Title = "Think Wind — Dynamic Island"; openSettings = settings;
         weather = new WeatherWidget(store);
+        weather.ReadingChanged += RefreshHeaderWeather;
         brightness = new BrightnessControl(() => Display.Bounds);
         trayCard = new TrayCard(store);
         calendar.SetResourceReference(StyleProperty, "Think.Calendar");
@@ -128,8 +129,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         Closed += (_, _) => statusWindow?.Close();
         IsVisibleChanged += (_, _) => RefreshApplicationInset();
         Closed += (_, _) => applicationInset.Dispose();
-        Closed += (_, _) => weather.Dispose();
-        IsVisibleChanged += (_, _) => { if (!IsVisible) weather.SetActive(false); };
+        Closed += (_, _) => { weather.ReadingChanged -= RefreshHeaderWeather; weather.Dispose(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { weather.SetActive(false); weather.SetHeaderActive(false); if (systemTools is not null) systemTools.IsOpen = false; } };
     }
     private void DragCompleted() { RefreshSettings(); ScheduleCollapse(); }
     private Border HoverCard(string title, UIElement child)
@@ -269,7 +270,9 @@ internal sealed partial class IslandWindow : FloatingWindow
                 clockButton.Style = (Style)FindResource("Think.IconButton"); clockButton.Content = clock;
                 clockButton.Padding = new Thickness(0); clockButton.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
                 LayoutDrag.Attach(clockButton, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
-                header.Children.Add(clockButton); continue;
+                header.Children.Add(clockButton);
+                if (Store.Value.ShowWeatherInHeader) header.Children.Add(WeatherButton(false));
+                continue;
             }
             var button = ActionButton(control.Name, () =>
             {
@@ -289,6 +292,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             if (id is not ("settings" or "windows-settings")) LayoutDrag.Attach(button, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
             header.Children.Add(button);
         }
+        header.Children.Add(SystemToolsButton(false));
         if (Stage == IslandStage.Full || Store.IsEditing)
         {
             if (Stage == IslandStage.Full)
@@ -391,6 +395,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         hoverModules.ColumnDefinitions[1].Width = new GridLength(Store.ModuleVisible("audio") ? 1 : 0, GridUnitType.Star);
         media.SetActive(IsVisible && Stage != IslandStage.Compact && Store.ModuleVisible("media"));
         weather.SetActive(IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("widgets"));
+        weather.SetHeaderActive(IsVisible && Store.Value.ShowWeatherInHeader);
+        RefreshHeaderWeather();
     }
     private static void Rehost(FrameworkElement element, Border slot)
     {
@@ -457,7 +463,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             return false;
         }
     }
-    private bool ControlsBusy => IsMouseCaptureWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || trayCard.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
+    private bool ControlsBusy => SystemToolsOpen || IsMouseCaptureWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || trayCard.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
     private bool InteractionInProgress => Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
     private void CancelCollapse() { hoverLeave.Stop(); outsideSince = null; }
     private void WaitForBridge() { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(50); hoverLeave.Start(); }

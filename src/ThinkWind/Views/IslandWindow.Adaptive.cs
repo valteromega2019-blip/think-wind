@@ -62,6 +62,11 @@ internal sealed partial class IslandWindow
         statusClock.Margin = new Thickness(0);
         DockPanel.SetDock(statusClock, Dock.Left);
         statusRow.Children.Add(statusClock);
+        var statusWeather = WeatherButton(true);
+        statusWeather.Visibility = Store.Value.ShowWeatherInHeader ? Visibility.Visible : Visibility.Collapsed;
+        DockPanel.SetDock(statusWeather, Dock.Left); statusRow.Children.Add(statusWeather);
+        var tools = SystemToolsButton(true);
+        DockPanel.SetDock(tools, Dock.Left); statusRow.Children.Add(tools);
         void Add(string label, string glyph, Action action)
         {
             var button = ActionButton(label, action); button.Style = (Style)FindResource("Think.IconButton");
