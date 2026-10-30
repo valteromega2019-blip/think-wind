@@ -2,6 +2,8 @@
 
 ## 0.11 Alfa — 0.11.0-alpha
 
+- Corrigida falha de inicialização com aplicativo maximizado: criar o HWND da ilha antes de atribuir a janela de status como dependente.
+
 - Modo Jogo reconhece executáveis nas instalações Steam (incluindo bibliotecas adicionais), Epic e GOG, além da detecção existente de tela cheia. A lista manual passa a ser complementar e novos perfis não contêm um jogo específico.
 - Opção de proteção ampla cobre qualquer aplicativo em primeiro plano fora do Shell e das exceções, para jogos não reconhecidos; também oculta o launcher em aplicativos comuns quando ativada.
 - Metadados locais somente para leitura, com cache de um minuto, sem varredura recursiva, novos hooks ou temporizadores. Caminhos de instalação são heurística: software instalado nas mesmas bibliotecas pode ser reconhecido, e jogos portáteis/de outras lojas podem precisar da proteção ampla ou lista complementar.

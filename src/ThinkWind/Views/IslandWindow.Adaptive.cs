@@ -25,6 +25,9 @@ internal sealed partial class IslandWindow
             if (ReferenceEquals(Surface.Child, statusRow)) Surface.Child = null;
             if (statusWindow is null)
             {
+                // WPF requires the owner's HWND before assigning an owned window,
+                // including the startup probe before the island's first Show().
+                new WindowInteropHelper(this).EnsureHandle();
                 statusWindow = new IslandStatusWindow(Store) { Owner = this, ShowActivated = false };
                 statusWindow.MouseEnter += (_, _) => CancelCollapse();
                 statusWindow.MouseLeave += (_, _) => ScheduleCollapse();
@@ -119,8 +122,8 @@ internal sealed partial class IslandWindow
 
     internal void PrepareInitialLayout()
     {
-        RefreshForegroundLayout();
         new WindowInteropHelper(this).EnsureHandle();
+        RefreshForegroundLayout();
         RefreshSettings();
         Resize(false);
     }
