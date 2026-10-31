@@ -6,7 +6,7 @@ namespace ThinkWind.Views;
 
 internal sealed partial class DockWindow
 {
-    private const double ShowDesktopSlotWidth = 24;
+    private const double ShowDesktopSlotWidth = 40;
     private Button ShowDesktopButton()
     {
         var button = ActionButton("Mostrar área de trabalho", () =>

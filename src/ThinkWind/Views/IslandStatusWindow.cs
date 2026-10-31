@@ -17,7 +17,7 @@ internal sealed class IslandStatusWindow : FloatingWindow
     private Color? sampled;
     private DateTime nextSample;
     private Color? pendingTint;
-    private bool MatchApp => Store.Value.IslandMatchAppColor && !SystemParameters.HighContrast;
+    private bool MatchApp => !Store.Value.UseCustomBarColor && Store.Value.IslandMatchAppColor && !SystemParameters.HighContrast;
     protected override Color MaterialTint => MatchApp && sampled.HasValue ? sampled.Value : base.MaterialTint;
     protected override bool MaterialLight => MatchApp && sampled.HasValue ? IsLight(sampled.Value) : base.MaterialLight;
     [DllImport("user32.dll")] private static extern nint GetDC(nint window);

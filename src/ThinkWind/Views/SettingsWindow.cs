@@ -119,25 +119,10 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Slider(general, "Tamanho das fontes", .8, 2.5, store.Value.FontScale, value => Change(p => p.FontScale = value), "P0", .05);
         Select(general, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
         Slider(general, "Opacidade dos blocos e controles", .1, .9, store.Value.InnerSurfaceOpacity, v => Change(p => p.InnerSurfaceOpacity = v), "P0", .05);
-        var accent = new DockPanel { Margin = new Thickness(0, 10, 0, 14) };
-        var color = new TextBox { Text = store.Value.AccentColor, Width = 100, Padding = new Thickness(10, 7, 10, 7), VerticalContentAlignment = VerticalAlignment.Center };
-        color.SetResourceReference(Control.BackgroundProperty, "Think.Control"); color.SetResourceReference(Control.ForegroundProperty, "Think.Text");
-        color.ToolTip = "Cor de destaque em hexadecimal, por exemplo #60CDFF";
-        color.TextChanged += (_, _) =>
-        {
-            if (building) return;
-            string text = color.Text.Trim();
-            if (text.Length != 7 || !text.StartsWith('#') || !text.Skip(1).All(Uri.IsHexDigit)) return;
-            Change(p => p.AccentColor = text.ToUpperInvariant());
-        };
-        DockPanel.SetDock(color, Dock.Right); accent.Children.Add(color);
-        var swatches = new WrapPanel();
-        foreach (var hex in new[] { "#60CDFF", "#89A5FF", "#B69CFF", "#5ED6B3", "#FFAE6D", "#FA819A" })
-        {
-            var swatch = new Button { Width = 30, Height = 30, Padding = new Thickness(0), Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)), ToolTip = hex };
-            swatch.Click += (_, _) => color.Text = hex; swatches.Children.Add(swatch);
-        }
-        accent.Children.Add(swatches); general.Children.Add(new TextBlock { Text = "Cor de destaque" }); general.Children.Add(accent);
+        AddColorSetting(general, "Cor de destaque", store.Value.AccentColor, value => Change(p => p.AccentColor = value));
+        Check(general, "Usar uma cor própria no fundo das barras", store.Value.UseCustomBarColor, value => Change(p => p.UseCustomBarColor = value));
+        AddColorSetting(general, "Cor do fundo · barra inferior e ilha", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));
+        Note(general, "Desative a cor própria para voltar ao fundo do tema. A opacidade e o Acrylic continuam nos controles de cada barra; a cor própria tem prioridade sobre acompanhar a cor do aplicativo.");
         Slider(general, "Duração das animações", 0, 600, store.Value.AnimationMilliseconds, v => Change(p => p.AnimationMilliseconds = v), "0 'ms'");
 
         var dock = Section("Barra inferior", "Ícones originais, sem fundos individuais. Ajustes independentes da ilha.");

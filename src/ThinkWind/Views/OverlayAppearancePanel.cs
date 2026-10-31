@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using Forms = System.Windows.Forms;
 
 using ThinkWind.Services;
 namespace ThinkWind.Views;
@@ -131,13 +129,8 @@ public sealed class OverlayAppearancePanel : UserControl
     private void PickColor(TextBox target)
     {
         if (!IsLoaded) return;
-        using var dialog = new Forms.ColorDialog { FullOpen = true, AnyColor = true };
-        dialog.Color = System.Drawing.ColorTranslator.FromHtml(OverlayAppearanceOptions.IsValidColor(target.Text) ? target.Text : "#00BFFF");
-        IntPtr handle = Window.GetWindow(this) is Window owner ? new WindowInteropHelper(owner).Handle : IntPtr.Zero;
-        Forms.DialogResult result = handle == IntPtr.Zero ? dialog.ShowDialog() : dialog.ShowDialog(new ColorOwner(handle));
-        if (result == Forms.DialogResult.OK) target.Text = $"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";
+        ColorPickerPopup.Open(target, OverlayAppearanceOptions.IsValidColor(target.Text) ? target.Text : "#00BFFF", value => target.Text = value);
     }
-    private sealed class ColorOwner(IntPtr handle) : Forms.IWin32Window { public IntPtr Handle => handle; }
 
     private void AddSlider(string label, string name, double maximum)
     {

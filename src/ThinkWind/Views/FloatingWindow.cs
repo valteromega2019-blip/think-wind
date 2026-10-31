@@ -23,7 +23,8 @@ internal abstract class FloatingWindow : Window
     protected virtual string? TopPanelSide => null;
     protected virtual double TopEdgeOffset => 0;
     protected virtual bool SuppressMaterial => false;
-    protected virtual Color MaterialTint => ThemeService.BaseColor;
+    protected virtual Color MaterialTint => Store.Value.UseCustomBarColor
+        ? (Color)ColorConverter.ConvertFromString(Store.Value.BarBackgroundColor) : ThemeService.BaseColor;
     protected virtual bool MaterialLight => ThemeService.Light;
     protected virtual Thickness TransparentInsets => new();
     protected virtual bool HideOnClose => true;

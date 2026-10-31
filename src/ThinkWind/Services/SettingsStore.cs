@@ -66,6 +66,8 @@ public sealed class Preferences
     public string Theme { get; set; } = "Auto";
     public double FontScale { get; set; } = 1;
     public string AccentColor { get; set; } = "#60CDFF";
+    public bool UseCustomBarColor { get; set; }
+    public string BarBackgroundColor { get; set; } = "#111318";
     public double? DockOpacity { get; set; }
     public double? IslandOpacity { get; set; }
     public string DockMaterial { get; set; } = "Acrylic";
@@ -232,6 +234,8 @@ public sealed class SettingsStore
         p.DockMaterial = Material(p.DockMaterial); p.IslandMaterial = Material(p.IslandMaterial);
         try { if (System.Windows.Media.ColorConverter.ConvertFromString(p.AccentColor) is not System.Windows.Media.Color c || c.A != 255) p.AccentColor = "#60CDFF"; }
         catch (Exception e) when (e is FormatException or NotSupportedException or ArgumentException) { p.AccentColor = "#60CDFF"; }
+        try { if (System.Windows.Media.ColorConverter.ConvertFromString(p.BarBackgroundColor) is not System.Windows.Media.Color background || background.A != 255) p.BarBackgroundColor = "#111318"; }
+        catch (Exception e) when (e is FormatException or NotSupportedException or ArgumentException) { p.BarBackgroundColor = "#111318"; }
         p.Shortcuts = (p.Shortcuts ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).ToList();
         p.DockOrder = (p.DockOrder ?? new()).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).Take(256).ToList();
         var quickIds = LayoutCatalog.QuickControls.Select(q => q.Id).ToArray();
