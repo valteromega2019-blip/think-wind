@@ -34,11 +34,13 @@ public partial class App : Application
     private int gameTransitions;
     private SettingsStore store = null!;
     private PreferenceStamp? preferenceStamp;
+    private StartupPriority? startupPriority;
     internal bool IsExiting { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         LaunchEnvironment.RemoveDevelopmentBootstrap();
+        if (StartupPermissions.RunSetup(e.Args, out int startupSetupCode)) { Shutdown(startupSetupCode); return; }
         if (WindowActionSetup.RunSetup(e.Args, out int windowSetupExitCode)) { Shutdown(windowSetupExitCode); return; }
         if (AuthorizedWindowAction.Run(e.Args, out int authorizedWindowExitCode)) { Shutdown(authorizedWindowExitCode); return; }
         if (AdvancedSensorSetup.RunSetup(e.Args, out int sensorSetupExitCode)) { Shutdown(sensorSetupExitCode); return; }
@@ -83,6 +85,9 @@ public partial class App : Application
         diagnosticReport = reportIndex >= 0 && reportIndex + 1 < e.Args.Length ? e.Args[reportIndex + 1] : null;
         store = diagnosing ? new SettingsStore(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThinkWindDiagnostic", Guid.NewGuid() + ".json")) : new SettingsStore();
         WindowActionSetup.AutomaticAuthorizationEnabled = store.Value.AutoAuthorizeWindowActions;
+        bool initialGame = false;
+        try { initialGame = GameModeService.Probe(store.Value); } catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
+        if (!diagnosing && !initialGame) startupPriority = new StartupPriority();
         if (diagnosing) { store.Value.AutoHide = false; store.Value.GameModeEnabled = !e.Args.Contains("--diagnostic-normal"); }
         if (!diagnosing)
         {
@@ -123,8 +128,6 @@ public partial class App : Application
                 if (IsExiting || gameMode?.Active == true) return;
                 if (context) menu.Show(Forms.Cursor.Position); else OpenSettings();
             }))));
-        bool initialGame = false;
-        try { initialGame = GameModeService.Probe(store.Value); } catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
         windowsTaskbar = new WindowsTaskbar(message =>
         {
             if (IsExiting) return;
@@ -137,12 +140,20 @@ public partial class App : Application
         gameMode.Configure(store.Value); ConfigureStartHotkey();
         ConfigureMonitors();
         ApplyHardwareOverlay();
-        if (!diagnosing && !initialGame && store.Value.HardwareSensorsAutoSetup && !AdvancedSensorSetup.IsConfigured)
+        startupPriority?.Dispose(); startupPriority = null;
+        if (!diagnosing && !initialGame && ((store.Value.HardwareSensorsAutoSetup && !AdvancedSensorSetup.IsConfigured)
+            || (store.Value.AutoAuthorizeWindowActions && !WindowActionSetup.IsConfigured)))
             Dispatcher.BeginInvoke(new Action(async () =>
             {
-                store.Update(p => p.HardwareSensorsSetupAttempted = true);
-                if (!AdvancedSensorSetup.IsConfigured) await AdvancedSensorSetup.Configure();
-            }));
+                if (IsExiting || gameMode?.Active == true) return;
+                try
+                {
+                    if (store.Value.HardwareSensorsAutoSetup) store.Update(p => p.HardwareSensorsSetupAttempted = true);
+                    await StartupPermissions.Prepare(store.Value.HardwareSensorsAutoSetup, store.Value.AutoAuthorizeWindowActions);
+                }
+                catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)
+                { MessageBox.Show("Não foi possível preparar os auxiliares: " + error.Message, "Think Wind"); }
+            }), System.Windows.Threading.DispatcherPriority.ContextIdle);
         if (diagnosing)
         {
             var exit = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
@@ -186,6 +197,7 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        startupPriority?.Dispose(); startupPriority = null;
         windowsTaskbar?.Dispose();
         startKey?.Dispose();
         launcherWindowsKey?.Dispose();
