@@ -1,3 +1,7 @@
+## 0.18 Alfa — revisão 2
+
+Entrega da branch fix/arrasto-permissoes aprovada pelo usuário. Instalador regenerado com runtime/PawnIO opcional. Sem nova execução de testes nesta publicação. [Notas](RELEASE-0.18.2-ALFA.md).
+
 ## Em desenvolvimento — acionamento do coletor administrativo
 
 - Identificada rejeição do parâmetro em IRegisteredTask.Run antes de iniciar a tarefa: object[] gerava um array de VARIANTs, enquanto a API aceita BSTR ou array de BSTR. A chamada agora envia diretamente a string fixa sensors/frames, substituída em Arg0.

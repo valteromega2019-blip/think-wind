@@ -1,5 +1,12 @@
 # Think Wind
 
+## 0.18 Alfa — revisão 2 (0.18.2-alpha)
+
+[Instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.18.2-alpha/ThinkWind-Setup-0.18.2-alpha.exe) · [Notas e limites](RELEASE-0.18.2-ALFA.md)
+
+Corrige o arrasto no Dock e o início do coletor administrativo, com interface normal e ícones expandidos em uma linha. Prévia confirmada pelo usuário; sem novos testes automatizados nesta revisão.
+
+
 ## 0.18 Alfa — revisão 1 (0.18.1-alpha)
 
 [Instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.18.1-alpha/ThinkWind-Setup-0.18.1-alpha.exe) · [Notas](RELEASE-0.18.1-ALFA.md)
