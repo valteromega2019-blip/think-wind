@@ -50,6 +50,18 @@ public partial class App : Application
         if (ElevatedWindowAction.Run(e.Args, out int actionExitCode)) { Shutdown(actionExitCode); return; }
         if (WindowsTaskbar.RunGuard(e.Args)) { Shutdown(); return; }
         bool configuringInstallation = e.Args.Contains("--configure-installation");
+        // Administrative roles above remain isolated. The visible launcher
+        // must match Explorer's token to receive its OLE drag/drop operations.
+        if (!configuringInstallation)
+        {
+            try { if (DesktopUserLauncher.RelaunchIfElevated(e.Args)) { Shutdown(); return; } }
+            catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                MessageBox.Show("Não foi possível abrir a interface com permissões compatíveis com o arrasto do Explorador.\n\n" + error.Message,
+                    "Think Wind", MessageBoxButton.OK, MessageBoxImage.Information);
+                Shutdown(1); return;
+            }
+        }
         instance = new Mutex(true, @"Local\ThinkWind.Launcher", out var first);
         if (configuringInstallation)
         {

@@ -1,3 +1,13 @@
+## Em desenvolvimento — interface compatível com o arrasto do Explorador
+
+Branch: fix/arrasto-permissoes.
+
+- Inicialização normal detecta se o launcher recebeu elevação. Nesse caso, reabre somente sua própria interface com o token do desktop, validando mesma conta e sessão, antes de criar a instância única, barra, ilha ou hooks.
+- Usa GetShellWindow, OpenProcessToken e CreateProcessWithTokenW para executar com as permissões do Explorador. O ambiente é criado para esse usuário; não herda o ambiente administrativo. Handles e bloco de ambiente são liberados após o lançamento.
+- Coletor de sensores, autorização da tarefa, configuração do instalador, proteção da barra e ações administrativas individuais mantêm seus caminhos separados. Não altera UAC, manifesto uiAccess, filtros de mensagens nem permissões globais.
+- Sem loop de reinicialização: há uma marca de relançamento e falha informada se não for possível usar o desktop da mesma conta. Não tenta transferir a interface para outro usuário.
+- Objetivo: permitir arrastos do Explorador/navegador normais para a barra sem manter a interface elevada. O arrasto direto para outros aplicativos elevados continua sujeito às regras do Windows.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura do código e diff; validação em execução pendente.
 ## Em desenvolvimento — restauração do arrastar e soltar no Dock
 
 - Reconhece arquivos, texto/HTML, imagens, links e descritores de arquivos virtuais para manter a barra aberta e ativar janelas durante o arrasto. Não interfere na reorganização interna dos ícones.
