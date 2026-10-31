@@ -188,7 +188,7 @@
     let matches = [];
     let timers = [];
     let userEdited = false;
-    let played = false;
+    let visible = false;
     function clearAuto() { for (const timer of timers) clearTimeout(timer); timers = []; }
     function renderResults() {
       const term = input.value.trim().toLocaleLowerCase('pt-BR');
@@ -228,7 +228,8 @@
       if (!preference.matches) animate(opened, { opacity: [0, 1], y: [12, 0], scale: [.95, 1] }, { type: 'spring', stiffness: 260, damping: 25 });
     }
     function play() {
-      clearAuto(); played = true; userEdited = false; input.value = '';
+      clearAuto(); userEdited = false; input.value = '';
+      status.setAttribute('aria-live', 'off');
       panel.hidden = true; trigger.hidden = false; trigger.setAttribute('aria-expanded', 'false');
       if (preference.matches) { input.value = 'Code'; openPanel(); launch(matches[0]); return; }
       const queue = (delay, action) => timers.push(setTimeout(action, delay));
@@ -236,8 +237,9 @@
       [...'Code'].forEach((character, index) => queue(750 + index * 190, () => { input.value += character; renderResults(); }));
       queue(1900, () => { enter.classList.add('is-pressed'); animate(enter, { scale: [1, .9, 1] }, { duration: .22 }); });
       queue(2080, () => launch(matches[0]));
+      queue(4200, () => { if (visible && !document.hidden && !userEdited) play(); });
     }
-    function interact() { userEdited = true; clearAuto(); }
+    function interact() { userEdited = true; clearAuto(); status.setAttribute('aria-live', 'polite'); }
     listen(trigger, 'click', () => { interact(); openPanel(true); });
     listen(input, 'focus', interact);
     listen(input, 'input', () => { interact(); renderResults(); });
@@ -251,10 +253,14 @@
     for (const button of document.querySelectorAll('[data-show-search]')) listen(button, 'click', () => {
       interact(); scene.scrollIntoView({ behavior: preference.matches ? 'instant' : 'smooth', block: 'center' }); openPanel(true);
     });
-    listen(document, 'visibilitychange', () => { if (document.hidden) clearAuto(); });
+    listen(document, 'visibilitychange', () => {
+      if (document.hidden) clearAuto();
+      else if (visible && !userEdited && !preference.matches) play();
+    });
     if (!preference.matches) cleanup.push(motion.inView(scene, () => {
-      if (!played && !userEdited) play();
-      return clearAuto;
+      visible = true;
+      if (!userEdited && !document.hidden) play();
+      return () => { visible = false; clearAuto(); };
     }, { amount: .5 }));
     cleanup.push(clearAuto);
   }
