@@ -1,3 +1,9 @@
+## Em desenvolvimento — uma linha de ícones na expansão
+
+- Controles anteriormente mostrados na segunda fileira passam para a mesma linha horizontal dos controles superiores nos estágios expandidos, antes do botão de recolher.
+- Mantida a separação de preferências de visibilidade: ícones secundários continuam ausentes no compacto e controles desativados permanecem ocultos.
+- Dimensões e margens dos botões secundários seguem a escala e o espaçamento da ilha. O cabeçalho usa o ajuste proporcional existente em telas estreitas, sem criar outra linha.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura de código e diff; conferência visual pendente.
 ## Em desenvolvimento — interface compatível com o arrasto do Explorador
 
 Branch: fix/arrasto-permissoes.

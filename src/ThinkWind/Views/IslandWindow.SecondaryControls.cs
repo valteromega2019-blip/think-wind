@@ -49,6 +49,8 @@ internal sealed partial class IslandWindow
     private void StyleSecondaryControl(Button button)
     {
         button.Style = (Style)FindResource("Think.IconButton");
-        button.Width = button.Height = 32; button.Padding = new Thickness(3); button.Margin = new Thickness(2);
+        button.Width = button.Height = 32 * Store.Value.IslandScale;
+        button.Padding = new Thickness(3);
+        button.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
     }
 }

@@ -352,6 +352,16 @@ internal sealed partial class IslandWindow : FloatingWindow
             expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(expand);
         }
         BuildSecondaryQuickControls();
+        if (Stage != IslandStage.Compact)
+        {
+            // Expanded controls share the same horizontal header; keep the
+            // expand/collapse button last and preserve compact visibility rules.
+            var secondary = hoverQuick.Children.Cast<UIElement>().ToArray();
+            hoverQuick.Children.Clear();
+            int insertion = Math.Max(0, header.Children.Count - 1);
+            foreach (var control in secondary) header.Children.Insert(insertion++, control);
+            hoverQuick.Visibility = Visibility.Collapsed;
+        }
     }
     private void UpdateClock()
     {
