@@ -1,3 +1,10 @@
+## Em desenvolvimento — seleção da GPU monitorada
+
+- Modo automático prioriza adaptador dedicado em vez de escolher pela ordem do fornecedor. Consulta DXCore (IsIntegrated e memória dedicada) ao abrir o inventário dos sensores, fora da thread de interface; identificação por nome normalizado e fallback conservador por modelo quando a informação nativa não está disponível.
+- Novo seletor GPU monitorada no painel, com Automático como padrão e opções das placas detectadas. Escolha manual persistente e aplicada ao painel, gráficos, VRAM e overlay; não modifica a GPU usada por aplicativos.
+- O coletor publica leituras separadas por GPU, incluindo os sensores extras, sem aceitar comandos do cliente elevado. Revisão gpu-v1 exige atualização da cópia protegida pelo fluxo normal de autorização. Se a GPU escolhida não estiver disponível, usa a prioridade automática e informa no seletor.
+- Histórico é limpo ao trocar a seleção, e amostras pendentes respeitam a escolha mais recente.
+- API: https://learn.microsoft.com/en-us/windows/win32/api/dxcore_interface/ne-dxcore_interface-dxcoreadapterproperty . Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário; identificação prática em hardware híbrido ainda precisa de confirmação.
 ## Publicação 0.18 Alfa
 
 Instalador regenerado com os últimos ajustes de foco e métricas do overlay. Release e página pública atualizadas. Testes anteriores: 47 aprovados; sem nova execução para os ajustes finais nesta publicação.

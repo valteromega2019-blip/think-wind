@@ -28,6 +28,7 @@ public sealed class Preferences
     public bool HideOverFullscreen { get; set; } = true;
     public bool IslandReserveTop { get; set; } = true;
     public bool HardwareOverlayEnabled { get; set; } = false;
+    public string MonitoringGpuId { get; set; } = "";
     public bool OverlayAutomatic { get; set; } = true;
     public bool OverlayHotkeyEnabled { get; set; } = true;
     public OverlayAppearanceOptions OverlayAppearance { get; set; } = new();
@@ -204,6 +205,7 @@ public sealed class SettingsStore
         p.InnerSurfaceOpacity = Limit(p.InnerSurfaceOpacity, .1, .9, .5);
         p.WindowPreviewDelayMilliseconds = Limit(p.WindowPreviewDelayMilliseconds, 150, 1500, 400);
         p.GameModeInclude = (p.GameModeInclude ?? "").Trim(); p.GameModeExclude = (p.GameModeExclude ?? "").Trim();
+        p.MonitoringGpuId = (p.MonitoringGpuId ?? "").Trim();
         p.DockMagnificationAmount = Limit(p.DockMagnificationAmount, .4, .6, .5);
         p.DockMagnificationSpeed = Limit(p.DockMagnificationSpeed, .5, 2, 1);
         p.DockMagnificationNeighbors = Math.Clamp(p.DockMagnificationNeighbors, 0, 4);

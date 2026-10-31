@@ -70,6 +70,7 @@ public partial class App : Application
         }
         ThemeService.Apply(store.Value);
         Telemetry = new HardwareTelemetry(Dispatcher);
+        Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         hardwareOverlay = new HardwareOverlayWindow(store, Telemetry);
         dock = new DockWindow(store);
         island = new IslandWindow(store, OpenSettings);
@@ -221,6 +222,7 @@ public partial class App : Application
     }
     private void ApplyHardwareOverlay()
     {
+        Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         hardwareOverlay?.Apply(gameMode?.RecognizedGame == true);
         if (!store.Value.OverlayHotkeyEnabled) { overlayHotkey?.Dispose(); overlayHotkey = null; }
         else if (overlayHotkey is null)

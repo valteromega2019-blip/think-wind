@@ -16,6 +16,10 @@ internal sealed class HardwareMonitorPanel : UserControl
     private readonly SettingsStore store;
     private readonly StackPanel body = new();
     private readonly OverlayToggleButton overlay;
+    private sealed record GpuChoice(string Id, string Label);
+    private readonly ComboBox gpuPicker = new() { DisplayMemberPath = nameof(GpuChoice.Label), MinHeight = 32, Margin = new Thickness(4, 0, 4, 10) };
+    private bool syncingGpu;
+    private string gpuChoiceSignature = "";
     private bool components;
     private int minutes = 5;
     private string chartMetric = "Temperatura";
@@ -30,7 +34,18 @@ internal sealed class HardwareMonitorPanel : UserControl
         var navigation = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 4, 6) };
         AddButton(navigation, "Resumo", () => { components = false; Render(); });
         AddButton(navigation, "Componentes", () => { components = true; Render(); });
-        root.Children.Add(navigation); root.Children.Add(body);
+        root.Children.Add(navigation);
+        var gpuLabel = new TextBlock { Text = "GPU monitorada", FontSize = 12, Margin = new Thickness(4, 2, 4, 6) };
+        gpuLabel.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); root.Children.Add(gpuLabel);
+        gpuPicker.SetResourceReference(Control.ForegroundProperty, "Think.Text");
+        gpuPicker.ToolTip = "Escolhe os sensores exibidos no painel e no overlay; não altera a GPU usada pelos aplicativos.";
+        System.Windows.Automation.AutomationProperties.SetName(gpuPicker, "GPU monitorada no painel e overlay");
+        gpuPicker.SelectionChanged += (_, _) =>
+        {
+            if (!syncingGpu && gpuPicker.SelectedItem is GpuChoice choice && store.Value.MonitoringGpuId != choice.Id)
+                store.Update(p => p.MonitoringGpuId = choice.Id);
+        };
+        root.Children.Add(gpuPicker); root.Children.Add(body);
         var footer = new WrapPanel { Margin = new Thickness(4, 8, 4, 0), VerticalAlignment = VerticalAlignment.Center };
         footer.Children.Add(overlay);
         AddButton(footer, "Personalizar overlay", () => ((App)Application.Current).OpenOverlaySettings());
@@ -40,9 +55,29 @@ internal sealed class HardwareMonitorPanel : UserControl
         Unloaded += (_, _) => { telemetry.Changed -= Update; store.Changed -= SettingsChanged; telemetry.SetActive(this, false); };
         Render();
     }
-    private void SettingsChanged(object? sender, EventArgs e) { MonitoringDesign.Install(Resources, store.Value); Render(); }
+    private void SettingsChanged(object? sender, EventArgs e) { MonitoringDesign.Install(Resources, store.Value); UpdateGpuPicker(); Render(); }
     internal static string Number(double? value, string unit, string format = "0") => value is { } number && double.IsFinite(number) ? number.ToString(format) + unit : "—";
-    private void Update(HardwareSample sample) { latest = sample; if (IsVisible) Render(); }
+    private void Update(HardwareSample sample) { latest = sample; if (IsVisible) { UpdateGpuPicker(); Render(); } }
+    private void UpdateGpuPicker()
+    {
+        var gpus = latest?.Gpus ?? Array.Empty<GpuReading>();
+        string selected = store.Value.MonitoringGpuId ?? "";
+        string signature = selected + "|" + string.Join("|", gpus.Select(gpu => gpu.Id + ":" + gpu.Device.Name + ":" + gpu.Integrated));
+        if (signature == gpuChoiceSignature) return;
+        gpuChoiceSignature = signature; syncingGpu = true;
+        try
+        {
+            var choices = new List<GpuChoice> { new("", "Automático — priorizar GPU dedicada") };
+            choices.AddRange(gpus.OrderBy(gpu => gpu.Integrated == false ? 0 : gpu.Integrated is null ? 1 : 2)
+                .ThenByDescending(gpu => gpu.DedicatedMemory).Select(gpu => new GpuChoice(gpu.Id,
+                    gpu.Device.Name + (gpu.Integrated == false ? " · dedicada" : gpu.Integrated == true ? " · integrada" : ""))));
+            if (selected.Length > 0 && choices.All(choice => choice.Id != selected))
+                choices.Add(new(selected, "GPU escolhida indisponível — usando seleção automática"));
+            gpuPicker.ItemsSource = choices;
+            gpuPicker.SelectedItem = choices.First(choice => choice.Id == selected);
+        }
+        finally { syncingGpu = false; }
+    }
     private TextBlock Text(string value, double size = 11, string resource = "Fg", bool mono = false)
     {
         var text = new TextBlock { Text = value, FontSize = size, TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily(mono ? "Cascadia Mono, Consolas" : "Segoe UI Variable Text") };
