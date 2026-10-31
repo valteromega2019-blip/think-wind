@@ -1,6 +1,6 @@
 # Página pública Orby Launcher
 
-Fonte da página publicada em https://valteromega2019-blip.github.io/think-wind-site/ .
+Fonte da página publicada em https://valteromega2019-blip.github.io/orby-launcher/ .
 Versão atual: 0.20 Beta. Download e notas apontam para a release v0.20.0-beta do repositório do aplicativo.
 
 ## Nova apresentação com Motion
