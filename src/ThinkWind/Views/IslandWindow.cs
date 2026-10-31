@@ -33,7 +33,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly StackPanel fullPanel = new();
     private readonly Viewbox moduleViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     private readonly Viewbox headerViewport;
-    private readonly Viewbox hoverViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
+    private readonly ScrollViewer hoverViewport = new() { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, CanContentScroll = false };
     private readonly BrightnessControl brightness;
     private readonly MediaCard media = new();
     private readonly WeatherWidget weather;
@@ -87,7 +87,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         var hoverMedia = HoverCard("Reprodução", hoverMediaSlot); var hoverVolume = HoverCard("Áudio e microfone", hoverAudio);
         Grid.SetColumn(hoverVolume, 1); hoverModules.Children.Add(hoverMedia); hoverModules.Children.Add(hoverVolume);
         hoverPanel.Children.Add(hoverModules); hoverPanel.Children.Add(hoverStatus);
-        hoverViewport.Child = hoverPanel;
+        hoverViewport.Content = hoverPanel;
+        hoverViewport.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
         DockPanel.SetDock(hoverViewport, Dock.Top); root.Children.Add(hoverViewport);
         moduleViewport.Child = modules;
         fullPanel.Children.Add(new AdornerDecoratorHost(moduleViewport));
@@ -586,7 +587,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         if (Stage != IslandStage.Compact && hoverQuick.Children.Count > 0) headerHeight += secondaryQuickViewport.DesiredSize.Height;
         double limit = Stage == IslandStage.Full ? Math.Max(120, Math.Min(620, Display.Height * .64)) : CompactLayout.PanelHeight(Display.Height);
         double inner = Math.Max(1, width - 24);
-        hoverViewport.Width = inner; hoverPanel.Width = inner;
+        hoverViewport.Width = inner; hoverPanel.Width = double.NaN;
         hoverViewport.MaxHeight = Math.Max(24, limit - headerHeight - 12);
         double boardWidth = Math.Max(760, inner);
         modules.Width = boardWidth; moduleViewport.Width = inner;
@@ -594,7 +595,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         modules.Measure(new Size(boardWidth, double.PositiveInfinity));
         moduleViewport.Measure(new Size(inner, moduleViewport.MaxHeight));
         hoverPanel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
-        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? Math.Min(limit, headerHeight + hoverPanel.DesiredSize.Height + 12) : Math.Min(limit, headerHeight + moduleViewport.DesiredSize.Height + 16);
+        hoverViewport.Height = Math.Min(hoverViewport.MaxHeight, Math.Max(1, hoverPanel.DesiredSize.Height));
+        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? Math.Min(limit, headerHeight + hoverViewport.Height + 12) : Math.Min(limit, headerHeight + moduleViewport.DesiredSize.Height + 16);
         // Keep the destination content layout stable while the native frame
         // reveals it; do not reflow the entire module tree on every frame.
         root.Width = inner;
