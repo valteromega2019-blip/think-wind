@@ -16,7 +16,7 @@ public partial class App : Application
     private Forms.NotifyIcon? tray;
     private DockWindow? dock;
     private IslandWindow? island;
-    private readonly List<(DockWindow Dock, IslandWindow Island)> extraMonitors = new();
+    private readonly List<(DockWindow Dock, IslandWindow? Island)> extraMonitors = new();
     private string monitorSignature = "";
     private SettingsWindow? settings;
     private WindowsTaskbar? windowsTaskbar;
@@ -88,7 +88,7 @@ public partial class App : Application
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Personalizar", null, (_, _) => Dispatcher.Invoke(OpenSettings));
         menu.Items.Add("Editar / concluir layout", null, (_, _) => Dispatcher.Invoke(() => store.SetEditing(!store.IsEditing)));
-        menu.Items.Add("Mostrar barra e ilha", null, (_, _) => Dispatcher.Invoke(() => { if (gameMode?.Active == true) return; dock.Show(); island.Show(); dock.RefreshSettings(); island.RefreshSettings(); }));
+        menu.Items.Add("Mostrar barra e ilha", null, (_, _) => Dispatcher.Invoke(() => { if (gameMode?.Active == true) return; dock?.Show(); island?.Show(); dock?.RefreshSettings(); island?.RefreshSettings(); }));
         menu.Items.Add("Sair do Think Wind", null, (_, _) => Dispatcher.Invoke(() => { IsExiting = true; Shutdown(); }));
         tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = AppBrand.TrayIcon(), ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
@@ -102,7 +102,6 @@ public partial class App : Application
             }))));
         bool initialGame = false;
         try { initialGame = GameModeService.Probe(store.Value); } catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
-        if (!initialGame) { dock.Show(); island.PrepareInitialLayout(); island.Show(); }
         windowsTaskbar = new WindowsTaskbar(message =>
         {
             if (IsExiting) return;
@@ -111,7 +110,6 @@ public partial class App : Application
         windowsTaskbar.Apply(store.Value.HideWindowsTaskbar);
         gameMode = new GameModeService(Dispatcher, ChangeGameMode, initialGame);
         gameMode.ForegroundChanged += RefreshForegroundLayouts;
-        island.RefreshForegroundLayout();
         if (initialGame) { gameHidden.Add(dock); gameHidden.Add(island); dock.SuspendForGame(true); gameTransitions++; }
         gameMode.Configure(store.Value); ConfigureStartHotkey();
         ConfigureMonitors();
@@ -199,7 +197,7 @@ public partial class App : Application
         foreach (var pair in extraMonitors)
         {
             if (editing || preferenceStamp?.Dock != next.Dock) pair.Dock.RefreshSettings(); else pair.Dock.RefreshAppearance();
-            if (editing || preferenceStamp?.Island != next.Island) pair.Island.RefreshSettings(); else pair.Island.RefreshAppearance();
+            if (editing || preferenceStamp?.Island != next.Island) pair.Island?.RefreshSettings(); else pair.Island?.RefreshAppearance();
         }
         preferenceStamp = next;
     }
@@ -252,7 +250,7 @@ public partial class App : Application
         {
             fullscreenHandle?.Hide();
             island?.EndFullscreenReveal();
-            foreach (var pair in extraMonitors) pair.Island.EndFullscreenReveal();
+            foreach (var pair in extraMonitors) pair.Island?.EndFullscreenReveal();
             foreach (var window in gameHidden.Where(window => Windows.OfType<Window>().Contains(window)).ToArray())
             { if (ReferenceEquals(window, island) && !window.IsLoaded) island?.PrepareInitialLayout(); bool activate = window.ShowActivated; window.ShowActivated = false; window.Show(); window.ShowActivated = activate; }
             gameHidden.Clear(); windowsTaskbar?.Apply(store.Value.HideWindowsTaskbar);

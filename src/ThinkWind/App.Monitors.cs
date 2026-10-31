@@ -14,7 +14,7 @@ public partial class App
     private void RefreshForegroundLayouts()
     {
         island?.RefreshForegroundLayout();
-        foreach (var pair in extraMonitors) pair.Island.RefreshForegroundLayout();
+        foreach (var pair in extraMonitors) pair.Island?.RefreshForegroundLayout();
     }
 
     private void DisplaySettingsChanged(object? sender, EventArgs e)
@@ -26,7 +26,7 @@ public partial class App
     private void ConfigureMonitors()
     {
         var screens = Forms.Screen.AllScreens;
-        if (screens.Length == 0 || dock is null || island is null) return;
+        if (screens.Length == 0 || dock is null) return;
         var p = store.Value;
         var primary = screens.FirstOrDefault(s => s.DeviceName.Equals(p.MonitorDeviceName, StringComparison.OrdinalIgnoreCase))
             ?? screens[Math.Clamp(p.MonitorIndex, 0, screens.Length - 1)];
@@ -35,7 +35,7 @@ public partial class App
             : new[] { primary };
         if (selected.Length == 0) selected = new[] { primary };
         selected = selected.OrderByDescending(s => s.Primary).ToArray();
-        string signature = string.Join("|", selected.Select(s => $"{s.DeviceName}:{s.Bounds}:{s.Primary}"));
+        string signature = p.SecondaryIslandsEnabled + "|" + string.Join("|", selected.Select(s => $"{s.DeviceName}:{s.Bounds}:{s.Primary}"));
         if (signature == monitorSignature) return;
         monitorSignature = signature;
         // Retire the complete window families, including their native materials,
@@ -51,8 +51,9 @@ public partial class App
         for (int index = 0; index < selected.Length; index++)
         {
             var bar = new DockWindow(store) { MonitorDeviceOverride = selected[index].DeviceName };
-            var top = new IslandWindow(store, OpenSettings) { MonitorDeviceOverride = selected[index].DeviceName };
-            top.FullscreenRevealClosed += () =>
+            var top = selected[index].Primary || p.SecondaryIslandsEnabled
+                ? new IslandWindow(store, OpenSettings) { MonitorDeviceOverride = selected[index].DeviceName } : null;
+            if (top is not null) top.FullscreenRevealClosed += () =>
             {
                 if (gameMode?.Active == true && gameMode.FullscreenPresentation
                     && fullscreenHandle is { } handle && handle.MonitorDeviceOverride == top.MonitorDeviceOverride)
@@ -64,8 +65,8 @@ public partial class App
             }
             else extraMonitors.Add((bar, top));
             if (gameMode?.Active == true)
-            { bar.SuspendForGame(true); gameHidden.Add(bar); gameHidden.Add(top); }
-            else { bar.Show(); top.PrepareInitialLayout(); top.Show(); top.RefreshForegroundLayout(); }
+            { bar.SuspendForGame(true); gameHidden.Add(bar); if (top is not null) gameHidden.Add(top); }
+            else { bar.Show(); top?.PrepareInitialLayout(); top?.Show(); top?.RefreshForegroundLayout(); }
         }
         // A display rebuild retires the old fullscreen handle as well. Recreate
         // it even when protection was already active before this rebuild.

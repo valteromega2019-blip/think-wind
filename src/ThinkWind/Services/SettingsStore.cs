@@ -55,6 +55,7 @@ public sealed class Preferences
     public int MonitorIndex { get; set; }
     public string? MonitorDeviceName { get; set; }
     public bool MultiMonitorEnabled { get; set; }
+    public bool SecondaryIslandsEnabled { get; set; }
     public bool AllMonitors { get; set; } = true;
     public List<string> ActiveMonitors { get; set; } = new();
     public string Theme { get; set; } = "Auto";

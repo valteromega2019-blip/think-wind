@@ -247,6 +247,8 @@ internal sealed partial class SettingsWindow : FloatingWindow
         { p.MonitorIndex = int.Parse(value); p.MonitorDeviceName = screens[p.MonitorIndex].DeviceName; }));
         Check(monitors, "Ativar em múltiplos monitores", store.Value.MultiMonitorEnabled, value => Change(p => p.MultiMonitorEnabled = value));
         Check(monitors, "Usar todos os monitores conectados", store.Value.AllMonitors, value => Change(p => p.AllMonitors = value));
+        Check(monitors, "Mostrar Dynamic Island nas telas secundárias", store.Value.SecondaryIslandsEnabled, value => Change(p => p.SecondaryIslandsEnabled = value));
+        Note(monitors, "Por padrão, a ilha aparece somente na tela principal do Windows. A barra inferior continua nas telas selecionadas. Ative esta opção para mostrar também a ilha nas telas secundárias selecionadas.");
         foreach (var screen in screens)
         {
             string device = screen.DeviceName;

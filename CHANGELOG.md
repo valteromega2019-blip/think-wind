@@ -1,3 +1,9 @@
+## Em desenvolvimento — ilha secundária opcional
+
+- Dynamic Island somente na tela principal do Windows por padrão. Nova opção Mostrar Dynamic Island nas telas secundárias em Personalizar > Monitores, desmarcada inclusive nos perfis existentes sem essa preferência.
+- As barras inferiores continuam nos monitores selecionados. Ilhas secundárias desativadas não são criadas e não reservam a área superior nem oferecem alça fullscreen nessa tela.
+- A opção aplica imediatamente e é salva automaticamente. Reativação, troca de tela principal e restauração após Modo Jogo respeitam as ilhas existentes.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura do código e diff.
 ## Em desenvolvimento — digitação direta no Iniciar
 
 - A abertura do Iniciar solicita ativação da janela e foco de teclado no campo de busca, repetindo uma única vez após a abertura nativa caso o foco inicial ainda não esteja aplicado.
