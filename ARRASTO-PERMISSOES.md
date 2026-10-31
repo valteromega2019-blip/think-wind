@@ -2,7 +2,7 @@
 
 A interface que recebe OLE Drag & Drop deve executar no mesmo nível de permissões do Explorador. Nesta branch, escolher Executar como administrador para o Think Wind inicia apenas o bootstrap elevado; ele reabre a interface no contexto normal do desktop e encerra antes de criar janelas ou hooks.
 
-Os sensores continuam no coletor protegido em Program Files, iniciado pela tarefa autorizada. Ações sobre janelas administrativas usam o auxiliar de uma operação já existente. A permissão desses auxiliares não é transferida para a barra que recebe arquivos.
+Os sensores continuam no coletor protegido em Program Files, iniciado pela tarefa autorizada. Ações sobre janelas administrativas usam um auxiliar de uma operação em Program Files, iniciado por tarefa autorizada. A primeira autorização ou atualização solicita UAC; cliques posteriores usam a tarefa sob demanda. A autorização pode ser revogada em Personalizar > Sistema. A permissão desses auxiliares não é transferida para a barra que recebe arquivos.
 
 O relançamento aceita somente o executável atual, a mesma conta e a mesma sessão. Não altera UAC, níveis de integridade, filtros de mensagens ou políticas. Se não existir um desktop compatível ou a API negar a operação, informa o erro; não reinicia repetidamente.
 

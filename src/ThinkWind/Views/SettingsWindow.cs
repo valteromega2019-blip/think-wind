@@ -221,6 +221,15 @@ internal sealed partial class SettingsWindow : FloatingWindow
         layout.Children.Add(resets);
 
         var system = Section("Sistema", "Os recursos nativos do Windows permanecem disponíveis.");
+        system.Children.Add(Button("Autorizar / atualizar controle automático de janelas", async () =>
+        {
+            if (await WindowActionSetup.Configure()) store.Update(p => p.AutoAuthorizeWindowActions = true);
+        }));
+        system.Children.Add(Button("Revogar controle automático de janelas", async () =>
+        {
+            if (await WindowActionSetup.Configure(remove: true)) store.Update(p => p.AutoAuthorizeWindowActions = false);
+        }));
+        Note(system, "Autorize o auxiliar uma vez pelo UAC para controlar suas janelas administrativas sem confirmar a cada clique. A autorização pode ser solicitada novamente ao atualizar o auxiliar. A interface continua normal para arrastar arquivos. Revogar remove a tarefa e desativa novas solicitações automáticas.");
         var games = Section("Jogos", "Proteção de tela cheia, detecção de jogos e exceções.");
         Check(games, "Modo Jogo automático: ocultar launcher e suspender tarefas", store.Value.GameModeEnabled, value => Change(p => p.GameModeEnabled = value));
         Check(games, "Ocultar launcher em vídeos e apps em tela cheia", store.Value.HideOverFullscreen, v => Change(p => p.HideOverFullscreen = v));

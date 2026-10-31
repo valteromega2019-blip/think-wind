@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
@@ -8,13 +7,12 @@ using System.Windows;
 
 namespace ThinkWind.Native;
 
-// One user-requested operation per UAC prompt. No persistent privileged server,
+// One user-requested operation per invocation. No persistent privileged server,
 // arbitrary commands, process termination, or weakened Windows policies.
 internal static class ElevatedWindowAction
 {
     private const string Switch = "--elevated-window-action";
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
-    [DllImport("user32.dll")] private static extern bool AllowSetForegroundWindow(uint process);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool PostMessage(nint window, uint message, nint wParam, nint lParam);
     [DllImport("advapi32.dll", SetLastError = true)] private static extern bool OpenProcessToken(nint process, uint access, out nint token);
     [DllImport("advapi32.dll", SetLastError = true)] private static extern bool GetTokenInformation(nint token, int kind, out int value, int length, out int needed);
@@ -42,34 +40,8 @@ internal static class ElevatedWindowAction
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { return Desktop.WindowExists(window); }
     }
-    internal static async Task<bool> Request(nint window, bool close, bool minimize = false, Window? owner = null)
-    {
-        if (!Desktop.WindowExists(window)) return false;
-        GetWindowThreadProcessId(window, out uint id);
-        try
-        {
-            using var target = Process.GetProcessById((int)id);
-            var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
-            info.ArgumentList.Add(Switch);
-            info.ArgumentList.Add(close ? "close" : minimize ? "minimize" : "activate");
-            info.ArgumentList.Add(window.ToInt64().ToString(CultureInfo.InvariantCulture));
-            info.ArgumentList.Add(id.ToString(CultureInfo.InvariantCulture));
-            info.ArgumentList.Add(target.StartTime.ToUniversalTime().Ticks.ToString(CultureInfo.InvariantCulture));
-            // This follows an explicit click, not a hover. Activating our own
-            // requester lets it grant foreground permission to the UAC helper.
-            if (owner?.IsVisible == true) owner.Activate();
-            using var helper = Process.Start(info);
-            if (helper is null) return false;
-            AllowSetForegroundWindow((uint)helper.Id);
-            await helper.WaitForExitAsync();
-            if (helper.ExitCode == 0) return true;
-            MessageBox.Show("O Windows não permitiu concluir a operação nesta janela, mesmo após a autorização.", "Think Wind");
-        }
-        catch (System.ComponentModel.Win32Exception error) when (error.NativeErrorCode == 1223) { }
-        catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-        { MessageBox.Show("Não foi possível solicitar autorização: " + error.Message, "Think Wind"); }
-        return false;
-    }
+    internal static Task<bool> Request(nint window, bool close, bool minimize = false, Window? owner = null)
+        => AuthorizedWindowAction.Request(window, close, minimize, owner);
     internal static bool Run(string[] args, out int exitCode)
     {
         exitCode = 1;

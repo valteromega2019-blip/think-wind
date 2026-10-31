@@ -119,7 +119,7 @@ internal static class AdvancedSensorSetup
         }
         return true;
     }
-    private static object? FindTask(object folder, string name)
+    internal static object? FindTask(object folder, string name)
     {
         object? tasks = null;
         try
@@ -138,10 +138,11 @@ internal static class AdvancedSensorSetup
         }
         finally { CoreAudio.Release(tasks); }
     }
-    private static void ProtectAndCopy()
+    internal static void ProtectAndCopy(string? protectedDirectory = null)
     {
-        string parent = Path.GetDirectoryName(DirectoryPath)!;
-        foreach (string path in new[] { parent, DirectoryPath })
+        string destinationDirectory = protectedDirectory ?? DirectoryPath;
+        string parent = Path.GetDirectoryName(destinationDirectory)!;
+        foreach (string path in new[] { parent, destinationDirectory })
         {
             var directory = Directory.CreateDirectory(path);
             if ((directory.Attributes & FileAttributes.ReparsePoint) != 0) throw new IOException("Pasta de sensores não pode ser um link.");
@@ -159,7 +160,7 @@ internal static class AdvancedSensorSetup
         {
             if (!new[] { ".exe", ".dll", ".json" }.Contains(Path.GetExtension(source), StringComparer.OrdinalIgnoreCase)) continue;
             if ((File.GetAttributes(source) & FileAttributes.ReparsePoint) != 0) throw new IOException("Arquivo de sensores não pode ser um link.");
-            string destination = Path.Combine(DirectoryPath, Path.GetFileName(source));
+            string destination = Path.Combine(destinationDirectory, Path.GetFileName(source));
             if (File.Exists(destination) && (File.GetAttributes(destination) & FileAttributes.ReparsePoint) != 0) throw new IOException("Destino inválido.");
             File.Copy(source, destination, true);
             // Do not retain an ACL/owner inherited from a previous payload.
@@ -167,7 +168,7 @@ internal static class AdvancedSensorSetup
             security.SetOwner(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null));
             new FileInfo(destination).SetAccessControl(security);
         }
-        if (!File.Exists(Executable)) throw new IOException("Executável do coletor não encontrado.");
+        if (!File.Exists(Path.Combine(destinationDirectory, "ThinkWind.exe"))) throw new IOException("Executável do auxiliar não encontrado.");
     }
     internal static void StartTask(bool frames = false)
     {

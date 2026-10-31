@@ -39,6 +39,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
         LaunchEnvironment.RemoveDevelopmentBootstrap();
+        if (WindowActionSetup.RunSetup(e.Args, out int windowSetupExitCode)) { Shutdown(windowSetupExitCode); return; }
+        if (AuthorizedWindowAction.Run(e.Args, out int authorizedWindowExitCode)) { Shutdown(authorizedWindowExitCode); return; }
         if (AdvancedSensorSetup.RunSetup(e.Args, out int sensorSetupExitCode)) { Shutdown(sensorSetupExitCode); return; }
         if (e.Args.Length > 0 && e.Args[0] == "--sensor-worker")
         {
@@ -80,6 +82,7 @@ public partial class App : Application
         int reportIndex = Array.IndexOf(e.Args, "--diagnostic-report");
         diagnosticReport = reportIndex >= 0 && reportIndex + 1 < e.Args.Length ? e.Args[reportIndex + 1] : null;
         store = diagnosing ? new SettingsStore(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThinkWindDiagnostic", Guid.NewGuid() + ".json")) : new SettingsStore();
+        WindowActionSetup.AutomaticAuthorizationEnabled = store.Value.AutoAuthorizeWindowActions;
         if (diagnosing) { store.Value.AutoHide = false; store.Value.GameModeEnabled = !e.Args.Contains("--diagnostic-normal"); }
         if (!diagnosing)
         {
@@ -223,6 +226,7 @@ public partial class App : Application
     }
     private void ConfigureStartHotkey()
     {
+        WindowActionSetup.AutomaticAuthorizationEnabled = store.Value.AutoAuthorizeWindowActions;
         // The isolated Windows key remains ours during games as requested.
         // The dedicated hook only posts the action; it does no UI/system work.
         bool interceptWindows = store.Value.WindowsKeyOpensLauncher;

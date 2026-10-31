@@ -1,3 +1,11 @@
+## Em desenvolvimento — autorização única para janelas administrativas
+
+- Substituída a solicitação UAC por clique por uma tarefa sob demanda: primeira autorização/atualização copia o auxiliar para Program Files protegido e registra uma ação fixa com nível elevado. Não há gatilho de logon nem processo permanente para essa função.
+- Após autorização, cada clique executa somente activate/minimize/close sobre HWND/PID/horário de criação validados. O auxiliar verifica conta e sessão de origem/destino. Não aceita executáveis, comandos ou mensagens Win32 arbitrárias.
+- Um pipe por solicitação, com ACL do usuário, nonce e timeout, faz apenas sincronização de foco e retorno do resultado. A interface verifica o executável protegido do auxiliar; o auxiliar confere o processo solicitante e sua data de criação. Auxiliar sai ao terminar a ação.
+- Autorizar/atualizar e revogar disponíveis em Personalizar > Sistema. Revogar remove a tarefa e desativa novos pedidos automáticos; cancelar o UAC não repete o pedido em cada clique da mesma sessão.
+- Barra segue em permissões normais para arrastar e soltar; sensores continuam independentes. Mantidos UAC e regras do Windows.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura de código e diff; autorização e ativação por tarefa precisam de confirmação prática.
 ## Em desenvolvimento — fallback para janelas administrativas
 
 - O VS Code observado está com título Administrator. Corrigida a decisão de autorização: falha ao consultar o token de uma janela existente não é mais classificada como aplicativo normal. Após uma ação explícita falhar, casos elevados ou indeterminados podem acionar o auxiliar UAC de uma operação.
