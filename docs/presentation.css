@@ -30,6 +30,10 @@ strong{font-weight:600}
 .nav{min-height:86px;display:flex;align-items:center;justify-content:space-between;gap:28px}
 .brand{display:flex;align-items:center;gap:12px;font-size:20px;letter-spacing:-.04em}
 .brand img{width:32px;height:32px;border-radius:8px}
+.brand .brand-logo{display:block;width:220px;height:auto;border-radius:0;object-fit:contain}
+.footer .footer-logo{display:block;width:220px;height:auto;max-width:100%;object-fit:contain}
+.footer .developer-credit{color:#a7b4c7;font-size:11px;margin-top:3px}
+.developer-credit strong{color:#edf3ff;font-weight:600}
 .brand strong{font-weight:600}
 .nav nav{display:flex;align-items:center;gap:28px;font-size:12px;color:var(--muted)}
 .nav a:hover{color:var(--text)}
@@ -382,6 +386,9 @@ strong{font-weight:600}
 .color-demo figcaption{font-size:8px;line-height:1.6;padding:0 20px 15px;color:#829bbb}
 @media(max-width:760px){.color-showcase{grid-template-columns:1fr;gap:30px;padding-top:30px;padding-bottom:35px}.color-showcase-copy{grid-row:1}.color-demo{max-width:600px;width:100%;margin:auto}}
 @media(max-width:400px){.color-demo-editor{padding:16px}.color-demo-swatches{gap:10px}.color-demo-dock{gap:12px}.color-glass{left:12px;right:12px;padding:12px}.color-glass-blocks>div{padding:10px}.color-glass-blocks strong{font-size:11px}}
+@media(max-width:1050px){.brand .brand-logo{width:180px}}
+@media(max-width:760px){.brand .brand-logo{width:150px}.footer .footer-logo{width:200px}}
+@media(max-width:420px){.brand .brand-logo{width:135px}}
 @media(prefers-reduced-motion:reduce){:root{scroll-behavior:auto}
 *,*::before,*::after{animation:none!important;transition:none!important}
 }
