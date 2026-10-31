@@ -323,7 +323,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 }
             });
             monitor.Style = (Style)FindResource("Think.IconButton");
-            monitor.Content = Glyph("\uE9D9", 17 * scale);
+            monitor.Content = Glyph(monitoringOpen ? "\uE80F" : "\uE9D9", 17 * scale);
             monitor.Width = monitor.Height = 32 * scale;
             monitor.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
             header.Children.Add(monitor);

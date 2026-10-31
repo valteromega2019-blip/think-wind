@@ -19,12 +19,17 @@ internal sealed partial class IslandWindow
             if (id == "tools") { hoverQuick.Children.Add(SystemToolsButton(false)); continue; }
             if (id == "monitor")
             {
-                var monitor = ActionButton("Desempenho do PC", () =>
+                bool monitoringOpen = SecondAreaAvailable && Stage == IslandStage.Full && secondAreaSelected;
+                var monitor = ActionButton(monitoringOpen ? "Voltar à área principal" : "Abrir monitoramento do PC", () =>
                 {
-                    if (SecondAreaAvailable) { secondAreaSelected = true; OpenFull(); }
+                    if (SecondAreaAvailable)
+                    {
+                        if (Stage == IslandStage.Full) SelectSecondArea(!secondAreaSelected);
+                        else { secondAreaSelected = true; OpenFull(); }
+                    }
                     else ToggleLeftArea();
                 });
-                monitor.Content = Glyph("\uE9D9", 17); StyleSecondaryControl(monitor); hoverQuick.Children.Add(monitor); continue;
+                monitor.Content = Glyph(monitoringOpen ? "\uE80F" : "\uE9D9", 17); StyleSecondaryControl(monitor); hoverQuick.Children.Add(monitor); continue;
             }
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
             var button = ActionButton(control.Name, () => { });
