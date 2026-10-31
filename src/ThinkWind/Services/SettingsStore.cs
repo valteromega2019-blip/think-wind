@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows.Threading;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 public sealed record Shortcut(string Name, string Target);
 public sealed record TrayActivity(int Count, DateTime LastUsedUtc, DateTime FirstSeenUtc);
 public sealed class Preferences
@@ -118,7 +118,7 @@ public sealed class SettingsStore
     internal int DockLayoutRevision { get; private set; }
     public Preferences Value { get; private set; } = new();
     public string? LoadWarning { get; private set; }
-    public SettingsStore() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThinkWind", "settings.json")) { }
+    public SettingsStore() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher", "settings.json")) { }
     internal SettingsStore(string settingsPath)
     {
         path = Path.GetFullPath(settingsPath);

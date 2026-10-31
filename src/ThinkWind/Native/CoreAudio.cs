@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // Only the documented prefix of each COM vtable is declared. Keep this order:
 // the native headers, rather than the alphabetical documentation index, define it.

@@ -5,7 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 internal sealed class IslandMotion
 {
     private int revision;

@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 internal sealed partial class SettingsWindow
 {

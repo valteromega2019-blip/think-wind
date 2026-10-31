@@ -2,9 +2,9 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 internal sealed partial class DockWindow
 {
     private WindowPreview? preview;

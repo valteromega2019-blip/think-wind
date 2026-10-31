@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record PreferenceStamp(string Dock, string Island, bool Editing)
 {
     internal static PreferenceStamp Capture(SettingsStore store)

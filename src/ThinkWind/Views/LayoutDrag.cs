@@ -5,7 +5,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 internal static class LayoutDrag
 {

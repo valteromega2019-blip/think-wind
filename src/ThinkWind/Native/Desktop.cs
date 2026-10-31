@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 internal static class Desktop
 {
     private static nint lastIslandApplication;

@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed class StaWorker : IDisposable
 {
     private readonly BlockingCollection<Action> queue = new();

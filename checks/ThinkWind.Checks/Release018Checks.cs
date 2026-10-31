@@ -10,7 +10,7 @@ internal static class Release018Checks
 {
     internal static void CalendarCells()
     {
-        var theme = new ResourceDictionary { Source = new Uri("/ThinkWind;component/Views/CalendarTheme.xaml", UriKind.Relative) };
+        var theme = new ResourceDictionary { Source = new Uri("/OrbyLauncher;component/Views/CalendarTheme.xaml", UriKind.Relative) };
         foreach (double font in new[] { 11.2, 14, 35 })
         foreach (double width in new[] { 220d, 320 })
         {

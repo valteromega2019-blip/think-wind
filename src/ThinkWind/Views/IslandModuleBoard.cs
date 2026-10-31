@@ -4,7 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 internal sealed class IslandModuleBoard : Panel
 {
     private readonly Dictionary<UIElement, Rect> slots = new();

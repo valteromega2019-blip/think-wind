@@ -6,10 +6,10 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Interop;
-using ThinkWind.Native;
-using ThinkWind.Services;
+using OrbyLauncher.Native;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 internal sealed partial class SettingsWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;

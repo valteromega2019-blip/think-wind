@@ -3,9 +3,9 @@ using System;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Interop;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 internal sealed partial class IslandWindow
 {

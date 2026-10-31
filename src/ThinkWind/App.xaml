@@ -1,4 +1,4 @@
-<Application x:Class="ThinkWind.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" ShutdownMode="OnExplicitShutdown">
+<Application x:Class="OrbyLauncher.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" ShutdownMode="OnExplicitShutdown">
  <Application.Resources>
   <ResourceDictionary>
   <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Views/CalendarTheme.xaml"/><ResourceDictionary Source="Views/ControlsTheme.xaml"/></ResourceDictionary.MergedDictionaries>

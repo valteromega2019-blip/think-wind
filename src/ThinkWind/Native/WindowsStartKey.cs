@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 // RegisterHotKey is opt-in. No ordinary input is intercepted or re-injected.
 internal sealed class WindowsStartKey : IDisposable
 {

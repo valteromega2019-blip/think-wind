@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Windows;
 using Microsoft.Win32;
-using ThinkWind.Native;
-using ThinkWind.Services;
-using ThinkWind.Views;
+using OrbyLauncher.Native;
+using OrbyLauncher.Services;
+using OrbyLauncher.Views;
 using Forms = System.Windows.Forms;
 
-namespace ThinkWind;
+namespace OrbyLauncher;
 public partial class App : Application
 {
     private Mutex? instance;
@@ -40,6 +40,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        AppBrand.InitializeWindowsIdentity();
         LaunchEnvironment.RemoveDevelopmentBootstrap();
         if (StartupPermissions.RunSetup(e.Args, out int startupSetupCode)) { Shutdown(startupSetupCode); return; }
         if (WindowActionSetup.RunSetup(e.Args, out int windowSetupExitCode)) { Shutdown(windowSetupExitCode); return; }
@@ -64,7 +65,7 @@ public partial class App : Application
             {
                 try
                 {
-                    string log = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThinkWind");
+                    string log = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher");
                     System.IO.Directory.CreateDirectory(log);
                     System.IO.File.WriteAllText(System.IO.Path.Combine(log, "desktop-ui-startup.log"), DateTime.UtcNow.ToString("O") + Environment.NewLine + error);
                 }
@@ -74,7 +75,7 @@ public partial class App : Application
                 Shutdown(1); return;
             }
         }
-        instance = new Mutex(true, @"Local\ThinkWind.Launcher", out var first);
+        instance = new Mutex(true, @"Local\OrbyLauncher.Launcher", out var first);
         if (configuringInstallation)
         {
             Shutdown(first ? InstallationSetup.Run() : 2);
@@ -84,7 +85,7 @@ public partial class App : Application
         diagnosing = e.Args.Contains("--diagnostic");
         int reportIndex = Array.IndexOf(e.Args, "--diagnostic-report");
         diagnosticReport = reportIndex >= 0 && reportIndex + 1 < e.Args.Length ? e.Args[reportIndex + 1] : null;
-        store = diagnosing ? new SettingsStore(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThinkWindDiagnostic", Guid.NewGuid() + ".json")) : new SettingsStore();
+        store = diagnosing ? new SettingsStore(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "OrbyLauncherDiagnostic", Guid.NewGuid() + ".json")) : new SettingsStore();
         WindowActionSetup.AutomaticAuthorizationEnabled = store.Value.AutoAuthorizeWindowActions;
         bool initialGame = false;
         try { initialGame = GameModeService.Probe(store.Value); } catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
@@ -125,7 +126,7 @@ public partial class App : Application
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
         var localTrayImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(tray.Icon.Handle, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
         localTrayImage.Freeze();
-        TrayService.RegisterLocal(new TrayEntry("Orby Launcher", localTrayImage, null, 0, "local:think-wind", LocalAction: context =>
+        TrayService.RegisterLocal(new TrayEntry("Orby Launcher", localTrayImage, null, 0, "local:orby-launcher", LocalAction: context =>
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (IsExiting || gameMode?.Active == true) return;

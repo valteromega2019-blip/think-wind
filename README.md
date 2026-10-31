@@ -2,6 +2,8 @@
 
 Desenvolvido pela **Think**. Novo nome e identidade do Think Wind, com atualização compatível das instalações anteriores.
 
+Em desenvolvimento: a próxima 0.20.1 Beta passa a usar executável, dados e instalação independentes sob OrbyLauncher, com correções dos ícones do próprio app e das Configurações do Windows. Detalhes em [Identidade independente](IDENTIDADE-ORBY.md). O download público abaixo ainda corresponde à 0.20.0 Beta anterior.
+
 ## 0.20 Beta (0.20.0-beta)
 
 [Baixar Orby Launcher](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.20.0-beta/OrbyLauncher-Setup-0.20.0-beta.exe) · [Notas e limitações](RELEASE-0.20-BETA.md) · [Site](https://valteromega2019-blip.github.io/orby-launcher/)

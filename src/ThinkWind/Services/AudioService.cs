@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using ThinkWind.Native;
-using static ThinkWind.Native.CoreAudio;
+using OrbyLauncher.Native;
+using static OrbyLauncher.Native.CoreAudio;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal sealed record AudioDevice(string Id, string Name);
 internal sealed record AudioState(string Id, string Name, double Volume, bool Muted);

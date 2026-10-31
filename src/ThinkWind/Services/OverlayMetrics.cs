@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 public static class OverlayMetrics
 {

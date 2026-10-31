@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using ComData = System.Runtime.InteropServices.ComTypes.IDataObject;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 // Ask the Shell's real drop handler; accepting a hover never means a transfer occurred.
 internal sealed class ShellDropSession : IDisposable
 {

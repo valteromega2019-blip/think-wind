@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record BrightnessState(string Monitor, uint Minimum, uint Maximum, uint Value);
 internal static class BrightnessService
 {

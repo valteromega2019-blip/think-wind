@@ -3,8 +3,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using ThinkWind.Services;
-using ThinkWind.Views;
+using OrbyLauncher.Services;
+using OrbyLauncher.Views;
 
 internal static class LayoutChecks
 {
@@ -135,7 +135,7 @@ internal static class LayoutChecks
         try
         {
             shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!); shortcut = ((dynamic)shell!).CreateShortcut(path); ((dynamic)shortcut!).TargetPath = target; ((dynamic)shortcut!).Save();
-            var icons = new ThinkWind.Native.ShellIcons();
+            var icons = new OrbyLauncher.Native.ShellIcons();
             var original = icons.Get(target) as System.Windows.Media.Imaging.BitmapSource; var linked = icons.Get(path) as System.Windows.Media.Imaging.BitmapSource;
             Require(original is not null && linked is not null && original.PixelWidth == linked.PixelWidth && original.PixelHeight == linked.PixelHeight);
             int stride = (original!.PixelWidth * original.Format.BitsPerPixel + 7) / 8;
@@ -146,7 +146,7 @@ internal static class LayoutChecks
             System.IO.File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(2));
             Require(icons.Resolve(path).Equals(changed, StringComparison.OrdinalIgnoreCase) && icons.VersionedKey(path) != firstKey);
         }
-        finally { ThinkWind.Native.CoreAudio.Release(shortcut); ThinkWind.Native.CoreAudio.Release(shell); }
+        finally { OrbyLauncher.Native.CoreAudio.Release(shortcut); OrbyLauncher.Native.CoreAudio.Release(shell); }
     }
     internal static void BluetoothLifecycle()
     {

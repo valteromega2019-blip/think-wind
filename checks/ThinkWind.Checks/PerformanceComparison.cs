@@ -18,7 +18,7 @@ internal static class PerformanceComparison
     {
         var output = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "performance-v0.10"); Directory.CreateDirectory(output);
         using var game = Process.GetProcessesByName("WardogsClient-Win64-Shipping").FirstOrDefault() ?? throw new InvalidOperationException("Wardogs não está aberto.");
-        if (Process.GetProcessesByName("ThinkWind").Length != 0) throw new InvalidOperationException("Encerre a instância do Think Wind antes da comparação.");
+        if (Process.GetProcessesByName("OrbyLauncher").Length != 0) throw new InvalidOperationException("Encerre a instância do Orby Launcher antes da comparação.");
         var samples = new List<Sample>();
         void Measure(string scenario, Process? launcher, int seconds)
         {
@@ -45,7 +45,7 @@ internal static class PerformanceComparison
                 desktop = new System.Windows.Window { Title = "Think Wind — controle de retorno ao desktop", Width = 220, Height = 120, ShowInTaskbar = false };
                 desktop.Show(); SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(desktop).Handle);
             }
-            var start = new ProcessStartInfo(Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "diagnostic-v0.10", "ThinkWind.exe")) { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
+            var start = new ProcessStartInfo(Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "diagnostic-v0.10", "OrbyLauncher.exe")) { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
             start.ArgumentList.Add("--diagnostic"); start.ArgumentList.Add("--diagnostic-report"); start.ArgumentList.Add(Path.Combine(output, scenario + ".json"));
             if (scenario == "normal") start.ArgumentList.Add("--diagnostic-normal");
             using var launcher = Process.Start(start) ?? throw new InvalidOperationException("Falha ao iniciar diagnóstico.");

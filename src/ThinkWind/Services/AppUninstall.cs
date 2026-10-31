@@ -6,9 +6,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class AppUninstall
 {

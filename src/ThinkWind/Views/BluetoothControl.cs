@@ -8,9 +8,9 @@ using System.Windows.Controls;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 using Windows.Devices.Radios;
-using ThinkWind.Services;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 internal sealed class BluetoothControl : StackPanel, IDisposable
 {
     internal static readonly string[] DeviceSelectors =

@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class InstallationSetup
 {
@@ -45,7 +45,7 @@ internal static class InstallationSetup
             if (changed) { data.Parameter = (nint)original; SHAppBarMessage(10, ref data); }
             try
             {
-                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThinkWind");
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher");
                 Directory.CreateDirectory(folder);
                 File.WriteAllText(Path.Combine(folder, "installation-setup.log"), error.Message);
             }

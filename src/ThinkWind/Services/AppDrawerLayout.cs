@@ -1,6 +1,6 @@
 using System;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record AppDrawerLayout(double Width, double Height, int Columns, int Rows)
 {
     internal const double CellHeight = 128;

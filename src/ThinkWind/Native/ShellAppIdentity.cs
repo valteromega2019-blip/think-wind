@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 internal sealed record LaunchIdentity(string Path, string? AppId, bool? Installed = null);
 internal static class ShellAppIdentity

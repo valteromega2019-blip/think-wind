@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record NetworkState(bool Connected, string Name, string Kind, string? Address, uint? Signal);
 internal static class NetworkService
 {

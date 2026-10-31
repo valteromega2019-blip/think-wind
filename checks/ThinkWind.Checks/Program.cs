@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
-using ThinkWind.Native;
-using ThinkWind.Services;
+using OrbyLauncher.Native;
+using OrbyLauncher.Services;
 
 internal static class Program
 {

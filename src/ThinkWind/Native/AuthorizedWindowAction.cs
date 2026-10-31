@@ -11,9 +11,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32.SafeHandles;
-using ThinkWind.Services;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // Per-click, bounded helper. Payload selects one fixed window operation, never
 // a command/executable. The pipe carries only hello/ack/result, not commands.
@@ -30,7 +30,7 @@ internal static class AuthorizedWindowAction
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool QueryFullProcessImageName(nint process, uint flags, StringBuilder path, ref uint size);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
     [DllImport("advapi32.dll")] private static extern bool OpenProcessToken(nint process, uint access, out nint token);
-    private static string PipeName(string nonce) => "ThinkWind.WindowAction.v1." + WindowActionSetup.UserSid + "." + nonce;
+    private static string PipeName(string nonce) => "OrbyLauncher.WindowAction.v1." + WindowActionSetup.UserSid + "." + nonce;
 
     internal static async Task<bool> Request(nint window, bool close, bool minimize, Window? owner)
     {

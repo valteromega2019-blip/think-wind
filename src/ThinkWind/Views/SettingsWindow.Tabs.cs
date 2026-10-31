@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Media.Animation;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 internal sealed partial class SettingsWindow
 {

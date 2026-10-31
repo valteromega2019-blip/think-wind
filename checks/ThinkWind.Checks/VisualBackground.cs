@@ -3,8 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
-using ThinkWind.Native;
-using ThinkWind.Services;
+using OrbyLauncher.Native;
+using OrbyLauncher.Services;
 
 internal static class VisualBackground
 {

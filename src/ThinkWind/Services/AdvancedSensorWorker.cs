@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using Microsoft.Win32.SafeHandles;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class AdvancedSensorWorker
 {

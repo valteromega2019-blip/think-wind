@@ -7,10 +7,10 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using ThinkWind.Native;
-using ThinkWind.Services;
+using OrbyLauncher.Native;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 internal sealed class WindowPreview : FloatingWindow
 {
     protected override bool AttachedTop => false;

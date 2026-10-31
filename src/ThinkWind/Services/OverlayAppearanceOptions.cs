@@ -3,7 +3,7 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 public sealed class OverlayAppearanceOptions
 {

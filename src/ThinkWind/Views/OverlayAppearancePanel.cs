@@ -6,8 +6,8 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
-using ThinkWind.Services;
-namespace ThinkWind.Views;
+using OrbyLauncher.Services;
+namespace OrbyLauncher.Views;
 
 public sealed class OverlayAppearancePanel : UserControl
 {

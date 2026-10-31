@@ -3,10 +3,10 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using ThinkWind.Native;
-using ThinkWind.Services;
+using OrbyLauncher.Native;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 internal sealed partial class DockWindow
 {
     private bool fileDragging;

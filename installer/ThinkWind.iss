@@ -1,17 +1,17 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.20.0-beta"
+#define MyAppVersion "0.20.1-beta"
 #ifndef PublishDir
-#define PublishDir "..\artifacts\publish-v0.20.0-beta"
+#define PublishDir "..\artifacts\publish-v0.20.1-beta"
 #endif
 [Setup]
-AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
+AppId={{B7408A21-58E2-4E3A-A842-84EF85965350}
 AppName=Orby Launcher
 AppPublisher=Think
 VersionInfoCompany=Think
 VersionInfoDescription=Instalador do Orby Launcher
 AppVersion={#MyAppVersion}
-VersionInfoVersion=0.20.0.0
-DefaultDirName={localappdata}\Programs\ThinkWind
+VersionInfoVersion=0.20.1.0
+DefaultDirName={localappdata}\Programs\OrbyLauncher
 PrivilegesRequired=lowest
 DefaultGroupName=Orby Launcher
 UsePreviousGroup=no
@@ -33,15 +33,12 @@ Name: "pawnio"; Description: "Instalar PawnIO oficial para sensores, se necessar
 Source: "..\artifacts\dependencies\PawnIO_setup.exe"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\src\ThinkWind\Assets\OrbyLauncher.ico"; DestDir: "{app}"; Flags: ignoreversion
-[InstallDelete]
-Type: files; Name: "{userprograms}\Think Wind\Think Wind.lnk"
-Type: dirifempty; Name: "{userprograms}\Think Wind"
 [Icons]
-Name: "{group}\Orby Launcher"; Filename: "{app}\ThinkWind.exe"
+Name: "{group}\Orby Launcher"; Filename: "{app}\OrbyLauncher.exe"; IconFilename: "{app}\OrbyLauncher.ico"; AppUserModelID: "Think.OrbyLauncher"
 [Run]
-Filename: "{app}\ThinkWind.exe"; Description: "Abrir Orby Launcher"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\OrbyLauncher.exe"; Description: "Abrir Orby Launcher"; Flags: nowait postinstall skipifsilent
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "ThinkWind"; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "OrbyLauncher"; Flags: uninsdeletevalue
 
 [Code]
 var
@@ -90,7 +87,7 @@ begin
   if CurStep = ssPostInstall then
   begin
     InstallPawnIO;
-    if not Exec(ExpandConstant('{app}\ThinkWind.exe'), '--configure-installation',
+    if not Exec(ExpandConstant('{app}\OrbyLauncher.exe'), '--configure-installation',
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     begin
       Log('Unable to run automatic taskbar configuration.');
@@ -99,7 +96,7 @@ begin
     else if ResultCode <> 0 then
     begin
       Log(Format('Automatic taskbar configuration failed, code %d.', [ResultCode]));
-      SuppressibleMsgBox('A instalacao foi concluida, mas a configuracao automatica das barras falhou. Feche o Orby Launcher e tente novamente, ou configure as duas opcoes manualmente. Detalhes em %LOCALAPPDATA%\ThinkWind\installation-setup.log, quando disponivel.', mbError, MB_OK, IDOK);
+      SuppressibleMsgBox('A instalacao foi concluida, mas a configuracao automatica das barras falhou. Feche o Orby Launcher e tente novamente, ou configure as duas opcoes manualmente. Detalhes em %LOCALAPPDATA%\OrbyLauncher\installation-setup.log, quando disponivel.', mbError, MB_OK, IDOK);
     end;
   end;
 end;

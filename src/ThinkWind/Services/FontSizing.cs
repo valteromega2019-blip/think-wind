@@ -5,7 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class FontSizing
 {

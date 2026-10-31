@@ -8,7 +8,7 @@ using Windows.UI.Composition;
 using Windows.UI.Composition.Desktop;
 using WinRT;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 internal sealed class BackdropComposition : IDisposable
 {

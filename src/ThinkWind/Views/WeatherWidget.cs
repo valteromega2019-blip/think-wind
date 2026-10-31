@@ -6,9 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using ThinkWind.Services;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 internal sealed class WeatherWidget : Grid, IDisposable
 {

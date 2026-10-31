@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Threading;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 // A separate copy of the app owns hiding/restoration. If the UI crashes, this
 // process observes its exit and restores only the shell windows it hid.
@@ -35,9 +35,9 @@ internal sealed class WindowsTaskbar : IDisposable
             // block the dispatcher or reveal the shell's overflow to do this.
             await TrayService.ReadAsync();
             if (request != revision) return;
-            string executable = Path.Combine(AppContext.BaseDirectory, "ThinkWind.exe");
+            string executable = Path.Combine(AppContext.BaseDirectory, "OrbyLauncher.exe");
             if (!File.Exists(executable)) throw new IOException("O executável do Orby Launcher não foi encontrado para proteger a restauração da barra.");
-            string name = @"Local\ThinkWind.Taskbar." + Guid.NewGuid().ToString("N");
+            string name = @"Local\OrbyLauncher.Taskbar." + Guid.NewGuid().ToString("N");
             stop = new EventWaitHandle(false, EventResetMode.ManualReset, name);
             var launch = new ProcessStartInfo(executable) { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
             launch.ArgumentList.Add("--taskbar-guard"); launch.ArgumentList.Add(Environment.ProcessId.ToString()); launch.ArgumentList.Add(name);
@@ -75,7 +75,7 @@ internal sealed class WindowsTaskbar : IDisposable
         nint shellHook = 0;
         try
         {
-            if (args.Length != 3 || !int.TryParse(args[1], out int pid) || !args[2].StartsWith(@"Local\ThinkWind.Taskbar.", StringComparison.Ordinal)) return true;
+            if (args.Length != 3 || !int.TryParse(args[1], out int pid) || !args[2].StartsWith(@"Local\OrbyLauncher.Taskbar.", StringComparison.Ordinal)) return true;
             using var owner = Process.GetProcessById(pid);
             using var done = EventWaitHandle.OpenExisting(args[2]);
             void Suppress(nint window)

@@ -4,7 +4,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 // Preserve CheckBox semantics, bindings and UI Automation TogglePattern while
 // replacing only the visual indicator with the launcher's ON/OFF language.

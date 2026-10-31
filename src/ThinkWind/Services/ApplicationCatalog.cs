@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Threading;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record AppEntry(string Name, string Target, string Category, ImageSource? Icon, string? AppId = null);
 internal sealed class ApplicationCatalog : IDisposable
 {

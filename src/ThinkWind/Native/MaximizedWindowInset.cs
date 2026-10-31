@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // Adjust only native maximized application windows. Never changes SPI work area,
 // registers an AppBar, or takes foreground focus. Incompatible custom maximized

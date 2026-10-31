@@ -6,11 +6,28 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Globalization;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 internal sealed class ShellIcons
 {
+    private const string SettingsTarget = @"shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel";
+    private static bool IsSettingsTarget(string target) => target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)
+        || target.Contains("windows.immersivecontrolpanel", StringComparison.OrdinalIgnoreCase)
+        || Path.GetFileName(target).Equals("SystemSettings.exe", StringComparison.OrdinalIgnoreCase);
+    private static bool IsLauncherTarget(string target) => Path.GetFileName(target).Equals("OrbyLauncher.exe", StringComparison.OrdinalIgnoreCase)
+        || target.Equals(AppBrand.AppUserModelId, StringComparison.OrdinalIgnoreCase)
+        || target.Equals(@"shell:AppsFolder\" + AppBrand.AppUserModelId, StringComparison.OrdinalIgnoreCase);
+    private static readonly Lazy<ImageSource> settingsFallback = new(() =>
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(100, 182, 241)); brush.Freeze();
+        var glyph = new FormattedText("\uE713", CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            new Typeface(new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), 128, brush, 1);
+        var drawing = new GeometryDrawing(brush, null, glyph.BuildGeometry(new System.Windows.Point()));
+        drawing.Freeze(); var image = new DrawingImage(drawing); image.Freeze(); return image;
+    });
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct FileInfo
     {
         internal nint Icon;
@@ -68,6 +85,13 @@ internal sealed class ShellIcons
     // Called only by an STA worker: extracting a shell icon may perform disk I/O.
     internal static ImageSource? ReadLarge(string target, int requestedPixels = 192)
     {
+        var path = new ShellIcons().Resolve(target);
+        if (IsLauncherTarget(path)) return AppBrand.ApplicationImage;
+        bool settings = IsSettingsTarget(target) || IsSettingsTarget(path);
+        return ReadLargeShell(settings ? SettingsTarget : target, requestedPixels) ?? (settings ? settingsFallback.Value : null);
+    }
+    private static ImageSource? ReadLargeShell(string target, int requestedPixels)
+    {
         requestedPixels = Math.Clamp(requestedPixels, 48, 512);
         var shortcutIcon = ShortcutIcon(target, requestedPixels); if (shortcutIcon is not null) return shortcutIcon;
         ImageFactory? factory = null; nint bitmap = 0;
@@ -82,7 +106,13 @@ internal sealed class ShellIcons
             try { if (GetDIBits(dc, bitmap, 0, (uint)info.Height, pixels, ref header, 0) != info.Height) return null; }
             finally { if (dc != 0) ReleaseDC(0, dc); }
             bool alpha = false; for (int i = 3; i < pixels.Length; i += 4) if (pixels[i] != 0) { alpha = true; break; }
-            if (!alpha) for (int i = 3; i < pixels.Length; i += 4) pixels[i] = 255;
+            if (!alpha)
+            {
+                bool color = false;
+                for (int i = 0; i < pixels.Length; i += 4) if (pixels[i] != 0 || pixels[i + 1] != 0 || pixels[i + 2] != 0) { color = true; break; }
+                if (!color) return null;
+                for (int i = 3; i < pixels.Length; i += 4) pixels[i] = 255;
+            }
             var image = BitmapSource.Create(info.Width, info.Height, 96, 96, PixelFormats.Pbgra32, null, pixels, info.Width * 4); image.Freeze(); return image;
         }
         catch (Exception error) when (error is COMException or ArgumentException or IOException or UnauthorizedAccessException) { return null; }
@@ -130,11 +160,11 @@ internal sealed class ShellIcons
     }
     internal ImageSource? Get(string? target, nint window = 0, string? appId = null)
     {
+        if (appId == AppBrand.AppUserModelId || (target is not null && IsLauncherTarget(Resolve(target)))) return AppBrand.ApplicationImage;
         // Packaged apps may expose a blank window/host icon. Their registered
         // AppsFolder identity is a better source than the host executable.
-        bool settings = target is not null && (target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)
-            || Path.GetFileName(target).Equals("SystemSettings.exe", StringComparison.OrdinalIgnoreCase));
-        string? registeredTarget = settings ? @"shell:AppsFolder\windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+        bool settings = target is not null && (IsSettingsTarget(target) || IsSettingsTarget(Resolve(target)));
+        string? registeredTarget = settings ? SettingsTarget
             : !string.IsNullOrWhiteSpace(appId) && appId.Contains('!') ? @"shell:AppsFolder\" + appId : null;
         if (registeredTarget is not null && !registeredTarget.Equals(target, StringComparison.OrdinalIgnoreCase))
         {
@@ -191,6 +221,7 @@ internal sealed class ShellIcons
         }
         catch (Exception e) when (e is ArgumentException or IOException or System.ComponentModel.Win32Exception) { value = null; }
         finally { if (info.Icon != 0) DestroyIcon(info.Icon); }
+        if (value is null && settings) value = settingsFallback.Value;
         Remember(targetKey, value); return value;
     }
     private void Remember(string key, ImageSource? image) { if (image is null) return; if (cache.Count > 256) cache.Clear(); cache[key] = image; }

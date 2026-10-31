@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class LaunchEnvironment
 {

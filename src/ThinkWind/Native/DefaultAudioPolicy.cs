@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 // Windows has no documented MMDevice setter for the global default. Keep the
 // desktop PolicyConfig interop isolated; callers validate the actual OS endpoint.
 internal static class DefaultAudioPolicy

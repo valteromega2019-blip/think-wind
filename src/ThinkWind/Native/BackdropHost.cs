@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // WPF owns a per-pixel-alpha HWND for controls. DWM owns this separate, unpainted
 // native HWND immediately behind it. A layered WPF window is not a DWM backdrop target.
@@ -22,7 +22,7 @@ internal sealed class BackdropHost : IDisposable
     }
     [StructLayout(LayoutKind.Sequential)] private struct Margins { internal int Left, Right, Top, Bottom; }
     private static readonly WindowProc Procedure = ProcessMessage;
-    private static readonly string ClassName = "ThinkWind.NativeBackdrop";
+    private static readonly string ClassName = "OrbyLauncher.NativeBackdrop";
     private static ushort atom;
     private readonly nint foreground;
     internal nint Handle { get; private set; }

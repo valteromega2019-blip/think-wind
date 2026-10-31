@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal sealed record WeatherPlace(string Name, double Latitude, double Longitude)
 { public override string ToString() => Name; }

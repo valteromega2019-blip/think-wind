@@ -6,7 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 internal sealed partial class DockWindow
 {

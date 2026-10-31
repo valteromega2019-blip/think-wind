@@ -1,4 +1,4 @@
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal enum IslandStage { Compact, Hover, Full }
 // Pure transition rules: popup lifetime never promotes the main island to Full.

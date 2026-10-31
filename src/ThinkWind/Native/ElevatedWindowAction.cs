@@ -5,7 +5,7 @@ using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // One user-requested operation per invocation. No persistent privileged server,
 // arbitrary commands, process termination, or weakened Windows policies.

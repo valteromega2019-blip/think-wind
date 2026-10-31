@@ -1,6 +1,6 @@
 using System;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record DockFit(int PerPage, double Icon, double Padding, double Gap, double NavigationWidth)
 {
     internal int Pages(int count) => Math.Max(1, (int)Math.Ceiling(count / (double)Math.Max(1, PerPage)));

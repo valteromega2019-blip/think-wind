@@ -2,10 +2,10 @@ using System;
 using System.Linq;
 using System.Windows;
 using Microsoft.Win32;
-using ThinkWind.Views;
+using OrbyLauncher.Views;
 using Forms = System.Windows.Forms;
 
-namespace ThinkWind;
+namespace OrbyLauncher;
 
 public partial class App
 {

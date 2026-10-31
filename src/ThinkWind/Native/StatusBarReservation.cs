@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // A reversible shell appbar reservation keeps maximized title bars below the
 // visible status strip. It owns no polling loop and is removed when hidden.

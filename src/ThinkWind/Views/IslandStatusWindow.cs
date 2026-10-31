@@ -3,10 +3,10 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using ThinkWind.Native;
-using ThinkWind.Services;
+using OrbyLauncher.Native;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 // Keep the status strip in its own small HWND while the control panel expands
 // below it. The empty area between them never becomes a click-blocking canvas.

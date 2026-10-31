@@ -4,7 +4,7 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal sealed class StartupPriority : IDisposable
 {

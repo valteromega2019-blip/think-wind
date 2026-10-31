@@ -1,7 +1,7 @@
 using System;
 using System.Windows;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 internal static class PageWheel
 {
     internal static void Attach(UIElement area, Func<int> count, Func<int> current, Action<int> change, Func<bool> busy)

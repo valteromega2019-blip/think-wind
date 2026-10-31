@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Threading;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record ForegroundGame(string Process, bool Fullscreen, bool Shell, nint Handle = 0, bool InstalledGame = false);
 internal sealed class GameModeService : IDisposable
 {

@@ -8,11 +8,11 @@ using System.Threading;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Session;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 public sealed class FrameMonitor : IDisposable
 {
-	private static readonly string SessionName = "ThinkWind-Frames-" + Environment.ProcessId;
+	private static readonly string SessionName = "OrbyLauncher-Frames-" + Environment.ProcessId;
 
 	private static readonly Guid DxgiProvider = new Guid("CA11C036-0102-4A2D-A6AD-F03CFED5D3C9");
 

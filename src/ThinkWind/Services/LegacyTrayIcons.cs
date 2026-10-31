@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class LegacyTrayIcons
 {

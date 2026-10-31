@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using Forms = System.Windows.Forms;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 // A non-layered top-level destination lets DWM render live content independently
 // of WPF's per-pixel-alpha foreground. It never activates or receives input.
 internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable

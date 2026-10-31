@@ -6,9 +6,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using ThinkWind.Services;
+using OrbyLauncher.Services;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 // One distance field and one spring clock drive the entire row. Transform the
 // actual buttons so hit testing and OLE drop targets follow the visible icons.

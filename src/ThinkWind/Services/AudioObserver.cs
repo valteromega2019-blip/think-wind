@@ -1,10 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
-using ThinkWind.Native;
-using static ThinkWind.Native.CoreAudio;
+using OrbyLauncher.Native;
+using static OrbyLauncher.Native.CoreAudio;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed class AudioObserver : IDisposable
 {
     private readonly Dispatcher dispatcher;

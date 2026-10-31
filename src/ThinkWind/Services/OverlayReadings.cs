@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class OverlayReadings
 {

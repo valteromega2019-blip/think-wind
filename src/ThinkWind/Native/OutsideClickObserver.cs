@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // Observe button presses only while the menu is visible. No hooks, capture,
 // NOLEGACY flag or input suppression; normal mouse delivery stays with Windows.

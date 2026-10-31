@@ -11,7 +11,7 @@ Esta é uma versão Beta. A seção Personalizar → Sobre e segurança reúne o
 
 ## Integração e dados locais
 
-Preferências são armazenadas em %LOCALAPPDATA%\ThinkWind\settings.json. O instalador configura a ocultação automática da barra do Windows e o uso da barra do launcher. A troca explícita de tema também pode alterar o modo claro/escuro do Windows. Essas opções são ajustáveis pelo usuário. O widget de clima consulta o serviço Open-Meteo para a cidade escolhida.
+Preferências são armazenadas em %LOCALAPPDATA%\OrbyLauncher\settings.json. O instalador configura a ocultação automática da barra do Windows e o uso da barra do launcher. A troca explícita de tema também pode alterar o modo claro/escuro do Windows. Essas opções são ajustáveis pelo usuário. O widget de clima consulta o serviço Open-Meteo para a cidade escolhida.
 
 A opção Desinstalar abre o mecanismo registrado pelo programa ou o gerenciamento nativo do Windows. O launcher não trata a exclusão de arquivos do aplicativo como desinstalação.
 

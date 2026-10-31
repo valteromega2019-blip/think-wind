@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Threading;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // The hook owns a dedicated message pump, never the WPF thread. Only an isolated
 // Windows key is consumed. Windows shortcuts are replayed together, in order.

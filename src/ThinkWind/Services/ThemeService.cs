@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class ThemeService
 {

@@ -7,7 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Animation;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 
 internal static class ColorPickerPopup
 {
@@ -43,7 +43,7 @@ internal static class ColorPickerPopup
         brightness.ValueChanged += (_, _) => { if (!syncing) wheel.Brightness = brightness.Value; };
         hex.TextChanged += (_, _) =>
         {
-            if (syncing || !ThinkWind.Services.OverlayAppearanceOptions.IsValidColor(hex.Text)) return;
+            if (syncing || !OrbyLauncher.Services.OverlayAppearanceOptions.IsValidColor(hex.Text)) return;
             syncing = true; wheel.Select((Color)ColorConverter.ConvertFromString(hex.Text)); brightness.Value = wheel.Brightness;
             preview.Background = new SolidColorBrush(wheel.Color); syncing = false; changed(hex.Text.ToUpperInvariant());
         };

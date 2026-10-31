@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record WifiAdapterInfo(Guid Id, string Name, bool? RadioOn, bool CanToggle, string? Error);
 internal sealed record WifiNetwork(Guid Adapter, string Name, byte[] Ssid, string Profile, uint Signal, bool Secure, uint Auth, uint Cipher, bool Connected, bool Connectable)
 {
@@ -197,7 +197,7 @@ internal sealed class WifiService : IDisposable
                 if (key64) for (int i = 0; i < secret.Length; i++) if (!Uri.IsHexDigit((char)Marshal.ReadInt16(password, i * 2))) throw new WifiUnavailableException("A chave WPA2 de 64 caracteres deve ser hexadecimal.");
             }
             string auth = network.Secure ? network.Auth == 9 ? "WPA3SAE" : "WPA2PSK" : "open";
-            string prefix = "<?xml version=\"1.0\"?><WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\"><name>ThinkWind-" + Convert.ToHexString(network.Ssid) + "</name><SSIDConfig><SSID><hex>" + Convert.ToHexString(network.Ssid) + "</hex></SSID></SSIDConfig><connectionType>ESS</connectionType><connectionMode>manual</connectionMode><MSM><security><authEncryption><authentication>" + auth + "</authentication><encryption>" + (network.Secure ? "AES" : "none") + "</encryption><useOneX>false</useOneX></authEncryption>";
+            string prefix = "<?xml version=\"1.0\"?><WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\"><name>OrbyLauncher-" + Convert.ToHexString(network.Ssid) + "</name><SSIDConfig><SSID><hex>" + Convert.ToHexString(network.Ssid) + "</hex></SSID></SSIDConfig><connectionType>ESS</connectionType><connectionMode>manual</connectionMode><MSM><security><authEncryption><authentication>" + auth + "</authentication><encryption>" + (network.Secure ? "AES" : "none") + "</encryption><useOneX>false</useOneX></authEncryption>";
             if (network.Secure) prefix += "<sharedKey><keyType>" + (key64 ? "networkKey" : "passPhrase") + "</keyType><protected>false</protected><keyMaterial>";
             string suffix = (network.Secure ? "</keyMaterial></sharedKey>" : "") + "</security></MSM></WLANProfile>";
             buffer = new char[prefix.Length + secret.Length * 6 + suffix.Length + 1]; prefix.CopyTo(0, buffer, 0, prefix.Length); int at = prefix.Length;

@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 // OLE drag/drop must stay at the desktop user's integrity level. Only the
 // existing protected sensor/action helpers retain administrative permissions.

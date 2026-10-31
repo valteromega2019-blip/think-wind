@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 // Read-only installation metadata. Cached for the existing foreground worker
 // (and its initial startup probe);

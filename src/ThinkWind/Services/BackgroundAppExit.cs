@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 // Only explicit user actions may end ordinary applications. No service control,
 // elevation, process-tree termination or changes to startup/system settings.

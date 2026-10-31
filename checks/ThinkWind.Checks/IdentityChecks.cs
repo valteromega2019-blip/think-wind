@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
 internal static class IdentityChecks
 {

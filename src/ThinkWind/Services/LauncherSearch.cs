@@ -5,9 +5,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record SearchBatch(IReadOnlyList<AppEntry> Items, string? Notice);
 internal sealed class LauncherSearch : IDisposable
 {

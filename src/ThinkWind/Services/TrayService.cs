@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using System.Windows.Automation;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record TrayEntry(string Name, ImageSource? Icon, AutomationElement? Element, nint Host, string Id = "", Accessibility.IAccessible? Accessible = null, int Child = 0, string? Executable = null, Action<bool>? LocalAction = null)
 {
     internal string DisplayName => Name.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? Name;

@@ -7,19 +7,19 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 // Approved installation of a fixed, read-only sensor action. The scheduled
 // action must NEVER point into a user-writable installation or preview folder.
 internal static class AdvancedSensorSetup
 {
     internal static string UserSid { get { using var identity = WindowsIdentity.GetCurrent(); return identity.User!.Value; } }
-    internal static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ThinkWind Sensors", UserSid);
-    internal static string Executable => Path.Combine(DirectoryPath, "ThinkWind.exe");
-    internal static string TaskName => "ThinkWind-Sensors-" + UserSid;
-    internal static string PipeName => "ThinkWind.Sensors.v3." + UserSid;
+    internal static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OrbyLauncher Sensors", UserSid);
+    internal static string Executable => Path.Combine(DirectoryPath, "OrbyLauncher.exe");
+    internal static string TaskName => "OrbyLauncher-Sensors-" + UserSid;
+    internal static string PipeName => "OrbyLauncher.Sensors.v3." + UserSid;
     private static string Marker => Path.Combine(DirectoryPath, "sensor-task-v3.enabled");
     private static string PayloadRevision => AppBrand.Version + "|frames-v2|gpu-v1|payload-v3|" + typeof(AdvancedSensorSetup).Assembly.ManifestModule.ModuleVersionId.ToString("N");
     internal static bool IsConfigured
@@ -189,7 +189,7 @@ internal static class AdvancedSensorSetup
             string source = Path.Combine(AppContext.BaseDirectory, relative);
             if (Directory.Exists(source)) CopyRuntimeDirectory(source, Path.Combine(destinationDirectory, relative));
         }
-        if (!File.Exists(Path.Combine(destinationDirectory, "ThinkWind.exe"))) throw new IOException("Executável do auxiliar não encontrado.");
+        if (!File.Exists(Path.Combine(destinationDirectory, "OrbyLauncher.exe"))) throw new IOException("Executável do auxiliar não encontrado.");
     }
     private static void CopyRuntimeDirectory(string source, string destination)
     {

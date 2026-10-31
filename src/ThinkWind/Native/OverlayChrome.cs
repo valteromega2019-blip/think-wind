@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 internal static class OverlayChrome
 {

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal static class AppVisibility
 {
     // Hide administrative/development utilities from the drawer, without

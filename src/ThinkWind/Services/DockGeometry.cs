@@ -1,6 +1,6 @@
 using System;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal static class DockGeometry
 {
     internal static double StartWidth(double icon) => Math.Max(40, icon + 12);

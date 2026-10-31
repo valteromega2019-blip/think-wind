@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 internal sealed class OverlayHotkey : IDisposable
 {

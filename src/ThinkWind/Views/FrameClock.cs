@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Media;
 
-namespace ThinkWind.Views;
+namespace OrbyLauncher.Views;
 // Follow WPF's presentation cadence instead of competing with a dispatcher timer.
 internal sealed class FrameClock
 {

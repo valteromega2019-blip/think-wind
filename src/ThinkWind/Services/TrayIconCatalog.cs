@@ -7,9 +7,9 @@ using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 // Read-only shell metadata supplements accessible LIVE icons. Cached history
 // alone never establishes that an application still has a notification icon.

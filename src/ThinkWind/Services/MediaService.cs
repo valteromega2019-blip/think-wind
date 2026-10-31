@@ -11,7 +11,7 @@ using Windows.ApplicationModel;
 using Windows.Media.Control;
 using Windows.Storage.Streams;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 internal sealed record MediaState(string Title, string Artist, string Player, ImageSource? Artwork, bool Playing,
     TimeSpan Start, TimeSpan End, TimeSpan Position, DateTimeOffset Updated, double Rate,
     TimeSpan SeekMin, TimeSpan SeekMax, bool CanSeek, bool CanToggle, bool CanNext, bool CanPrevious)

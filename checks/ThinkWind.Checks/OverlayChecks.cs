@@ -5,9 +5,9 @@ using System.Windows.Interop;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using ThinkWind.Native;
-using ThinkWind.Services;
-using ThinkWind.Views;
+using OrbyLauncher.Native;
+using OrbyLauncher.Services;
+using OrbyLauncher.Views;
 
 internal static class OverlayChecks
 {

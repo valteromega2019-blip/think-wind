@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace ThinkWind.Native;
+namespace OrbyLauncher.Native;
 
 internal sealed record GpuAdapterInfo(string Name, bool Integrated, ulong DedicatedMemory);
 

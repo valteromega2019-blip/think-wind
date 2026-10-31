@@ -5,17 +5,17 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal static class WindowActionSetup
 {
     internal static bool AutomaticAuthorizationEnabled { get; set; } = true;
     internal static string UserSid => AdvancedSensorSetup.UserSid;
-    internal static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ThinkWind Window Actions", UserSid);
-    internal static string Executable => Path.Combine(DirectoryPath, "ThinkWind.exe");
-    internal static string TaskName => "ThinkWind-WindowActions-" + UserSid;
+    internal static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OrbyLauncher Window Actions", UserSid);
+    internal static string Executable => Path.Combine(DirectoryPath, "OrbyLauncher.exe");
+    internal static string TaskName => "OrbyLauncher-WindowActions-" + UserSid;
     private static string Marker => Path.Combine(DirectoryPath, "window-actions.enabled");
     internal static bool IsConfigured
     {

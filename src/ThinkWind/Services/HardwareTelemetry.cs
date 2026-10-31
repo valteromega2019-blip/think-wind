@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using LibreHardwareMonitor.Hardware;
 using Microsoft.Win32;
-using ThinkWind.Native;
+using OrbyLauncher.Native;
 
-namespace ThinkWind.Services;
+namespace OrbyLauncher.Services;
 
 internal sealed record DeviceReading(string Name, double? Temperature = null, double? Load = null, double? Clock = null, double? Power = null, double? MemoryUsed = null, double? MemoryTotal = null);
 internal sealed record GpuReading(string Id, DeviceReading Device, bool? Integrated, ulong DedicatedMemory, Dictionary<string, double?> Extra);
