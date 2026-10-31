@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -13,6 +14,7 @@ internal sealed partial class LauncherPanelWindow
     private readonly TranslateTransform rowsMotion = new(), openingMotion = new();
     private string renderedStamp = "", renderedSection = "";
     private int renderedPage;
+    private readonly Stopwatch rowsAnimationTime = new();
     private bool DrawerAnimations => IsVisible && !LayoutDrag.Active && menus == 0
         && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0;
     private TimeSpan DrawerDuration => TimeSpan.FromMilliseconds(Math.Clamp(Store.Value.AnimationMilliseconds, 100, 320));
@@ -43,16 +45,20 @@ internal sealed partial class LauncherPanelWindow
         // Animate the whole grid through composition, never its cell dimensions.
         // SnapshotAndReplace keeps rapid wheel/tab changes from accumulating clocks.
         resultsGrid.RenderTransform = rowsMotion;
-        bool continuing = rowsMotion.HasAnimatedProperties || resultsGrid.HasAnimatedProperties;
+        // WPF can retain a stopped animation clock after its visible effect
+        // ends. Track the actual transition time, otherwise all later pages
+        // start at offset zero and appear to have no animation at all.
+        bool continuing = rowsAnimationTime.IsRunning && rowsAnimationTime.Elapsed < DrawerDuration;
         double previousX = rowsMotion.X, previousY = rowsMotion.Y, previousOpacity = resultsGrid.Opacity;
         rowsMotion.BeginAnimation(TranslateTransform.XProperty, null);
         rowsMotion.BeginAnimation(TranslateTransform.YProperty, null);
         resultsGrid.BeginAnimation(OpacityProperty, null);
         rowsMotion.X = rowsMotion.Y = 0; resultsGrid.Opacity = 1;
-        if (!hadRows || !DrawerAnimations) return;
-        if (direction == 0) rowsMotion.BeginAnimation(TranslateTransform.YProperty, Enter(continuing ? previousY : 6, 0), HandoffBehavior.SnapshotAndReplace);
-        else rowsMotion.BeginAnimation(TranslateTransform.XProperty, Enter(continuing ? previousX : direction * 16, 0), HandoffBehavior.SnapshotAndReplace);
-        resultsGrid.BeginAnimation(OpacityProperty, Enter(continuing ? previousOpacity : .88, 1), HandoffBehavior.SnapshotAndReplace);
+        if (!DrawerAnimations) { rowsAnimationTime.Reset(); return; }
+        rowsAnimationTime.Restart();
+        if (direction == 0) rowsMotion.BeginAnimation(TranslateTransform.YProperty, Enter(continuing ? previousY : 8, 0), HandoffBehavior.SnapshotAndReplace);
+        else rowsMotion.BeginAnimation(TranslateTransform.XProperty, Enter(continuing ? previousX : direction * 32, 0), HandoffBehavior.SnapshotAndReplace);
+        resultsGrid.BeginAnimation(OpacityProperty, Enter(continuing ? previousOpacity : hadRows ? .86 : .8, 1), HandoffBehavior.SnapshotAndReplace);
     }
 
     private void AnimateDrawerOpening()
@@ -61,12 +67,14 @@ internal sealed partial class LauncherPanelWindow
         content.BeginAnimation(OpacityProperty, null); openingMotion.BeginAnimation(TranslateTransform.YProperty, null);
         content.Opacity = 1; openingMotion.Y = 0;
         if (!DrawerAnimations) return;
+        AnimateDrawerRows(0, false);
         content.BeginAnimation(OpacityProperty, Enter(.9, 1), HandoffBehavior.SnapshotAndReplace);
         openingMotion.BeginAnimation(TranslateTransform.YProperty, Enter(6, 0), HandoffBehavior.SnapshotAndReplace);
     }
 
     private void CancelDrawerMotion()
     {
+        rowsAnimationTime.Reset();
         resultsGrid.BeginAnimation(OpacityProperty, null); content.BeginAnimation(OpacityProperty, null);
         rowsMotion.BeginAnimation(TranslateTransform.XProperty, null); rowsMotion.BeginAnimation(TranslateTransform.YProperty, null);
         openingMotion.BeginAnimation(TranslateTransform.YProperty, null);
