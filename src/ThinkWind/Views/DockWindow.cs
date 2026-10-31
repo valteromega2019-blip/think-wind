@@ -209,7 +209,7 @@ internal sealed partial class DockWindow : FloatingWindow
         // float above a cursor that is still resting on the original handle.
         bool pointerInside = pointerInsideReveal || PointerInsideDock;
         if (pointerInside) lastHover = DateTime.UtcNow;
-        if (preview?.IsVisible == true && !preview.IsMouseOver && !pointerInside
+        if (preview?.IsVisible == true && !preview.IsMouseOver && !preview.IsInteracting && !pointerInside
             && DateTime.UtcNow - lastHover >= TimeSpan.FromMilliseconds(350)) StopPreviews();
         // An ordinary focused button isn't an ongoing interaction. In particular,
         // activating the owner for a right-click must not pin the dock forever.

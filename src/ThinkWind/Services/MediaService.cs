@@ -26,6 +26,7 @@ internal enum MediaCommand { Toggle, Previous, Next }
 internal sealed class MediaService : IDisposable
 {
     private readonly Dispatcher dispatcher;
+    private readonly string? requiredSource;
     private GlobalSystemMediaTransportControlsSessionManager? manager;
     private GlobalSystemMediaTransportControlsSession? session;
     private volatile bool active, disposed;
@@ -39,7 +40,7 @@ internal sealed class MediaService : IDisposable
     internal MediaState? State { get; private set; }
     internal string? Error { get; private set; }
     internal event Action? Changed;
-    internal MediaService(Dispatcher uiDispatcher) { dispatcher = uiDispatcher; }
+    internal MediaService(Dispatcher uiDispatcher, string? sourceFilter = null) { dispatcher = uiDispatcher; requiredSource = sourceFilter; }
     internal async Task SetActiveAsync(bool value)
     {
         if (disposed || active == value) return;
@@ -76,7 +77,8 @@ internal sealed class MediaService : IDisposable
             do
             {
                 refreshAgain = false;
-                var candidates = manager.GetSessions().Where(s => !BrowserSource(s.SourceAppUserModelId)).ToArray();
+                var candidates = manager.GetSessions().Where(s => !BrowserSource(s.SourceAppUserModelId)
+                    && (requiredSource is null || s.SourceAppUserModelId.Contains(requiredSource, StringComparison.OrdinalIgnoreCase))).ToArray();
                 Watch(candidates);
                 var next = await SelectMusic(candidates);
                 if (!active || disposed) return;

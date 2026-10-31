@@ -30,9 +30,9 @@ internal sealed class MediaCard : Grid, IDisposable
     internal bool IsInteracting => seeking || dragging || busy || IsMouseCaptureWithin;
     internal event Action? AvailabilityChanged;
     internal event Action? LayoutChanged;
-    internal MediaCard()
+    internal MediaCard(string? sourceFilter = null)
     {
-        service = new MediaService(Dispatcher);
+        service = new MediaService(Dispatcher, sourceFilter);
         backgroundCover = new Border { Background = artworkBackground, CornerRadius = new CornerRadius(20), IsHitTestVisible = false, Visibility = Visibility.Collapsed };
         backgroundShade = new Border { CornerRadius = new CornerRadius(20), IsHitTestVisible = false, Visibility = Visibility.Collapsed,
             Background = new LinearGradientBrush(Color.FromArgb(155, 8, 12, 18), Color.FromArgb(220, 8, 12, 18), 90) };

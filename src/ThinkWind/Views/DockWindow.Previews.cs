@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
 using ThinkWind.Native;
@@ -24,16 +25,24 @@ internal sealed partial class DockWindow
                 preview.MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; previewClose.Stop(); };
                 preview.MouseLeave += (_, _) => { lastHover = DateTime.UtcNow; previewClose.Start(); };
             }
-            preview.Present(previewItem.Windows);
+            if (IsSpotify(previewItem)) preview.PresentSpotify();
+            else preview.Present(previewItem.Windows);
         };
-        previewClose.Tick += (_, _) => { previewClose.Stop(); if (preview?.IsMouseOver != true && !previewIconHovered) preview?.Hide(); };
+        previewClose.Tick += (_, _) =>
+        {
+            if (preview?.IsInteracting == true) return;
+            previewClose.Stop(); if (preview?.IsMouseOver != true && !previewIconHovered) preview?.Hide();
+        };
     }
+    private static bool IsSpotify(Item item) => string.Equals(item.Name, "Spotify", StringComparison.OrdinalIgnoreCase)
+        || (item.Target?.Contains("spotify", StringComparison.OrdinalIgnoreCase) == true)
+        || item.Windows.Any(window => window.Executable?.Contains("spotify", StringComparison.OrdinalIgnoreCase) == true);
     private void AttachPreview(FrameworkElement element, Item item)
     {
         element.MouseEnter += (_, _) =>
         {
             if (MenuOpen) return;
-            if (item.Windows.Count == 0) { StopPreviews(); return; }
+            if (item.Windows.Count == 0 && !IsSpotify(item)) { StopPreviews(); return; }
             previewIconHovered = true;
             previewClose.Stop(); previewOpen.Stop(); previewItem = item; previewAnchor = element;
             previewOpen.Interval = TimeSpan.FromMilliseconds(Store.Value.WindowPreviewDelayMilliseconds);

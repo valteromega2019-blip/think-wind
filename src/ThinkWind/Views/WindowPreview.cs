@@ -24,17 +24,34 @@ internal sealed class WindowPreview : FloatingWindow
     private readonly ShellIcons icons = new();
     private List<Desktop.RunningWindow> windows = new();
     private int page, perPage = 4;
+    private MediaCard? spotify;
+    private bool spotifyMode;
+    internal bool IsInteracting => spotifyMode && spotify?.IsInteracting == true;
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         anchor = getAnchor; Title = "Think Wind — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;
         refresh.Tick += (_, _) => { if (windows.Any(window => !WindowThumbnail.IsWindow(window.Handle))) { windows.RemoveAll(window => !WindowThumbnail.IsWindow(window.Handle)); Render(); } };
         LayoutUpdated += (_, _) => PlaceThumbnails();
-        IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); Release(); } };
-        Closed += (_, _) => Release();
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); Release(); spotify?.SetActive(false); } };
+        Closed += (_, _) => { Release(); spotify?.Dispose(); };
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape) Hide(); };
     }
     internal void Present(IEnumerable<Desktop.RunningWindow> source)
-    { windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0; if (windows.Count == 0) return; Show(); Render(); refresh.Start(); }
+    {
+        spotifyMode = false; spotify?.SetActive(false); viewport.Child = body;
+        windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
+        if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Start();
+    }
+    internal void PresentSpotify()
+    {
+        refresh.Stop(); Release(); spotifyMode = true;
+        if (spotify is null)
+        {
+            spotify = new MediaCard("spotify");
+            spotify.LayoutChanged += () => { if (IsVisible && spotifyMode) Position(); };
+        }
+        viewport.Child = spotify; Show(); Position(); spotify.SetActive(true);
+    }
     private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); }
     private void Render()
     {
@@ -100,6 +117,17 @@ internal sealed class WindowPreview : FloatingWindow
     }
     public override void Position()
     {
+        if (spotifyMode && spotify is not null)
+        {
+            double mediaWidth = Math.Max(1, Math.Min(360, Display.Width - 16));
+            var mediaBounds = anchor();
+            viewport.Width = mediaWidth - 20;
+            spotify.Width = viewport.Width;
+            viewport.MaxHeight = Math.Max(48, Math.Min(420, (mediaBounds.Top - Display.Work.Top) / Display.Scale - 36));
+            viewport.Measure(new Size(viewport.Width, viewport.MaxHeight));
+            PlaceAbove(mediaWidth, viewport.DesiredSize.Height + 20, mediaBounds, false);
+            return;
+        }
         double width = Math.Min(Display.Width - 16, Math.Max(1, grid.Columns) * 280 + 20);
         var bounds = anchor(); body.Width = width - 20; viewport.Width = body.Width;
         // IconButton centres its ContentPresenter. An empty Border otherwise
