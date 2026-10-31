@@ -1,3 +1,8 @@
+## Em desenvolvimento — digitação direta no Iniciar
+
+- A abertura do Iniciar solicita ativação da janela e foco de teclado no campo de busca, repetindo uma única vez após a abertura nativa caso o foco inicial ainda não esteja aplicado.
+- Texto digitado enquanto uma aba ou botão do menu estiver com foco é encaminhado à pesquisa, preservando a primeira letra e sem interceptação global de caracteres. Campos de texto, menus de contexto e combinações com Ctrl/Alt/Windows são preservados.
+- A solicitação pendente é cancelada ao fechar o painel. Sem compilação, testes ou type check nesta etapa, conforme a preferência do usuário; confirmação interativa pendente.
 ## Em desenvolvimento — FPS e controles do overlay
 
 - Corrigida a ausência de captura local de FPS: quando o launcher já está elevado, ele usa ETW diretamente, sem depender da tarefa de sensores. A sessão só inicia quando as métricas de frames são solicitadas e é encerrada quando deixam de ser necessárias.

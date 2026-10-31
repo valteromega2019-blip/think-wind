@@ -18,6 +18,8 @@ namespace ThinkWind.Views;
 internal enum LauncherPanelMode { Start, Library, Search }
 internal sealed partial class LauncherPanelWindow : FloatingWindow
 {
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(nint window);
+    private int searchFocusRevision;
     protected override bool AttachedTop => false;
     private readonly ApplicationCatalog catalog;
     private readonly LauncherSearch search = new();
@@ -85,6 +87,18 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         viewport.Child = content; Surface.Child = viewport;
         query.TextChanged += (_, _) => { if (!updating) { page = 0; Reload(); } };
         query.PreviewKeyDown += (_, e) => { if (e.Key == Key.Enter && results.Count > 0) { Launch(results[0]); e.Handled = true; } };
+        PreviewTextInput += (_, e) =>
+        {
+            if (query.IsKeyboardFocusWithin || e.OriginalSource is TextBoxBase || menus > 0 || modal
+                || string.IsNullOrEmpty(e.Text)
+                || (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Windows)) != 0) return;
+            // If a tab/button temporarily owns focus, the first typed text
+            // still starts the search. No global character interception.
+            FocusSearch();
+            query.SelectedText = e.Text;
+            query.CaretIndex = query.Text.Length;
+            e.Handled = true;
+        };
         category.SelectionChanged += (_, _) => { if (!updating) { page = 0; Reload(); } };
         debounce.Tick += async (_, _) => { debounce.Stop(); await ReadFiles(); };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
@@ -127,7 +141,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         updating = true; query.Text = text; updating = false; page = 0;
         UpdateCategories(); Reload(); ShowActivated = focusSearch;
         Show(); RefreshSettings(); visibility.Start(); refresh.Start();
-        if (focusSearch) { Activate(); query.Focus(); query.CaretIndex = query.Text.Length; }
+        if (focusSearch) FocusSearch();
         AnimateDrawerOpening();
         await catalog.RefreshAsync();
         try { var items = await search.RecentAsync(); if (!disposed) { recent = items; if (IsVisible) Reload(false); } }
@@ -139,10 +153,28 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         updating = true; query.Text = text; updating = false; page = 0; Reload();
     }
     internal void OpenFirstResult() { if (IsVisible && results.Count > 0) Launch(results[0]); }
-    internal void FocusSearch() { if (IsVisible) { Activate(); query.Focus(); query.CaretIndex = query.Text.Length; } }
+    internal void FocusSearch()
+    {
+        if (!IsVisible) return;
+        int revision = ++searchFocusRevision;
+        void Focus()
+        {
+            if (!IsVisible || revision != searchFocusRevision || menus > 0 || modal) return;
+            SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+            Activate();
+            FocusManager.SetFocusedElement(this, query);
+            Keyboard.Focus(query); query.Focus(); query.CaretIndex = query.Text.Length;
+        }
+        Focus();
+        // On the first Show, native activation/layout can finish after the
+        // synchronous call. Retry once, before ordinary queued input is handled.
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+        { if (!query.IsKeyboardFocusWithin) Focus(); }));
+    }
     internal void Dismiss()
     {
         if (!IsVisible) return;
+        searchFocusRevision++;
         cancellation?.Cancel(); debounce.Stop(); visibility.Stop(); refresh.Stop(); Hide(); Store.Flush(); Dismissed?.Invoke();
     }
     private void CatalogChanged() { if (!IsVisible) return; UpdateCategories(); Reload(false); }
