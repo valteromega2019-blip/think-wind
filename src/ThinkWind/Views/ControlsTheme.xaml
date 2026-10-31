@@ -11,19 +11,19 @@
   <Setter Property="Background" Value="{DynamicResource Think.Control}"/>
   <Setter Property="BorderBrush" Value="{DynamicResource Think.Hover}"/>
   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Slider">
-   <Grid x:Name="Surface" Background="Transparent" SnapsToDevicePixels="True">
-    <Border Height="32" Background="{TemplateBinding Background}" CornerRadius="16"/>
+   <Grid x:Name="Surface" Background="Transparent" SnapsToDevicePixels="True" UseLayoutRounding="True">
+    <Border Height="32" VerticalAlignment="Center" Background="{TemplateBinding Background}" CornerRadius="16"/>
     <Track x:Name="PART_Track" Height="32" VerticalAlignment="Center"
            Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}"
            IsDirectionReversed="{TemplateBinding IsDirectionReversed}" Orientation="{TemplateBinding Orientation}">
      <Track.DecreaseRepeatButton><RepeatButton Height="32" Command="Slider.DecreaseLarge" Background="{TemplateBinding Foreground}" Focusable="False">
       <RepeatButton.Template><ControlTemplate TargetType="RepeatButton">
-       <Border Background="{TemplateBinding Background}" CornerRadius="16" Margin="0,0,-16,0"/>
+       <Border Height="32" VerticalAlignment="Center" Background="{TemplateBinding Background}" CornerRadius="16,0,0,16" Margin="0,0,-16,0"/>
       </ControlTemplate></RepeatButton.Template>
      </RepeatButton></Track.DecreaseRepeatButton>
      <Track.Thumb><Thumb Width="32" Height="32">
       <Thumb.Template><ControlTemplate TargetType="Thumb">
-       <Grid>
+       <Grid Width="32" Height="32" VerticalAlignment="Center" SnapsToDevicePixels="True">
         <Border Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" CornerRadius="16"/>
         <Border x:Name="HandleShade" Background="Black" Opacity="0.28" CornerRadius="16"/>
        </Grid>
