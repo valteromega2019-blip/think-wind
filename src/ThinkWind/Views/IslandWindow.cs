@@ -269,8 +269,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             var grip = Glyph("\uE784", 15); grip.Width = 22; AttachPositionGrip(grip); header.Children.Add(grip);
         }
         var standard = Store.Value.QuickOrder.Where(id => id is not ("settings" or "monitor" or "tools") && IsQuickVisible(id));
-        var headerIds = Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing ? new[] { "settings" } : standard
-            .Concat(Stage == IslandStage.Full ? new[] { "settings" } : Array.Empty<string>()).Distinct();
+        var headerIds = Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing ? Array.Empty<string>() : standard;
         header.HorizontalAlignment = Stage == IslandStage.Full && maximizedOnDisplay ? HorizontalAlignment.Right : HorizontalAlignment.Center;
         foreach (var id in headerIds)
         {
@@ -330,16 +329,20 @@ internal sealed partial class IslandWindow : FloatingWindow
             header.Children.Add(monitor);
         }
         if (IsQuickVisible("tools")) header.Children.Add(SystemToolsButton(false));
+        BuildSecondaryQuickControls();
         if (Stage == IslandStage.Full || Store.IsEditing)
         {
             if (Stage == IslandStage.Full)
             {
+                var settingsButton = ActionButton("Personalizar launcher", openSettings);
+                settingsButton.Content = Glyph(LayoutCatalog.QuickControls.First(q => q.Id == "settings").Glyph, 17 * scale);
+                StyleSecondaryControl(settingsButton); hoverQuick.Children.Add(settingsButton);
                 themeToggle = ActionButton("Alternar tema do Windows e do launcher", async () =>
                     await ThemeService.SelectTheme(Store, ThemeService.IsLight(Store.Value) ? "Dark" : "Light"));
                 themeToggle.Style = (Style)FindResource("Think.IconButton");
                 themeToggle.Width = themeToggle.Height = 32 * scale;
                 themeToggle.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
-                RefreshThemeToggle(); header.Children.Add(themeToggle);
+                RefreshThemeToggle(); hoverQuick.Children.Add(themeToggle);
             }
             var close = ActionButton(Store.IsEditing ? "Concluir edição" : "Fechar painel completo", () =>
             { if (Store.IsEditing) Store.SetEditing(false); Transition(() => interaction.CloseFull()); });
@@ -351,17 +354,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             var expand = ActionButton("Abrir painel completo", OpenFull);
             expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(expand);
         }
-        BuildSecondaryQuickControls();
-        if (Stage != IslandStage.Compact)
-        {
-            // Expanded controls share the same horizontal header; keep the
-            // expand/collapse button last and preserve compact visibility rules.
-            var secondary = hoverQuick.Children.Cast<UIElement>().ToArray();
-            hoverQuick.Children.Clear();
-            int insertion = Math.Max(0, header.Children.Count - 1);
-            foreach (var control in secondary) header.Children.Insert(insertion++, control);
-            hoverQuick.Visibility = Visibility.Collapsed;
-        }
+        hoverQuick.Visibility = hoverQuick.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
     private void UpdateClock()
     {
@@ -623,7 +616,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         headerViewport.Height = Math.Max(40, 36 * p.IslandScale);
         double headerHeight = Math.Max(40, 36 * p.IslandScale) + Surface.Padding.Top + Surface.Padding.Bottom;
         secondaryQuickViewport.Width = headerViewport.Width;
-        hoverQuick.Width = Math.Min(288, Math.Max(36, hoverQuick.Children.OfType<FrameworkElement>().Sum(item => item.Width + item.Margin.Left + item.Margin.Right)));
+        // Keep the extra controls on one independent row. The Viewbox fits it
+        // to the available width instead of wrapping or changing the main row.
+        hoverQuick.Width = Math.Max(36, hoverQuick.Children.OfType<FrameworkElement>().Sum(item => item.Width + item.Margin.Left + item.Margin.Right));
         secondaryQuickViewport.Measure(new Size(headerViewport.Width, double.PositiveInfinity));
         if (Stage != IslandStage.Compact && hoverQuick.Children.Count > 0) headerHeight += secondaryQuickViewport.DesiredSize.Height;
         double limit = Stage == IslandStage.Full ? Math.Max(120, Math.Min(620, Display.Height * .64)) : CompactLayout.PanelHeight(Display.Height);
