@@ -1,3 +1,8 @@
+## Ajuste após a prévia 0.18 — métricas na disposição original
+
+- Removidos os blocos destacados de temperatura/uso no topo. Esses valores voltam às linhas originais de GPU/CPU, junto das demais métricas.
+- Temperatura e uso passam a 14 DIP, apenas um pouco maiores que os demais valores de 13 DIP e com o mesmo tamanho entre si. Mantida a temperatura antes do uso dentro da linha, sem alterar a posição dos grupos.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. O instalador 0.18 já gerado não inclui este ajuste posterior.
 ## 0.18 Alfa — empacotamento local
 
 Consolida as correções desta branch e os ajustes do overlay. Validação final: 47 testes aprovados, 0 falhos e 0 ignorados. Instalador local com PawnIO oficial opcional; sem publicação remota nesta etapa. [Notas](RELEASE-0.18-ALFA.md).

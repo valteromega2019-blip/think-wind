@@ -80,25 +80,6 @@ internal sealed class HardwareOverlayWindow : Window
             Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 3), Child = content };
         var selected = store.Value.OverlayVisibleMetrics;
         string V(string key) => sample is null ? "—" : OverlayReadings.Value(sample, key);
-        // Temperatures lead the overlay; utilization has equal visual weight.
-        // Respect individually disabled metrics and avoid repeating them below.
-        foreach (var component in new[] { (Name: "CPU", Prefix: "cpu"), (Name: "GPU", Prefix: "gpu") })
-        {
-            string temperature = component.Prefix + "_temp", usage = component.Prefix + "_load";
-            if (!selected.Contains(temperature) && !selected.Contains(usage)) continue;
-            var panel = new StackPanel();
-            panel.Children.Add(Text(component.Name, 13));
-            var values = new WrapPanel { MaxWidth = 420 };
-            foreach (string key in new[] { temperature, usage }.Where(selected.Contains))
-            {
-                var metric = new StackPanel { Margin = new Thickness(0, 5, 18, 0) };
-                metric.Children.Add(Text(key == temperature ? "Temperatura" : "Uso", 11, true));
-                var number = Text(V(key), 20); number.FontWeight = FontWeights.Bold;
-                if (key == temperature) number.Foreground = B(palette.Accent);
-                metric.Children.Add(number); values.Children.Add(metric);
-            }
-            panel.Children.Add(values); rows.Children.Add(Block(panel));
-        }
         if (selected.Contains("fps") || selected.Contains("frametime"))
         {
             var frameRow = new StackPanel { Orientation = Orientation.Horizontal };
@@ -127,12 +108,21 @@ internal sealed class HardwareOverlayWindow : Window
             rows.Children.Add(new Border { Background = B(palette.Graph), CornerRadius = surface.CornerRadius, Padding = new Thickness(5, 3, 5, 3), Margin = new Thickness(0, 6, 0, 4), Child = canvas });
         }
         if (sample is not null)
-            foreach (var row in OverlayReadings.Rows(sample, selected.Where(key => key is not ("cpu_temp" or "cpu_load" or "gpu_temp" or "gpu_load")).ToArray()))
+            foreach (var row in OverlayReadings.Rows(sample, selected))
             {
                 var line = new Grid(); line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) }); line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) }); line.ColumnDefinitions.Add(new ColumnDefinition());
                 line.Children.Add(new Border { Background = B(palette.Accent), CornerRadius = new CornerRadius(1) });
                 var label = Text(row.Group, muted: true); label.Margin = new Thickness(8, 0, 0, 0); Grid.SetColumn(label, 1); line.Children.Add(label);
-                var value = Text(row.Value); Grid.SetColumn(value, 2); line.Children.Add(value); rows.Children.Add(Block(line));
+                var value = Text("");
+                var metrics = OverlayMetrics.All.Where(metric => metric.Group == row.Group && selected.Contains(metric.Key))
+                    .OrderBy(metric => metric.Key is "cpu_temp" or "gpu_temp" ? 0 : metric.Key is "cpu_load" or "gpu_load" ? 1 : 2);
+                foreach (var metric in metrics)
+                {
+                    if (value.Inlines.Count > 0) value.Inlines.Add(new System.Windows.Documents.Run(" · "));
+                    bool emphasized = metric.Key is "cpu_temp" or "cpu_load" or "gpu_temp" or "gpu_load";
+                    value.Inlines.Add(new System.Windows.Documents.Run(V(metric.Key)) { FontSize = emphasized ? 14 : 13 });
+                }
+                Grid.SetColumn(value, 2); line.Children.Add(value); rows.Children.Add(Block(line));
             }
         string extra = string.Join(" · ", new[] { selected.Contains("game") ? V("game") : null, selected.Contains("clock") ? V("clock") : null }.Where(value => value is not null));
         if (extra.Length > 0) rows.Children.Add(Text(extra, 10, true));
