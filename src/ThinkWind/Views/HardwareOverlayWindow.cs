@@ -17,6 +17,8 @@ internal sealed class HardwareOverlayWindow : Window
     private readonly Border surface = new() { Padding = new Thickness(12, 9, 12, 9), BorderThickness = new Thickness(1) };
     private readonly HardwareTelemetry telemetry;
     private readonly SettingsStore store;
+    private BackdropHost? backdrop;
+    private (bool Light, bool HighContrast)? materialState;
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongW")] private static extern int SetWindowLong(nint window, int index, int value);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
@@ -34,11 +36,18 @@ internal sealed class HardwareOverlayWindow : Window
             SetWindowLong(window, -20, GetWindowLong(window, -20) | 0x20 | 0x80 | 0x08000000);
             HwndSource.FromHwnd(window).AddHook((nint hwnd, int message, nint wParam, nint lParam, ref bool handled) =>
             { if (message == 0x84) { handled = true; return -1; } if (message == 0x21) { handled = true; return 3; } return 0; });
+            backdrop = new BackdropHost(this);
+            ApplyBackdropMaterial();
+            Render(telemetry.Latest);
         };
-        IsVisibleChanged += (_, _) => telemetry.SetActive(this, IsVisible);
+        IsVisibleChanged += (_, _) =>
+        {
+            telemetry.SetActive(this, IsVisible);
+            if (!IsVisible) backdrop?.Hide(); else PositionOverlay();
+        };
         SizeChanged += (_, _) => PositionOverlay();
         telemetry.Changed += Update;
-        Closed += (_, _) => { telemetry.Changed -= Update; telemetry.SetActive(this, false); };
+        Closed += (_, _) => { telemetry.Changed -= Update; telemetry.SetActive(this, false); backdrop?.Dispose(); backdrop = null; };
     }
     internal void Apply(bool gameActive = false)
     {
@@ -56,7 +65,11 @@ internal sealed class HardwareOverlayWindow : Window
         var options = store.Value.OverlayAppearance;
         var palette = OverlayPalette.Resolve(options, Application.Current.Resources, store.Value);
         Brush B(Color color) => OverlayPalette.Brush(color);
-        surface.Background = B(palette.Background); surface.BorderBrush = B(palette.Border);
+        ApplyBackdropMaterial();
+        var background = palette.Background;
+        if (backdrop?.MaterialAvailable != true) background.A = 255;
+        surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : B(background);
+        surface.BorderBrush = SystemParameters.HighContrast ? SystemColors.WindowTextBrush : B(palette.Border);
         surface.CornerRadius = new CornerRadius(options.SyncWithAppTheme ? Math.Clamp(store.Value.IslandRadius, 0, 24) : options.CornerRadius);
         rows.Children.Clear();
         TextBlock Text(string value, double size = 12, bool muted = false) => new() {
@@ -120,6 +133,17 @@ internal sealed class HardwareOverlayWindow : Window
         double vertical = store.Value.OverlayCustomPosition ? store.Value.OverlayPositionY / 100 : bottom ? 1 : 0;
         int x = display.Bounds.Left + margin + (int)Math.Round(availableX * horizontal);
         int y = display.Bounds.Top + margin + (int)Math.Round(availableY * vertical);
-        SetWindowPos(window, (nint)(-1), Math.Max(display.Bounds.Left, x), Math.Max(display.Bounds.Top, y), 0, 0, 0x0010 | 0x0001 | 0x0200);
+        x = Math.Max(display.Bounds.Left, x); y = Math.Max(display.Bounds.Top, y);
+        SetWindowPos(window, (nint)(-1), x, y, 0, 0, 0x0010 | 0x0001 | 0x0200);
+        backdrop?.Synchronize(new OverlayChrome.PixelRect { Left = x, Top = y, Right = x + width, Bottom = y + height },
+            surface.CornerRadius.TopLeft * store.Value.OverlayScale * display.Scale, false, IsVisible);
+    }
+    private void ApplyBackdropMaterial()
+    {
+        if (backdrop is null) return;
+        var next = (ThemeService.Light, SystemParameters.HighContrast);
+        if (materialState == next) return;
+        backdrop.SetMaterial(next.Item2 ? "Solid" : "Acrylic", next.Item1);
+        materialState = next;
     }
 }

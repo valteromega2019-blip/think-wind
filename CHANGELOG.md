@@ -1,3 +1,10 @@
+## Em desenvolvimento — Acrylic no overlay de métricas
+
+- O overlay agora utiliza BackdropHost e composição nativa Acrylic, como a ilha, em vez de somente pintar uma superfície semitransparente.
+- A camada de material acompanha posição, dimensões, escala e cantos arredondados do overlay. É ocultada junto com ele e liberada no fechamento.
+- Preservados os estilos sem ativação e com passagem de cliques, sem injeção no jogo. O estado do material só é atualizado quando tema ou alto contraste mudam.
+- Se a composição não estiver disponível, utiliza fundo legível opaco; alto contraste usa superfície do sistema.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura de código e diff; confirmação visual pendente.
 ## Em desenvolvimento — foco da pesquisa pelo teclado
 
 - A abertura pela tecla Windows solicita explicitamente o foco da pesquisa depois de alternar o menu, incluindo quando a barra estava oculta.
