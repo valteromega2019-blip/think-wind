@@ -1,3 +1,7 @@
+## Atualização para publicação
+
+Os 47 testes abaixo correspondem à rodada anterior, antes dos últimos ajustes de foco e estilo do overlay. O pacote final foi recompilado, sem repetir testes nesta publicação. Não houve nova medição de FPS ou latência em jogos.
+
 # Validação 0.18 Alfa
 
 Pedido explícito: compilar, executar os testes e gerar instalador. Data: 30/10/2026.

@@ -1,3 +1,7 @@
+## Publicação 0.18 Alfa
+
+Instalador regenerado com os últimos ajustes de foco e métricas do overlay. Release e página pública atualizadas. Testes anteriores: 47 aprovados; sem nova execução para os ajustes finais nesta publicação.
+
 ## Ajuste após a prévia 0.18 — cor das métricas principais
 
 - Temperatura e uso de CPU/GPU utilizam a cor de destaque configurada no overlay, preservando a posição nas linhas e os tamanhos atuais. As demais métricas mantêm a cor de texto.

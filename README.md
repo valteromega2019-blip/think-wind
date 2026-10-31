@@ -1,5 +1,12 @@
 # Think Wind
 
+## 0.18 Alfa — 0.18.0-alpha
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.18.0-alpha/ThinkWind-Setup-0.18.0-alpha.exe) · [Notas e limitações](RELEASE-0.18-ALFA.md)
+
+Ilha secundária opcional, Iniciar e pesquisa na tela principal, ajustes de foco, overlay Acrylic com posição personalizada e métricas refinadas. Testes da rodada anterior: 47 aprovados. Ajustes finais compilados sem nova execução de testes.
+
+
 ## 0.17 Alfa — 0.17.0-alpha
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.17.0-alpha/ThinkWind-Setup-0.17.0-alpha.exe) · [Notas e limitações](RELEASE-0.17-ALFA.md)
