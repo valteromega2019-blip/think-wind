@@ -1,3 +1,8 @@
+## Ajuste após a prévia 0.18 — ativação da busca pela tecla Windows
+
+- Acrescentada tentativa de ativação quando SetForegroundWindow direto é recusado: somente na solicitação explícita de foco, a thread de interface conecta temporariamente sua fila à thread em primeiro plano, solicita ativação e desconecta em finally antes de qualquer operação WPF.
+- Nenhum processamento de texto, IO, espera ou layout ocorre durante a conexão. Mantido o foco no HWND e no TextBox após a tentativa; não há captura global de letras nem alteração permanente de foco.
+- Hipótese tratada: falta de direito de ativação após abertura por hook, diferente de clique no menu. Ainda requer confirmação em uso. Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário.
 ## Ajuste após a prévia 0.18 — métricas na disposição original
 
 - Removidos os blocos destacados de temperatura/uso no topo. Esses valores voltam às linhas originais de GPU/CPU, junto das demais métricas.
