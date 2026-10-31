@@ -15,6 +15,7 @@ namespace ThinkWind.Views;
 internal sealed partial class IslandWindow : FloatingWindow
 {
     protected override bool AttachedTop => true;
+    protected override bool SquareTopCorners => Stage == IslandStage.Compact;
     private readonly IslandInteraction interaction = new();
     internal IslandStage Stage => interaction.Stage;
     private readonly DockPanel root = new();
@@ -408,6 +409,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             preparingFullReveal = true; Surface.Visibility = Visibility.Hidden; ApplyAppearance();
             if (Stage == IslandStage.Full && !fullscreenReveal) Place(Math.Min(Display.Width - 16, Store.Value.IslandExpandedWidth), 6, false);
         }
+        else ApplyAppearance();
         UpdateAdaptiveState();
         BuildHeader(); UpdateStageVisibility(); UpdateClock();
         void Reveal()
