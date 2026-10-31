@@ -25,8 +25,9 @@ internal sealed partial class IslandWindow
     {
         secondArea.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
         secondArea.Background = System.Windows.Media.Brushes.Transparent;
-        secondArea.Child = new Viewbox { Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly,
-            Child = new HardwareMonitorPanel(Store, ((App)Application.Current).Telemetry) { Width = 520 } };
+        var monitor = new HardwareMonitorPanel(Store, ((App)Application.Current).Telemetry) { Width = 760, WideLayout = true };
+        monitor.LayoutChanged += () => { if (secondAreaSelected) ModuleSizeChanged(); };
+        secondArea.Child = new Viewbox { Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = monitor };
         fullPanel.Children.Add(secondArea);
         fullPanel.Children.Add(areaIndicators);
         RefreshAreaIndicators();

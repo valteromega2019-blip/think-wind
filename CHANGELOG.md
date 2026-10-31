@@ -1,3 +1,10 @@
+## Em desenvolvimento — margens da área central de monitoramento
+
+- A página central de monitoramento mede seu conteúdo e ajusta a largura da ilha à largura efetivamente renderizada, removendo as grandes faixas vazias laterais causadas pelo painel fixo de 520 DIP dentro de uma janela mais larga.
+- Nesse modo, os quatro cartões de resumo ficam lado a lado e o painel usa largura lógica de pelo menos 760 DIP, reduzindo a necessidade de diminuir o conteúdo para caber em altura. A área lateral conserva seu layout compacto.
+- Mudanças de conteúdo e de fonte solicitam nova medição sem remover os limites da tela ou adicionar rolagem.
+- Corrigido o rótulo das opções de GPU: exibe somente o nome, inclusive em templates que ignoram DisplayMemberPath.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura de código e diff; conferência visual pendente.
 ## 0.18 Alfa — revisão 2
 
 Entrega da branch fix/arrasto-permissoes aprovada pelo usuário. Instalador regenerado com runtime/PawnIO opcional. Sem nova execução de testes nesta publicação. [Notas](RELEASE-0.18.2-ALFA.md).

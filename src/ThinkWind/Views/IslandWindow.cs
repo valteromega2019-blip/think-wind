@@ -657,6 +657,24 @@ internal sealed partial class IslandWindow : FloatingWindow
         hoverViewport.Height = Math.Max(1, hoverPanel.DesiredSize.Height);
         secondArea.Width = inner;
         secondArea.Height = System.Math.Max(40, System.Math.Min(520, limit - headerHeight - 38));
+        if (Stage == IslandStage.Full && secondAreaSelected && secondArea.Child is Viewbox monitorViewport
+            && monitorViewport.Child is FrameworkElement monitorPanel)
+        {
+            // Fit the window to the scaled monitoring board, instead of placing
+            // a fixed 520-DIP board in the middle of a much wider empty island.
+            double monitorWidth = Math.Max(760, inner);
+            monitorPanel.Width = monitorWidth;
+            FontSizing.PrepareForMeasure(monitorPanel);
+            monitorPanel.InvalidateMeasure();
+            monitorPanel.Measure(new Size(monitorWidth, double.PositiveInfinity));
+            double monitorHeight = Math.Max(1, Math.Ceiling(monitorPanel.DesiredSize.Height));
+            double fit = Math.Min(1, Math.Min(inner / monitorWidth, contentLimit / monitorHeight));
+            inner = monitorWidth * fit;
+            width = inner + Surface.Padding.Left + Surface.Padding.Right;
+            monitorViewport.Width = inner; monitorViewport.Height = monitorHeight * fit;
+            secondArea.Width = inner; secondArea.Height = monitorViewport.Height;
+            headerViewport.Width = inner;
+        }
         double fullContentHeight = secondAreaSelected ? secondArea.Height : moduleViewport.DesiredSize.Height;
         moduleViewport.Measure(new Size(inner, contentLimit));
         if (!secondAreaSelected) fullContentHeight = moduleViewport.DesiredSize.Height;

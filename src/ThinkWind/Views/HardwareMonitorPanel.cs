@@ -16,7 +16,16 @@ internal sealed class HardwareMonitorPanel : UserControl
     private readonly SettingsStore store;
     private readonly StackPanel body = new();
     private readonly OverlayToggleButton overlay;
-    private sealed record GpuChoice(string Id, string Label);
+    private sealed record GpuChoice(string Id, string Label)
+    {
+        public override string ToString() => Label;
+    }
+    private bool wideLayout;
+    internal bool WideLayout
+    {
+        get => wideLayout;
+        set { if (wideLayout == value) return; wideLayout = value; Render(); }
+    }
     private readonly ComboBox gpuPicker = new() { DisplayMemberPath = nameof(GpuChoice.Label), MinHeight = 32, Margin = new Thickness(4, 0, 4, 10) };
     private readonly TextBlock sensorNotice = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 0, 4, 8), Visibility = Visibility.Collapsed };
     private bool syncingGpu;
@@ -114,7 +123,7 @@ internal sealed class HardwareMonitorPanel : UserControl
     private void RenderSummary()
     {
         var s = latest;
-        var cards = new UniformGrid { Columns = 2 };
+        var cards = new UniformGrid { Columns = WideLayout ? 4 : 2 };
         Summary(cards, "\uE950", "Processador", s?.Cpu.Temperature.HasValue == true ? Number(s.Cpu.Temperature," °C") : Number(s?.Cpu.Load,"%"), $"{Number(s?.Cpu.Load,"%")} de uso · {s?.Cpu.Name ?? "Processador"}", s?.Cpu.Load);
         Summary(cards, "\uE7F4", "Placa de vídeo", s?.Gpu.Temperature.HasValue == true ? Number(s.Gpu.Temperature," °C") : Number(s?.Gpu.Load,"%"), $"{Number(s?.Gpu.Load,"%")} de uso · {s?.Gpu.Name ?? "GPU"}", s?.Gpu.Load);
         double? ramPct = s?.RamTotal > 0 ? s.RamUsed / s.RamTotal * 100 : null;
