@@ -20,6 +20,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
 {
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(nint window);
     private int searchFocusRevision;
+    private bool focusSearchOnActivation;
     protected override bool AttachedTop => false;
     private readonly ApplicationCatalog catalog;
     private readonly LauncherSearch search = new();
@@ -87,6 +88,16 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         viewport.Child = content; Surface.Child = viewport;
         query.TextChanged += (_, _) => { if (!updating) { page = 0; Reload(); } };
         query.PreviewKeyDown += (_, e) => { if (e.Key == Key.Enter && results.Count > 0) { Launch(results[0]); e.Handled = true; } };
+        Activated += (_, _) =>
+        {
+            if (!focusSearchOnActivation) return;
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                if (!IsVisible || !IsActive || !focusSearchOnActivation || menus > 0 || modal) return;
+                FocusManager.SetFocusedElement(this, query);
+                Keyboard.Focus(query); query.Focus();
+            }));
+        };
         PreviewTextInput += (_, e) =>
         {
             if (query.IsKeyboardFocusWithin || e.OriginalSource is TextBoxBase || menus > 0 || modal
@@ -137,6 +148,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     internal async void Present(LauncherPanelMode requested, string text = "", bool focusSearch = true)
     {
         openingForeground = Desktop.GetForegroundWindow(); foregroundClaimed = IsActive; outsideForeground = 0;
+        focusSearchOnActivation = focusSearch;
         mode = requested; section = requested == LauncherPanelMode.Library ? "Biblioteca" : requested == LauncherPanelMode.Start ? "Fixados" : "Todos";
         updating = true; query.Text = text; updating = false; page = 0;
         UpdateCategories(); Reload(); ShowActivated = focusSearch;
@@ -156,6 +168,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     internal void FocusSearch()
     {
         if (!IsVisible) return;
+        focusSearchOnActivation = true;
         int revision = ++searchFocusRevision;
         void Focus()
         {
@@ -169,12 +182,13 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         // On the first Show, native activation/layout can finish after the
         // synchronous call. Retry once, before ordinary queued input is handled.
         Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
-        { if (!query.IsKeyboardFocusWithin) Focus(); }));
+        { if (!IsActive || !query.IsKeyboardFocusWithin) Focus(); }));
     }
     internal void Dismiss()
     {
         if (!IsVisible) return;
         searchFocusRevision++;
+        focusSearchOnActivation = false;
         cancellation?.Cancel(); debounce.Stop(); visibility.Stop(); refresh.Stop(); Hide(); Store.Flush(); Dismissed?.Invoke();
     }
     private void CatalogChanged() { if (!IsVisible) return; UpdateCategories(); Reload(false); }

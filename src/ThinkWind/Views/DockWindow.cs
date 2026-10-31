@@ -573,6 +573,7 @@ internal sealed partial class DockWindow : FloatingWindow
         temporaryFullscreenStart |= overFullscreen && !IsVisible;
         if (!IsVisible) Show();
         ToggleStart();
+        if (launcher?.IsVisible == true) launcher.FocusSearch();
     }
     public override void RefreshAppearance() { base.RefreshAppearance(); magnifier.Configure(Store.Value, magnificationReserve); launcher?.RefreshAppearance(); }
     private void MoveOne(string source, int direction)

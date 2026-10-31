@@ -1,3 +1,9 @@
+## Em desenvolvimento — foco da pesquisa pelo teclado
+
+- A abertura pela tecla Windows solicita explicitamente o foco da pesquisa depois de alternar o menu, incluindo quando a barra estava oculta.
+- O campo recupera o foco após a ativação nativa da janela. A tentativa adiada considera também janela inativa, evitando tratar o foco interno antigo do TextBox como prova de que ele já recebe digitação.
+- Busca iniciada pela caixa do Dock preserva o foco original; solicitações de foco são desarmadas ao fechar o menu.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Confirmação interativa pendente.
 ## Em desenvolvimento — posição personalizada do overlay
 
 - Adicionados sliders de posição horizontal e vertical, de 0% a 100% da área disponível, com indicação decimal e ajuste de 0,1 ponto percentual pelas setas do teclado.
