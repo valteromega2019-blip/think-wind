@@ -28,4 +28,6 @@
 
 - Pesquisa: primeiro resultado visível pré-selecionado ao digitar, com superfície suave e contorno na cor de destaque. O foco permanece no texto; Enter no campo do menu ou na barra inferior abre o mesmo item destacado, inclusive após paginação e atualização dos resultados indexados. Sem destaque permanente nas grades quando não há pesquisa.
 
+- Sliders refinados conforme nova referência: cápsula sem contorno, preenchimento contínuo sob o centro do controle circular e círculo sólido no mesmo tom do preenchimento com escurecimento suave. Alturas iguais e geometria preservadas; cores seguem o Foreground de cada slider, com atualização dinâmica da personalização.
+
 Revisão por leitura de código e diff. Sem compilação, testes, type check ou conferência visual nesta etapa, conforme a preferência do usuário. A branch `feature/v0.19` não foi publicada e o instalador existente não foi alterado.

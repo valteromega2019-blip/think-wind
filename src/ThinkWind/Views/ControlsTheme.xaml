@@ -12,7 +12,7 @@
   <Setter Property="BorderBrush" Value="{DynamicResource Think.Hover}"/>
   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Slider">
    <Grid x:Name="Surface" Background="Transparent" SnapsToDevicePixels="True">
-    <Border Height="32" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="16"/>
+    <Border Height="32" Background="{TemplateBinding Background}" CornerRadius="16"/>
     <Track x:Name="PART_Track" Height="32" VerticalAlignment="Center"
            Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}"
            IsDirectionReversed="{TemplateBinding IsDirectionReversed}" Orientation="{TemplateBinding Orientation}">
@@ -22,8 +22,12 @@
       </ControlTemplate></RepeatButton.Template>
      </RepeatButton></Track.DecreaseRepeatButton>
      <Track.Thumb><Thumb Width="32" Height="32">
-      <Thumb.Template><ControlTemplate TargetType="Thumb"><Border x:Name="Handle" Background="{DynamicResource Think.Control}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" CornerRadius="16" BorderThickness="1.5"/>
-       <ControlTemplate.Triggers><Trigger Property="IsDragging" Value="True"><Setter TargetName="Handle" Property="Opacity" Value="0.85"/></Trigger></ControlTemplate.Triggers>
+      <Thumb.Template><ControlTemplate TargetType="Thumb">
+       <Grid>
+        <Border Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" CornerRadius="16"/>
+        <Border x:Name="HandleShade" Background="Black" Opacity="0.28" CornerRadius="16"/>
+       </Grid>
+       <ControlTemplate.Triggers><Trigger Property="IsDragging" Value="True"><Setter TargetName="HandleShade" Property="Opacity" Value="0.22"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></Thumb.Template>
      </Thumb></Track.Thumb>
      <Track.IncreaseRepeatButton><RepeatButton Height="32" Command="Slider.IncreaseLarge" Background="{TemplateBinding Background}" Style="{StaticResource Think.SliderPart}"/></Track.IncreaseRepeatButton>
