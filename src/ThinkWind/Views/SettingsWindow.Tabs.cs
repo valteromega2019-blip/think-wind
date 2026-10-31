@@ -26,7 +26,7 @@ internal sealed partial class SettingsWindow
     {
         string label = name switch
         {
-            "Barra inferior" => "Barra", "Dynamic Island" => "Ilha", "Ícones da ilha" => "Ícones",
+            "Barra de aplicativos" => "Aplicativos", "Central de controle" => "Central de controle", "Ícones da central de controle" => "Ícones",
             "Overlay e sensores" => "Overlay", "Editor de layout" => "Layout", "Sobre e segurança" => "Sobre", _ => name
         };
         var tab = Button(label, () => SelectSettingsTab(name));
@@ -38,7 +38,7 @@ internal sealed partial class SettingsWindow
     }
     private void FinishSettingsTabs()
     {
-        string[] order = { "Aparência", "Barra inferior", "Dynamic Island", "Ícones da ilha", "Widgets", "Clima", "Overlay e sensores", "Editor de layout", "Jogos", "Monitores", "Sistema", "Sobre e segurança" };
+        string[] order = { "Aparência", "Barra de aplicativos", "Central de controle", "Ícones da central de controle", "Widgets", "Clima", "Overlay e sensores", "Editor de layout", "Jogos", "Monitores", "Sistema", "Sobre e segurança" };
         foreach (string name in order.Concat(settingsPages.Keys).Distinct())
             if (settingsPages.TryGetValue(name, out var page)) tabNavigation.Children.Add(page.Tab);
         if (!settingsPages.ContainsKey(selectedSettingsTab)) selectedSettingsTab = settingsPages.Keys.First();

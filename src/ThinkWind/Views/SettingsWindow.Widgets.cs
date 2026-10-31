@@ -21,7 +21,7 @@ internal sealed partial class SettingsWindow
     private string WidgetEditorSignature() => JsonSerializer.Serialize(new { store.Value.WidgetOrder, store.Value.HiddenWidgets, store.Value.WidgetFavorites });
     private void BuildWidgetEditor()
     {
-        var page = Section("Widgets", "Arraste pelos puxadores ou use as setas. Mostre, oculte e organize os cartões com atualização imediata na ilha.");
+        var page = Section("Widgets", "Arraste pelos puxadores ou use as setas. Mostre, oculte e organize os cartões com atualização imediata na central de controle.");
         foreach (var element in new FrameworkElement[] { widgetPreview, widgetRows, widgetNoteEditor, favoriteRows })
             if (element.Parent is Panel old) old.Children.Remove(element);
         page.Children.Add(new TextBlock { Text = "Prévia da ordem", FontWeight = FontWeights.SemiBold });

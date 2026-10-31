@@ -39,7 +39,7 @@ public sealed class OverlayAppearancePanel : UserControl
         var root = new StackPanel(); card.Child = root;
         root.Children.Add(Text("Aparência", 17, true));
         root.Children.Add(Text("Alterações e prévia em tempo real.", 11, false, "Muted", new Thickness(0, 4, 0, 8)));
-        _sync.Content = Text("Seguir cores, fundo e transparência da ilha", 11);
+        _sync.Content = Text("Seguir cores, fundo e transparência da central de controle", 11);
         Register(_sync, "OverlayThemeSync"); _sync.Margin = new Thickness(0, 0, 0, 12);
         _sync.Checked += (_, _) => Change(); _sync.Unchecked += (_, _) => Change(); root.Children.Add(_sync);
         root.Children.Add(_columns);

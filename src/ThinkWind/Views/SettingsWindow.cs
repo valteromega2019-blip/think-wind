@@ -123,11 +123,11 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Slider(general, "Opacidade dos blocos e controles", .1, .9, store.Value.InnerSurfaceOpacity, v => Change(p => p.InnerSurfaceOpacity = v), "P0", .05);
         AddColorSetting(general, "Cor de destaque", store.Value.AccentColor, value => Change(p => p.AccentColor = value));
         Check(general, "Usar uma cor própria no fundo das barras", store.Value.UseCustomBarColor, value => Change(p => p.UseCustomBarColor = value));
-        AddColorSetting(general, "Cor do fundo · barra inferior e ilha", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));
+        AddColorSetting(general, "Cor do fundo · barra de aplicativos e central de controle", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));
         Note(general, "Desative a cor própria para voltar ao fundo do tema. A opacidade e o Acrylic continuam nos controles de cada barra; a cor própria tem prioridade sobre acompanhar a cor do aplicativo.");
         Slider(general, "Duração das animações", 0, 600, store.Value.AnimationMilliseconds, v => Change(p => p.AnimationMilliseconds = v), "0 'ms'");
 
-        var dock = Section("Barra inferior", "Ícones originais, sem fundos individuais. Ajustes independentes da ilha.");
+        var dock = Section("Barra de aplicativos", "Ícones originais, sem fundos individuais. Ajustes independentes da central de controle.");
         Select(dock, "Material e desfoque", store.Value.DockMaterial, Materials(), v => Change(p => p.DockMaterial = v));
         Slider(dock, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.DockOpacity ?? store.Value.TintOpacity, v => Change(p => p.DockOpacity = v), "P0");
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");
@@ -148,7 +148,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Select(dock, "Pesquisa na barra", store.Value.DockSearchMode, new[] { new Choice("Bar", "Barra compacta"), new Choice("Icon", "Apenas lupa") }, v => Change(p => p.DockSearchMode = v));
         Note(dock, "Recolhida, a barra é uma cápsula central arredondada de 96 × 6 DIP, a 4 pixels da borda inferior. Os ajustes de tamanho e posição acima afetam o estado expandido.");
 
-        var island = Section("Dynamic Island", "Integrada à borda superior, com cantos inferiores arredondados.");
+        var island = Section("Central de controle", "Barra de status no topo e painel expansível com controles, mídia e widgets.");
         Select(island, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));
         Slider(island, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.IslandOpacity ?? store.Value.TintOpacity, v => Change(p => p.IslandOpacity = v), "P0");
         Slider(island, "Escala dos acessos rápidos", .8, 1.4, store.Value.IslandScale, v => Change(p => p.IslandScale = v), "P0");
@@ -156,10 +156,10 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Select(island, "Lado da expansão com apps maximizados ou em tela dividida", store.Value.IslandPanelSide, new[] { new Choice("Right", "Direita"), new Choice("Left", "Esquerda") }, v => Change(p => p.IslandPanelSide = v));
         Note(island, "No desktop e com janelas restauradas, a expansão fica centralizada. Com aplicativo maximizado ou encaixado pelo Windows Snap, abre no lado escolhido (direita por padrão).");
         Note(island, "Sobre aplicativos, o painel abre abaixo da barra de status. O recolhimento segue o tempo configurado, preservando controles em uso e a passagem entre os painéis.");
-        Check(island, "Recolher a ilha automaticamente após sair com o mouse", store.Value.IslandAutoCollapse, v => Change(p => p.IslandAutoCollapse = v));
-        Check(island, "Reduzir a ilha sobre apps maximizados ou em tela dividida", store.Value.IslandReduceOverMaximized, v => Change(p => p.IslandReduceOverMaximized = v));
-        Check(island, "Reservar sempre a faixa superior para a ilha", store.Value.IslandReserveTop, v => Change(p => p.IslandReserveTop = v));
-        Note(island, "A reserva usa a área útil nativa do Windows e pode reorganizar ícones do desktop ao ativar ou desativar. Permanece estável entre os modos da ilha.");
+        Check(island, "Recolher a central de controle automaticamente após sair com o mouse", store.Value.IslandAutoCollapse, v => Change(p => p.IslandAutoCollapse = v));
+        Check(island, "Reduzir a central de controle sobre apps maximizados ou em tela dividida", store.Value.IslandReduceOverMaximized, v => Change(p => p.IslandReduceOverMaximized = v));
+        Check(island, "Reservar sempre a faixa superior para a central de controle", store.Value.IslandReserveTop, v => Change(p => p.IslandReserveTop = v));
+        Note(island, "A reserva usa a área útil nativa do Windows e pode reorganizar ícones do desktop ao ativar ou desativar. Permanece estável entre os modos da central de controle.");
         var overlay = Section("Overlay e sensores", "Monitoramento opcional e sensores avançados. As permissões do coletor são independentes da interface.");
         Check(overlay, "Overlay de monitoramento do PC", store.Value.HardwareOverlayEnabled, v => Change(p => p.HardwareOverlayEnabled = v));
         overlay.Children.Add(Button("Personalizar overlay · métricas, posição e aparência", () => ((App)Application.Current).OpenOverlaySettings()));
@@ -174,7 +174,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
             if (await AdvancedSensorSetup.Configure(remove: true)) store.Update(p => p.HardwareSensorsAutoSetup = false);
         }));
         Note(overlay, "Overlay opcional: aparece somente em jogo reconhecido em primeiro plano, quando habilitado. Não aparece no desktop nem em vídeos. Temperaturas dependem de suporte e permissões; dados ausentes aparecem como —.");
-        Check(island, "Barra superior acompanha a cor do aplicativo abaixo", store.Value.IslandMatchAppColor, v => Change(p => p.IslandMatchAppColor = v));
+        Check(island, "Barra de status acompanha a cor do aplicativo abaixo", store.Value.IslandMatchAppColor, v => Change(p => p.IslandMatchAppColor = v));
         Slider(island, "Espera para recolher (segundos)", 0, 10, store.Value.IslandCollapseSeconds, v => Change(p => p.IslandCollapseSeconds = v), "0.0 's'", .1);
         Slider(island, "Espaçamento", 0, 20, store.Value.IslandSpacing, v => Change(p => p.IslandSpacing = v));
         Slider(island, "Arredondamento inferior", 0, 48, store.Value.IslandRadius, v => Change(p => p.IslandRadius = v));
@@ -191,9 +191,9 @@ internal sealed partial class SettingsWindow : FloatingWindow
         // Detach reusable controls from their previous section when resetting.
         if (editing.Parent is Panel oldEditing) oldEditing.Children.Remove(editing);
         layout.Children.Add(editing);
-        Note(layout, "Na barra, arraste os ícones. Na ilha, arraste os acessos rápidos ou o título de cada módulo. O puxador lateral ajusta a posição horizontal. Esc conclui a edição.");
+        Note(layout, "Na barra, arraste os ícones. Na central de controle, arraste os acessos rápidos ou o título de cada módulo. O puxador lateral ajusta a posição horizontal. Esc conclui a edição.");
         Note(layout, "Os três primeiros módulos visíveis ficam em destaque. Calendário e bandeja têm áreas detalhadas. A engrenagem do Windows fica no compacto; a personalização do Think Wind aparece apenas no painel completo.");
-        var islandIcons = Section("Ícones da ilha", "Marque para mostrar na barra principal. Desmarque para mover aos acessos adicionais da área expandida. Use Ocultar nas duas áreas para desativar completamente.");
+        var islandIcons = Section("Ícones da central de controle", "Marque para mostrar na barra principal. Desmarque para mover aos acessos adicionais da área expandida. Use Ocultar nas duas áreas para desativar completamente.");
         Note(islandIcons, "No modo barra, relógio e clima ficam à esquerda, seguidos por desempenho e ferramentas. Os demais ícones aparecem à direita na ordem escolhida.");
         islandIcons.Children.Add(Button("Configurar ícone e cidade do clima", ShowWeatherSection));
         if (quickRows.Parent is Panel oldQuick) oldQuick.Children.Remove(quickRows);
@@ -203,8 +203,8 @@ internal sealed partial class SettingsWindow : FloatingWindow
         layout.Children.Add(moduleRows);
         RebuildLayoutRows();
         var resets = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
-        resets.Children.Add(Button("Restaurar barra", () => { store.ResetDock(); Build(); }));
-        resets.Children.Add(Button("Restaurar ilha", () => { store.ResetIsland(); Build(); }));
+        resets.Children.Add(Button("Restaurar barra de aplicativos", () => { store.ResetDock(); Build(); }));
+        resets.Children.Add(Button("Restaurar central de controle", () => { store.ResetIsland(); Build(); }));
         resets.Children.Add(Button("Restaurar tudo", () => { store.ResetAll(); Build(); }));
         layout.Children.Add(resets);
 
@@ -237,15 +237,15 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Check(system, "Usar somente a barra do Think Wind (ocultar a barra do Windows)", store.Value.HideWindowsTaskbar, value => Change(p => p.HideWindowsTaskbar = value));
         Note(system, "Oculta a barra original em todos os monitores enquanto o Think Wind estiver aberto. Ao desativar ou sair, ela é restaurada. O Explorador e a tecla Windows continuam funcionando.");
         var screens = System.Windows.Forms.Screen.AllScreens;
-        var monitors = Section("Monitores", "Escolha onde exibir a barra e a ilha, em uma ou várias telas.");
+        var monitors = Section("Monitores", "Escolha onde exibir a barra e a central de controle, em uma ou várias telas.");
         int monitorIndex = Array.FindIndex(screens, s => s.DeviceName.Equals(store.Value.MonitorDeviceName, StringComparison.OrdinalIgnoreCase));
         if (monitorIndex < 0) monitorIndex = Math.Clamp(store.Value.MonitorIndex, 0, screens.Length - 1);
-        Select(monitors, "Monitor da barra e da ilha", monitorIndex.ToString(), screens.Select((s, i) => new Choice(i.ToString(), $"{s.DeviceName} · {s.Bounds.Width} × {s.Bounds.Height}")).ToArray(), value => Change(p =>
+        Select(monitors, "Monitor da barra e da central de controle", monitorIndex.ToString(), screens.Select((s, i) => new Choice(i.ToString(), $"{s.DeviceName} · {s.Bounds.Width} × {s.Bounds.Height}")).ToArray(), value => Change(p =>
         { p.MonitorIndex = int.Parse(value); p.MonitorDeviceName = screens[p.MonitorIndex].DeviceName; }));
         Check(monitors, "Ativar em múltiplos monitores", store.Value.MultiMonitorEnabled, value => Change(p => p.MultiMonitorEnabled = value));
         Check(monitors, "Usar todos os monitores conectados", store.Value.AllMonitors, value => Change(p => p.AllMonitors = value));
-        Check(monitors, "Mostrar Dynamic Island nas telas secundárias", store.Value.SecondaryIslandsEnabled, value => Change(p => p.SecondaryIslandsEnabled = value));
-        Note(monitors, "Por padrão, a ilha aparece somente na tela principal do Windows. A barra inferior continua nas telas selecionadas. Ative esta opção para mostrar também a ilha nas telas secundárias selecionadas.");
+        Check(monitors, "Mostrar Central de controle nas telas secundárias", store.Value.SecondaryIslandsEnabled, value => Change(p => p.SecondaryIslandsEnabled = value));
+        Note(monitors, "Por padrão, a central de controle aparece somente na tela principal do Windows. A barra de aplicativos continua nas telas selecionadas. Ative esta opção para mostrar também a central de controle nas telas secundárias selecionadas.");
         foreach (var screen in screens)
         {
             string device = screen.DeviceName;
@@ -274,6 +274,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { Note(system, "A opção de inicialização não está disponível para esta conta."); }
         Note(system, "A ocultação da barra original pode ser desativada nesta seção. O launcher não substitui os arquivos do Explorer.");
         var about = Section("Sobre e segurança", "Think Wind · " + AppBrand.Version);
+        Note(about, "Desenvolvedor: " + AppBrand.Developer);
         Note(about, AppBrand.Copyright);
         Note(about, "Baixe instaladores somente da página oficial ou das releases do projeto no GitHub. Compare o SHA-256 com o arquivo publicado na mesma release. O instalador Alfa ainda não possui assinatura digital; o hash confirma a correspondência do arquivo, não garante ausência de vulnerabilidades.");
         Note(about, "As preferências ficam neste usuário do Windows. Alterações de tema e ocultação automática afetam as preferências do sistema. Desinstalação de aplicativos usa os mecanismos registrados no Windows. Rede, áudio e Bluetooth dependem das permissões do sistema.");

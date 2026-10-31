@@ -6,6 +6,9 @@
 [Setup]
 AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
 AppName=Think Wind
+AppPublisher=Think
+VersionInfoCompany=Think
+VersionInfoDescription=Instalador do Think Wind
 AppVersion={#MyAppVersion}
 VersionInfoVersion=0.18.4.0
 DefaultDirName={localappdata}\Programs\ThinkWind

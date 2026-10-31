@@ -119,7 +119,7 @@ public partial class App : Application
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Personalizar", null, (_, _) => Dispatcher.Invoke(OpenSettings));
         menu.Items.Add("Editar / concluir layout", null, (_, _) => Dispatcher.Invoke(() => store.SetEditing(!store.IsEditing)));
-        menu.Items.Add("Mostrar barra e ilha", null, (_, _) => Dispatcher.Invoke(() => { if (gameMode?.Active == true) return; dock?.Show(); island?.Show(); dock?.RefreshSettings(); island?.RefreshSettings(); }));
+        menu.Items.Add("Mostrar barra de aplicativos e central de controle", null, (_, _) => Dispatcher.Invoke(() => { if (gameMode?.Active == true) return; dock?.Show(); island?.Show(); dock?.RefreshSettings(); island?.RefreshSettings(); }));
         menu.Items.Add("Sair do Think Wind", null, (_, _) => Dispatcher.Invoke(() => { IsExiting = true; Shutdown(); }));
         tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = AppBrand.TrayIcon(), ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);

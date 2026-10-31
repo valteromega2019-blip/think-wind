@@ -69,7 +69,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private sealed record Item(string Key, string Name, string? Target, string? Glyph, List<Desktop.RunningWindow> Windows, Shortcut? Pin, Action? Action);
     public DockWindow(SettingsStore store) : base(store)
     {
-        Title = "Think Wind — Dock";
+        Title = "Think Wind — Barra de aplicativos";
         items.VerticalAlignment = VerticalAlignment.Bottom;
         items.Background = Brushes.Transparent;
         PageWheel.Attach(items, () => fit.Pages(entries.Count), () => page, value => { page = value; RenderPage(); Position(); }, () => fileDragging || MenuOpen || LayoutDrag.Active || Store.IsEditing || dockSearch.IsMouseOver);
