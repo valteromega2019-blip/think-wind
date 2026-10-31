@@ -1,0 +1,13 @@
+{
+  "name": "think-wind-presentation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Página pública do Think Wind com animações Motion.",
+  "scripts": {},
+  "dependencies": {
+    "motion": "14.9.0"
+  },
+  "devDependencies": {
+    "motion-ai": "14.2.0"
+  }
+}
