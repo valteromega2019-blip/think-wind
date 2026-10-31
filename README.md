@@ -1,5 +1,12 @@
 # Think Wind
 
+## 0.17 Alfa — 0.17.0-alpha
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.17.0-alpha/ThinkWind-Setup-0.17.0-alpha.exe) · [Notas e limitações](RELEASE-0.17-ALFA.md)
+
+Personalização em abas, fontes até 250%, expansão de mídia/áudio sem rolagem, monitoramento e overlay, múltiplos monitores e PawnIO opcional incluído. Sem novos testes ou type check separado nesta publicação.
+
+
 ## 0.16 Alfa — revisão 2 (0.16.2-alpha)
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.16.2-alpha/ThinkWind-Setup-0.16.2-alpha.exe) · [Notas e limitações](RELEASE-0.16.2-ALFA.md)

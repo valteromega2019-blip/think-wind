@@ -24,6 +24,20 @@ public sealed class Preferences
     public string GameModeInclude { get; set; } = "";
     public string GameModeExclude { get; set; } = "msedge;chrome;firefox;Code;steam;steamwebhelper";
     public bool AutoHide { get; set; } = true;
+    public bool DockVisibleOnDesktop { get; set; } = false;
+    public bool HideOverFullscreen { get; set; } = true;
+    public bool IslandReserveTop { get; set; } = true;
+    public bool HardwareOverlayEnabled { get; set; } = false;
+    public bool OverlayAutomatic { get; set; } = true;
+    public bool OverlayHotkeyEnabled { get; set; } = true;
+    public OverlayAppearanceOptions OverlayAppearance { get; set; } = new();
+    public List<string> OverlayVisibleMetrics { get; set; } = OverlayMetrics.Defaults().ToList();
+    public string OverlayCorner { get; set; } = "TL";
+    public double OverlayScale { get; set; } = 1;
+    public bool HardwareSensorsSetupAttempted { get; set; } = false;
+    public bool HardwareSensorsAutoSetup { get; set; } = true;
+    public bool StartWithWindows { get; set; } = true;
+    public bool StartupDefaultsInitialized { get; set; } = false;
     public bool DockMagnification { get; set; } = true;
     public double DockMagnificationAmount { get; set; } = .5;
     public double DockMagnificationSpeed { get; set; } = 1;
@@ -40,6 +54,9 @@ public sealed class Preferences
     public bool ShowAudio { get; set; } = true;
     public int MonitorIndex { get; set; }
     public string? MonitorDeviceName { get; set; }
+    public bool MultiMonitorEnabled { get; set; }
+    public bool AllMonitors { get; set; } = true;
+    public List<string> ActiveMonitors { get; set; } = new();
     public string Theme { get; set; } = "Auto";
     public double FontScale { get; set; } = 1;
     public string AccentColor { get; set; } = "#60CDFF";
@@ -140,6 +157,7 @@ public sealed class SettingsStore
             p.DockHorizontalOffset = 0; p.DockBottomOffset = defaults.DockBottomOffset;
             p.DockMaterial = defaults.DockMaterial; p.DockOpacity = .72; p.AutoHide = defaults.AutoHide;
             p.DockCollapseSeconds = defaults.DockCollapseSeconds; p.DockSearchMode = defaults.DockSearchMode;
+            p.DockVisibleOnDesktop = defaults.DockVisibleOnDesktop;
             p.WindowPreviewsEnabled = defaults.WindowPreviewsEnabled; p.WindowPreviewDelayMilliseconds = defaults.WindowPreviewDelayMilliseconds;
             p.DockMagnification = defaults.DockMagnification; p.DockMagnificationAmount = defaults.DockMagnificationAmount;
             p.DockMagnificationSpeed = defaults.DockMagnificationSpeed; p.DockMagnificationNeighbors = defaults.DockMagnificationNeighbors;
@@ -156,6 +174,7 @@ public sealed class SettingsStore
             p.IslandScale = 1; p.IslandExpandedWidth = defaults.IslandExpandedWidth; p.IslandSpacing = defaults.IslandSpacing;
             p.IslandRadius = defaults.IslandRadius; p.IslandHorizontalOffset = 0;
             p.IslandPanelSide = defaults.IslandPanelSide;
+            p.IslandReserveTop = defaults.IslandReserveTop; p.HideOverFullscreen = defaults.HideOverFullscreen;
             p.IslandMatchAppColor = defaults.IslandMatchAppColor;
             p.IslandAutoCollapse = defaults.IslandAutoCollapse; p.IslandCollapseSeconds = defaults.IslandCollapseSeconds;
             p.IslandMaterial = defaults.IslandMaterial; p.IslandOpacity = .72;
@@ -166,7 +185,14 @@ public sealed class SettingsStore
     private static double Limit(double value, double min, double max, double fallback) => double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
     private void Normalize()
     {
+        Value.OverlayAutomatic = true;
+        Value.OverlayAppearance = (Value.OverlayAppearance ?? new()).Normalize();
+        Value.OverlayVisibleMetrics = (Value.OverlayVisibleMetrics ?? OverlayMetrics.Defaults().ToList())
+            .Where(key => OverlayMetrics.All.Any(metric => metric.Key == key)).Distinct().ToList();
+        Value.OverlayCorner = Value.OverlayCorner is "TL" or "TR" or "BL" or "BR" ? Value.OverlayCorner : "TL";
+        Value.OverlayScale = double.IsFinite(Value.OverlayScale) ? Math.Clamp(Value.OverlayScale, .7, 1.5) : 1;
         var p = Value;
+        p.ActiveMonitors = (p.ActiveMonitors ?? new()).Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         p.DockScale = Limit(p.DockScale, .75, 1.5, 1); p.TintOpacity = Limit(p.TintOpacity, .2, 1, .72);
         p.DockCollapseSeconds = Limit(p.DockCollapseSeconds, 0, 10, .8);
         p.InnerSurfaceOpacity = Limit(p.InnerSurfaceOpacity, .1, .9, .5);

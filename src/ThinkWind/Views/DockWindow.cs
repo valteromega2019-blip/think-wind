@@ -49,6 +49,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private readonly List<string> visibleOrder = new();
     private string signature = "";
     private bool hidden, rebuilding;
+    private bool applicationOverDock;
     private bool readingWindows;
     private ContextMenu? activeContextMenu;
     private DateTime contextMenuRequested;
@@ -175,6 +176,11 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private void UpdateVisibility()
     {
+        if (Store.Value.DockVisibleOnDesktop && !applicationOverDock)
+        {
+            lastHover = DateTime.UtcNow;
+            SetHidden(false);
+        }
         bool pointerInsideReveal = PointerInsideRevealArea();
         if (hidden && !IsPositionAnimating && pointerInsideReveal)
         {
@@ -191,7 +197,7 @@ internal sealed partial class DockWindow : FloatingWindow
             && DateTime.UtcNow - lastHover >= TimeSpan.FromMilliseconds(350)) StopPreviews();
         // An ordinary focused button isn't an ongoing interaction. In particular,
         // activating the owner for a right-click must not pin the dock forever.
-        if (Store.Value.AutoHide && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !pointerInside && !IsMouseCaptureWithin && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
+        if (Store.Value.AutoHide && (!Store.Value.DockVisibleOnDesktop || applicationOverDock) && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !pointerInside && !IsMouseCaptureWithin && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
     }
     private bool PointerInsideRevealArea()
     {
@@ -233,6 +239,14 @@ internal sealed partial class DockWindow : FloatingWindow
         finally { readingWindows = false; }
         if (!pins.SequenceEqual(Store.Value.Shortcuts) || !startPins.SequenceEqual(Store.Value.StartPins)) { signature = ""; nextAppRefresh = DateTime.MinValue; return; }
         if (!IsVisible || LayoutDrag.Active || fileDragging || MenuOpen) return;
+        var screen = Display;
+        int dockHeight = (int)Math.Ceiling((ExpandedHeight + Store.Value.DockBottomOffset) * screen.Scale);
+        int dockWidth = (int)Math.Ceiling(Math.Max(96, TotalWidth) * screen.Scale);
+        int dockLeft = (int)Math.Round(screen.Work.Left + (screen.Work.Width - dockWidth) / 2d + Store.Value.DockHorizontalOffset * screen.Scale);
+        applicationOverDock = windows.Any(window => !window.Minimized
+            && OverlayChrome.GetWindowRect(window.Handle, out var rectangle)
+            && rectangle.Right > dockLeft && rectangle.Left < dockLeft + dockWidth
+            && rectangle.Bottom > screen.Work.Bottom - dockHeight && rectangle.Top < screen.Work.Bottom);
         var removed = pinIdentities.Where(pair => pair.Value.Installed == false && !windows.Any(window =>
             (!string.IsNullOrWhiteSpace(window.Executable) && DockPath(window.Executable).Equals(DockPath(pair.Value.Path), StringComparison.OrdinalIgnoreCase))
             || (!string.IsNullOrWhiteSpace(pair.Value.AppId) && pair.Value.AppId.Equals(window.AppId, StringComparison.OrdinalIgnoreCase))))
@@ -414,12 +428,20 @@ internal sealed partial class DockWindow : FloatingWindow
         var dropIndicator = new Border { Height = 2, Width = 20, CornerRadius = new CornerRadius(1), VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Hidden };
         dropIndicator.RenderTransform = new TranslateTransform(0, 7);
         dropIndicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent"); panel.Children.Add(dropIndicator);
+        nint foregroundBeforeClick = 0;
         var button = ActionButton(item.Name, () =>
         {
             if (Store.IsEditing && item.Key != "system:add") return;
             if (item.Action is not null) item.Action();
-            else OpenDockItem(item, selected, true);
+            else
+            {
+                var current = item.Windows.FirstOrDefault(window => Desktop.IsActiveWindow(window.Handle, foregroundBeforeClick)) ?? selected;
+                OpenDockItem(item, current, true, foregroundBeforeClick);
+            }
+            foregroundBeforeClick = 0;
         }, item.Name + (minimized ? " · minimizado" : focused is not null ? " · ativo" : item.Windows.Count > 0 ? " · em execução" : ""));
+        button.PreviewMouseLeftButtonDown += (_, _) => foregroundBeforeClick = Desktop.GetForegroundWindow();
+        button.PreviewKeyDown += (_, _) => foregroundBeforeClick = 0;
         button.Style = (Style)FindResource("Think.IconButton");
         button.Content = panel; button.Width = size + 2 * fit.Padding; button.Padding = new Thickness(fit.Padding, 4, fit.Padding, 4);
         button.Margin = new Thickness(fit.Gap / 2, 0, fit.Gap / 2, 0);
@@ -456,23 +478,39 @@ internal sealed partial class DockWindow : FloatingWindow
         return button;
     }
     private bool openingDockItem;
-    private async void OpenDockItem(Item item, Desktop.RunningWindow? selected, bool minimizeIfActive)
+    private async void OpenDockItem(Item item, Desktop.RunningWindow? selected, bool minimizeIfActive, nint foregroundBeforeClick = 0)
     {
         if (openingDockItem) return;
         openingDockItem = true;
         try
         {
+            nint foregroundAtClick = foregroundBeforeClick != 0
+                ? foregroundBeforeClick : Desktop.GetForegroundWindow();
+            bool shouldMinimize = minimizeIfActive && selected is not null
+                && Desktop.IsVisibleAndRestored(selected.Handle)
+                && Desktop.IsActiveWindow(selected.Handle, foregroundAtClick);
+            StopPreviews();
             // OSK is a UIAccess application: let its own shell activation
             // restore the existing instance instead of forcing foreground.
             if (selected?.Executable is string keyboard
                 && System.IO.Path.GetFileName(keyboard).Equals("osk.exe", StringComparison.OrdinalIgnoreCase))
-            { SystemActions.Run(keyboard); return; }
+            {
+                if (shouldMinimize
+                    && Desktop.MinimizeWindow(selected.Handle)) return;
+                SystemActions.Run(keyboard); return;
+            }
             if (selected is not null && Desktop.WindowExists(selected.Handle))
             {
-                if (await Desktop.ActivateFromDock(selected.Handle, minimizeIfActive)) return;
+                if (await Desktop.ActivateFromDock(selected.Handle, shouldMinimize)) return;
                 // A denied foreground request must not start another instance.
                 if (Desktop.WindowExists(selected.Handle))
                 {
+                    if (ElevatedWindowAction.IsElevatedTarget(selected.Handle))
+                    {
+                        await ElevatedWindowAction.Request(selected.Handle, close: false,
+                            minimize: shouldMinimize);
+                        return;
+                    }
                     MessageBox.Show("O Windows não permitiu ativar esta janela. Se o aplicativo estiver sendo executado como administrador, suas permissões podem impedir a ativação pelo launcher.", "Think Wind");
                     return;
                 }
@@ -507,7 +545,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private void EnsureLauncher()
     {
         if (launcher is not null) return;
-        launcher = new LauncherPanelWindow(Store, catalog, () => TargetBounds, () => dockSearch.IsKeyboardFocusWithin) { Owner = this };
+        launcher = new LauncherPanelWindow(Store, catalog, () => TargetBounds, () => dockSearch.IsKeyboardFocusWithin) { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
         launcher.Dismissed += () => { lastHover = DateTime.UtcNow; AnimateSearch(false); };
     }
     private void ShowPanel(LauncherPanelMode mode)

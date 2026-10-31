@@ -102,13 +102,24 @@ internal static class Desktop
         else RestoreAndActivate(hwnd);
     }
     internal static bool WindowExists(nint hwnd) => hwnd != 0 && IsWindow(hwnd);
-    internal static async System.Threading.Tasks.Task<bool> ActivateFromDock(nint hwnd, bool minimizeIfActive)
+    [DllImport("user32.dll")] private static extern nint GetAncestor(nint window, uint flags);
+    internal static bool IsActiveWindow(nint window, nint foreground) => foreground != 0 && (foreground == window || GetAncestor(foreground, 3) == window);
+    internal static bool MinimizeWindow(nint window) => WindowExists(window) && !IsIconic(window) && ShowWindowAsync(window, 6);
+    internal static bool IsVisibleAndRestored(nint window) => WindowExists(window) && IsWindowVisible(window) && !IsIconic(window);
+    internal static async System.Threading.Tasks.Task<bool> ActivateFromDock(nint hwnd, bool minimizeRequested)
     {
         if (!WindowExists(hwnd)) return false;
         nint popup = GetLastActivePopup(hwnd);
-        if (minimizeIfActive && GetForegroundWindow() == hwnd && !IsIconic(hwnd)
-            && (popup == 0 || popup == hwnd || !IsWindowVisible(popup)))
-            return ShowWindowAsync(hwnd, 6);
+        if (minimizeRequested && IsVisibleAndRestored(hwnd))
+        {
+            if (!ShowWindowAsync(hwnd, 6)) return false;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                await System.Threading.Tasks.Task.Delay(60).ConfigureAwait(false);
+                if (!WindowExists(hwnd) || IsIconic(hwnd)) return true;
+            }
+            return false;
+        }
         // Restoration is queued on the application's thread. Activation can
         // arrive too early; retry briefly without blocking either UI thread.
         for (int attempt = 0; attempt < 4; attempt++)
@@ -118,7 +129,7 @@ internal static class Desktop
             popup = GetLastActivePopup(hwnd);
             nint target = popup != 0 && IsWindowVisible(popup) ? popup : hwnd;
             if (!IsIconic(hwnd) && IsWindowVisible(target) && GetForegroundWindow() == target) return true;
-            if (attempt < 3) await System.Threading.Tasks.Task.Delay(80 * (attempt + 1));
+            if (attempt < 3) await System.Threading.Tasks.Task.Delay(80 * (attempt + 1)).ConfigureAwait(false);
         }
         return false;
     }

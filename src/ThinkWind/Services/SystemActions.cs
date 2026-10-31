@@ -72,4 +72,11 @@ internal static class SystemActions
         if (enabled) key.SetValue("ThinkWind", "\"" + Environment.ProcessPath + "\"");
         else key.DeleteValue("ThinkWind", false);
     }
+    internal static void ApplyStartupDefault(SettingsStore store, bool installation = false)
+    {
+        if (!installation && store.Value.StartupDefaultsInitialized) return;
+        SetStartup(store.Value.StartWithWindows);
+        store.Value.StartupDefaultsInitialized = true;
+        store.Save();
+    }
 }

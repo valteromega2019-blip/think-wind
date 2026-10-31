@@ -92,6 +92,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         moduleViewport.Child = modules;
         fullPanel.Children.Add(new AdornerDecoratorHost(moduleViewport));
         root.Children.Add(fullPanel); Surface.Child = root;
+        InitializeSecondArea();
         BuildBodies();
         Loaded += (_, _) => { RefreshSettings(); UpdateClock(); timer.Start(); };
         activation.Tick += (_, _) => { if (NearActivationZone && !interaction.MiniOpen) { if (!hoverEnter.IsEnabled) hoverEnter.Start(); } else if (!IsMouseOver) hoverEnter.Stop(); };
@@ -135,6 +136,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         Closed += (_, _) => statusWindow?.Close();
         IsVisibleChanged += (_, _) => RefreshApplicationInset();
         Closed += (_, _) => applicationInset.Dispose();
+        Closed += (_, _) => fixedReservation?.Dispose();
         Closed += (_, _) => { weather.ReadingChanged -= RefreshHeaderWeather; weather.Dispose(); };
         IsVisibleChanged += (_, _) => { if (!IsVisible) { weather.SetActive(false); weather.SetHeaderActive(false); systemTools?.Close(); } };
         IsVisibleChanged += (_, _) =>
@@ -254,6 +256,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     private void BuildHeader()
     {
+        UpdateSecondAreaMode();
         foreach (var old in header.Children.OfType<Button>()) if (ReferenceEquals(old.Content, clock)) old.Content = null;
         header.Children.Clear();
         themeToggle = null;
@@ -305,6 +308,25 @@ internal sealed partial class IslandWindow : FloatingWindow
         }
         if (!IsQuickVisible("clock") && Store.Value.ShowWeatherInHeader && WeatherEnabled && !(Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing))
             header.Children.Add(WeatherButton(false));
+        if (SecondAreaAvailable && IsQuickVisible("monitor"))
+        {
+            bool monitoringOpen = Stage == IslandStage.Full && secondAreaSelected;
+            var monitor = ActionButton(monitoringOpen ? "Voltar à área principal" : "Abrir monitoramento do PC", () =>
+            {
+                if (Store.IsEditing) return;
+                if (Stage == IslandStage.Full) SelectSecondArea(!secondAreaSelected);
+                else
+                {
+                    secondAreaSelected = true;
+                    OpenFull();
+                }
+            });
+            monitor.Style = (Style)FindResource("Think.IconButton");
+            monitor.Content = Glyph("\uE9D9", 17 * scale);
+            monitor.Width = monitor.Height = 32 * scale;
+            monitor.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
+            header.Children.Add(monitor);
+        }
         if (IsQuickVisible("tools")) header.Children.Add(SystemToolsButton(false));
         if (Stage == IslandStage.Full || Store.IsEditing)
         {
@@ -363,12 +385,18 @@ internal sealed partial class IslandWindow : FloatingWindow
         if (previous == Stage) return;
         int revision = ++expansionRevision;
         preparingFullReveal = false;
+        if (fullscreenReveal && Stage == IslandStage.Compact)
+        {
+            Hide(); fullscreenReveal = false;
+            FullscreenRevealClosed?.Invoke();
+            return;
+        }
         if (Stage != IslandStage.Compact)
         {
             // Begin the panel's reveal below the persistent strip. Never animate
             // the strip's full-width rectangle into the panel's rectangle.
             preparingFullReveal = true; Surface.Visibility = Visibility.Hidden; ApplyAppearance();
-            if (Stage == IslandStage.Full) Place(Math.Min(Display.Width - 16, Store.Value.IslandExpandedWidth), 6, false);
+            if (Stage == IslandStage.Full && !fullscreenReveal) Place(Math.Min(Display.Width - 16, Store.Value.IslandExpandedWidth), 6, false);
         }
         UpdateAdaptiveState();
         BuildHeader(); UpdateStageVisibility(); UpdateClock();
@@ -447,7 +475,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         statusWindow?.RefreshAppearance();
         foreach (var mini in minis.Values) if (mini.IsVisible) mini.RefreshAppearance();
     }
-    private bool PointerInsideGroup => IsMouseOver || statusWindow?.IsMouseOver == true || minis.Values.Any(mini => mini.IsVisible && mini.IsMouseOver);
+    private bool PointerInsideGroup => IsMouseOver || statusWindow?.IsMouseOver == true || leftArea?.IsMouseOver == true || minis.Values.Any(mini => mini.IsVisible && mini.IsMouseOver);
     private bool NearActivationZone
     {
         get
@@ -511,7 +539,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         miniTrigger = trigger;
         if (!minis.TryGetValue(kind, out var mini))
         {
-            mini = new MiniIslandWindow(Store, kind, MiniAnchor) { Owner = this, ShowInTaskbar = ShowInTaskbar };
+            mini = new MiniIslandWindow(Store, kind, MiniAnchor) { Owner = this, ShowInTaskbar = ShowInTaskbar, MonitorDeviceOverride = MonitorDeviceOverride };
             mini.MouseEnter += (_, _) => CancelCollapse();
             mini.MouseLeave += (_, _) => ScheduleCollapse();
             mini.PreviewKeyDown += (_, _) => { keyboardBusyUntil = DateTime.UtcNow.AddMilliseconds(350); ScheduleCollapse(); };
@@ -564,6 +592,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private void Resize(bool animate)
     {
         UpdateAdaptiveState();
+        UpdateSecondAreaMode();
         if (edgeReduced)
         {
             Surface.Padding = new Thickness(12, 2, 12, 2);
@@ -574,12 +603,13 @@ internal sealed partial class IslandWindow : FloatingWindow
         }
         var p = Store.Value;
         FontSizing.PrepareForMeasure(root);
-        Surface.Padding = new Thickness(12, 5, 12, Stage == IslandStage.Compact ? 5 : 12);
+        Surface.Padding = Stage == IslandStage.Compact ? new Thickness(12, 5, 12, 5) : new Thickness(12);
         header.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         double compact = Math.Min(Display.Width - 16, Math.Max(220 * p.IslandScale, header.DesiredSize.Width + 32));
         double width = Stage == IslandStage.Compact ? compact : Stage == IslandStage.Hover ? Math.Min(Display.Width - 16, Math.Max(compact, Math.Min(540, p.IslandExpandedWidth))) : Math.Min(Display.Width - 16, p.IslandExpandedWidth);
         headerViewport.Width = Math.Max(1, width - 24);
-        double headerHeight = Math.Max(40, 36 * p.IslandScale) + 10;
+        headerViewport.Height = Math.Max(40, 36 * p.IslandScale);
+        double headerHeight = Math.Max(40, 36 * p.IslandScale) + Surface.Padding.Top + Surface.Padding.Bottom;
         secondaryQuickViewport.Width = headerViewport.Width;
         hoverQuick.Width = Math.Min(288, Math.Max(36, hoverQuick.Children.OfType<FrameworkElement>().Sum(item => item.Width + item.Margin.Left + item.Margin.Right)));
         secondaryQuickViewport.Measure(new Size(headerViewport.Width, double.PositiveInfinity));
@@ -588,15 +618,36 @@ internal sealed partial class IslandWindow : FloatingWindow
         double inner = Math.Max(1, width - 24);
         hoverViewport.Width = inner; hoverPanel.Width = inner;
         hoverViewport.MaxHeight = double.PositiveInfinity;
+        // Preserve the compact three-column layout before scaling. Reflowing
+        // this board into narrow columns made it tall, then the Viewbox shrank
+        // it again and left large empty margins on both sides.
         double boardWidth = Math.Max(760, inner);
-        modules.Width = boardWidth; moduleViewport.Width = inner;
-        moduleViewport.MaxHeight = Math.Max(24, limit - headerHeight - 16);
-        modules.Measure(new Size(boardWidth, double.PositiveInfinity));
-        moduleViewport.Measure(new Size(inner, moduleViewport.MaxHeight));
+        modules.Width = boardWidth;
+        double indicatorsHeight = SecondAreaAvailable ? 14 : 0;
+        double contentLimit = Math.Max(24, limit - headerHeight - indicatorsHeight - 16);
+        moduleViewport.MaxHeight = contentLimit;
+        if (Stage == IslandStage.Full && !secondAreaSelected)
+        {
+            modules.Measure(new Size(boardWidth, double.PositiveInfinity));
+            double naturalHeight = Math.Max(1, modules.DesiredSize.Height);
+            double fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
+            inner = Math.Max(1, boardWidth * fit);
+            width = inner + Surface.Padding.Left + Surface.Padding.Right;
+            moduleViewport.Width = inner;
+            moduleViewport.Height = naturalHeight * fit;
+            headerViewport.Width = inner;
+        }
+        else { moduleViewport.Width = inner; moduleViewport.Height = double.NaN; }
+        moduleViewport.Measure(new Size(inner, contentLimit));
         hoverModules.InvalidateMeasure(); hoverPanel.InvalidateMeasure();
         hoverPanel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
         hoverViewport.Height = Math.Max(1, hoverPanel.DesiredSize.Height);
-        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height + 12 : Math.Min(limit, headerHeight + moduleViewport.DesiredSize.Height + 16);
+        secondArea.Width = inner;
+        secondArea.Height = System.Math.Max(40, System.Math.Min(520, limit - headerHeight - 38));
+        double fullContentHeight = secondAreaSelected ? secondArea.Height : moduleViewport.DesiredSize.Height;
+        moduleViewport.Measure(new Size(inner, contentLimit));
+        if (!secondAreaSelected) fullContentHeight = moduleViewport.DesiredSize.Height;
+        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height + 12 : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
         // Keep the destination content layout stable while the native frame
         // reveals it; do not reflow the entire module tree on every frame.
         root.Width = inner;

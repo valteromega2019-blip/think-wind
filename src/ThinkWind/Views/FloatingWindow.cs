@@ -16,6 +16,7 @@ internal abstract class FloatingWindow : Window
     protected readonly SettingsStore Store;
     protected readonly Border Surface;
     protected abstract bool AttachedTop { get; }
+    protected virtual bool SquareTopCorners => AttachedTop;
     protected virtual bool UsesIslandAppearance => AttachedTop;
     protected virtual bool CollapsedDock => false;
     protected virtual bool FullWidthTop => false;
@@ -27,7 +28,10 @@ internal abstract class FloatingWindow : Window
     protected virtual Thickness TransparentInsets => new();
     protected virtual bool HideOnClose => true;
     protected virtual string? MaterialOverride => null;
-    protected OverlayChrome.Display Display => OverlayChrome.GetDisplay(Store.Value.MonitorIndex, Store.Value.MonitorDeviceName);
+    internal string? MonitorDeviceOverride { get; set; }
+    private bool retiring;
+    internal void Retire() { retiring = true; Close(); }
+    protected OverlayChrome.Display Display => OverlayChrome.GetDisplay(Store.Value.MonitorIndex, MonitorDeviceOverride ?? Store.Value.MonitorDeviceName);
     private readonly FrameClock animation = new();
     private readonly Stopwatch elapsed = new();
     private OverlayChrome.PixelRect start, target;
@@ -75,7 +79,7 @@ internal abstract class FloatingWindow : Window
             else UpdateClip();
         };
         Loaded += (_, _) => Position();
-        Closing += (_, e) => { if (HideOnClose && Application.Current is App app && !app.IsExiting) { e.Cancel = true; Hide(); } };
+        Closing += (_, e) => { if (!retiring && HideOnClose && Application.Current is App app && !app.IsExiting) { e.Cancel = true; Hide(); } };
         Closed += (_, _) => { animation.Stop(); backdrop?.Dispose(); };
         animation.Tick += (_, _) =>
         {
@@ -122,7 +126,7 @@ internal abstract class FloatingWindow : Window
             Surface.Background = new LinearGradientBrush(
                 Color.FromArgb(235, 132, 149, 168), Color.FromArgb(220, 76, 91, 110), 90);
         }
-        Surface.CornerRadius = AttachedTop ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
+        Surface.CornerRadius = SquareTopCorners ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
         Surface.Margin = TransparentInsets;
         centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;
         UpdateClip();
@@ -133,7 +137,7 @@ internal abstract class FloatingWindow : Window
         if (hwnd == 0 || !OverlayChrome.GetWindowRect(hwnd, out var rectangle)) return;
         if (SuppressMaterial) { backdrop?.Hide(); return; }
         var scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1;
-        var next = (rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top, (int)Math.Round(radius * scale), AttachedTop, scale);
+        var next = (rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top, (int)Math.Round(radius * scale), SquareTopCorners, scale);
         if (next.Item1 < 1 || next.Item2 < 1) return;
         var inset = TransparentInsets;
         if (Surface.Margin != inset) Surface.Margin = inset;
@@ -145,7 +149,7 @@ internal abstract class FloatingWindow : Window
             rectangle.Left += (int)Math.Round(inset.Left * scale); rectangle.Right -= (int)Math.Round(inset.Right * scale);
             rectangle.Top += (int)Math.Round(inset.Top * scale); rectangle.Bottom -= (int)Math.Round(inset.Bottom * scale);
             if (rectangle.Right > rectangle.Left && rectangle.Bottom > rectangle.Top)
-                backdrop?.Synchronize(rectangle, next.Item3, AttachedTop, IsVisible);
+                backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible);
             else backdrop?.Hide();
             return;
         }
@@ -159,19 +163,19 @@ internal abstract class FloatingWindow : Window
             double r = Math.Min(radius, Math.Min(width, height) / 2);
             using (var context = geometry.Open())
             {
-                context.BeginFigure(new Point(AttachedTop ? 0 : r, 0), true, true);
-                context.LineTo(new Point(AttachedTop ? width : width - r, 0), true, false);
-                if (!AttachedTop) context.ArcTo(new Point(width, r), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
+                context.BeginFigure(new Point(SquareTopCorners ? 0 : r, 0), true, true);
+                context.LineTo(new Point(SquareTopCorners ? width : width - r, 0), true, false);
+                if (!SquareTopCorners) context.ArcTo(new Point(width, r), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
                 context.LineTo(new Point(width, height - r), true, false);
                 context.ArcTo(new Point(width - r, height), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
                 context.LineTo(new Point(r, height), true, false);
                 context.ArcTo(new Point(0, height - r), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
-                context.LineTo(new Point(0, AttachedTop ? 0 : r), true, false);
-                if (!AttachedTop) context.ArcTo(new Point(r, 0), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
+                context.LineTo(new Point(0, SquareTopCorners ? 0 : r), true, false);
+                if (!SquareTopCorners) context.ArcTo(new Point(r, 0), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
             }
             geometry.Freeze(); ((Grid)Content).Clip = geometry;
         }
-        backdrop?.Synchronize(rectangle, next.Item3, AttachedTop, IsVisible);
+        backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible);
     }
     protected void Place(double width, double height, bool animate = false)
     {
@@ -186,7 +190,11 @@ internal abstract class FloatingWindow : Window
         x = Math.Clamp(x, display.Work.Left + (AttachedTop ? 0 : 8), Math.Max(display.Work.Left + 8, display.Work.Right - w - (AttachedTop ? 0 : 8)));
         int y = AttachedTop ? display.Bounds.Top + (int)Math.Round(TopEdgeOffset * display.Scale) : display.Work.Bottom - margin - h;
         if (AttachedTop && (TopPanelSide is "Left" or "Right"))
-            x = TopPanelSide == "Left" ? display.Work.Left + 8 : display.Work.Right - w - 8;
+        {
+            int panelMargin = (int)Math.Round(12 * display.Scale);
+            x = TopPanelSide == "Left" ? display.Work.Left + panelMargin : display.Work.Right - w - panelMargin;
+            x = Math.Clamp(x, display.Work.Left, Math.Max(display.Work.Left, display.Work.Right - w));
+        }
         else if (AttachedTop && TopPanelSide == "Center")
             x = display.Work.Left + (display.Work.Width - w) / 2;
         if (AttachedTop && FullWidthTop) { x = display.Bounds.Left; w = display.Bounds.Width; }

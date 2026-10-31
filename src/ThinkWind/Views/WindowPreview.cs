@@ -47,12 +47,24 @@ internal sealed class WindowPreview : FloatingWindow
         foreach (var window in shown)
         {
             var card = new StackPanel { Margin = new Thickness(4) }; var heading = new DockPanel();
-            var close = ActionButton("Fechar esta janela", () => { if (!WindowThumbnail.CloseWindow(window.Handle)) MessageBox.Show("O Windows não permitiu solicitar o fechamento desta janela.", "Think Wind"); }); close.Content = Glyph("\uE711", 12); close.Padding = new Thickness(4); close.Width = close.Height = 26; DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
+            var controls = new StackPanel { Orientation = Orientation.Horizontal };
+            DockPanel.SetDock(controls, Dock.Right); heading.Children.Add(controls);
+            var minimize = PreviewControl("Minimizar esta janela", "\uE921", async () =>
+            {
+                if (!Desktop.IsVisibleAndRestored(window.Handle)) return;
+                bool minimized = await Desktop.ActivateFromDock(window.Handle, true);
+                if (!minimized && ElevatedWindowAction.IsElevatedTarget(window.Handle))
+                    minimized = await ElevatedWindowAction.Request(window.Handle, close: false, minimize: true);
+                if (minimized) Hide();
+                else MessageBox.Show("O Windows não permitiu minimizar esta janela.", "Think Wind");
+            });
+            var close = PreviewControl("Fechar esta janela", "\uE711", async () => { if (!WindowThumbnail.CloseWindow(window.Handle)) { if (ElevatedWindowAction.IsElevatedTarget(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: true); else MessageBox.Show("O Windows não permitiu solicitar o fechamento desta janela.", "Think Wind"); } });
+            controls.Children.Add(minimize); controls.Children.Add(close);
             var icon = new Image { Source = icons.Get(window.Executable, window.Handle), Width = 18, Height = 18, Margin = new Thickness(2, 0, 6, 0) }; DockPanel.SetDock(icon, Dock.Left); heading.Children.Add(icon);
             heading.Children.Add(new TextBlock { Text = window.Title, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); card.Children.Add(heading);
             var area = new Border { Height = 120, Margin = new Thickness(0, 4, 0, 0), Background = Brushes.Transparent };
             previewAreas.Add(area);
-            var open = ActionButton(window.Title, () => { Hide(); Desktop.RestoreAndActivate(window.Handle); }); open.ToolTip = null; open.Content = area; open.SetResourceReference(StyleProperty, "Think.IconButton"); open.Padding = new Thickness(0); card.Children.Add(open); grid.Children.Add(card);
+            var open = ActionButton(window.Title, async () => { Hide(); if (!await Desktop.ActivateFromDock(window.Handle, false) && ElevatedWindowAction.IsElevatedTarget(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: false); }); open.ToolTip = null; open.Content = area; open.SetResourceReference(StyleProperty, "Think.IconButton"); open.Padding = new Thickness(0); card.Children.Add(open); grid.Children.Add(card);
             var host = new WindowThumbnail(new WindowInteropHelper(this).Handle, window.Handle);
             if (host.Available) thumbnails.Add((area, host)); else { host.Dispose(); area.Child = new TextBlock { Text = "Prévia indisponível. Clique para abrir.", TextWrapping = TextWrapping.Wrap, FontSize = 11, VerticalAlignment = VerticalAlignment.Center }; }
         }
@@ -64,6 +76,14 @@ internal sealed class WindowPreview : FloatingWindow
             nav.Children.Add(back); nav.Children.Add(new TextBlock { Text = $"{page + 1}/{pages}", Margin = new Thickness(8), VerticalAlignment = VerticalAlignment.Center }); nav.Children.Add(next); body.Children.Add(nav);
         }
         Position();
+    }
+    private Button PreviewControl(string label, string glyph, Action action)
+    {
+        var button = ActionButton(label, action);
+        button.Content = Glyph(glyph, 12);
+        button.Width = button.Height = 26;
+        button.Padding = new Thickness(4);
+        return button;
     }
     private void PlaceThumbnails()
     {

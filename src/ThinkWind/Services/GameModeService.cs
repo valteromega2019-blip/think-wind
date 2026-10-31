@@ -15,6 +15,7 @@ internal sealed class GameModeService : IDisposable
     [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
     [DllImport("user32.dll")] private static extern bool GetWindowRect(nint window, out Rect rect);
     [DllImport("user32.dll")] private static extern bool IsZoomed(nint window);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
     [DllImport("kernel32.dll")] private static extern nint OpenProcess(uint access, bool inherit, uint process);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool QueryFullProcessImageName(nint process, uint flags, System.Text.StringBuilder path, ref uint size);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
@@ -32,8 +33,16 @@ internal sealed class GameModeService : IDisposable
     private int reading;
     private volatile bool disposed;
     private bool enabled = true;
+    private bool hideFullscreen = true;
     private string[] include = Array.Empty<string>(), exclude = Array.Empty<string>();
+    private nint presentationWindow;
+    private uint presentationProcess;
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
+    [DllImport("user32.dll")] private static extern bool IsIconic(nint window);
+    [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(nint window, int attribute, out int value, int size);
     internal bool Active { get; private set; }
+    internal bool FullscreenPresentation { get; private set; }
+    internal bool RecognizedGame { get; private set; }
     internal event Action? ForegroundChanged;
     internal string CurrentProcess { get; private set; } = "";
     internal GameModeService(Dispatcher ui, Action<bool> onChange, bool initiallyActive = false)
@@ -43,12 +52,15 @@ internal sealed class GameModeService : IDisposable
         foregroundHook = SetWinEventHook(3, 3, 0, foregroundEvent, 0, 0, 2);
         timer = new Timer(_ => Read(), null, 1500, 1500);
     }
-    internal static bool Probe(Preferences p) => Eligible(Snapshot(), p.GameModeEnabled, p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+    internal static bool Probe(Preferences p) => Eligible(Snapshot(), p.GameModeEnabled, p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), p.HideOverFullscreen);
     internal void Configure(Preferences p)
-    { enabled = p.GameModeEnabled; include = p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); exclude = p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); Read(); }
-    internal static bool Eligible(ForegroundGame game, bool enabled, string[] include, string[] exclude)
+    { enabled = p.GameModeEnabled; hideFullscreen = p.HideOverFullscreen; include = p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); exclude = p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); Read(); }
+    internal static bool Eligible(ForegroundGame game, bool enabled, string[] include, string[] exclude, bool hideFullscreen = true)
     {
         string Key(string value) => Path.GetFileNameWithoutExtension(value);
+        // Browser exclusions apply to game identification, never to genuine
+        // fullscreen video. This protection works even with Game Mode disabled.
+        if (hideFullscreen && game.Fullscreen && !game.Shell) return true;
         // Companion desktop tools must not toggle shell visibility just by
         // gaining focus, even on existing profiles with broad protection on.
         if (game.Process.Equals("ThinkExplode", StringComparison.OrdinalIgnoreCase)
@@ -64,7 +76,17 @@ internal sealed class GameModeService : IDisposable
             bool posted = false;
             try
             {
-                var game = Snapshot(); bool active = Eligible(game, enabled, include, exclude);
+                nint observedForeground = GetForegroundWindow();
+                GetWindowThreadProcessId(observedForeground, out uint foregroundProcess);
+                var game = Snapshot(observedForeground);
+                // Our overlay taking focus is not Alt+Tab away from the video.
+                // Recheck the real presentation HWND instead of trusting old state.
+                if (foregroundProcess == Environment.ProcessId && presentationWindow != 0
+                    && IsWindowVisible(presentationWindow) && !IsIconic(presentationWindow)
+                    && GetWindowThreadProcessId(presentationWindow, out uint owner) != 0 && owner == presentationProcess
+                    && !(DwmGetWindowAttribute(presentationWindow, 14, out int cloaked, 4) >= 0 && cloaked != 0))
+                    game = Snapshot(presentationWindow);
+                bool active = Eligible(game, enabled, include, exclude, hideFullscreen);
                 if (disposed || dispatcher.HasShutdownStarted) return;
                 dispatcher.BeginInvoke(DispatcherPriority.Send, new Action(() =>
                 {
@@ -72,9 +94,23 @@ internal sealed class GameModeService : IDisposable
                     try
                     {
                         if (disposed) return;
-                        stale = game.Handle != 0 && game.Handle != GetForegroundWindow(); if (stale) return;
-                        ForegroundChanged?.Invoke();
-                        CurrentProcess = game.Process; if (Active == active) return; Active = active; changed(active);
+                        stale = observedForeground != GetForegroundWindow(); if (stale) return;
+                        CurrentProcess = game.Process;
+                        bool recognized = !game.Shell && (game.InstalledGame
+                            || include.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase)))
+                            && !exclude.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase));
+                        bool recognizedChanged = RecognizedGame != recognized;
+                        RecognizedGame = recognized;
+                        bool presentation = active && game.Fullscreen && !game.InstalledGame
+                            && !include.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase));
+                        bool presentationChanged = FullscreenPresentation != presentation;
+                        presentationWindow = presentation ? game.Handle : 0;
+                        if (presentation) GetWindowThreadProcessId(game.Handle, out presentationProcess);
+                        else presentationProcess = 0;
+                        FullscreenPresentation = presentation;
+                        if (Active != active) { Active = active; changed(active); }
+                        else if (presentationChanged || recognizedChanged) changed(active);
+                        if (!active) ForegroundChanged?.Invoke();
                     }
                     finally { Interlocked.Exchange(ref reading, 0); if (stale && !disposed) Read(); }
                 }));
@@ -84,17 +120,18 @@ internal sealed class GameModeService : IDisposable
             finally { if (!posted) Interlocked.Exchange(ref reading, 0); }
         });
     }
-    private static ForegroundGame Snapshot()
+    private static ForegroundGame Snapshot(nint selectedWindow = 0)
     {
-        nint window = GetForegroundWindow(); GetWindowThreadProcessId(window, out uint pid);
+        nint window = selectedWindow != 0 ? selectedWindow : GetForegroundWindow(); GetWindowThreadProcessId(window, out uint pid);
         if (window == 0 || pid == 0) return new("", false, true);
         using var process = Process.GetProcessById((int)pid); string name = process.ProcessName;
         bool shell = pid == Environment.ProcessId || name.Equals("explorer", StringComparison.OrdinalIgnoreCase) || name.Equals("dwm", StringComparison.OrdinalIgnoreCase) || name.Equals("ShellExperienceHost", StringComparison.OrdinalIgnoreCase) || name.Equals("StartMenuExperienceHost", StringComparison.OrdinalIgnoreCase);
         var monitor = new Monitor { Size = (uint)Marshal.SizeOf<Monitor>() };
-        bool full = !IsZoomed(window) && GetWindowRect(window, out var rect) && GetMonitorInfo(MonitorFromWindow(window, 2), ref monitor)
+        bool full = (!IsZoomed(window) || (GetWindowLong(window, -16) & 0x00C00000) == 0)
+            && GetWindowRect(window, out var rect) && GetMonitorInfo(MonitorFromWindow(window, 2), ref monitor)
             && rect.Left <= monitor.Bounds.Left + 2 && rect.Top <= monitor.Bounds.Top + 2 && rect.Right >= monitor.Bounds.Right - 2 && rect.Bottom >= monitor.Bounds.Bottom - 2;
         bool installed = false;
-        if (!shell && !full)
+        if (!shell)
         {
             nint handle = OpenProcess(0x1000, false, pid);
             if (handle != 0) try

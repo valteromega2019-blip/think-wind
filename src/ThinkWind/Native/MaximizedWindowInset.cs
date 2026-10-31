@@ -94,6 +94,10 @@ internal sealed class MaximizedWindowInset : IDisposable
                 var name = new StringBuilder(64); GetClassName(window, name, name.Capacity);
                 if (name.ToString() is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
                 if (!OverlayChrome.GetWindowRect(window, out var current)) return true;
+                // Genuine borderless fullscreen must retain monitor bounds.
+                if (!IsZoomed(window) && current.Left <= display.Bounds.Left + 2
+                    && current.Right >= display.Bounds.Right - 2 && current.Top <= display.Bounds.Top + 2
+                    && current.Bottom >= display.Bounds.Bottom - 2 && !IsAdjustedWindow(window)) return true;
                 bool fillsWork = current.Left <= display.Work.Left + 2 && current.Right >= display.Work.Right - 2
                     && current.Top <= display.Work.Top + 2 && current.Bottom >= display.Work.Bottom - 2;
                 if (!IsZoomed(window) && !fillsWork && !IsAdjustedWindow(window)) return true;

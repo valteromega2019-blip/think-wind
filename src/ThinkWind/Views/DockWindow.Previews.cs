@@ -20,7 +20,7 @@ internal sealed partial class DockWindow
             if (!IsVisible || MenuOpen || fileDragging || Store.IsEditing || LayoutDrag.Active || !Store.Value.WindowPreviewsEnabled || previewItem is null) return;
             if (preview is null)
             {
-                preview = new WindowPreview(Store, PreviewIconBounds) { Owner = this };
+                preview = new WindowPreview(Store, PreviewIconBounds) { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
                 preview.MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; previewClose.Stop(); };
                 preview.MouseLeave += (_, _) => { lastHover = DateTime.UtcNow; previewClose.Start(); };
             }

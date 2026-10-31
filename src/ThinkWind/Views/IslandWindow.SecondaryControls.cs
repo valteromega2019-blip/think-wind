@@ -17,6 +17,15 @@ internal sealed partial class IslandWindow
             && Store.Value.HiddenQuickControls.Contains(id) && !Store.Value.DisabledQuickControls.Contains(id)))
         {
             if (id == "tools") { hoverQuick.Children.Add(SystemToolsButton(false)); continue; }
+            if (id == "monitor")
+            {
+                var monitor = ActionButton("Desempenho do PC", () =>
+                {
+                    if (SecondAreaAvailable) { secondAreaSelected = true; OpenFull(); }
+                    else ToggleLeftArea();
+                });
+                monitor.Content = Glyph("\uE9D9", 17); StyleSecondaryControl(monitor); hoverQuick.Children.Add(monitor); continue;
+            }
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
             var button = ActionButton(control.Name, () => { });
             button.Content = Glyph(control.Glyph, 17); StyleSecondaryControl(button);

@@ -26,7 +26,7 @@ internal sealed partial class DockWindow
     {
         if (startTools is not null) { startTools.Close(); return; }
         StopPreviews(); launcher?.Dismiss(); magnifier.Reset(); lastHover = DateTime.UtcNow;
-        var popup = new SystemToolsWindow(Store, anchor, above: true) { Owner = this };
+        var popup = new SystemToolsWindow(Store, anchor, above: true) { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
         startTools = popup;
         popup.Closed += (_, _) =>
         {

@@ -156,6 +156,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Slider(dock, "Distância da borda inferior", 4, 80, store.Value.DockBottomOffset, v => Change(p => p.DockBottomOffset = v));
         Slider(dock, "Posição horizontal", -4000, 4000, store.Value.DockHorizontalOffset, v => Change(p => p.DockHorizontalOffset = v));
         Check(dock, "Recolher automaticamente quando estiver ociosa", store.Value.AutoHide, v => Change(p => p.AutoHide = v));
+        Check(dock, "Manter a barra visível quando nenhum app ocupa sua área", store.Value.DockVisibleOnDesktop, v => Change(p => p.DockVisibleOnDesktop = v));
         Slider(dock, "Espera para recolher a barra (segundos)", 0, 10, store.Value.DockCollapseSeconds, v => Change(p => p.DockCollapseSeconds = v), "0.0 's'", .1);
         Select(dock, "Pesquisa na barra", store.Value.DockSearchMode, new[] { new Choice("Bar", "Barra compacta"), new Choice("Icon", "Apenas lupa") }, v => Change(p => p.DockSearchMode = v));
         Note(dock, "Recolhida, a barra é uma cápsula central arredondada de 96 × 6 DIP, a 4 pixels da borda inferior. Os ajustes de tamanho e posição acima afetam o estado expandido.");
@@ -170,6 +171,22 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Note(island, "Sobre aplicativos, o painel abre abaixo da barra de status. O recolhimento segue o tempo configurado, preservando controles em uso e a passagem entre os painéis.");
         Check(island, "Recolher a ilha automaticamente após sair com o mouse", store.Value.IslandAutoCollapse, v => Change(p => p.IslandAutoCollapse = v));
         Check(island, "Reduzir a ilha sobre apps maximizados ou em tela dividida", store.Value.IslandReduceOverMaximized, v => Change(p => p.IslandReduceOverMaximized = v));
+        Check(island, "Reservar sempre a faixa superior para a ilha", store.Value.IslandReserveTop, v => Change(p => p.IslandReserveTop = v));
+        Note(island, "A reserva usa a área útil nativa do Windows e pode reorganizar ícones do desktop ao ativar ou desativar. Permanece estável entre os modos da ilha.");
+        var overlay = Section("Overlay e sensores", "Monitoramento opcional e sensores avançados. As permissões do coletor são independentes da interface.");
+        Check(overlay, "Overlay de monitoramento do PC", store.Value.HardwareOverlayEnabled, v => Change(p => p.HardwareOverlayEnabled = v));
+        overlay.Children.Add(Button("Personalizar overlay · métricas, posição e aparência", () => ((App)Application.Current).OpenOverlaySettings()));
+        overlay.Children.Add(Button("Autorizar / atualizar coletor de sensores (UAC uma vez)", async () =>
+        {
+            store.Update(p => { p.HardwareSensorsSetupAttempted = true; p.HardwareSensorsAutoSetup = true; });
+            await AdvancedSensorSetup.Configure();
+        }));
+        overlay.Children.Add(Button("Desativar início elevado dos sensores", async () =>
+        {
+            store.Update(p => p.HardwareSensorsSetupAttempted = true);
+            if (await AdvancedSensorSetup.Configure(remove: true)) store.Update(p => p.HardwareSensorsAutoSetup = false);
+        }));
+        Note(overlay, "Overlay opcional: aparece somente em jogo reconhecido em primeiro plano, quando habilitado. Não aparece no desktop nem em vídeos. Temperaturas dependem de suporte e permissões; dados ausentes aparecem como —.");
         Check(island, "Barra superior acompanha a cor do aplicativo abaixo", store.Value.IslandMatchAppColor, v => Change(p => p.IslandMatchAppColor = v));
         Slider(island, "Espera para recolher (segundos)", 0, 10, store.Value.IslandCollapseSeconds, v => Change(p => p.IslandCollapseSeconds = v), "0.0 's'", .1);
         Slider(island, "Espaçamento", 0, 20, store.Value.IslandSpacing, v => Change(p => p.IslandSpacing = v));
@@ -206,6 +223,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         var system = Section("Sistema", "Os recursos nativos do Windows permanecem disponíveis.");
         var games = Section("Jogos", "Proteção de tela cheia, detecção de jogos e exceções.");
         Check(games, "Modo Jogo automático: ocultar launcher e suspender tarefas", store.Value.GameModeEnabled, value => Change(p => p.GameModeEnabled = value));
+        Check(games, "Ocultar launcher em vídeos e apps em tela cheia", store.Value.HideOverFullscreen, v => Change(p => p.HideOverFullscreen = v));
         Check(system, "Abrir Iniciar com Ctrl+Alt+Espaço (desativado durante jogos)", store.Value.StartHotkeyEnabled, value => Change(p => p.StartHotkeyEnabled = value));
         Check(system, "Tecla Windows abre o Iniciar do Think Wind (desativado no Modo Jogo)", store.Value.WindowsKeyOpensLauncher, value => Change(p => p.WindowsKeyOpensLauncher = value));
         Note(games, "Detecção automática por tela cheia e pastas de instalação Steam, Epic e GOG, inclusive jogos em janela. A lista abaixo é apenas complementar. Aplicativos instalados nessas pastas também podem ser reconhecidos; use as exceções quando necessário.");
@@ -227,6 +245,18 @@ internal sealed partial class SettingsWindow : FloatingWindow
         if (monitorIndex < 0) monitorIndex = Math.Clamp(store.Value.MonitorIndex, 0, screens.Length - 1);
         Select(monitors, "Monitor da barra e da ilha", monitorIndex.ToString(), screens.Select((s, i) => new Choice(i.ToString(), $"{s.DeviceName} · {s.Bounds.Width} × {s.Bounds.Height}")).ToArray(), value => Change(p =>
         { p.MonitorIndex = int.Parse(value); p.MonitorDeviceName = screens[p.MonitorIndex].DeviceName; }));
+        Check(monitors, "Ativar em múltiplos monitores", store.Value.MultiMonitorEnabled, value => Change(p => p.MultiMonitorEnabled = value));
+        Check(monitors, "Usar todos os monitores conectados", store.Value.AllMonitors, value => Change(p => p.AllMonitors = value));
+        foreach (var screen in screens)
+        {
+            string device = screen.DeviceName;
+            Check(monitors, $"Tela selecionada: {device}", store.Value.ActiveMonitors.Contains(device), value => Change(p =>
+            {
+                if (value && !p.ActiveMonitors.Contains(device)) p.ActiveMonitors.Add(device);
+                else if (!value) p.ActiveMonitors.Remove(device);
+            }));
+        }
+        Note(monitors, "Para escolher telas individuais, ative múltiplos monitores e desmarque usar todos. Sem seleção, será usado o monitor principal configurado acima.");
         Check(system, "Mostrar uso de RAM", store.Value.ShowMemory, value => Change(p => p.ShowMemory = value));
         Check(system, "Mostrar bateria quando disponível", store.Value.ShowBattery, value => Change(p => p.ShowBattery = value));
         try
@@ -234,7 +264,11 @@ internal sealed partial class SettingsWindow : FloatingWindow
             Check(system, "Iniciar junto com o Windows", SystemActions.StartupEnabled(), value =>
             {
                 if (building) return;
-                try { SystemActions.SetStartup(value); }
+                try
+                {
+                    SystemActions.SetStartup(value);
+                    Change(p => { p.StartWithWindows = value; p.StartupDefaultsInitialized = true; });
+                }
                 catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { MessageBox.Show(e.Message, "Não foi possível alterar a inicialização"); Build(); }
             });
         }

@@ -53,7 +53,7 @@ internal sealed partial class IslandWindow
         button.Click += (_, _) =>
         {
             if (systemTools is not null) { systemTools.Close(); return; }
-            var popup = new SystemToolsWindow(Store, button) { Owner = this };
+            var popup = new SystemToolsWindow(Store, button) { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
             systemTools = popup;
             popup.Closed += (_, _) => { if (ReferenceEquals(systemTools, popup)) systemTools = null; ScheduleCollapse(); };
             CancelCollapse(); popup.Show(); popup.Position(); popup.Activate();

@@ -1,3 +1,74 @@
+## 0.17 Alfa — 0.17.0-alpha
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.17.0-alpha/ThinkWind-Setup-0.17.0-alpha.exe) · [Notas e limitações](RELEASE-0.17-ALFA.md)
+
+Personalização em abas, fontes até 250%, expansão de mídia/áudio sem rolagem, monitoramento e overlay, múltiplos monitores e PawnIO opcional incluído. Sem novos testes ou type check separado nesta publicação.
+
+## Em desenvolvimento — tela cheia, reserva superior e Dock no desktop
+
+- Toggle de overlay passa a pílula de 128 × 34 DIP com identificação interna Overlay · ON/OFF, mantendo estados de cor e acessibilidade.
+- Clique em aplicativo ativo do Dock preserva o foreground capturado antes do foco do botão, escolhe a janela ativa do grupo e solicita minimização, verificando o resultado com espera assíncrona limitada. Menus e miniaturas continuam restaurando/ativando. Auxiliar elevado também admite somente a ação adicional minimizar, com validação existente de janela/processo.
+- Diagnóstico passivo: PawnIO encontrado em execução; tarefa de sensores instalada, porém LastTaskResult=1. Alteração de IPC para saída somente leitura (v3), retirando impersonação e ajuste de rótulo de integridade. Cliente valida identidade/caminho elevado e servidor valida token/sessão do cliente sem impersonação. Modo fixo sensores/frames é argumento da tarefa, com whitelist estrita; não há comandos de controle pelo pipe. Atualização protegida requer UAC novamente, solicitada na próxima abertura se configuração automática estiver habilitada.
+- Falhas do worker passam a registrar exceção em sensor-worker-error.log na pasta protegida. Esta revisão ainda não foi compilada nem executada; causa específica do resultado 1 anterior não foi confirmada e leituras de CPU precisam de confirmação prática. Sem testes ou type check.
+
+- Toggle de overlay circular de 38 DIP, ON com destaque colorido e OFF neutro, sincronizado entre painéis e editor. Tooltip explicita que habilitado não significa visível fora de jogos; mantém suporte a teclado e estado acessível. Sem compilação, testes ou type check nesta etapa.
+
+- Ícone de monitoramento disponível no cabeçalho principal da ilha central, inclusive compacta/hover; abre diretamente a segunda área e, no painel completo, alterna com a principal. No modo barra permanece somente o acesso esquerdo. Sem compilação, testes ou type check nesta etapa.
+
+- Modo barra mantém a área de monitoramento apenas no painel esquerdo: seletor e indicadores removidos do painel direito, que volta à área principal ao trocar de modo. Modo ilha preserva a troca entre as duas áreas.
+- Grade do painel completo volta a usar a composição compacta de 760 DIP antes da redução proporcional. Janela passa a acompanhar a largura real do conteúdo após limitar a altura, eliminando sobras laterais produzidas por dupla redução/reflow. Sem compilação, testes ou type check; conferência visual pendente.
+
+- Inicialização solicita configuração do coletor quando não houver autorização válida, inclusive após tentativa anterior malsucedida; uma tentativa por abertura, sem repetir na mesma sessão após cancelamento. Revogação explícita em Personalizar desativa essa configuração automática. UAC inicial continua obrigatório; tarefa previamente autorizada executa sem nova pergunta.
+- Removidos texto de estado, avisos técnicos e botão Autorizar sensores abaixo dos blocos da ilha. Mantidos apenas toggle compacto de Overlay e acesso à personalização; autorização/diagnóstico permanecem em Personalizar. Sem compilação, testes ou type check nesta etapa.
+
+- Design do monitoramento unificado à ilha: cards transparentes, texto e destaque usam os recursos do launcher, opacidade interna considera a transparência configurada e cantos seguem o arredondamento da ilha. Botões com template arredondado, realce/foco/pressionado/desativado e seleção dos controles do gráfico.
+- Personalização do overlay reduzida para 620 × 640 DIP (limitada ao monitor), com aparência, métricas por grupo e ajuda recolhíveis. Editor usa o material da ilha; modo sincronizado também acompanha fundo, transparência e cantos, preservando valores personalizados para modo independente. Campos de cor ficam ocultos quando sincronizados e controles herdados são desabilitados. Sem compilação, testes ou type check nesta etapa.
+
+- Overlay limitado a jogo reconhecido em primeiro plano (catálogo de instalação ou lista explícita, respeitando exceções), independente de vídeos/fullscreen genérico. Botão e Ctrl+Shift+O habilitam a exibição, sem forçar overlay no desktop. Detecção separada da proteção de tela cheia e do estado ativado do Modo Jogo.
+- Configuração do coletor: tarefa ausente na primeira instalação passa a ser tratada por enumeração, evitando variações de tradução COM/FileNotFoundException de GetTask. Falhas exibem etapa, mensagem e HRESULT no configurador elevado; conta diferente/elevação ausente têm mensagens específicas, sem atribuir toda falha à conta administrativa. Causa real da captura anterior não confirmada porque a exceção era descartada. Sem compilação, testes ou type check; nenhuma nova tarefa foi instalada nesta etapa.
+
+- Portados do código fornecido do Think Monitor: editor de aparência do overlay (cores, transparência por superfície, cantos e prévia) e catálogo dos 26 itens. Acrescentados seleção por grupo, presets, quatro posições, três escalas, modo manual/automático e atalho Ctrl+Shift+O via RegisterHotKey configurável, sem hook global.
+- Overlay renderiza blocos GPU/VRAM/CPU/RAM e FPS, frametime, 1% low e gráfico quando disponíveis. Captura ETW adaptada do monitor, só no auxiliar elevado e mediante overlay ativo com métricas de quadros selecionadas; janela de 10 s, até 4096 eventos do processo em primeiro plano. São eventos Present DXGI/D3D9, não medição garantida de quadros exibidos nem garantia para toda API gráfica/anti-cheat. PerfCap ainda indisponível; demais sensores extras dependem do hardware.
+- Blocos de resumo e componentes redesenhados no padrão visual fornecido: cards neutros com linha fina, títulos pequenos, valores grandes, histórico real CPU/GPU de 1/5/15 min e anéis de RAM/VRAM/disco. Sem importação de benchmark, resultados de testes, eventos ou biblioteca de jogos.
+- Protocolo do coletor passa a v2, com handshake limitado a sensores ou sensores+ETW. Coletor protegido anterior precisa ser atualizado pelo botão Autorizar/atualizar sensores (UAC); a interface não substitui silenciosamente o payload elevado. Dados não disponíveis aparecem como —.
+- Sem compilação, restore, testes ou type check nesta etapa. Reprodução visual, FPS/ETW, permissões e métricas precisam de confirmação prática.
+
+- Iniciar com Windows habilitado por padrão, aplicado uma vez na primeira execução e restaurado pelo instalador conforme a preferência salva. Desativação em Personalizar é preservada e não é revertida a cada abertura. Coletor tem trigger de logon próprio após autorização UAC inicial, sem nova pergunta nas execuções da tarefa. Sem aprovação automática de UAC e sem elevar a interface. Sem compilação, testes, type check ou mudanças reais no Registro/tarefas nesta etapa.
+
+- Sensores avançados: coletor isolado no modo --sensor-worker, instalado por configuração UAC única em Program Files com ACL de leitura para usuários. Tarefa agendada por usuário (InteractiveToken/Highest), ação fixa e registro protegido; inicia no logon ou sob demanda sem solicitar UAC novamente. Não armazena senha nem desativa UAC. A configuração recusa credenciais de outro usuário e caminhos com reparse points.
+- IPC local com ACL por SID, verificação de processo/sessão, caminho do servidor protegido e token elevado. Protocolo envia somente amostras JSON limitadas a 64 KiB; sem comandos de escrita/controle. Sem cliente, o auxiliar encerra após 20 s sem abrir sensores; ao desconectar encerra a sessão e libera bibliotecas. GPU/CPU avançadas compartilham um único coletor; falha mantém fallback básico.
+- Primeira execução normal tenta configurar uma vez; cancelamento não repete automaticamente. Botões em Personalizar permitem autorizar/atualizar ou revogar a tarefa. Atualizações do payload protegido exigem nova autorização, e não usam diretamente executável de diretório gravável pelo usuário. Drivers não são instalados automaticamente; todos os sensores dependem de suporte real do hardware/PawnIO.
+- Sem compilação, testes, type check, instalação de tarefa ou alterações de permissões neste ambiente. Implementação revisada apenas por leitura; UAC inicial e confirmação prática ainda pendentes.
+
+- Monitoramento independente nas duas novas áreas: blocos CPU/GPU/RAM/disco, nomes, uso, temperatura/clock/potência e VRAM quando publicados pelo sensor. RAM, carga total CPU e espaço livre vêm das APIs do Windows; sensores adicionais usam LibreHardwareMonitorLib 0.9.6. Nenhum arquivo/runtime/IPC do Think Monitor é utilizado.
+- Coletor compartilhado a cada 2 segundos fora do Dispatcher, somente com painel visível ou overlay explicitamente ativado. Ao perder todos os consumidores, fecha os sensores. Não habilita controladores, placa-mãe/SMBus, rede nem sensores DIMM. CPU de baixo nível só é habilitada com processo elevado; sem instalação de drivers ou elevação automática. Valores ausentes são —.
+- Overlay próprio, desligado por padrão, com toggle nos painéis e Personalizar; sem captura de cliques, teclado, injeção, benchmark ou FPS simulado. Opt-in permanece visível em jogos, mantendo a coleta reduzida apenas quando solicitado. Fullscreen exclusivo/hardware protegido pode impedir a exibição do overlay de desktop.
+- Não foram executados compilação, restore de pacotes, testes nem type check. Integração de sensores, disponibilidade de temperatura e desenho dos painéis ainda precisam de confirmação prática após compilação solicitada.
+
+- Margens dos painéis padronizadas: 12 DIP nas superfícies expandidas, painel lateral a 12 DIP da lateral (considerando DPI) e Área 2 sem margem superior extra. Grade usa a largura interna disponível em vez de mínimo virtual de 760 DIP; altura considera o padding real para evitar sobras assimétricas. Sem compilação, testes ou type check nesta etapa.
+
+- Área experimental: abas textuais substituídas por ícone de monitoramento no cabeçalho e dois indicadores clicáveis. Contêiner da área principal é ocultado junto ao conteúdo para não deixar espaço residual. Painel esquerdo verifica saída do cursor e recolhe pelo atraso configurado, preservando captura do mouse e passagem pelo topo. Sem compilação, testes ou type check nesta etapa.
+
+- Estrutura experimental vazia: seletor Área principal/Área 2 no painel completo da ilha e botão + à esquerda da barra superior abrindo painel independente abaixo do topo. Superfícies seguem o tema/Acrylic existente, com fechamento próprio e limites de tamanho. Sem compilação, testes ou type check nesta etapa.
+
+- Foco recebido pela própria ilha não encerra mais o modo de apresentação: a detecção consulta novamente a janela original do vídeo, conferindo PID, visibilidade, minimização e desktop virtual. Alt+Tab para outro aplicativo ou saída real de fullscreen continuam encerrando a proteção. Sem compilação, testes ou type check nesta etapa.
+
+- Expandir durante a revelação em fullscreen mantém a ilha centralizada e presa ao topo, sem faixa de status separada, deslocamento lateral ou passagem por uma janela de 6 DIP. Recolhimento continua retornando à alça. Sem compilação, testes ou type check nesta etapa.
+
+- Alça em tela cheia revela a própria ilha no estágio hover (mídia/áudio), sem substituir por atalhos de Configurações. Saída do grupo recolhe conforme o atraso configurado e retorna à alça; controles e mini-painéis preservam a interação. Revelação não redimensiona o aplicativo fullscreen. Sem compilação, testes ou type check nesta etapa.
+
+- Tela cheia sem moldura também é detectada quando mantém IsZoomed. Apresentação/vídeo protegido oculta as barras normais e oferece alça superior de 96 × 6 DIP, com relógio e atalhos nativos ao passar o mouse, recolhendo após sair. Jogos reconhecidos pelo catálogo/lista não recebem a alça. Sem compilação, testes ou type check; confirmação visual pendente.
+
+- Proteção de tela cheia independente das exceções de navegadores e da ativação do Modo Jogo; oculta a interface e suspende os serviços já gerenciados pelo modo protegido. Troca do estado protegido precede o ajuste da ilha para não redimensionar o vídeo durante a entrada. Detecção atual usa aplicativo em primeiro plano sem estado maximizado e cobertura do monitor; outros modos de vídeo precisam de confirmação.
+- Reserva superior AppBar de 28 DIP fixa e configurável (ativada por padrão), independente de hover, modo central, visibilidade e maximização. Usa a área útil nativa em lugar do ajuste individual enquanto ativa. Pode reorganizar o desktop ao ativar/desativar; aplicativos que ignoram a área útil ainda podem exigir tratamento específico. Jogos e vídeos em fullscreen usam limites do monitor.
+- Opção de manter Dock visível sem janela ocupando sua região, desativada por padrão. Reutiliza a leitura de janelas a cada dois segundos, sem polling adicional. Preferências salvas e aplicadas em tempo real.
+- Sem compilação, testes ou type check nesta etapa. Resultado interativo e ciclos de tela cheia/reserva ainda não validados.
+
+## Em desenvolvimento — controle de janelas elevadas
+
+- Ativação e fechamento recusados para aplicativos elevados podem solicitar auxiliar pontual com UAC. Aceita somente ativar ou WM_CLOSE, validando HWND, PID, início do processo e sessão; encerra após a ação, antes do mutex e inicialização do launcher.
+- Launcher permanece asInvoker, sem servidor elevado persistente e sem TerminateProcess. Cancelamento do UAC respeitado. Sem compilação, testes ou type check; comportamento ainda pendente de confirmação.
+
 ## 0.16 Alfa — revisão 2 (0.16.2-alpha)
 
 - Publicação com melhorias de ativação, ícones, alça inferior, teclado virtual opcional e reconhecimento do enquadramento compatível ao restaurar. Veja RELEASE-0.16.2-ALFA.md para escopo e limitações.
