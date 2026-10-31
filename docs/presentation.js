@@ -275,7 +275,7 @@
     const output = scene.querySelector('output');
     const name = scene.querySelector('#color-demo-name');
     const colors = [
-      { name: 'Azul', accent: '#60cdff', rgb: [30, 70, 108] },
+      { name: 'Azul', accent: '#64e7ff', rgb: [21, 59, 117] },
       { name: 'Lavanda', accent: '#b8a5ef', rgb: [81, 54, 111] },
       { name: 'Coral', accent: '#ee9d9b', rgb: [105, 51, 58] },
       { name: 'Menta', accent: '#79d7be', rgb: [27, 84, 79] }
