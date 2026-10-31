@@ -2,19 +2,19 @@
 <html lang="pt-BR">
 <head>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
- <meta name="theme-color" content="#101313">
+ <meta name="theme-color" content="#10141c">
  <meta name="description" content="Think Wind: Dock flutuante, Dynamic Island e um novo Iniciar para o Windows. Conheça a versão 0.19 Alfa · revisão 1, com Acrylic e personalização em tempo real.">
  <title>Think Wind — Seu Windows, em outro ritmo.</title>
  <link rel="icon" href="assets/think-wind.png" type="image/png">
- <link rel="stylesheet" href="presentation.css?v=motion-1">
+ <link rel="stylesheet" href="presentation.css?v=motion-blue-2">
  <script defer src="assets/vendor/motion-14.9.0.js"></script>
- <script defer src="presentation.js?v=motion-1"></script>
+ <script defer src="presentation.js?v=motion-blue-2"></script>
 </head>
 <body>
  <a class="skip" href="#conteudo">Ir para o conteúdo</a>
  <header class="header"><div class="container nav">
   <a class="brand" href="#" aria-label="Think Wind — início"><img src="assets/think-wind.png" width="36" height="36" alt=""><span>Think <strong>Wind</strong></span></a>
-  <nav aria-label="Navegação principal"><a href="#player">Player</a><a href="#monitoramento">Desempenho</a><a href="#recursos">Recursos</a><a href="#instalacao">Instalação</a><a href="#versao">0.19 Alfa · revisão 1</a><a class="nav-github" href="https://github.com/valteromega2019-blip/think-wind-site">GitHub ↗</a></nav>
+  <nav aria-label="Navegação principal"><a href="#dock">Dock</a><a href="#player">Player</a><a href="#monitoramento">Desempenho</a><a href="#recursos">Recursos</a><a href="#instalacao">Instalação</a><a href="#versao">0.19 Alfa · revisão 1</a><a class="nav-github" href="https://github.com/valteromega2019-blip/think-wind-site">GitHub ↗</a></nav>
  </div></header>
  <main id="conteudo">
   <section class="hero container" aria-labelledby="titulo">
@@ -26,13 +26,26 @@
     <p class="access-note">Download público da 0.19 Alfa · revisão 1. Consulte as notas da versão e o SHA-256 no GitHub.</p>
    </div>
    <div class="hero-visual"><div class="visual-label"><span class="mini-window" aria-hidden="true"></span> 01 — Seu desktop, reorganizado.</div>
-    <figure><div class="desktop-preview" role="img" aria-label="Ilustração conceitual do Think Wind: ilha de controles no topo e Dock de aplicativos na parte inferior de um desktop.">
+    <figure><div class="desktop-preview" role="group" aria-label="Ilustração interativa da ilha e da barra de aplicativos do Think Wind.">
      <div class="wallpaper-orbit orbit-one"></div><div class="wallpaper-orbit orbit-two"></div>
-     <div class="island-preview"><div class="island-header"><span>10:24</span><span>◉ &nbsp; ♪ &nbsp; ⚙</span></div><div class="preview-blocks"><div><small>REPRODUÇÃO</small><strong>No seu ritmo</strong><span class="media-symbols">‹ &nbsp; ▶ &nbsp; ›</span></div><div><small>ÁUDIO</small><span class="slider-preview"></span><small>MICROFONE</small><span class="slider-preview microphone"></span></div></div></div>
+     <div class="island-preview"><div class="island-header"><span>10:24</span><span>◉ &nbsp; ♪ &nbsp; ⚙</span></div><div class="preview-blocks"><div><small>REPRODUÇÃO</small><strong>No seu ritmo</strong><span class="media-symbols">‹ &nbsp; ▶ &nbsp; ›</span></div><div><small>ÁUDIO</small><span class="slider-preview"></span><small>MICROFONE</small><span class="slider-preview microphone"></span></div></div><div class="island-extra"><span>◷ Calendário</span><span>↗ Desempenho</span><span>☁ Clima</span></div></div>
      <div class="desktop-copy"><span>THINK WIND</span><strong>Espaço para<br>o que importa.</strong></div>
      <div class="dock-preview"><span class="windows-mark"><i></i><i></i><i></i><i></i></span><span class="search-preview">⌕ <small>Pesquisar</small></span><span class="app-symbol folder-symbol">▰</span><span class="app-symbol browser-symbol">◉</span><span class="app-symbol music-symbol">♫</span><img src="assets/think-wind.png" width="28" height="28" alt=""></div>
-    </div><figcaption>Ilustração conceitual da experiência. Não é uma captura do aplicativo.</figcaption></figure>
+    </div><div class="island-demo-controls" role="group" aria-label="Experimentar os estados da ilha"><button type="button" class="demo-chip" data-island-stage="compact" aria-pressed="true">Compacta</button><button type="button" class="demo-chip" data-island-stage="partial" aria-pressed="false">Mídia</button><button type="button" class="demo-chip" data-island-stage="full" aria-pressed="false">Completa</button></div><figcaption>Experimente a ilha acima. Ilustração interativa; não é uma captura nem controla o aplicativo.</figcaption></figure>
    </div>
+  </section>
+  <section class="container section dock-showcase" id="dock" aria-labelledby="dock-titulo">
+   <div class="section-heading"><div><p class="eyebrow">UM DOS DESTAQUES / DOCK MAGNÉTICO</p><h2 id="dock-titulo">O cursor se move.<br>Os ícones acompanham.</h2></div><p>O ícone em foco cresce e os vizinhos seguem em uma onda suave. O fundo continua compacto. Passe o mouse ou use Tab na demonstração.</p></div>
+   <div class="magnet-scene"><div class="magnet-scene-caption"><span>EXPERIMENTE A AMPLIAÇÃO</span><span>Movimento com Motion ↗</span></div><div class="magnet-dock" role="group" aria-label="Demonstração do efeito de ampliação dos ícones, sem abrir aplicativos">
+    <button class="magnet-slot" type="button" aria-label="Demonstrar ampliação: Iniciar"><span class="magnet-sprite windows-demo"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M5 7h17v16H5zm20 0h18v16H25zM5 26h17v16H5zm20 0h18v16H25z"/></svg></span><span class="magnet-label">Iniciar</span></button>
+    <button class="magnet-slot" type="button" aria-label="Demonstrar ampliação: Arquivos"><span class="magnet-sprite folder-demo"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#f8ce76" d="M4 10h16l5 5h19v26H4z"/><path fill="#e8ac45" d="M4 19h40v22H4z"/><path fill="#ffda8b" d="M4 20h40l-4 21H8z"/></svg></span><span class="magnet-label">Arquivos</span></button>
+    <button class="magnet-slot" type="button" aria-label="Demonstrar ampliação: Navegador"><span class="magnet-sprite browser-demo"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="#58b8e7"/><path d="M7 32C11 12 41 12 42 25c-9-8-15-3-17 1 10 9 9 13 0 17C14 44 7 37 7 32" fill="#3772d4"/><path d="M7 32c6 7 22 7 28-3 3 17-24 20-28 3" fill="#79d9da"/></svg></span><span class="magnet-label">Navegador</span></button>
+    <button class="magnet-slot" type="button" aria-label="Demonstrar ampliação: Música"><span class="magnet-sprite music-demo"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="13" fill="#a9a6ef"/><path d="M29 33V14l-12 3v18m0-15 12-3" fill="none" stroke="#222445" stroke-width="3" stroke-linecap="round"/><ellipse cx="13" cy="35" rx="5" ry="4" fill="#222445"/><ellipse cx="25" cy="33" rx="5" ry="4" fill="#222445"/></svg></span><span class="magnet-label">Música</span></button>
+    <button class="magnet-slot" type="button" aria-label="Demonstrar ampliação: Think Wind"><span class="magnet-sprite"><img src="assets/think-wind.png" width="48" height="48" alt=""></span><span class="magnet-label">Think Wind</span></button>
+    <button class="magnet-slot" type="button" aria-label="Demonstrar ampliação: Mensagens"><span class="magnet-sprite chat-demo"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#7baddf" d="M4 5h40v30H21L9 44v-9H4z"/><path d="M13 16h22M13 24h16" stroke="#172b49" stroke-width="3" stroke-linecap="round"/></svg></span><span class="magnet-label">Mensagens</span></button>
+    <button class="magnet-slot" type="button" aria-label="Demonstrar ampliação: Configurações"><span class="magnet-sprite settings-demo"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#aebdd1" d="m19 3 10 0 2 7 7 2 5 9-5 6 1 8-9 7-7-4-8 2-7-8 3-8-4-7 6-9 6 1z"/><circle cx="24" cy="24" r="9" fill="#263b56"/><circle cx="24" cy="24" r="5" fill="#7bbfe6"/></svg></span><span class="magnet-label">Ajustes</span></button>
+   </div><p class="magnet-hint">Aproxime o cursor. Veja a diferença.</p><button type="button" class="demo-chip" id="replay-illustrations">↻ Repetir montagem</button></div>
+   <p class="fine-print">Demonstração visual do efeito. Os ícones não abrem programas; a intensidade real é configurável no launcher.</p>
   </section>
   <section class="container section player-news" id="player" aria-labelledby="player-titulo">
    <div class="player-news-copy"><p class="eyebrow">NOVIDADE / PLAYER + SPOTIFY</p><h2 id="player-titulo">A música fica.<br>A janela não<br>precisa abrir.</h2><p>A capa do álbum agora preenche o fundo do player na Central de controle, com os comandos e as informações da música sobre a imagem.</p><ul class="player-news-list"><li><strong>Prévia do Spotify na barra:</strong> passe o mouse sobre o ícone para ver capa, música e artista, sem abrir o aplicativo.</li><li><strong>Controle direto:</strong> reproduza, pause, avance ou volte à faixa anterior. Consulte o progresso e ajuste a posição quando o player permitir.</li><li><strong>Visual integrado:</strong> controles em cápsula, cores personalizadas e a mesma linguagem visual do launcher.</li></ul><p class="fine-print">A prévia depende das miniaturas habilitadas e da sessão de mídia disponibilizada pelo Spotify ao Windows. Capa, duração e comandos aparecem conforme os dados e as funções oferecidos pelo player.</p></div>
