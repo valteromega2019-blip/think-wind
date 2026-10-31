@@ -1,4 +1,4 @@
-# v0.19 — personalização visual em desenvolvimento
+# v0.19 Alfa — personalização visual
 
 - Em Aparência, cor própria para o fundo da barra inferior e da ilha, independente da cor de destaque. Desativar a opção restaura o fundo do tema. Preferências persistentes, aplicadas imediatamente; opacidade e material continuam nos controles existentes. Na barra superior, a cor própria tem prioridade sobre acompanhar a cor do aplicativo.
 - Seletor cromático WPF compartilhado com o overlay: círculo de matiz/saturação, luminosidade, prévia e hexadecimal. Superfície, bordas e controles seguem os recursos do tema do launcher. Mouse com captura durante arrasto; setas para matiz/saturação e Esc para fechar. Nenhuma alteração do tema do Windows ao escolher cores.
@@ -30,4 +30,4 @@
 
 - Sliders refinados conforme nova referência: cápsula sem contorno, preenchimento contínuo sob o centro do controle circular e círculo sólido no mesmo tom do preenchimento com escurecimento suave. Alturas iguais e geometria preservadas; cores seguem o Foreground de cada slider, com atualização dinâmica da personalização.
 
-Revisão por leitura de código e diff. Sem compilação, testes, type check ou conferência visual nesta etapa, conforme a preferência do usuário. A branch `feature/v0.19` não foi publicada e o instalador existente não foi alterado.
+Entrega 0.19.0-alpha: revisão por leitura de código e diff, compilação e empacotamento do instalador Windows x64. Testes automatizados e type check separado não executados, conforme a preferência do usuário. Conferência visual completa não realizada; correções de Mica e indicadores aguardam confirmação prática. Publicação a partir da branch feature/v0.19, sem integração automática à main.
