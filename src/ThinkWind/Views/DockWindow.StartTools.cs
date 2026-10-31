@@ -14,7 +14,7 @@ internal sealed partial class DockWindow
     }
     private void AttachStartTools(Button start)
     {
-        start.ToolTip = "Iniciar Think Wind · botão direito: ferramentas do Windows";
+        start.ToolTip = "Iniciar Orby Launcher · botão direito: ferramentas do Windows";
         start.PreviewMouseRightButtonUp += (_, e) => { e.Handled = true; OpenStartTools(start); };
         start.PreviewKeyDown += (_, e) =>
         {

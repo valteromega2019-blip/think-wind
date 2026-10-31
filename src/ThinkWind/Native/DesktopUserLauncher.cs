@@ -44,7 +44,7 @@ internal static class DesktopUserLauncher
     {
         using var current = WindowsIdentity.GetCurrent();
         if (!new WindowsPrincipal(current).IsInRole(WindowsBuiltInRole.Administrator)) return false;
-        if (args.Contains(RelaunchFlag)) throw new InvalidOperationException("A interface ainda recebeu permissões administrativas. Abra o Think Wind pelo Explorador sem marcar Executar como administrador.");
+        if (args.Contains(RelaunchFlag)) throw new InvalidOperationException("A interface ainda recebeu permissões administrativas. Abra o Orby Launcher pelo Explorador sem marcar Executar como administrador.");
         nint shell = GetShellWindow();
         if (shell == 0) throw new InvalidOperationException("O Explorador precisa estar aberto para iniciar a interface com suporte a arrastar e soltar.");
         GetWindowThreadProcessId(shell, out uint id);
@@ -58,14 +58,14 @@ internal static class DesktopUserLauncher
             process = OpenProcess(0x1000, false, id);
             if (process == 0 || !OpenProcessToken(process, 0xB, out token)) throw new Win32Exception(Marshal.GetLastWin32Error());
             using var desktopIdentity = new WindowsIdentity(token);
-            if (desktopIdentity.User is null || current.User is null || !desktopIdentity.User.Equals(current.User)) throw new InvalidOperationException("Use a mesma conta do desktop para iniciar o Think Wind. A interface não será transferida para outro usuário.");
+            if (desktopIdentity.User is null || current.User is null || !desktopIdentity.User.Equals(current.User)) throw new InvalidOperationException("Use a mesma conta do desktop para iniciar o Orby Launcher. A interface não será transferida para outro usuário.");
             if (!GetTokenInformation(token, 20, out int elevated, 4, out _)) throw new Win32Exception(Marshal.GetLastWin32Error());
             // With UAC disabled, Explorer itself can be elevated. The source and
             // target already share its level; there is no medium desktop token.
             if (elevated != 0) return false;
             if (!DuplicateTokenEx(token, 0x02000000, 0, 2, 1, out primary)) throw new Win32Exception(Marshal.GetLastWin32Error());
             if (!CreateEnvironmentBlock(out environment, primary, false)) throw new Win32Exception(Marshal.GetLastWin32Error());
-            string executable = Environment.ProcessPath ?? throw new InvalidOperationException("Executável do Think Wind indisponível.");
+            string executable = Environment.ProcessPath ?? throw new InvalidOperationException("Executável do Orby Launcher indisponível.");
             string command = string.Join(" ", new[] { executable }.Concat(args).Append(RelaunchFlag).Select(Quote));
             if (command.Length >= 1024) throw new InvalidOperationException("Argumentos de inicialização muito longos para reabrir a interface.");
             var startup = new StartupInfo { Size = (uint)Marshal.SizeOf<StartupInfo>(), Desktop = @"winsta0\default" };

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
@@ -14,7 +14,7 @@ internal sealed class WindowsStartKey : IDisposable
     internal WindowsStartKey(Action showStart)
     {
         open = showStart;
-        source = new HwndSource(new HwndSourceParameters("Think Wind — Hotkey") { ParentWindow = new nint(-3), Width = 0, Height = 0 });
+        source = new HwndSource(new HwndSourceParameters("Orby Launcher — Hotkey") { ParentWindow = new nint(-3), Width = 0, Height = 0 });
         source.AddHook(Message);
         if (!RegisterHotKey(source.Handle, 1, 0x4003, 0x20)) { int error = Marshal.GetLastWin32Error(); source.Dispose(); throw new Win32Exception(error); }
     }

@@ -83,7 +83,7 @@ internal sealed class EmptyIslandAreaWindow : FloatingWindow
     protected override double TopEdgeOffset => 36;
     internal EmptyIslandAreaWindow(SettingsStore store, HardwareTelemetry telemetry) : base(store)
     {
-        Title = "Think Wind — Área 2"; ShowActivated = false;
+        Title = "Orby Launcher — Área 2"; ShowActivated = false;
         Surface.Padding = new Thickness(12);
         var monitor = new HardwareMonitorPanel(store, telemetry) { Width = 520 };
         monitorViewport.Child = monitor; Surface.Child = monitorViewport;

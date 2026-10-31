@@ -21,7 +21,7 @@ internal static class LayoutCatalog
         new("monitor", "Desempenho do PC", "\uE9D9", null),
         new("tools", "Ferramentas do Windows · três pontos", "\uE712", null),
         new("windows-settings", "Configurações do Windows", "\uE713", "ms-settings:"),
-        new("settings", "Configurações do Think Wind", "\uE771", null)
+        new("settings", "Configurações do Orby Launcher", "\uE771", null)
     };
     internal static readonly string[] Modules = { "connections", "media", "audio", "metrics", "calendar", "notifications", "weather", "notes", "favorites" };
     internal static string ModuleName(string id) => id switch

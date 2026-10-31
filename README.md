@@ -1,4 +1,12 @@
-# Think Wind
+# Orby Launcher
+
+Desenvolvido pela **Think**. Novo nome e identidade do Think Wind, com atualização compatível das instalações anteriores.
+
+## 0.19 Alfa — revisão 2 (0.19.2-alpha)
+
+[Baixar Orby Launcher](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.19.2-alpha/OrbyLauncher-Setup-0.19.2-alpha.exe) · [Notas e limitações](RELEASE-0.19.2.md) · [Apresentação](https://valteromega2019-blip.github.io/think-wind-site/)
+
+Nome e ícone atualizados no aplicativo e no instalador. Novo site com identidade azul, ciano e violeta, exemplos interativos e animações Motion. Dados e identificadores internos de atualização preservados. Compilação e empacotamento realizados sem novos testes ou type check separado.
 
 ## 0.18 Alfa — revisão 2 (0.18.2-alpha)
 
@@ -92,7 +100,7 @@ O código e os instaladores deste projeto são públicos. A apresentação conti
 
 ## 0.07 Alfa — 0.7.0-alpha
 
-Microfone também na primeira expansão da ilha e tecla Windows isolada integrada ao Iniciar do Think Wind enquanto o app estiver em execução. Compilação/verificação de tipos C#/XAML sem erros ou avisos; sem suíte de testes nesta etapa. Instalador solicitado em `artifacts/installer/ThinkWind-Setup-0.7.0-alpha.exe`. [Detalhes e limites](REFINAMENTOS-0.07-ALFA.md).
+Microfone também na primeira expansão da ilha e tecla Windows isolada integrada ao Iniciar do Orby Launcher enquanto o app estiver em execução. Compilação/verificação de tipos C#/XAML sem erros ou avisos; sem suíte de testes nesta etapa. Instalador solicitado em `artifacts/installer/ThinkWind-Setup-0.7.0-alpha.exe`. [Detalhes e limites](REFINAMENTOS-0.07-ALFA.md).
 
 Launcher independente para Windows, sem dependências de código, serviços ou configurações do Think Monitor.
 
@@ -112,7 +120,7 @@ Bandeja 6 × 4 com favoritos e paginação, calendário mensal aberto no painel 
 
 **Compilação Release da v0.06 realizada posteriormente a pedido do usuário: zero erros e zero avisos.** Executável para teste em `artifacts/preview-v0.06/ThinkWind.exe`. Testes, type check separado, execução e publish não realizados; nenhum instalador gerado. A cópia anterior em `src/ThinkWind/bin/Release` foi preservada.
 
-Refinamento adicional: bandeja sem redirecionamento automático ao Windows e opção **Sistema → Usar somente a barra do Think Wind**, com ocultação temporária da barra original e auxiliar de restauração. Ícones ocultos não expostos pelo Explorer continuam sujeitos às limitações descritas no documento da v0.06.
+Refinamento adicional: bandeja sem redirecionamento automático ao Windows e opção **Sistema → Usar somente a barra do Orby Launcher**, com ocultação temporária da barra original e auxiliar de restauração. Ícones ocultos não expostos pelo Explorer continuam sujeitos às limitações descritas no documento da v0.06.
 
 ## Atualização anterior: v0.05
 

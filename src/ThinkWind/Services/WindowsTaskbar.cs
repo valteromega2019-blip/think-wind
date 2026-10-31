@@ -36,7 +36,7 @@ internal sealed class WindowsTaskbar : IDisposable
             await TrayService.ReadAsync();
             if (request != revision) return;
             string executable = Path.Combine(AppContext.BaseDirectory, "ThinkWind.exe");
-            if (!File.Exists(executable)) throw new IOException("O executável do Think Wind não foi encontrado para proteger a restauração da barra.");
+            if (!File.Exists(executable)) throw new IOException("O executável do Orby Launcher não foi encontrado para proteger a restauração da barra.");
             string name = @"Local\ThinkWind.Taskbar." + Guid.NewGuid().ToString("N");
             stop = new EventWaitHandle(false, EventResetMode.ManualReset, name);
             var launch = new ProcessStartInfo(executable) { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };

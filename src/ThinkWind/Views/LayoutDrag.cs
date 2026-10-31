@@ -35,7 +35,7 @@ internal static class LayoutDrag
             if (handle is not null) grip.ReleaseMouseCapture();
             try { DragDrop.DoDragDrop(grip, new DataObject(typeof(Payload), new Payload(scope, key)), DragDropEffects.Move); }
             catch (Exception error) when (error is COMException or InvalidOperationException)
-            { MessageBox.Show("Não foi possível concluir o arraste. Use os botões de reordenação em Personalizar.\n" + error.Message, "Think Wind"); }
+            { MessageBox.Show("Não foi possível concluir o arraste. Use os botões de reordenação em Personalizar.\n" + error.Message, "Orby Launcher"); }
             finally { Active = false; Clear(); Completed?.Invoke(); }
             e.Handled = true;
         };

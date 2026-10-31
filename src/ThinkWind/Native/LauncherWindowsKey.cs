@@ -36,7 +36,7 @@ internal sealed class LauncherWindowsKey : IDisposable
     internal LauncherWindowsKey(Dispatcher dispatcher, Action showStart)
     {
         ui = dispatcher; open = showStart; callback = Handle;
-        new Thread(Run) { IsBackground = true, Name = "Think Wind — Windows key" }.Start();
+        new Thread(Run) { IsBackground = true, Name = "Orby Launcher — Windows key" }.Start();
     }
     private void Run()
     {

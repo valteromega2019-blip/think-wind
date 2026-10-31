@@ -45,13 +45,13 @@ internal static class SystemToolsMenu
         var signOut = new MenuItem { Header = "Sair" };
         signOut.Click += (_, _) =>
         {
-            if (MessageBox.Show("Sair da conta do Windows agora? Salve seus documentos antes de continuar.", "Think Wind", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            if (MessageBox.Show("Sair da conta do Windows agora? Salve seus documentos antes de continuar.", "Orby Launcher", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
             try
             {
                 var info = new ProcessStartInfo(SystemFile("shutdown.exe")) { UseShellExecute = false, CreateNoWindow = true };
                 info.ArgumentList.Add("/l"); Process.Start(info);
             }
-            catch (System.ComponentModel.Win32Exception error) { MessageBox.Show(error.Message, "Think Wind"); }
+            catch (System.ComponentModel.Win32Exception error) { MessageBox.Show(error.Message, "Orby Launcher"); }
         };
         power.Items.Add(signOut);
         foreach (string action in new[] { "Suspender", "Desligar", "Reiniciar" })
@@ -77,7 +77,7 @@ internal static class SystemToolsMenu
             else if (action == "MinimizeAll") ((dynamic)shell).MinimizeAll();
         }
         catch (Exception error) when (error is COMException or InvalidOperationException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
-        { MessageBox.Show("Não foi possível abrir este recurso do Windows: " + error.Message, "Think Wind"); }
+        { MessageBox.Show("Não foi possível abrir este recurso do Windows: " + error.Message, "Orby Launcher"); }
         finally { if (shell is not null && Marshal.IsComObject(shell)) Marshal.FinalReleaseComObject(shell); }
     }
 }

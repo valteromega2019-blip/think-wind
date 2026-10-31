@@ -65,7 +65,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private MiniIslandKind? lastMiniKind;
     public IslandWindow(SettingsStore store, Action settings) : base(store)
     {
-        Title = "Think Wind — Central de controle"; openSettings = settings;
+        Title = "Orby Launcher — Central de controle"; openSettings = settings;
         weather = new WeatherWidget(store, compact: true);
         widgetArea = new WidgetArea(store);
         weather.ReadingChanged += RefreshHeaderWeather;

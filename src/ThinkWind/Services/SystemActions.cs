@@ -73,20 +73,20 @@ internal static class SystemActions
         catch (System.ComponentModel.Win32Exception error) when (!administrator && error.NativeErrorCode == 740 && CanRunAsAdministrator(target))
         { return Launch(target, true); }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException or ArgumentException or NotSupportedException)
-        { MessageBox.Show("Não foi possível abrir: " + target + "\n" + e.Message, "Think Wind"); return false; }
+        { MessageBox.Show("Não foi possível abrir: " + target + "\n" + e.Message, "Orby Launcher"); return false; }
     }
     internal static void Power(string action, bool confirm = true)
     {
         if (action is not ("Desligar" or "Reiniciar" or "Suspender")) return;
-        if (confirm && MessageBox.Show(action + " o computador agora?", "Think Wind", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (confirm && MessageBox.Show(action + " o computador agora?", "Orby Launcher", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         if (action == "Suspender")
         {
-            if (!System.Windows.Forms.Application.SetSuspendState(System.Windows.Forms.PowerState.Suspend, false, false)) MessageBox.Show("O Windows não permitiu suspender o computador.", "Think Wind");
+            if (!System.Windows.Forms.Application.SetSuspendState(System.Windows.Forms.PowerState.Suspend, false, false)) MessageBox.Show("O Windows não permitiu suspender o computador.", "Orby Launcher");
             return;
         }
         var info = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "shutdown.exe")) { UseShellExecute = false, CreateNoWindow = true };
         info.ArgumentList.Add(action == "Reiniciar" ? "/r" : "/s"); info.ArgumentList.Add("/t"); info.ArgumentList.Add("0");
-        try { Process.Start(info); } catch (System.ComponentModel.Win32Exception error) { MessageBox.Show(error.Message, "Think Wind"); }
+        try { Process.Start(info); } catch (System.ComponentModel.Win32Exception error) { MessageBox.Show(error.Message, "Orby Launcher"); }
     }
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     internal static bool StartupEnabled()

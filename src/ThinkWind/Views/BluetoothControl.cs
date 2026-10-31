@@ -152,7 +152,7 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
         {
             if (device.Pairing.IsPaired)
             {
-                if (MessageBox.Show("Remover o pareamento de " + device.Name + "?", "Think Wind — Bluetooth", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+                if (MessageBox.Show("Remover o pareamento de " + device.Name + "?", "Orby Launcher — Bluetooth", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
                 var unpair = device.Pairing.UnpairAsync(); operation = unpair;
                 var result = await unpair; status.Text = "Windows: " + result.Status;
             }

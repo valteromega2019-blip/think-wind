@@ -70,7 +70,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private sealed record Item(string Key, string Name, string? Target, string? Glyph, List<Desktop.RunningWindow> Windows, Shortcut? Pin, Action? Action);
     public DockWindow(SettingsStore store) : base(store)
     {
-        Title = "Think Wind — Barra de aplicativos";
+        Title = "Orby Launcher — Barra de aplicativos";
         items.VerticalAlignment = VerticalAlignment.Bottom;
         items.Background = Brushes.Transparent;
         PageWheel.Attach(items, () => fit.Pages(entries.Count), () => page, value => { page = value; RenderPage(); Position(); }, () => fileDragging || MenuOpen || LayoutDrag.Active || Store.IsEditing || dockSearch.IsMouseOver);
@@ -78,7 +78,7 @@ internal sealed partial class DockWindow : FloatingWindow
         catalog = new ApplicationCatalog(Dispatcher);
         catalog.Changed += () => { signature = ""; nextAppRefresh = DateTime.MinValue; };
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
-        System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Think Wind");
+        System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Orby Launcher");
         dockSearch.TextChanged += (_, _) => { if (!clearingDockSearch && dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); } };
         dockSearch.GotKeyboardFocus += (_, _) => { AnimateSearch(true); EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); };
         dockSearch.LostKeyboardFocus += (_, _) =>
@@ -358,7 +358,7 @@ internal sealed partial class DockWindow : FloatingWindow
         items.Children.Clear();
         if (primaryControls)
         {
-            var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
+            var start = ActionButton("Iniciar Orby Launcher", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
             AttachStartTools(start);
             items.Children.Add(SearchSlot(searchWidth));
             start.Margin = new Thickness(0, 0, 8, 0);
@@ -538,7 +538,7 @@ internal sealed partial class DockWindow : FloatingWindow
                             minimize: shouldMinimize, owner: this);
                         return;
                     }
-                    MessageBox.Show("Não foi possível colocar esta janela em primeiro plano. Tente novamente quando o aplicativo responder.", "Think Wind");
+                    MessageBox.Show("Não foi possível colocar esta janela em primeiro plano. Tente novamente quando o aplicativo responder.", "Orby Launcher");
                     return;
                 }
             }

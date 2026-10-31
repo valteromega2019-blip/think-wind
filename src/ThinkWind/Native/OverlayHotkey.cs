@@ -14,7 +14,7 @@ internal sealed class OverlayHotkey : IDisposable
     internal OverlayHotkey(Action action)
     {
         toggle = action;
-        source = new HwndSource(new HwndSourceParameters("Think Wind — Overlay hotkey") { ParentWindow = new nint(-3), Width = 0, Height = 0 });
+        source = new HwndSource(new HwndSourceParameters("Orby Launcher — Overlay hotkey") { ParentWindow = new nint(-3), Width = 0, Height = 0 });
         source.AddHook(Message);
         if (!RegisterHotKey(source.Handle, 2, 0x4006, 0x4F)) { int error = Marshal.GetLastWin32Error(); source.Dispose(); throw new Win32Exception(error); }
     }

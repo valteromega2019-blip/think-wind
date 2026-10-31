@@ -11,7 +11,7 @@ internal sealed class FullscreenHandleWindow : FloatingWindow
     protected override bool AttachedTop => true;
     internal FullscreenHandleWindow(SettingsStore store, Action reveal) : base(store)
     {
-        Title = "Think Wind — Acesso em tela cheia";
+        Title = "Orby Launcher — Acesso em tela cheia";
         ShowActivated = false;
         Surface.Padding = new Thickness(0);
         Surface.Child = new Border { Width = 96, Height = 6, CornerRadius = new CornerRadius(3),

@@ -31,7 +31,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         store = settings;
         Resources[typeof(CheckBox)] = SelectionCircleStyle.Create();
         weatherSettings = new WeatherWidget(store, true);
-        Title = "Think Wind · Personalização";
+        Title = "Orby Launcher · Personalização";
         SizeToContent = SizeToContent.Manual;
         var display = OverlayChrome.GetDisplay(store.Value.MonitorIndex, store.Value.MonitorDeviceName);
         Width = Math.Min(440, display.Width - 24); Height = Math.Min(580, display.Height - 24);
@@ -222,7 +222,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Check(games, "Modo Jogo automático: ocultar launcher e suspender tarefas", store.Value.GameModeEnabled, value => Change(p => p.GameModeEnabled = value));
         Check(games, "Ocultar launcher em vídeos e apps em tela cheia", store.Value.HideOverFullscreen, v => Change(p => p.HideOverFullscreen = v));
         Check(system, "Abrir Iniciar com Ctrl+Alt+Espaço (desativado durante jogos)", store.Value.StartHotkeyEnabled, value => Change(p => p.StartHotkeyEnabled = value));
-        Check(system, "Tecla Windows abre o Iniciar do Think Wind (desativado no Modo Jogo)", store.Value.WindowsKeyOpensLauncher, value => Change(p => p.WindowsKeyOpensLauncher = value));
+        Check(system, "Tecla Windows abre o Iniciar do Orby Launcher (desativado no Modo Jogo)", store.Value.WindowsKeyOpensLauncher, value => Change(p => p.WindowsKeyOpensLauncher = value));
         Note(games, "Detecção automática por tela cheia e pastas de instalação Steam, Epic e GOG, inclusive jogos em janela. A lista abaixo é apenas complementar. Aplicativos instalados nessas pastas também podem ser reconhecidos; use as exceções quando necessário.");
         Note(games, "Aplicativos comuns em janela não acionam o Modo Jogo apenas por receberem foco. Para jogos não reconhecidos, use a lista complementar. Think Monitor é tratado como ferramenta de desktop. No Modo Jogo, a interceptação da tecla Windows é desativada.");
         void ProcessList(string label, string value, Action<string> change)
@@ -234,8 +234,8 @@ internal sealed partial class SettingsWindow : FloatingWindow
         }
         ProcessList("Jogos adicionais (opcional): executáveis separados por ;", store.Value.GameModeInclude, value => Change(p => p.GameModeInclude = value));
         ProcessList("Exceções do Modo Jogo (separadas por ;)", store.Value.GameModeExclude, value => Change(p => p.GameModeExclude = value));
-        Check(system, "Usar somente a barra do Think Wind (ocultar a barra do Windows)", store.Value.HideWindowsTaskbar, value => Change(p => p.HideWindowsTaskbar = value));
-        Note(system, "Oculta a barra original em todos os monitores enquanto o Think Wind estiver aberto. Ao desativar ou sair, ela é restaurada. O Explorador e a tecla Windows continuam funcionando.");
+        Check(system, "Usar somente a barra do Orby Launcher (ocultar a barra do Windows)", store.Value.HideWindowsTaskbar, value => Change(p => p.HideWindowsTaskbar = value));
+        Note(system, "Oculta a barra original em todos os monitores enquanto o Orby Launcher estiver aberto. Ao desativar ou sair, ela é restaurada. O Explorador e a tecla Windows continuam funcionando.");
         var screens = System.Windows.Forms.Screen.AllScreens;
         var monitors = Section("Monitores", "Escolha onde exibir a barra e a central de controle, em uma ou várias telas.");
         int monitorIndex = Array.FindIndex(screens, s => s.DeviceName.Equals(store.Value.MonitorDeviceName, StringComparison.OrdinalIgnoreCase));
@@ -273,7 +273,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         }
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { Note(system, "A opção de inicialização não está disponível para esta conta."); }
         Note(system, "A ocultação da barra original pode ser desativada nesta seção. O launcher não substitui os arquivos do Explorer.");
-        var about = Section("Sobre e segurança", "Think Wind · " + AppBrand.Version);
+        var about = Section("Sobre e segurança", "Orby Launcher · " + AppBrand.Version);
         Note(about, "Desenvolvedor: " + AppBrand.Developer);
         Note(about, AppBrand.Copyright);
         Note(about, "Baixe instaladores somente da página oficial ou das releases do projeto no GitHub. Compare o SHA-256 com o arquivo publicado na mesma release. O instalador Alfa ainda não possui assinatura digital; o hash confirma a correspondência do arquivo, não garante ausência de vulnerabilidades.");

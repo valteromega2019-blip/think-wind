@@ -28,7 +28,7 @@ internal sealed class IslandStatusWindow : FloatingWindow
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
     internal IslandStatusWindow(SettingsStore store) : base(store)
     {
-        Title = "Think Wind — Barra de status"; Surface.Padding = new Thickness(12, 2, 12, 2);
+        Title = "Orby Launcher — Barra de status"; Surface.Padding = new Thickness(12, 2, 12, 2);
         IsVisibleChanged += (_, _) => { if (!IsVisible && Surface.Background is SolidColorBrush brush) brush.BeginAnimation(SolidColorBrush.ColorProperty, null); };
     }
     internal void Attach(UIElement? content) => Surface.Child = content;

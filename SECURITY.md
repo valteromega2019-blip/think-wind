@@ -1,4 +1,4 @@
-# Segurança do Think Wind
+# Segurança do Orby Launcher
 
 Esta é uma versão Alfa. A seção Personalizar → Sobre e segurança reúne os links oficiais e as limitações conhecidas.
 

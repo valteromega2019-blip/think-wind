@@ -19,7 +19,7 @@ internal sealed class SystemToolsWindow : FloatingWindow
 
     internal SystemToolsWindow(SettingsStore store, Button source, bool above = false) : base(store)
     {
-        anchor = source; aboveAnchor = above; Title = "Think Wind — Ferramentas do Windows"; ShowActivated = true;
+        anchor = source; aboveAnchor = above; Title = "Orby Launcher — Ferramentas do Windows"; ShowActivated = true;
         Surface.Padding = new Thickness(10);
         var root = new DockPanel();
         var heading = new DockPanel { Margin = new Thickness(6, 0, 0, 8) };

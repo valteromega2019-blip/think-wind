@@ -29,7 +29,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private readonly ApplicationCatalog catalog;
     private readonly LauncherSearch search = new();
     private readonly ShellIcons icons = new();
-    private readonly StaWorker imageWorker = new("Think Wind — ícones da gaveta");
+    private readonly StaWorker imageWorker = new("Orby Launcher — ícones da gaveta");
     private readonly Dictionary<string, ImageSource> largeIcons = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Task<ImageSource?>> pendingIcons = new(StringComparer.OrdinalIgnoreCase);
     private readonly Func<OverlayChrome.PixelRect> anchor;
@@ -61,7 +61,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     internal event Action? Dismissed;
     internal LauncherPanelWindow(SettingsStore store, ApplicationCatalog apps, Func<OverlayChrome.PixelRect> getAnchor, Func<bool> hasDockFocus) : base(store)
     {
-        catalog = apps; anchor = getAnchor; dockHasFocus = hasDockFocus; Title = "Think Wind — Iniciar e pesquisa";
+        catalog = apps; anchor = getAnchor; dockHasFocus = hasDockFocus; Title = "Orby Launcher — Iniciar e pesquisa";
         ShowActivated = true; Surface.Padding = new Thickness(14);
         content.Children.Add(title);
         var queryFrame = new Border { Child = query, CornerRadius = new CornerRadius(14), Margin = new Thickness(4) }; queryFrame.SetResourceReference(Border.BackgroundProperty, "Think.Control"); content.Children.Add(queryFrame);

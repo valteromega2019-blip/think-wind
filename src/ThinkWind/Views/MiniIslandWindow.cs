@@ -32,7 +32,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
-        Title = kind switch { MiniIslandKind.Bluetooth => "Think Wind — Bluetooth", MiniIslandKind.Volume => "Think Wind — Mini volume", MiniIslandKind.Calendar => "Think Wind — Calendário", MiniIslandKind.Tray => "Think Wind — Bandeja", _ => "Think Wind — Mini rede" };
+        Title = kind switch { MiniIslandKind.Bluetooth => "Orby Launcher — Bluetooth", MiniIslandKind.Volume => "Orby Launcher — Mini volume", MiniIslandKind.Calendar => "Orby Launcher — Calendário", MiniIslandKind.Tray => "Orby Launcher — Bandeja", _ => "Orby Launcher — Mini rede" };
         ShowActivated = true;
         var heading = new DockPanel();
         var close = ActionButton("Fechar", Dismiss); close.Padding = new Thickness(8, 4, 8, 4);

@@ -43,11 +43,11 @@ internal static class AdvancedSensorSetup
             await process.WaitForExitAsync();
             if (process.ExitCode == 0) return true;
             if (process.ExitCode != 10)
-                MessageBox.Show("A configuração do coletor terminou antes de concluir. Código: " + process.ExitCode + ". Tente novamente pelo botão Autorizar sensores.", "Think Wind");
+                MessageBox.Show("A configuração do coletor terminou antes de concluir. Código: " + process.ExitCode + ". Tente novamente pelo botão Autorizar sensores.", "Orby Launcher");
         }
         catch (System.ComponentModel.Win32Exception error) when (error.NativeErrorCode == 1223) { }
         catch (Exception error) when (error is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException or InvalidOperationException)
-        { MessageBox.Show("Configuração dos sensores: " + error.Message, "Think Wind"); }
+        { MessageBox.Show("Configuração dos sensores: " + error.Message, "Orby Launcher"); }
         return false;
     }
     internal static bool RunSetup(string[] args, out int exitCode)
@@ -60,7 +60,7 @@ internal static class AdvancedSensorSetup
         {
             using var identity = WindowsIdentity.GetCurrent();
             if (args.Length != 2) throw new InvalidOperationException("Argumentos de configuração inválidos.");
-            if (args[1] != UserSid) throw new InvalidOperationException("A confirmação do UAC usou outra conta. Use a conta administradora que iniciou o Think Wind. Não é necessário elevar a interface inteira.");
+            if (args[1] != UserSid) throw new InvalidOperationException("A confirmação do UAC usou outra conta. Use a conta administradora que iniciou o Orby Launcher. Não é necessário elevar a interface inteira.");
             if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator)) throw new UnauthorizedAccessException("A configuração não recebeu a autorização administrativa do Windows.");
             stage = "Conexão com o Agendador de Tarefas";
             service = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!);
@@ -110,7 +110,7 @@ internal static class AdvancedSensorSetup
         }
         catch (Exception error) when (error is COMException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
         {
-            MessageBox.Show(stage + "\n\n" + error.Message + "\n\nCódigo: 0x" + error.HResult.ToString("X8"), "Think Wind — Configuração de sensores", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(stage + "\n\n" + error.Message + "\n\nCódigo: 0x" + error.HResult.ToString("X8"), "Orby Launcher — Configuração de sensores", MessageBoxButton.OK, MessageBoxImage.Error);
             exitCode = 10;
         }
         finally

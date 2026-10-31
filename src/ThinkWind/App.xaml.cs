@@ -70,7 +70,7 @@ public partial class App : Application
                 }
                 catch (Exception logError) when (logError is System.IO.IOException or UnauthorizedAccessException) { }
                 MessageBox.Show("Não foi possível abrir a interface com permissões compatíveis com o arrasto do Explorador.\n\n" + error.Message,
-                    "Think Wind", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "Orby Launcher", MessageBoxButton.OK, MessageBoxImage.Information);
                 Shutdown(1); return;
             }
         }
@@ -80,7 +80,7 @@ public partial class App : Application
             Shutdown(first ? InstallationSetup.Run() : 2);
             return;
         }
-        if (!first) { MessageBox.Show("O Think Wind já está em execução. Use o ícone na bandeja do Windows.", "Think Wind"); Shutdown(); return; }
+        if (!first) { MessageBox.Show("O Orby Launcher já está em execução. Use o ícone na bandeja do Windows.", "Orby Launcher"); Shutdown(); return; }
         diagnosing = e.Args.Contains("--diagnostic");
         int reportIndex = Array.IndexOf(e.Args, "--diagnostic-report");
         diagnosticReport = reportIndex >= 0 && reportIndex + 1 < e.Args.Length ? e.Args[reportIndex + 1] : null;
@@ -94,7 +94,7 @@ public partial class App : Application
         {
             try { SystemActions.ApplyStartupDefault(store); }
             catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
-            { MessageBox.Show("Não foi possível configurar a inicialização automática: " + error.Message, "Think Wind"); }
+            { MessageBox.Show("Não foi possível configurar a inicialização automática: " + error.Message, "Orby Launcher"); }
         }
         ThemeService.Apply(store.Value);
         Telemetry = new HardwareTelemetry(Dispatcher);
@@ -120,12 +120,12 @@ public partial class App : Application
         menu.Items.Add("Personalizar", null, (_, _) => Dispatcher.Invoke(OpenSettings));
         menu.Items.Add("Editar / concluir layout", null, (_, _) => Dispatcher.Invoke(() => store.SetEditing(!store.IsEditing)));
         menu.Items.Add("Mostrar barra de aplicativos e central de controle", null, (_, _) => Dispatcher.Invoke(() => { if (gameMode?.Active == true) return; dock?.Show(); island?.Show(); dock?.RefreshSettings(); island?.RefreshSettings(); }));
-        menu.Items.Add("Sair do Think Wind", null, (_, _) => Dispatcher.Invoke(() => { IsExiting = true; Shutdown(); }));
-        tray = new Forms.NotifyIcon { Text = "Think Wind", Icon = AppBrand.TrayIcon(), ContextMenuStrip = menu, Visible = true };
+        menu.Items.Add("Sair do Orby Launcher", null, (_, _) => Dispatcher.Invoke(() => { IsExiting = true; Shutdown(); }));
+        tray = new Forms.NotifyIcon { Text = "Orby Launcher", Icon = AppBrand.TrayIcon(), ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
         var localTrayImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(tray.Icon.Handle, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
         localTrayImage.Freeze();
-        TrayService.RegisterLocal(new TrayEntry("Think Wind", localTrayImage, null, 0, "local:think-wind", LocalAction: context =>
+        TrayService.RegisterLocal(new TrayEntry("Orby Launcher", localTrayImage, null, 0, "local:think-wind", LocalAction: context =>
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (IsExiting || gameMode?.Active == true) return;
@@ -134,7 +134,7 @@ public partial class App : Application
         windowsTaskbar = new WindowsTaskbar(message =>
         {
             if (IsExiting) return;
-            Dispatcher.BeginInvoke(new Action(() => { store.Update(p => p.HideWindowsTaskbar = false); MessageBox.Show(message, "Think Wind"); }));
+            Dispatcher.BeginInvoke(new Action(() => { store.Update(p => p.HideWindowsTaskbar = false); MessageBox.Show(message, "Orby Launcher"); }));
         });
         windowsTaskbar.Apply(store.Value.HideWindowsTaskbar);
         gameMode = new GameModeService(Dispatcher, ChangeGameMode, initialGame);
@@ -157,7 +157,7 @@ public partial class App : Application
                         Telemetry.RefreshAuthorizedSensors();
                 }
                 catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)
-                { MessageBox.Show("Não foi possível preparar os auxiliares: " + error.Message, "Think Wind"); }
+                { MessageBox.Show("Não foi possível preparar os auxiliares: " + error.Message, "Orby Launcher"); }
             }), System.Windows.Threading.DispatcherPriority.ContextIdle);
         if (diagnosing)
         {
@@ -165,7 +165,7 @@ public partial class App : Application
             exit.Tick += (_, _) => { exit.Stop(); WriteDiagnosticReport(); IsExiting = true; Shutdown(); }; exit.Start();
         }
         if (e.Args.Contains("--settings")) OpenSettings();
-        if (store.LoadWarning is not null) MessageBox.Show(store.LoadWarning, "Think Wind");
+        if (store.LoadWarning is not null) MessageBox.Show(store.LoadWarning, "Orby Launcher");
     }
     internal void OpenWeatherSettings()
     {

@@ -157,7 +157,7 @@ internal sealed class TrayCard : StackPanel
                 menus++;
                 try
                 {
-                    if (MessageBox.Show($"Encerrar {entry.DisplayName}?\n\nO aplicativo será fechado, incluindo processos auxiliares do mesmo executável. Dados não salvos podem ser perdidos. Prefira Sair no menu original quando disponível.", "Think Wind", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+                    if (MessageBox.Show($"Encerrar {entry.DisplayName}?\n\nO aplicativo será fechado, incluindo processos auxiliares do mesmo executável. Dados não salvos podem ser perdidos. Prefira Sair no menu original quando disponível.", "Orby Launcher", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
                     var result = await BackgroundAppExit.End(targets);
                     if (result.Error is not null) ShowError(result.Error);
                     nextRefresh = DateTime.MinValue; signature = ""; Refresh();

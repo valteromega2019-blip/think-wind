@@ -26,7 +26,7 @@ internal static class ThemeService
         }
         catch (Exception error) when (error is UnauthorizedAccessException or System.Security.SecurityException or System.IO.IOException)
         {
-            MessageBox.Show("Não foi possível alterar o tema do Windows. " + error.Message, "Think Wind");
+            MessageBox.Show("Não foi possível alterar o tema do Windows. " + error.Message, "Orby Launcher");
         }
         finally { themeChanges.Release(); }
     }

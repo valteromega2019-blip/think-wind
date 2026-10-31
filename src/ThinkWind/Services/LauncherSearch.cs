@@ -11,7 +11,7 @@ namespace ThinkWind.Services;
 internal sealed record SearchBatch(IReadOnlyList<AppEntry> Items, string? Notice);
 internal sealed class LauncherSearch : IDisposable
 {
-    private readonly StaWorker worker = new("Think Wind — índice do Windows");
+    private readonly StaWorker worker = new("Orby Launcher — índice do Windows");
     internal static readonly AppEntry[] Settings =
     {
         new("Configurações do Windows", "ms-settings:", "Configurações", null), new("Rede e Wi-Fi", "ms-settings:network-wifi", "Configurações", null),

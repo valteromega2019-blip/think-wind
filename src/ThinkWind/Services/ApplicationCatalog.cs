@@ -13,7 +13,7 @@ internal sealed record AppEntry(string Name, string Target, string Category, Ima
 internal sealed class ApplicationCatalog : IDisposable
 {
     private readonly Dispatcher dispatcher;
-    private readonly StaWorker worker = new("Think Wind — aplicativos");
+    private readonly StaWorker worker = new("Orby Launcher — aplicativos");
     private readonly Dictionary<string, (string Version, LaunchIdentity Identity)> launchIdentities = new(StringComparer.OrdinalIgnoreCase);
     private readonly ShellIcons identityIcons = new();
     private readonly Dictionary<string, DateTime> missingPins = new(StringComparer.OrdinalIgnoreCase);

@@ -68,11 +68,11 @@ internal static class AuthorizedWindowAction
             await pipe.WriteAsync(new byte[] { 0xA5 }, timeout.Token); await pipe.FlushAsync(timeout.Token);
             await pipe.ReadExactlyAsync(message, timeout.Token);
             if (message[0] == 0) return true;
-            MessageBox.Show("O Windows não permitiu concluir a operação nesta janela pelo auxiliar autorizado.", "Think Wind");
+            MessageBox.Show("O Windows não permitiu concluir a operação nesta janela pelo auxiliar autorizado.", "Orby Launcher");
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or OperationCanceledException or ArgumentException
             or InvalidOperationException or System.ComponentModel.Win32Exception or COMException)
-        { MessageBox.Show("Controle automático de janelas: " + error.Message + "\nVocê pode atualizar a autorização em Personalizar > Sistema.", "Think Wind"); }
+        { MessageBox.Show("Controle automático de janelas: " + error.Message + "\nVocê pode atualizar a autorização em Personalizar > Sistema.", "Orby Launcher"); }
         finally { gate.Release(); }
         return false;
     }

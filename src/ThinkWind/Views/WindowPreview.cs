@@ -29,7 +29,7 @@ internal sealed class WindowPreview : FloatingWindow
     internal bool IsInteracting => spotifyMode && spotify?.IsInteracting == true;
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
-        anchor = getAnchor; Title = "Think Wind — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;
+        anchor = getAnchor; Title = "Orby Launcher — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;
         refresh.Tick += (_, _) => { if (windows.Any(window => !WindowThumbnail.IsWindow(window.Handle))) { windows.RemoveAll(window => !WindowThumbnail.IsWindow(window.Handle)); Render(); } };
         LayoutUpdated += (_, _) => PlaceThumbnails();
         IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); Release(); spotify?.SetActive(false); } };
@@ -73,9 +73,9 @@ internal sealed class WindowPreview : FloatingWindow
                 if (!minimized && ElevatedWindowAction.NeedsAdminFallback(window.Handle))
                     minimized = await ElevatedWindowAction.Request(window.Handle, close: false, minimize: true, owner: Owner ?? this);
                 if (minimized) Hide();
-                else MessageBox.Show("O Windows não permitiu minimizar esta janela.", "Think Wind");
+                else MessageBox.Show("O Windows não permitiu minimizar esta janela.", "Orby Launcher");
             });
-            var close = PreviewControl("Fechar esta janela", "\uE711", async () => { if (!WindowThumbnail.CloseWindow(window.Handle)) { if (ElevatedWindowAction.NeedsAdminFallback(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: true, owner: Owner ?? this); else MessageBox.Show("O Windows não permitiu solicitar o fechamento desta janela.", "Think Wind"); } });
+            var close = PreviewControl("Fechar esta janela", "\uE711", async () => { if (!WindowThumbnail.CloseWindow(window.Handle)) { if (ElevatedWindowAction.NeedsAdminFallback(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: true, owner: Owner ?? this); else MessageBox.Show("O Windows não permitiu solicitar o fechamento desta janela.", "Orby Launcher"); } });
             controls.Children.Add(minimize); controls.Children.Add(close);
             var icon = new Image { Source = icons.Get(window.Executable, window.Handle), Width = 18, Height = 18, Margin = new Thickness(2, 0, 6, 0) }; DockPanel.SetDock(icon, Dock.Left); heading.Children.Add(icon);
             heading.Children.Add(new TextBlock { Text = window.Title, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); card.Children.Add(heading);

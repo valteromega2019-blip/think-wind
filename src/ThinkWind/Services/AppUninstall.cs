@@ -24,7 +24,7 @@ internal static class AppUninstall
     {
         try
         {
-            using var worker = new StaWorker("Think Wind — desinstalação");
+            using var worker = new StaWorker("Orby Launcher — desinstalação");
             var identity = await worker.Run(() => ShellAppIdentity.ReadLaunch(target, new ShellIcons()));
             if (identity.AppId is string id && id.Contains('!'))
             {
@@ -34,13 +34,13 @@ internal static class AppUninstall
             var candidates = await Task.Run(() => Find(name, identity.Path));
             if (candidates.Count != 1) { SystemActions.Run("ms-settings:appsfeatures"); return; }
             var app = candidates[0];
-            if (MessageBox.Show("Abrir o desinstalador de " + app.Name + "?", "Think Wind", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (MessageBox.Show("Abrir o desinstalador de " + app.Name + "?", "Orby Launcher", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             if (!SplitCommand(app.Command, out string executable, out string arguments))
             { SystemActions.Run("ms-settings:appsfeatures"); return; }
             Process.Start(new ProcessStartInfo(executable, arguments) { UseShellExecute = true });
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException or System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException)
-        { MessageBox.Show("Não foi possível abrir a desinstalação. " + error.Message, "Think Wind"); }
+        { MessageBox.Show("Não foi possível abrir a desinstalação. " + error.Message, "Orby Launcher"); }
     }
     private static List<Candidate> Find(string name, string target)
     {

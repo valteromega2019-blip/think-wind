@@ -39,7 +39,7 @@ internal static class WindowActionSetup
         }
         catch (System.ComponentModel.Win32Exception error) when (error.NativeErrorCode == 1223) { return false; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException)
-        { MessageBox.Show("Não foi possível configurar o controle autorizado de janelas: " + error.Message, "Think Wind"); return false; }
+        { MessageBox.Show("Não foi possível configurar o controle autorizado de janelas: " + error.Message, "Orby Launcher"); return false; }
     }
     internal static bool RunSetup(string[] args, out int exitCode)
     {
@@ -50,7 +50,7 @@ internal static class WindowActionSetup
         {
             using var identity = WindowsIdentity.GetCurrent();
             if (args.Length != 2 || args[1] != UserSid || !new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
-                throw new UnauthorizedAccessException("Autorize com a mesma conta administradora que usa o Think Wind.");
+                throw new UnauthorizedAccessException("Autorize com a mesma conta administradora que usa o Orby Launcher.");
             service = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!);
             ((dynamic)service!).Connect(); folder = ((dynamic)service).GetFolder(@"\");
             previous = AdvancedSensorSetup.FindTask(folder, TaskName);
@@ -79,7 +79,7 @@ internal static class WindowActionSetup
             File.WriteAllText(Marker, AppBrand.Version + "|action-v2"); exitCode = 0;
         }
         catch (Exception error) when (error is COMException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
-        { MessageBox.Show("Autorização do controle de janelas: " + error.Message, "Think Wind"); }
+        { MessageBox.Show("Autorização do controle de janelas: " + error.Message, "Orby Launcher"); }
         finally { foreach (var item in new[] { registered, action, actions, settings, principal, definition, previous, folder, service }) CoreAudio.Release(item); }
         return true;
     }

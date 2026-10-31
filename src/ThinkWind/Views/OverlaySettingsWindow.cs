@@ -24,7 +24,7 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
     private readonly System.Collections.Generic.Dictionary<string, RadioButton> cornerButtons = new();
     internal OverlaySettingsWindow(SettingsStore store) : base(store)
     {
-        settings = store; Title = "Think Wind — Personalização do overlay"; ShowActivated = true;
+        settings = store; Title = "Orby Launcher — Personalização do overlay"; ShowActivated = true;
         MonitoringDesign.Install(Resources, store.Value);
         var root = new DockPanel();
         var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };

@@ -325,7 +325,7 @@ internal abstract class FloatingWindow : Window
             if (LayoutDrag.Active) return;
             try { action(); }
             catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception)
-            { MessageBox.Show(e.Message, "Think Wind"); }
+            { MessageBox.Show(e.Message, "Orby Launcher"); }
         };
         return button;
     }

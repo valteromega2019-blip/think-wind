@@ -25,7 +25,7 @@ internal sealed class HardwareOverlayWindow : Window
     internal HardwareOverlayWindow(SettingsStore settings, HardwareTelemetry source)
     {
         store = settings; telemetry = source;
-        Title = "Think Wind — Overlay de monitoramento";
+        Title = "Orby Launcher — Overlay de monitoramento";
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = true;
         Background = Brushes.Transparent; ShowInTaskbar = false; ShowActivated = false; Topmost = true;
         SizeToContent = SizeToContent.WidthAndHeight; IsHitTestVisible = false; Focusable = false;

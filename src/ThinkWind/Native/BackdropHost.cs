@@ -53,7 +53,7 @@ internal sealed class BackdropHost : IDisposable
         }
         // No GDI redirection bitmap: Composition is the only painted surface.
         uint extended = window.ShowInTaskbar ? 0x08240008u : 0x08200088u;
-        Handle = CreateWindowEx(extended, ClassName, "Think Wind — Material · " + window.Title, 0x80000000, -10000, -10000, 1, 1, helper.Owner, 0, GetModuleHandle(null), 0);
+        Handle = CreateWindowEx(extended, ClassName, "Orby Launcher — Material · " + window.Title, 0x80000000, -10000, -10000, 1, 1, helper.Owner, 0, GetModuleHandle(null), 0);
         if (Handle == 0) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         // Ownership guarantees that the alpha content stays above its own material.
         helper.Owner = Handle;

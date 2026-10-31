@@ -1,25 +1,26 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.19.1-alpha"
+#define MyAppVersion "0.19.2-alpha"
 #ifndef PublishDir
-#define PublishDir "..\artifacts\publish-v0.19.1-alpha"
+#define PublishDir "..\artifacts\publish-v0.19.2-alpha"
 #endif
 [Setup]
 AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
-AppName=Think Wind
+AppName=Orby Launcher
 AppPublisher=Think
 VersionInfoCompany=Think
-VersionInfoDescription=Instalador do Think Wind
+VersionInfoDescription=Instalador do Orby Launcher
 AppVersion={#MyAppVersion}
-VersionInfoVersion=0.19.1.0
+VersionInfoVersion=0.19.2.0
 DefaultDirName={localappdata}\Programs\ThinkWind
 PrivilegesRequired=lowest
-DefaultGroupName=Think Wind
+DefaultGroupName=Orby Launcher
+UsePreviousGroup=no
 OutputDir=..\artifacts\installer
-OutputBaseFilename=ThinkWind-Setup-{#MyAppVersion}
+OutputBaseFilename=OrbyLauncher-Setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-SetupIconFile=..\src\ThinkWind\Assets\ThinkWind.ico
+SetupIconFile=..\src\ThinkWind\Assets\OrbyLauncher.ico
 UninstallDisplayIcon={app}\ThinkWind.exe
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -30,10 +31,13 @@ Name: "pawnio"; Description: "Instalar PawnIO oficial para sensores, se necessar
 [Files]
 Source: "..\artifacts\dependencies\PawnIO_setup.exe"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+[InstallDelete]
+Type: files; Name: "{userprograms}\Think Wind\Think Wind.lnk"
+Type: dirifempty; Name: "{userprograms}\Think Wind"
 [Icons]
-Name: "{group}\Think Wind"; Filename: "{app}\ThinkWind.exe"
+Name: "{group}\Orby Launcher"; Filename: "{app}\ThinkWind.exe"
 [Run]
-Filename: "{app}\ThinkWind.exe"; Description: "Abrir Think Wind"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\ThinkWind.exe"; Description: "Abrir Orby Launcher"; Flags: nowait postinstall skipifsilent
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "ThinkWind"; Flags: uninsdeletevalue
 
@@ -88,12 +92,12 @@ begin
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     begin
       Log('Unable to run automatic taskbar configuration.');
-      SuppressibleMsgBox('Nao foi possivel configurar as barras automaticamente. Abra Personalizar > Sistema no Think Wind e ative Usar somente a barra do Think Wind. No Windows, ative Ocultar automaticamente a barra de tarefas.', mbError, MB_OK, IDOK);
+      SuppressibleMsgBox('Nao foi possivel configurar as barras automaticamente. Abra Personalizar > Sistema no Orby Launcher e ative Usar somente a barra do Orby Launcher. No Windows, ative Ocultar automaticamente a barra de tarefas.', mbError, MB_OK, IDOK);
     end
     else if ResultCode <> 0 then
     begin
       Log(Format('Automatic taskbar configuration failed, code %d.', [ResultCode]));
-      SuppressibleMsgBox('A instalacao foi concluida, mas a configuracao automatica das barras falhou. Feche o Think Wind e tente novamente, ou configure as duas opcoes manualmente. Detalhes em %LOCALAPPDATA%\ThinkWind\installation-setup.log, quando disponivel.', mbError, MB_OK, IDOK);
+      SuppressibleMsgBox('A instalacao foi concluida, mas a configuracao automatica das barras falhou. Feche o Orby Launcher e tente novamente, ou configure as duas opcoes manualmente. Detalhes em %LOCALAPPDATA%\ThinkWind\installation-setup.log, quando disponivel.', mbError, MB_OK, IDOK);
     end;
   end;
 end;

@@ -19,7 +19,7 @@ internal sealed record WifiSnapshot(IReadOnlyList<WifiAdapterInfo> Adapters, IRe
 internal sealed class WifiUnavailableException : Exception { internal WifiUnavailableException(string message) : base(message) { } }
 internal sealed class WifiService : IDisposable
 {
-    private readonly StaWorker worker = new("Think Wind — WLAN");
+    private readonly StaWorker worker = new("Orby Launcher — WLAN");
     private static readonly object adapterSync = new();
     private static Task<Interface[]>? adapterDiscovery;
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct Interface
