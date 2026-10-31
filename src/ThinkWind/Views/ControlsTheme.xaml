@@ -15,10 +15,10 @@
     <Track x:Name="PART_Track" Height="24" VerticalAlignment="Center"
            Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}"
            IsDirectionReversed="{TemplateBinding IsDirectionReversed}" Orientation="{TemplateBinding Orientation}">
-     <Track.DecreaseRepeatButton><RepeatButton Height="16" Command="Slider.DecreaseLarge" Background="{TemplateBinding Foreground}" Style="{StaticResource Think.SliderPart}"/></Track.DecreaseRepeatButton>
-     <Track.Thumb><Thumb Width="10" Height="24">
-      <Thumb.Template><ControlTemplate TargetType="Thumb"><Border x:Name="Handle" Background="{DynamicResource Think.Text}" CornerRadius="5" BorderThickness="1" BorderBrush="{DynamicResource Think.Control}"/>
-       <ControlTemplate.Triggers><Trigger Property="IsDragging" Value="True"><Setter TargetName="Handle" Property="Background" Value="{DynamicResource Think.Accent}"/></Trigger></ControlTemplate.Triggers>
+     <Track.DecreaseRepeatButton><RepeatButton Height="16" Margin="0,0,-8,0" Command="Slider.DecreaseLarge" Background="{TemplateBinding Foreground}" Style="{StaticResource Think.SliderPart}"/></Track.DecreaseRepeatButton>
+     <Track.Thumb><Thumb Width="16" Height="16">
+      <Thumb.Template><ControlTemplate TargetType="Thumb"><Border x:Name="Handle" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" CornerRadius="8" BorderThickness="0"/>
+       <ControlTemplate.Triggers><Trigger Property="IsDragging" Value="True"><Setter TargetName="Handle" Property="Opacity" Value="0.85"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></Thumb.Template>
      </Thumb></Track.Thumb>
      <Track.IncreaseRepeatButton><RepeatButton Height="16" Command="Slider.IncreaseLarge" Background="{TemplateBinding Background}" Style="{StaticResource Think.SliderPart}"/></Track.IncreaseRepeatButton>

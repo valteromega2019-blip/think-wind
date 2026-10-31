@@ -148,7 +148,7 @@ internal sealed class MediaService : IDisposable
             uint loaded = await reader.LoadAsync((uint)stream.Size); var bytes = new byte[checked((int)loaded)]; reader.ReadBytes(bytes);
             using var memory = new MemoryStream(bytes);
             var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 160; image.StreamSource = memory; image.EndInit(); image.Freeze(); return image;
+            image.DecodePixelWidth = 512; image.StreamSource = memory; image.EndInit(); image.Freeze(); return image;
         }
         catch (Exception e) when (Unavailable(e) || e is IOException or FormatException) { return null; }
     }

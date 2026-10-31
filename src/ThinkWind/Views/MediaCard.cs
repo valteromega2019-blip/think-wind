@@ -9,9 +9,12 @@ using System.Windows.Threading;
 using ThinkWind.Services;
 
 namespace ThinkWind.Views;
-internal sealed class MediaCard : StackPanel, IDisposable
+internal sealed class MediaCard : Grid, IDisposable
 {
     private readonly MediaService service;
+    private readonly StackPanel body = new() { Margin = new Thickness(6) };
+    private readonly ImageBrush artworkBackground = new() { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };
+    private readonly Border backgroundCover, backgroundShade;
     private readonly Image artwork = new() { Width = 64, Height = 64, Stretch = Stretch.UniformToFill };
     private readonly TextBlock title = new() { FontSize = 16, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock artist = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
@@ -30,6 +33,11 @@ internal sealed class MediaCard : StackPanel, IDisposable
     internal MediaCard()
     {
         service = new MediaService(Dispatcher);
+        backgroundCover = new Border { Background = artworkBackground, CornerRadius = new CornerRadius(14), IsHitTestVisible = false, Visibility = Visibility.Collapsed };
+        backgroundShade = new Border { CornerRadius = new CornerRadius(14), IsHitTestVisible = false, Visibility = Visibility.Collapsed,
+            Background = new LinearGradientBrush(Color.FromArgb(155, 8, 12, 18), Color.FromArgb(220, 8, 12, 18), 90) };
+        RenderOptions.SetBitmapScalingMode(backgroundCover, BitmapScalingMode.HighQuality);
+        Children.Add(backgroundCover); Children.Add(backgroundShade); Children.Add(body);
         var row = new Grid(); row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); row.ColumnDefinitions.Add(new ColumnDefinition());
         cover = new Border { Width = 44, Height = 44, CornerRadius = new CornerRadius(12), ClipToBounds = true, Child = artwork, Margin = new Thickness(0, 0, 8, 0) };
         artwork.Width = artwork.Height = 44;
@@ -37,10 +45,11 @@ internal sealed class MediaCard : StackPanel, IDisposable
         cover.SetResourceReference(Border.BackgroundProperty, "Think.Control"); row.Children.Add(cover);
         var details = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; details.Children.Add(title); details.Children.Add(artist); details.Children.Add(player);
         artist.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); player.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent");
-        Grid.SetColumn(details, 1); row.Children.Add(details); Children.Add(row);
+        title.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); time.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");
+        Grid.SetColumn(details, 1); row.Children.Add(details); body.Children.Add(row);
         transport = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         previous = Transport("Anterior", "\uE892", MediaCommand.Previous); toggle = Transport("Reproduzir / pausar", "\uE768", MediaCommand.Toggle); next = Transport("Próxima", "\uE893", MediaCommand.Next);
-        transport.Children.Add(previous); transport.Children.Add(toggle); transport.Children.Add(next); Children.Add(transport); Children.Add(progress); Children.Add(time);
+        transport.Children.Add(previous); transport.Children.Add(toggle); transport.Children.Add(next); body.Children.Add(transport); body.Children.Add(progress); body.Children.Add(time);
         System.Windows.Automation.AutomationProperties.SetName(progress, "Posição da reprodução");
         progress.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => { seeking = true; dragging = true; }));
         progress.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(async (_, e) => { dragging = seeking = false; if (!e.Canceled) await Seek(); }));
@@ -70,6 +79,7 @@ internal sealed class MediaCard : StackPanel, IDisposable
     {
         bool wasAvailable = Tag is true; Tag = Available;
         var state = service.State; artwork.Source = state?.Artwork;
+        UpdateArtworkBackground(state?.Artwork);
         cover.Visibility = transport.Visibility = Available ? Visibility.Visible : Visibility.Collapsed;
         string nextTitle = state?.Title ?? "Nenhuma mídia ativa";
         string nextArtist = state?.Artist ?? service.Error ?? "Abra um player compatível com o Windows";
@@ -81,6 +91,23 @@ internal sealed class MediaCard : StackPanel, IDisposable
         RenderButtons(); UpdateProgress();
         if (wasAvailable != Available) AvailabilityChanged?.Invoke();
         if (wasAvailable != Available || metadataChanged) { InvalidateMeasure(); LayoutChanged?.Invoke(); }
+    }
+    private void UpdateArtworkBackground(ImageSource? source)
+    {
+        bool visible = source is not null && !SystemParameters.HighContrast;
+        artworkBackground.ImageSource = source;
+        backgroundCover.Visibility = backgroundShade.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        // These resources are local to this player. No change to the global
+        // theme/accent, and no image decoding or blur loop during playback.
+        if (visible && !Resources.Contains("Think.Text"))
+        {
+            var text = new SolidColorBrush(Color.FromRgb(249, 250, 252)); text.Freeze();
+            var muted = new SolidColorBrush(Color.FromRgb(219, 226, 236)); muted.Freeze();
+            Resources["Think.Text"] = text; Resources["Think.Muted"] = muted;
+        }
+        else if (!visible) { Resources.Remove("Think.Text"); Resources.Remove("Think.Muted"); }
+        player.SetResourceReference(TextBlock.ForegroundProperty, visible ? "Think.Muted" : "Think.Accent");
+        progress.SetResourceReference(Control.ForegroundProperty, visible ? "Think.Text" : "Think.Accent");
     }
     private void RenderButtons() { previous.IsEnabled = !busy && service.State?.CanPrevious == true; next.IsEnabled = !busy && service.State?.CanNext == true; toggle.IsEnabled = !busy && service.State?.CanToggle == true; }
     private void UpdateProgress()
