@@ -106,7 +106,7 @@
       if (!region.contains(event.relatedTarget) && !region.matches(':hover')) { touched = false; startCycle(); }
     });
     listen(document, 'visibilitychange', () => { if (document.hidden) stopCycle(); else startCycle(); });
-    if (!preference.matches) cleanup.push(motion.inView(island, () => {
+    if (!preference.matches) cleanup.push(motion.inView(region.querySelector('.desktop-preview'), () => {
       visible = true; startCycle();
       return () => { visible = false; stopCycle(); };
     }));
