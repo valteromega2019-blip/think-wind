@@ -43,6 +43,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     private string moduleStructure = "";
     private readonly IslandMotion motion = new();
     private bool resizeQueued, updatingLayout, dismissingMinis, contentResizePending, readingNetwork;
+    private int expansionRevision;
+    private bool preparingFullReveal;
     private DateTime? outsideSince;
     private DateTime keyboardBusyUntil;
     private bool collapseEnabled;
@@ -134,6 +136,12 @@ internal sealed partial class IslandWindow : FloatingWindow
         Closed += (_, _) => applicationInset.Dispose();
         Closed += (_, _) => { weather.ReadingChanged -= RefreshHeaderWeather; weather.Dispose(); };
         IsVisibleChanged += (_, _) => { if (!IsVisible) { weather.SetActive(false); weather.SetHeaderActive(false); systemTools?.Close(); } };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible && Stage == IslandStage.Full)
+                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+                { if (IsVisible && Stage == IslandStage.Full && !preparingFullReveal) Resize(false); }));
+        };
     }
     private void DragCompleted() { RefreshSettings(); ScheduleCollapse(); }
     private Border HoverCard(string title, UIElement child)
@@ -352,18 +360,30 @@ internal sealed partial class IslandWindow : FloatingWindow
         var before = motion.Capture(MotionElements());
         var previous = Stage; change();
         if (previous == Stage) return;
+        int revision = ++expansionRevision;
+        preparingFullReveal = false;
         if (Stage == IslandStage.Full)
         {
             // Begin the panel's reveal below the persistent strip. Never animate
             // the strip's full-width rectangle into the panel's rectangle.
             preparingFullReveal = true; Surface.Visibility = Visibility.Hidden; ApplyAppearance();
             Place(Math.Min(Display.Width - 16, Store.Value.IslandExpandedWidth), 6, false);
-            preparingFullReveal = false;
         }
         UpdateAdaptiveState();
-        BuildHeader(); UpdateStageVisibility(); Resize(true); UpdateClock();
-        motion.Arrange(this, before, MotionElements(), Store.Value.AnimationMilliseconds);
-        if (!PointerInsideGroup) ScheduleCollapse();
+        BuildHeader(); UpdateStageVisibility(); UpdateClock();
+        void Reveal()
+        {
+            if (revision != expansionRevision) return;
+            if (!IsVisible) { preparingFullReveal = false; return; }
+            FontSizing.PrepareForMeasure(root);
+            contentResizePending = false;
+            preparingFullReveal = false;
+            Resize(true);
+            motion.Arrange(this, before, MotionElements(), Store.Value.AnimationMilliseconds);
+            if (!PointerInsideGroup) ScheduleCollapse();
+        }
+        if (Stage == IslandStage.Full) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(Reveal));
+        else Reveal();
     }
     private void OpenFull()
     {
@@ -401,6 +421,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private IEnumerable<FrameworkElement> MotionElements() => Stage == IslandStage.Full ? cards.Values.Cast<FrameworkElement>() : new FrameworkElement[] { media, output };
     private void ModuleSizeChanged()
     {
+        if (preparingFullReveal) { contentResizePending = true; return; }
         if (IsPositionAnimating) { contentResizePending = true; return; }
         if (updatingLayout || resizeQueued || !IsVisible || Stage == IslandStage.Compact || LayoutDrag.Active) return;
         if (ControlsBusy) { contentResizePending = true; return; }
@@ -410,6 +431,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         {
             resizeQueued = false;
             if (!IsVisible || Stage == IslandStage.Compact || LayoutDrag.Active) return;
+            if (preparingFullReveal || IsPositionAnimating) { contentResizePending = true; return; }
             if (ControlsBusy) { contentResizePending = true; return; }
             var before = motion.Capture(MotionElements()); Resize(true);
             motion.Arrange(this, before, MotionElements(), Store.Value.AnimationMilliseconds);
@@ -550,6 +572,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             return;
         }
         var p = Store.Value;
+        FontSizing.PrepareForMeasure(root);
         Surface.Padding = new Thickness(12, 5, 12, Stage == IslandStage.Compact ? 5 : 12);
         header.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         double compact = Math.Min(Display.Width - 16, Math.Max(220 * p.IslandScale, header.DesiredSize.Width + 32));

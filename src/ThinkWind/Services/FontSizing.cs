@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,12 +27,19 @@ internal static class FontSizing
         if (window.ReadLocalValue(ScaleProperty) is double previous && previous == scale) return;
         window.SetValue(ScaleProperty, scale);
         window.FontSize = SystemFonts.MessageFontSize * scale;
-        Walk(window);
+        PrepareForMeasure(window);
     }
-    private static void Walk(DependencyObject node)
+    internal static void PrepareForMeasure(DependencyObject root) => Walk(root, new HashSet<DependencyObject>());
+    private static void Walk(DependencyObject node, HashSet<DependencyObject> visited)
     {
+        if (!visited.Add(node)) return;
         ApplyElement(node);
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++) Walk(VisualTreeHelper.GetChild(node, i));
+        // Collapsed pages and freshly rehosted cards may not have a visual
+        // tree yet. Their explicit text sizes must be ready before measuring.
+        if (node is Visual)
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++) Walk(VisualTreeHelper.GetChild(node, i), visited);
+        foreach (object child in LogicalTreeHelper.GetChildren(node))
+            if (child is DependencyObject dependency) Walk(dependency, visited);
     }
     private static void ApplyElement(DependencyObject element)
     {

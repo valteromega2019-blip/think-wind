@@ -193,7 +193,7 @@ public sealed class SettingsStore
         p.IslandPanelSide = p.IslandPanelSide is "Left" or "Right" ? p.IslandPanelSide : "Right";
         p.AnimationMilliseconds = Limit(p.AnimationMilliseconds, 0, 600, 220);
         p.Theme = p.Theme is "Auto" or "Dark" or "Light" ? p.Theme : "Auto";
-        p.FontScale = Limit(p.FontScale, .8, 1.3, 1);
+        p.FontScale = Limit(p.FontScale, .8, 2.5, 1);
         p.DockMaterial = Material(p.DockMaterial); p.IslandMaterial = Material(p.IslandMaterial);
         try { if (System.Windows.Media.ColorConverter.ConvertFromString(p.AccentColor) is not System.Windows.Media.Color c || c.A != 255) p.AccentColor = "#60CDFF"; }
         catch (Exception e) when (e is FormatException or NotSupportedException or ArgumentException) { p.AccentColor = "#60CDFF"; }

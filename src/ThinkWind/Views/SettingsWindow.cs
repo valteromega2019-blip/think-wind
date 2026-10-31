@@ -52,10 +52,12 @@ internal sealed partial class SettingsWindow : FloatingWindow
         titleBar.Children.Add(new Image { Source = AppBrand.WindowIcon, Width = 28, Height = 28, HorizontalAlignment = HorizontalAlignment.Left });
         titleBar.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 1 && !close.IsMouseOver) DragMove(); };
         heading.Children.Add(titleBar);
-        heading.Children.Add(new TextBlock { Text = "Personalizar Think Wind", FontSize = 21, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 4) });
-        heading.Children.Add(new TextBlock { Text = "Ajustes em tempo real, com salvamento automático.", FontSize = 11, TextWrapping = TextWrapping.Wrap, Opacity = .8 });
+        heading.Children.Add(new TextBlock { Text = "Personalizar", FontSize = 21, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 4) });
+        heading.Children.Add(new TextBlock { Text = "Alterações salvas automaticamente.", FontSize = 11, TextWrapping = TextWrapping.Wrap, Opacity = .8 });
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
-        DockPanel.SetDock(tabNavigation, Dock.Top); root.Children.Add(tabNavigation);
+        var tabScroll = new ScrollViewer { Content = tabNavigation, MaxHeight = 124, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        tabScroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
+        DockPanel.SetDock(tabScroll, Dock.Top); root.Children.Add(tabScroll);
         var scroll = settingsScroll;
         scroll.Content = content;
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
@@ -114,7 +116,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     {
         building = true; content.Children.Clear(); ClearSettingsTabs();
         var general = Section("Aparência", "Grafite, ciano e superfícies limpas — identidade Think.");
-        Slider(general, "Tamanho das fontes", .8, 1.3, store.Value.FontScale, value => Change(p => p.FontScale = value), "P0", .05);
+        Slider(general, "Tamanho das fontes", .8, 2.5, store.Value.FontScale, value => Change(p => p.FontScale = value), "P0", .05);
         Select(general, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
         Slider(general, "Opacidade dos blocos e controles", .1, .9, store.Value.InnerSurfaceOpacity, v => Change(p => p.InnerSurfaceOpacity = v), "P0", .05);
         var accent = new DockPanel { Margin = new Thickness(0, 10, 0, 14) };

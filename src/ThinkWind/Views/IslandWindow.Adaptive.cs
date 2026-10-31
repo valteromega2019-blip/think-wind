@@ -11,7 +11,6 @@ internal sealed partial class IslandWindow
 {
     private bool maximizedOnDisplay, edgeReduced;
 
-    private bool preparingFullReveal;
     protected override bool FullWidthTop => edgeReduced && Stage == Services.IslandStage.Compact;
     protected override bool SuppressMaterial => edgeReduced || preparingFullReveal;
     protected override string? TopPanelSide => Stage == Services.IslandStage.Full ? (maximizedOnDisplay ? Store.Value.IslandPanelSide : "Center") : null;
@@ -39,14 +38,14 @@ internal sealed partial class IslandWindow
             }
             statusRow.Width = Math.Max(1, Display.Bounds.Width / Display.Scale - 24); statusRow.Height = 24;
             statusWindow.Attach(statusRow); Surface.Child = root;
-            Surface.Visibility = edgeReduced ? Visibility.Hidden : Visibility.Visible;
+            Surface.Visibility = edgeReduced || preparingFullReveal ? Visibility.Hidden : Visibility.Visible;
             if (IsVisible) { if (!statusWindow.IsVisible) statusWindow.Show(); statusWindow.Position(); statusWindow.RefreshAppTint(); }
             else statusWindow.Hide();
         }
         else
         {
             statusWindow?.Attach(null); statusWindow?.Hide();
-            Surface.Child = root; Surface.Visibility = Visibility.Visible;
+            Surface.Child = root; Surface.Visibility = preparingFullReveal ? Visibility.Hidden : Visibility.Visible;
         }
         RefreshApplicationInset();
     }
