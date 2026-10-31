@@ -264,10 +264,70 @@
     }, { amount: .5 }));
     cleanup.push(clearAuto);
   }
+  function setupColorDemo() {
+    const scene = document.querySelector('.color-demo');
+    if (!scene) return;
+    const swatches = [...scene.querySelectorAll('[data-demo-color]')];
+    const opacity = scene.querySelector('input[type="range"]');
+    const output = scene.querySelector('output');
+    const name = scene.querySelector('#color-demo-name');
+    const colors = [
+      { name: 'Azul', accent: '#60cdff', rgb: [30, 70, 108] },
+      { name: 'Lavanda', accent: '#b8a5ef', rgb: [81, 54, 111] },
+      { name: 'Coral', accent: '#ee9d9b', rgb: [105, 51, 58] },
+      { name: 'Menta', accent: '#79d7be', rgb: [27, 84, 79] }
+    ];
+    let index = 0;
+    let visible = false;
+    let manual = false;
+    let timer;
+    let tintAnimation;
+    function stop() { clearInterval(timer); timer = undefined; }
+    function apply(next, instant = false) {
+      index = next;
+      const color = colors[index];
+      const alpha = 1 - Number(opacity.value) / 100;
+      const fill = `rgba(${color.rgb.join(',')},${alpha})`;
+      tintAnimation?.stop();
+      if (instant || preference.matches) {
+        scene.style.setProperty('--demo-accent', color.accent);
+        scene.style.setProperty('--demo-fill', fill);
+      } else tintAnimation = animate(scene, { '--demo-accent': color.accent, '--demo-fill': fill }, { duration: .7, ease: 'easeInOut' });
+      name.textContent = color.name;
+      output.value = opacity.value + '%';
+      for (const swatch of swatches) swatch.setAttribute('aria-pressed', String(Number(swatch.dataset.demoColor) === index));
+    }
+    function start() {
+      stop();
+      if (!visible || document.hidden || manual || preference.matches) return;
+      timer = setInterval(() => apply((index + 1) % colors.length), 2200);
+    }
+    function interact() { manual = true; stop(); }
+    for (const swatch of swatches) {
+      listen(swatch, 'focus', interact);
+      listen(swatch, 'click', () => { interact(); apply(Number(swatch.dataset.demoColor)); });
+    }
+    listen(opacity, 'focus', interact);
+    listen(opacity, 'input', () => { interact(); apply(index, true); });
+    const replay = scene.querySelector('#replay-colors');
+    if (replay) {
+      replay.disabled = preference.matches;
+      listen(replay, 'click', () => { manual = false; apply((index + 1) % colors.length); start(); });
+    }
+    listen(document, 'visibilitychange', () => { if (document.hidden) stop(); else start(); });
+    apply(index, true);
+    if (!preference.matches) cleanup.push(motion.inView(scene, () => {
+      visible = true; start();
+      assemble('.color-glass-blocks > div', 20);
+      return () => { visible = false; stop(); };
+    }, { amount: .3 }));
+    cleanup.push(() => { stop(); tintAnimation?.stop(); });
+  }
   function enable() {
     disable();
     setupIsland();
     setupSearchDemo();
+    setupColorDemo();
     const replay = document.querySelector('#replay-illustrations');
     if (replay) { replay.disabled = preference.matches; replay.title = preference.matches ? 'Movimento reduzido ativado no sistema' : 'Repetir a montagem dos ícones'; }
     if (preference.matches) return;
