@@ -119,15 +119,21 @@ internal sealed class HardwareMonitorPanel : UserControl
     {
         // Keep the board's allocated height throughout a telemetry refresh.
         // New text/graph elements must not resize the surrounding Viewbox.
-        if (updateLayout) body.Height = double.NaN;
+        if (updateLayout) { Height = double.NaN; body.Height = double.NaN; }
         body.Children.Clear();
         if (components) RenderComponents(); else RenderSummary();
+        // Loaded also applies font scaling. Do it now, while the new controls
+        // already inherit this panel's scale, so they cannot grow after measure.
+        FontSizing.PrepareForMeasure(this);
         if (!updateLayout) return;
         // Only explicit layout/settings changes may change the window geometry.
         double measureWidth = double.IsFinite(Width) && Width > 0 ? Width : 520;
         Measure(new Size(measureWidth, double.PositiveInfinity));
         body.Height = Math.Ceiling(body.DesiredSize.Height);
         var size = new Size(Math.Ceiling(DesiredSize.Width), Math.Ceiling(DesiredSize.Height));
+        // Freeze the complete board, not only its body: status messages and
+        // picker text must not change the Viewbox scale on every sensor sample.
+        Height = Math.Max(1, size.Height);
         if (Math.Abs(size.Width - lastLayoutSize.Width) > 1 || Math.Abs(size.Height - lastLayoutSize.Height) > 1)
         {
             lastLayoutSize = size;

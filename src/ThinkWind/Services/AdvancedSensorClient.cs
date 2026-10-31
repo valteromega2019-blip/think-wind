@@ -18,8 +18,6 @@ internal sealed class AdvancedSensorClient
     [DllImport("kernel32.dll")] private static extern nint OpenProcess(uint access, bool inherit, uint process);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool QueryFullProcessImageName(nint process, uint flags, StringBuilder path, ref uint length);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
-    [DllImport("advapi32.dll")] private static extern bool OpenProcessToken(nint process, uint access, out nint token);
-    [DllImport("advapi32.dll")] private static extern bool GetTokenInformation(nint token, int type, out int value, int length, out int needed);
     private NamedPipeClientStream? pipe;
     private DateTime retryAfter;
     private bool frameMode;
@@ -76,16 +74,13 @@ internal sealed class AdvancedSensorClient
         try
         {
             var path = new StringBuilder(32768); uint size = (uint)path.Capacity;
-            if (!QueryFullProcessImageName(process, 0, path, ref size)
-                || !Path.GetFullPath(path.ToString()).Equals(Path.GetFullPath(AdvancedSensorSetup.Executable), StringComparison.OrdinalIgnoreCase)) return false;
-            if (!OpenProcessToken(process, 8, out nint token)) return false;
-            try
-            {
-                using var identity = new WindowsIdentity(token);
-                return identity.User?.Value == AdvancedSensorSetup.UserSid
-                    && GetTokenInformation(token, 20, out int elevated, 4, out _) && elevated != 0;
-            }
-            finally { CloseHandle(token); }
+            // Authenticate the actual pipe server by its session and immutable,
+            // SID-specific executable, as for the window-action helper. A medium
+            // integrity client cannot reliably query an elevated process token.
+            // The protected worker checks its own elevation before creating IPC
+            // and validates the connecting user's SID and session independently.
+            return QueryFullProcessImageName(process, 0, path, ref size)
+                && Path.GetFullPath(path.ToString()).Equals(Path.GetFullPath(AdvancedSensorSetup.Executable), StringComparison.OrdinalIgnoreCase);
         }
         finally { CloseHandle(process); }
     }
