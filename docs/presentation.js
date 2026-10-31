@@ -67,10 +67,13 @@
     function interact() { touched = true; clearTimeout(closeTimer); }
     setStage('compact', true);
     for (const button of buttons) listen(button, 'click', () => { interact(); setStage(button.dataset.islandStage); });
-    listen(island, 'pointerenter', event => {
+    const expandOnHover = event => {
       if (event.pointerType === 'touch') return;
       interact(); if (stage === 'compact') setStage('partial');
-    });
+    };
+    listen(island, 'pointerenter', expandOnHover);
+    const statusBar = region.querySelector('.status-preview');
+    if (statusBar) listen(statusBar, 'pointerenter', expandOnHover);
     listen(region, 'pointerenter', () => clearTimeout(closeTimer));
     listen(region, 'pointerleave', () => {
       clearTimeout(closeTimer);
