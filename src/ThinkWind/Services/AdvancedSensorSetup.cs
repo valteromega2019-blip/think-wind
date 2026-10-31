@@ -154,8 +154,8 @@ internal static class AdvancedSensorSetup
             security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null), FileSystemRights.ReadAndExecute, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
             directory.SetAccessControl(security);
         }
-        // Flat .NET distribution only. No scripts, user settings, plugins or
-        // external executable paths become scheduled elevated actions.
+        // Only application binaries/configuration and the fixed Windows runtime
+        // asset directories are copied. Never user settings, scripts or plugins.
         // A development build may replace a self-contained installation. Leaving
         // its hostfxr/coreclr behind makes the new apphost load an incompatible
         // local runtime before any managed setup or sensor code can execute.
@@ -181,7 +181,40 @@ internal static class AdvancedSensorSetup
             security.SetOwner(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null));
             new FileInfo(destination).SetAccessControl(security);
         }
+        // Framework-dependent builds resolve Windows-specific implementations
+        // through .deps.json. The root LibreHardwareMonitorLib.dll can be the
+        // portable asset; omitting runtimes makes the protected copy incomplete.
+        foreach (string relative in new[] { Path.Combine("runtimes", "win"), Path.Combine("runtimes", "win-x64"), "amd64" })
+        {
+            string source = Path.Combine(AppContext.BaseDirectory, relative);
+            if (Directory.Exists(source)) CopyRuntimeDirectory(source, Path.Combine(destinationDirectory, relative));
+        }
         if (!File.Exists(Path.Combine(destinationDirectory, "ThinkWind.exe"))) throw new IOException("Executável do auxiliar não encontrado.");
+    }
+    private static void CopyRuntimeDirectory(string source, string destination)
+    {
+        if ((File.GetAttributes(source) & FileAttributes.ReparsePoint) != 0) throw new IOException("Dependência de runtime não pode ser um link.");
+        var directory = Directory.CreateDirectory(destination);
+        if ((directory.Attributes & FileAttributes.ReparsePoint) != 0) throw new IOException("Destino de runtime não pode ser um link.");
+        var admins = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        var security = new DirectorySecurity(); security.SetOwner(admins); security.SetAccessRuleProtection(true, false);
+        foreach (var sid in new[] { admins, new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null) })
+            security.AddAccessRule(new FileSystemAccessRule(sid, FileSystemRights.FullControl, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null), FileSystemRights.ReadAndExecute,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        directory.SetAccessControl(security);
+        foreach (string file in Directory.EnumerateFiles(source))
+        {
+            if (!new[] { ".dll", ".exe", ".json" }.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) continue;
+            string target = Path.Combine(destination, Path.GetFileName(file));
+            if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0
+                || (File.Exists(target) && (File.GetAttributes(target) & FileAttributes.ReparsePoint) != 0)) throw new IOException("Dependência de runtime inválida.");
+            File.Copy(file, target, true);
+            var fileSecurity = new FileSecurity(); fileSecurity.SetOwner(admins); fileSecurity.SetAccessRuleProtection(false, false);
+            new FileInfo(target).SetAccessControl(fileSecurity);
+        }
+        foreach (string child in Directory.EnumerateDirectories(source))
+            CopyRuntimeDirectory(child, Path.Combine(destination, Path.GetFileName(child)));
     }
     internal static void StartTask(bool frames = false)
     {
