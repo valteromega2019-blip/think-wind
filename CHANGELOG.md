@@ -1,3 +1,10 @@
+## Em desenvolvimento — FPS e controles do overlay
+
+- Corrigida a ausência de captura local de FPS: quando o launcher já está elevado, ele usa ETW diretamente, sem depender da tarefa de sensores. A sessão só inicia quando as métricas de frames são solicitadas e é encerrada quando deixam de ser necessárias.
+- Os provedores DXGI/D3D9 são habilitados com nível Verbose; o filtro continua aceitando somente eventos Present do processo em primeiro plano. O coletor separado exige a revisão frames-v2, para atualizar sua cópia protegida pelo fluxo normal de autorização.
+- O overlay informa quando está aguardando eventos ou quando a sessão ETW reporta erro, sem inventar FPS. Sua renderização é suspensa quando não está visível.
+- A personalização do overlay identifica a seleção dos quatro cantos e oferece slider de tamanho de 70% a 150%, com aplicação imediata e salvamento automático.
+- Revisão por leitura de código e diff. Não foram executados compilação, testes ou type check nesta etapa. A leitura de FPS ainda precisa de confirmação em um jogo DirectX compatível; outros caminhos gráficos podem não emitir os eventos capturados.
 ## Em desenvolvimento — Iniciar próprio também durante jogos
 
 - Por solicitação do usuário, a tecla Windows isolada continua direcionada ao Think Wind durante jogos quando WindowsKeyOpensLauncher está habilitado. O atalho opcional do launcher também permanece disponível.

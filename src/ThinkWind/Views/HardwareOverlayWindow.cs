@@ -50,7 +50,7 @@ internal sealed class HardwareOverlayWindow : Window
         Render(telemetry.Latest);
         Show(); PositionOverlay();
     }
-    private void Update(HardwareSample sample) { if (store.Value.HardwareOverlayEnabled) Render(sample); }
+    private void Update(HardwareSample sample) { if (IsVisible && store.Value.HardwareOverlayEnabled) Render(sample); }
     private void Render(HardwareSample? sample)
     {
         var options = store.Value.OverlayAppearance;
@@ -72,6 +72,12 @@ internal sealed class HardwareOverlayWindow : Window
             if (selected.Contains("fps")) { var fps = Text(V("fps"), 24); fps.FontWeight = FontWeights.Bold; fps.Foreground = B(palette.Accent); frameRow.Children.Add(fps); }
             if (selected.Contains("frametime")) { var time = Text(V("frametime")); time.Margin = new Thickness(frameRow.Children.Count > 0 ? 12 : 0, 0, 0, 4); time.VerticalAlignment = VerticalAlignment.Bottom; frameRow.Children.Add(time); }
             rows.Children.Add(Block(frameRow));
+            if (sample?.Frames is null)
+            {
+                int errorAt = sample?.Status.IndexOf("FPS/ETW indisponível:", StringComparison.Ordinal) ?? -1;
+                rows.Children.Add(Text(errorAt >= 0 ? sample!.Status[errorAt..]
+                    : "Aguardando eventos FPS · DXGI / D3D9", 10, true));
+            }
         }
         if (selected.Contains("low1")) rows.Children.Add(Text("1% low " + V("low1"), muted: true));
         if (selected.Contains("graph"))

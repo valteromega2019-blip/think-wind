@@ -57,8 +57,8 @@ public sealed class FrameMonitor : IDisposable
 				{
 					StopOnDispose = true
 				};
-				session.EnableProvider(DxgiProvider, TraceEventLevel.Informational, ulong.MaxValue);
-				session.EnableProvider(D3D9Provider, TraceEventLevel.Informational, ulong.MaxValue);
+				session.EnableProvider(DxgiProvider, TraceEventLevel.Verbose, ulong.MaxValue);
+				session.EnableProvider(D3D9Provider, TraceEventLevel.Verbose, ulong.MaxValue);
 				session.Source.AllEvents += OnEvent;
 				_session = session;
 				_thread = new Thread(() =>

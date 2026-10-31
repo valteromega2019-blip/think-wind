@@ -31,13 +31,20 @@ internal sealed class HardwareTelemetry : IDisposable
     private readonly object sync = new();
     private bool disposed;
     private readonly AdvancedSensorClient? advanced;
+    private readonly bool localFrameAccess;
     internal volatile bool CaptureFrames;
     private long lastIdle, lastTotal;
     internal HardwareSample? Latest { get; private set; }
     internal System.Collections.Generic.Queue<HardwareSample> History { get; } = new();
     internal event Action<HardwareSample>? Changed;
     internal HardwareTelemetry(Dispatcher ui, bool worker = false)
-    { dispatcher = ui; if (!worker) advanced = new AdvancedSensorClient(); _ = Task.Run(Run); }
+    {
+        dispatcher = ui;
+        using var identity = WindowsIdentity.GetCurrent();
+        localFrameAccess = !worker && new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        if (!worker && !localFrameAccess) advanced = new AdvancedSensorClient();
+        _ = Task.Run(Run);
+    }
     internal void SetActive(object consumer, bool active)
     {
         lock (sync)
@@ -51,6 +58,8 @@ internal sealed class HardwareTelemetry : IDisposable
     private async Task Run()
     {
         Computer? computer = null;
+        using var localFrames = new FrameMonitor();
+        DateTime retryFrames = DateTime.MinValue;
         bool attempted = false;
         string sensorStatus = "";
         try
@@ -59,6 +68,7 @@ internal sealed class HardwareTelemetry : IDisposable
             {
                 if (!Needed)
                 {
+                    localFrames.Stop();
                     try { computer?.Close(); } catch (Exception error) when (error is not OutOfMemoryException) { }
                     computer = null; attempted = false;
                     advanced?.Disconnect();
@@ -67,6 +77,12 @@ internal sealed class HardwareTelemetry : IDisposable
                     continue;
                 }
                 HardwareSample? remote = advanced is null ? null : await advanced.Read(stop.Token, CaptureFrames).ConfigureAwait(false);
+                if (localFrameAccess && CaptureFrames)
+                {
+                    if (!localFrames.Running && DateTime.UtcNow >= retryFrames)
+                    { localFrames.Start(); retryFrames = DateTime.UtcNow.AddSeconds(15); }
+                }
+                else if (localFrames.Running) localFrames.Stop();
                 if (remote is not null && computer is not null)
                 {
                     try { computer.Close(); } catch (Exception error) when (error is not OutOfMemoryException) { }
@@ -94,6 +110,9 @@ internal sealed class HardwareTelemetry : IDisposable
                 try
                 {
                     var sample = remote ?? Read(computer, sensorStatus);
+                    if (localFrameAccess && CaptureFrames)
+                        sample = sample with { Frames = localFrames.GetForegroundStats(),
+                            Status = sample.Status + (localFrames.Error is null ? "" : " FPS/ETW indisponível: " + localFrames.Error) };
                     if (Needed && !dispatcher.HasShutdownStarted)
                         _ = dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
                         { if (!Needed) return; Latest = sample; History.Enqueue(sample); while (History.Count > 450) History.Dequeue(); Changed?.Invoke(sample); }));

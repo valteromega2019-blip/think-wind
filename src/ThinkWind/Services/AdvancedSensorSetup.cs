@@ -21,11 +21,12 @@ internal static class AdvancedSensorSetup
     internal static string TaskName => "ThinkWind-Sensors-" + UserSid;
     internal static string PipeName => "ThinkWind.Sensors.v3." + UserSid;
     private static string Marker => Path.Combine(DirectoryPath, "sensor-task-v3.enabled");
+    private static string PayloadRevision => AppBrand.Version + "|frames-v2";
     internal static bool IsConfigured
     {
         get
         {
-            try { return File.Exists(Executable) && File.Exists(Marker) && File.ReadAllText(Marker) == AppBrand.Version; }
+            try { return File.Exists(Executable) && File.Exists(Marker) && File.ReadAllText(Marker) == PayloadRevision; }
             catch (IOException) { return false; }
             catch (UnauthorizedAccessException) { return false; }
         }
@@ -104,7 +105,7 @@ internal static class AdvancedSensorSetup
             // DONT_ADD_PRINCIPAL_ACE prevents Scheduler from adding a broader
             // user ACE: normal-integrity clients may read/run, never edit it.
             registered = ((dynamic)folder).RegisterTaskDefinition(TaskName, definition, 6 | 16, UserSid, null, 3, security);
-            File.WriteAllText(Marker, AppBrand.Version);
+            File.WriteAllText(Marker, PayloadRevision);
             exitCode = 0;
         }
         catch (Exception error) when (error is COMException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)

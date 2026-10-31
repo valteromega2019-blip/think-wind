@@ -43,6 +43,8 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
         hotkey.SetResourceReference(Control.ForegroundProperty, "Fg");
         hotkey.Checked += (_, _) => settings.Update(p => p.OverlayHotkeyEnabled = true);
         hotkey.Unchecked += (_, _) => settings.Update(p => p.OverlayHotkeyEnabled = false); content.Children.Add(hotkey);
+        var positionTitle = new TextBlock { Text = "Posição na tela", FontSize = 14, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 10) };
+        positionTitle.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); content.Children.Add(positionTitle);
         var choices = new WrapPanel { Margin = new Thickness(0, 0, 0, 12) };
         foreach (var item in new[] { ("TL", "Superior esquerdo"), ("TR", "Superior direito"), ("BL", "Inferior esquerdo"), ("BR", "Inferior direito") })
         {
@@ -51,13 +53,18 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
             radio.Checked += (_, _) => settings.Update(p => p.OverlayCorner = item.Item1); choices.Children.Add(radio);
         }
         content.Children.Add(choices);
-        var sizes = new WrapPanel();
-        foreach (var item in new[] { (.85, "Pequeno"), (1d, "Médio"), (1.3, "Grande") })
+        var sizeTitle = new TextBlock { Text = $"Tamanho do overlay · {store.Value.OverlayScale:P0}", FontSize = 14, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 8) };
+        sizeTitle.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); content.Children.Add(sizeTitle);
+        var size = new Slider { Minimum = 70, Maximum = 150, Value = store.Value.OverlayScale * 100,
+            TickFrequency = 5, IsSnapToTickEnabled = true, Margin = new Thickness(0, 0, 0, 16),
+            ToolTip = "Tamanho de 70% a 150%, aplicado imediatamente" };
+        System.Windows.Automation.AutomationProperties.SetName(size, "Tamanho do overlay em porcentagem");
+        size.ValueChanged += (_, _) =>
         {
-            var radio = new RadioButton { Content = item.Item2, GroupName = "Scale", IsChecked = Math.Abs(store.Value.OverlayScale - item.Item1) < .01, Margin = new Thickness(0, 0, 16, 12) };
-            radio.SetResourceReference(Control.ForegroundProperty, "Fg"); radio.Checked += (_, _) => settings.Update(p => p.OverlayScale = item.Item1); sizes.Children.Add(radio);
-        }
-        content.Children.Add(sizes);
+            sizeTitle.Text = $"Tamanho do overlay · {size.Value:0}%";
+            settings.Update(p => p.OverlayScale = size.Value / 100);
+        };
+        content.Children.Add(size);
         var presets = new WrapPanel();
         foreach (var preset in new[] { "SÓ FPS", "PADRÃO", "TUDO" })
         {
@@ -71,7 +78,7 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
         var metricsSection = new Expander { Header = "Métricas exibidas", Content = metricGroups, IsExpanded = true, Margin = new Thickness(0, 10, 0, 0) };
         metricsSection.SetResourceReference(Control.ForegroundProperty, "Think.Text");
         content.Children.Add(metricsSection); BuildMetrics();
-        var notice = new TextBlock { Text = "Métricas indisponíveis aparecem como —. FPS/frametime usam eventos de apresentação DXGI/D3D9 (não equivalem a todos os quadros exibidos). Exigem o coletor avançado atualizado. Hotspot, ventoinha e sensores extras dependem do hardware; PerfCap não está disponível nesta implementação. Sem injeção no jogo; tela cheia exclusiva pode não exibir este overlay. Ctrl+Shift+O pode estar indisponível se outro aplicativo já usar o atalho.", TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(0, 12, 0, 0) };
+        var notice = new TextBlock { Text = "Métricas indisponíveis aparecem como —. FPS/frametime usam eventos de apresentação DXGI/D3D9 (não equivalem a todos os quadros exibidos). Usam coleta local quando o launcher está como administrador ou o coletor avançado atualizado quando está com permissões normais. Hotspot, ventoinha e sensores extras dependem do hardware; PerfCap não está disponível nesta implementação. Sem injeção no jogo; tela cheia exclusiva pode não exibir este overlay. Ctrl+Shift+O pode estar indisponível se outro aplicativo já usar o atalho.", TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(0, 12, 0, 0) };
         notice.SetResourceReference(TextBlock.ForegroundProperty, "Muted");
         var help = new Expander { Header = "Informações e compatibilidade", Content = notice, IsExpanded = false, Margin = new Thickness(0, 10, 0, 0) };
         help.SetResourceReference(Control.ForegroundProperty, "Think.Muted"); content.Children.Add(help);
