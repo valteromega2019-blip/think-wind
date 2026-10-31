@@ -38,7 +38,6 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly MediaCard media = new();
     private readonly WeatherWidget weather;
     private readonly WidgetArea widgetArea;
-    private readonly TrayCard trayCard;
     private readonly System.Windows.Controls.Calendar calendar = new() { IsTodayHighlighted = true, SelectionMode = CalendarSelectionMode.SingleDate };
     private readonly TextBlock connectionStatus = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4) };
     private string moduleStructure = "";
@@ -67,10 +66,9 @@ internal sealed partial class IslandWindow : FloatingWindow
     {
         Title = "Think Wind — Central de controle"; openSettings = settings;
         weather = new WeatherWidget(store, compact: true);
-        widgetArea = new WidgetArea(store, weather);
+        widgetArea = new WidgetArea(store);
         weather.ReadingChanged += RefreshHeaderWeather;
         brightness = new BrightnessControl(() => Display.Bounds);
-        trayCard = new TrayCard(store);
         calendar.SetResourceReference(StyleProperty, "Think.Calendar");
         calendar.FontSize = 14;
         calendar.Loaded += (_, _) => ModuleSizeChanged();
@@ -88,7 +86,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition());
         var hoverAudio = new StackPanel(); hoverAudio.Children.Add(hoverOutputSlot); hoverAudio.Children.Add(hoverMicrophoneSlot);
-        var hoverMedia = HoverCard("Reprodução", hoverMediaSlot); var hoverVolume = HoverCard("Áudio e microfone", hoverAudio);
+        var hoverMedia = HoverCard("Reprodução", hoverMediaSlot, true); var hoverVolume = HoverCard("Áudio e microfone", hoverAudio);
         Grid.SetColumn(hoverVolume, 1); hoverModules.Children.Add(hoverMedia); hoverModules.Children.Add(hoverVolume);
         hoverPanel.Children.Add(hoverModules); hoverPanel.Children.Add(hoverStatus);
         hoverViewport.Child = hoverPanel;
@@ -100,7 +98,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         BuildBodies();
         Loaded += (_, _) => { RefreshSettings(); UpdateClock(); timer.Start(); };
         activation.Tick += (_, _) => { if (NearActivationZone && !interaction.MiniOpen) { if (!hoverEnter.IsEnabled) hoverEnter.Start(); } else if (!IsMouseOver) hoverEnter.Stop(); };
-        timer.Tick += (_, _) => { RefreshAdaptiveReveal(); UpdateClock(); RefreshAudio(); UpdateHoverStatus(); weather.Poll(); if (contentResizePending && !ControlsBusy) ModuleSizeChanged(); if (IsVisible && Stage == IslandStage.Full) { if (Store.ModuleVisible("background")) trayCard.Refresh(); if (Store.ModuleVisible("connections")) brightness.Refresh(); } };
+        timer.Tick += (_, _) => { RefreshAdaptiveReveal(); UpdateClock(); RefreshAudio(); UpdateHoverStatus(); weather.Poll(); if (contentResizePending && !ControlsBusy) ModuleSizeChanged(); if (IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("connections")) brightness.Refresh(); };
         hoverEnter.Tick += (_, _) => { hoverEnter.Stop(); if (!edgeReduced && (IsMouseOver || NearActivationZone) && !interaction.MiniOpen) Transition(() => interaction.Enter()); };
         hoverLeave.Tick += (_, _) =>
         {
@@ -131,7 +129,6 @@ internal sealed partial class IslandWindow : FloatingWindow
             Transition(() => { if (Stage == IslandStage.Full) interaction.CloseFull(); else interaction.Compact(); }); e.Handled = true;
         };
         media.LayoutChanged += ModuleSizeChanged;
-        trayCard.LayoutChanged += ModuleSizeChanged;
         brightness.LayoutChanged += ModuleSizeChanged;
         LayoutDrag.Completed += DragCompleted;
         Closed += (_, _) => { timer.Stop(); activation.Stop(); hoverEnter.Stop(); hoverLeave.Stop(); motion.Cancel(MotionElements()); LayoutDrag.Completed -= DragCompleted; media.Dispose(); };
@@ -151,10 +148,10 @@ internal sealed partial class IslandWindow : FloatingWindow
         };
     }
     private void DragCompleted() { RefreshSettings(); ScheduleCollapse(); }
-    private Border HoverCard(string title, UIElement child)
+    private Border HoverCard(string title, UIElement child, bool fullBleed = false)
     {
-        var panel = new StackPanel(); panel.Children.Add(new TextBlock { Text = title, FontSize = 10, Margin = new Thickness(0, 0, 0, 6) }); panel.Children.Add(child);
-        var card = new Border { Child = panel, Padding = new Thickness(10), Margin = new Thickness(4), CornerRadius = new CornerRadius(18) };
+        var card = new Border { Child = child, Padding = new Thickness(fullBleed ? 0 : 10), Margin = new Thickness(4), CornerRadius = new CornerRadius(20) };
+        System.Windows.Automation.AutomationProperties.SetName(card, title);
         card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard"); return card;
     }
     private void BuildBodies()
@@ -186,12 +183,13 @@ internal sealed partial class IslandWindow : FloatingWindow
         var calendarPanel = new StackPanel();
         calendarPanel.Children.Add(calendarDate);
         calendarPanel.Children.Add(calendar); bodies["calendar"] = calendarPanel;
-        bodies["background"] = trayCard;
         var notifications = new WrapPanel();
         var alerts = ActionButton("Abrir notificações", () => Desktop.Chord(0x5B, 0x4E)); alerts.Content = Glyph("\uE7F4", 20); alerts.Width = 36; alerts.Height = 36; alerts.Padding = new Thickness(4); notifications.Children.Add(alerts);
         var alertSettings = ActionButton("Configurar notificações", () => SystemActions.Run("ms-settings:notifications")); alertSettings.Content = Glyph("\uE713", 16); alertSettings.Width = 36; alertSettings.Height = 36; alertSettings.Padding = new Thickness(4); notifications.Children.Add(alertSettings);
         bodies["notifications"] = notifications;
-        bodies["widgets"] = widgetArea;
+        bodies["weather"] = weather;
+        bodies["notes"] = widgetArea.Notes;
+        bodies["favorites"] = widgetArea.Favorites;
     }
     public override void RefreshSettings()
     {
@@ -213,7 +211,9 @@ internal sealed partial class IslandWindow : FloatingWindow
                 if (!Store.ModuleVisible(id)) continue;
                 var body = bodies[id];
                 if (body is FrameworkElement element && element.Parent is Panel parent) parent.Children.Remove(element);
-                var content = new StackPanel();
+                var content = new Grid();
+                content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                content.RowDefinitions.Add(new RowDefinition());
                 var title = new DockPanel { Margin = new Thickness(4, 0, 4, 8) };
                 var grip = new TextBlock { Text = Store.IsEditing ? "⋮⋮  " + LayoutCatalog.ModuleName(id) : LayoutCatalog.ModuleName(id), FontSize = 14, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(4), Opacity = .9, Cursor = Store.IsEditing ? Cursors.SizeAll : Cursors.Arrow };
                 grip.SetResourceReference(TextBlock.ForegroundProperty, Store.IsEditing ? "Think.Accent" : "Think.Text");
@@ -222,9 +222,12 @@ internal sealed partial class IslandWindow : FloatingWindow
                     var hide = ActionButton("Ocultar", () => Store.Update(p => p.HiddenModules.Add(id)));
                     hide.Padding = new Thickness(8, 3, 8, 3); DockPanel.SetDock(hide, Dock.Right); title.Children.Add(hide);
                 }
-                title.Children.Add(grip); content.Children.Add(title); content.Children.Add(body);
+                title.Children.Add(grip);
+                if (Store.IsEditing) content.Children.Add(title);
+                Grid.SetRow(body, 1); content.Children.Add(body);
                 var card = new Border { Child = content, Tag = id, CornerRadius = new CornerRadius(20), Padding = new Thickness(10), VerticalAlignment = VerticalAlignment.Stretch, HorizontalAlignment = HorizontalAlignment.Stretch, UseLayoutRounding = true };
                 card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
+                System.Windows.Automation.AutomationProperties.SetName(card, LayoutCatalog.ModuleName(id));
                 LayoutDrag.Attach(card, "modules", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.ModuleOrder, from, to, after)), true, grip);
                 cards[id] = card;
             }
@@ -233,11 +236,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         var ordered = Store.Value.ModuleOrder.Where(cards.ContainsKey).ToArray();
         for (int i = 0; i < ordered.Length; i++)
         {
-            var card = cards[ordered[i]]; bool prominent = i < 3;
-            card.Margin = new Thickness(0); card.Padding = new Thickness(prominent ? 10 : 8);
-            card.CornerRadius = new CornerRadius(prominent ? 20 : 16);
-            if (card.Child is StackPanel content && content.Children[0] is DockPanel title)
-                foreach (var label in title.Children.OfType<TextBlock>()) label.FontSize = 14;
+            var card = cards[ordered[i]];
+            card.Margin = new Thickness(0); card.Padding = new Thickness(ordered[i] is "media" or "notes" ? 0 : 10);
+            card.CornerRadius = new CornerRadius(20);
         }
         modules.Gap = Math.Max(6, Store.Value.IslandSpacing + 2);
         modules.SetCards(ordered.Select(id => cards[id]));
@@ -339,6 +340,8 @@ internal sealed partial class IslandWindow : FloatingWindow
                 var settingsButton = ActionButton("Personalizar launcher", openSettings);
                 settingsButton.Content = Glyph(LayoutCatalog.QuickControls.First(q => q.Id == "settings").Glyph, 17 * scale);
                 StyleSecondaryControl(settingsButton); hoverQuick.Children.Add(settingsButton);
+                var widgetsButton = ActionButton("Editar widgets", () => ((App)Application.Current).OpenWidgetSettings());
+                widgetsButton.Content = Glyph("\uE80A", 17 * scale); StyleSecondaryControl(widgetsButton); hoverQuick.Children.Add(widgetsButton);
                 themeToggle = ActionButton("Alternar tema do Windows e do launcher", async () =>
                     await ThemeService.SelectTheme(Store, ThemeService.IsLight(Store.Value) ? "Dark" : "Light"));
                 themeToggle.Style = (Style)FindResource("Think.IconButton");
@@ -443,7 +446,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         hoverModules.ColumnDefinitions[0].Width = new GridLength(Store.ModuleVisible("media") ? 1.35 : 0, GridUnitType.Star);
         hoverModules.ColumnDefinitions[1].Width = new GridLength(Store.ModuleVisible("audio") ? 1 : 0, GridUnitType.Star);
         media.SetActive(IsVisible && Stage != IslandStage.Compact && Store.ModuleVisible("media"));
-        weather.SetActive(IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("widgets") && !Store.Value.HiddenWidgets.Contains("weather"));
+        weather.SetActive(IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("weather"));
         weather.SetHeaderActive(IsVisible && WeatherEnabled && (Store.Value.ShowWeatherInHeader || Stage != IslandStage.Compact));
         RefreshHeaderWeather();
     }
@@ -514,7 +517,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             return false;
         }
     }
-    private bool ControlsBusy => SystemToolsOpen || IsMouseCaptureWithin || widgetArea.IsKeyboardFocusWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || trayCard.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
+    private bool ControlsBusy => SystemToolsOpen || IsMouseCaptureWithin || widgetArea.IsInteracting || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
     private bool InteractionInProgress => Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
     private void CancelCollapse() { hoverLeave.Stop(); outsideSince = null; }
     private void WaitForBridge() { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(50); hoverLeave.Start(); }

@@ -18,7 +18,7 @@ internal sealed partial class SettingsWindow
     private string widgetEditorSignature = "";
     private bool widgetEditorQueued;
     internal void ShowWidgetsSection() => SelectSettingsTab("Widgets");
-    private string WidgetEditorSignature() => JsonSerializer.Serialize(new { store.Value.WidgetOrder, store.Value.HiddenWidgets, store.Value.WidgetFavorites });
+    private string WidgetEditorSignature() => JsonSerializer.Serialize(new { store.Value.ModuleOrder, store.Value.HiddenModules, store.Value.ShowAudio, store.Value.WidgetFavorites });
     private void BuildWidgetEditor()
     {
         var page = Section("Widgets", "Arraste pelos puxadores ou use as setas. Mostre, oculte e organize os cartões com atualização imediata na central de controle.");
@@ -26,7 +26,7 @@ internal sealed partial class SettingsWindow
             if (element.Parent is Panel old) old.Children.Remove(element);
         page.Children.Add(new TextBlock { Text = "Prévia da ordem", FontWeight = FontWeights.SemiBold });
         widgetPreview.Margin = new Thickness(0, 8, 0, 12); page.Children.Add(widgetPreview); page.Children.Add(widgetRows);
-        page.Children.Add(Button("Restaurar ordem e visibilidade", () => store.Update(p => { p.WidgetOrder = new() { "weather", "notes", "favorites" }; p.HiddenWidgets.Clear(); })));
+        page.Children.Add(Button("Restaurar ordem e visibilidade", () => store.Update(p => { p.ModuleOrder = LayoutCatalog.Modules.ToList(); p.HiddenModules.Clear(); p.ShowAudio = true; })));
         page.Children.Add(Button("Configurar cidade do clima", ShowWeatherSection));
         page.Children.Add(new TextBlock { Text = "Notas rápidas", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 6) });
         widgetNoteEditor.SetResourceReference(Control.BackgroundProperty, "Think.Control"); widgetNoteEditor.SetResourceReference(Control.ForegroundProperty, "Think.Text");
@@ -67,13 +67,13 @@ internal sealed partial class SettingsWindow
     private void RebuildWidgetRows()
     {
         widgetEditorSignature = WidgetEditorSignature(); widgetRows.Children.Clear(); widgetPreview.Children.Clear(); favoriteRows.Children.Clear();
-        foreach (string id in store.Value.WidgetOrder)
+        foreach (string id in store.Value.ModuleOrder)
         {
-            string label = id switch { "weather" => "Clima", "notes" => "Notas rápidas", _ => "Atalhos favoritos" };
-            bool visible = !store.Value.HiddenWidgets.Contains(id);
-            LayoutRow(widgetRows, "widgets-settings", id, label, visible, store.Value.WidgetOrder,
-                enabled => store.Update(p => { if (enabled) p.HiddenWidgets.Remove(id); else p.HiddenWidgets.Add(id); }),
-                (from, to, after) => store.Update(p => LayoutCatalog.Move(p.WidgetOrder, from, to, after)));
+            string label = LayoutCatalog.ModuleName(id);
+            bool visible = store.ModuleVisible(id);
+            LayoutRow(widgetRows, "widgets-settings", id, label, visible, store.Value.ModuleOrder,
+                enabled => store.Update(p => { if (enabled) { p.HiddenModules.Remove(id); if (id == "audio") p.ShowAudio = true; } else p.HiddenModules.Add(id); }),
+                (from, to, after) => store.Update(p => LayoutCatalog.Move(p.ModuleOrder, from, to, after)));
             if (visible)
             {
                 var tile = new Border { Child = new TextBlock { Text = label, FontSize = 11 }, CornerRadius = new CornerRadius(10), Padding = new Thickness(8), Margin = new Thickness(0, 0, 5, 5) };

@@ -9,24 +9,24 @@ using ThinkWind.Services;
 
 namespace ThinkWind.Views;
 
-internal sealed class WidgetArea : DockPanel, IDisposable
+// Reusable widget bodies; the main board owns their independent layout slots.
+internal sealed class WidgetArea : IDisposable
 {
     private readonly SettingsStore store;
-    private readonly WeatherWidget weather;
-    private readonly Grid tiles = new();
     private readonly TextBox notes = new() { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MaxLength = 4000,
-        Height = 136, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(8), BorderThickness = new Thickness(0) };
+        MinHeight = 148, VerticalAlignment = VerticalAlignment.Stretch, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        Padding = new Thickness(12), BorderThickness = new Thickness(0), Background = Brushes.Transparent };
+    private readonly Grid favorites = new() { MinHeight = 148 };
     private readonly ShellIcons icons = new();
     private string signature = "";
-    internal WidgetArea(SettingsStore settings, WeatherWidget weatherWidget)
+    internal FrameworkElement Notes => notes;
+    internal FrameworkElement Favorites => favorites;
+    internal bool IsInteracting => notes.IsKeyboardFocusWithin || favorites.IsKeyboardFocusWithin || notes.IsMouseCaptureWithin;
+    internal WidgetArea(SettingsStore settings)
     {
-        store = settings; weather = weatherWidget;
-        var edit = new Button { Content = "Editar widgets", HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, 0, 6), Padding = new Thickness(8, 4, 8, 4) };
-        edit.SetResourceReference(StyleProperty, "Think.IconButton");
-        edit.Click += (_, _) => ((App)Application.Current).OpenWidgetSettings();
-        DockPanel.SetDock(edit, Dock.Top); Children.Add(edit); Children.Add(tiles);
-        notes.SetResourceReference(Control.BackgroundProperty, "Think.Control"); notes.SetResourceReference(Control.ForegroundProperty, "Think.Text");
-        notes.Text = store.Value.WidgetNote;
+        store = settings;
+        notes.SetResourceReference(Control.ForegroundProperty, "Think.Text"); notes.Text = store.Value.WidgetNote;
+        notes.ToolTip = "Notas rápidas · salvamento automático";
         System.Windows.Automation.AutomationProperties.SetName(notes, "Notas rápidas, salvas automaticamente");
         notes.TextChanged += (_, _) => { if (notes.Text != store.Value.WidgetNote) store.Update(p => p.WidgetNote = notes.Text); };
         store.Changed += SettingsChanged; Refresh();
@@ -38,46 +38,25 @@ internal sealed class WidgetArea : DockPanel, IDisposable
     }
     private void Refresh()
     {
-        string next = string.Join('|', store.Value.WidgetOrder) + "/" + string.Join('|', store.Value.HiddenWidgets)
-            + "/" + string.Join('|', store.Value.WidgetFavorites.Select(item => item.Name + ":" + item.Target));
+        string next = System.Text.Json.JsonSerializer.Serialize(store.Value.WidgetFavorites);
         if (next == signature) return;
-        signature = next;
-        if (weather.Parent is Panel oldWeather) oldWeather.Children.Remove(weather);
-        if (notes.Parent is Panel oldNotes) oldNotes.Children.Remove(notes);
-        foreach (Border old in tiles.Children) old.Child = null;
-        tiles.Children.Clear(); tiles.ColumnDefinitions.Clear();
-        foreach (string id in store.Value.WidgetOrder.Where(id => !store.Value.HiddenWidgets.Contains(id)))
+        signature = next; favorites.Children.Clear();
+        var grid = new UniformGrid { Columns = 3, VerticalAlignment = VerticalAlignment.Center };
+        foreach (var item in store.Value.WidgetFavorites)
         {
-            var body = new StackPanel();
-            if (id == "weather") body.Children.Add(weather);
-            else
-            {
-                var title = new TextBlock { Text = id == "notes" ? "Notas rápidas" : "Atalhos favoritos", FontSize = 13, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8) };
-                title.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); body.Children.Add(title);
-                if (id == "notes") body.Children.Add(notes);
-                else
-                {
-                    var grid = new UniformGrid { Columns = 3 };
-                    foreach (var item in store.Value.WidgetFavorites)
-                    {
-                        var content = new StackPanel();
-                        content.Children.Add(new Image { Source = icons.Get(item.Target), Width = 26, Height = 26, Stretch = Stretch.Uniform });
-                        var name = new TextBlock { Text = item.Name, FontSize = 10, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 3, 0, 0) };
-                        name.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); content.Children.Add(name);
-                        var button = new Button { Content = content, ToolTip = item.Name, Padding = new Thickness(4), Margin = new Thickness(1) };
-                        button.SetResourceReference(StyleProperty, "Think.IconButton"); button.Click += (_, _) => SystemActions.Run(item.Target); grid.Children.Add(button);
-                    }
-                    if (grid.Children.Count == 0)
-                    {
-                        var empty = new TextBlock { Text = "Escolha até 6 atalhos em Editar widgets.", FontSize = 12, TextWrapping = TextWrapping.Wrap };
-                        empty.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); body.Children.Add(empty);
-                    }
-                    else body.Children.Add(grid);
-                }
-            }
-            tiles.ColumnDefinitions.Add(new ColumnDefinition());
-            var card = new Border { Child = body, Padding = new Thickness(8), Margin = new Thickness(3), CornerRadius = new CornerRadius(14), MinHeight = 202 };
-            card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard"); Grid.SetColumn(card, tiles.Children.Count); tiles.Children.Add(card);
+            var content = new StackPanel();
+            content.Children.Add(new Image { Source = icons.Get(item.Target), Width = 30, Height = 30, Stretch = Stretch.Uniform });
+            var name = new TextBlock { Text = item.Name, FontSize = 11, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
+            name.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); content.Children.Add(name);
+            var button = new Button { Content = content, ToolTip = item.Name, Padding = new Thickness(5), Margin = new Thickness(2) };
+            button.SetResourceReference(FrameworkElement.StyleProperty, "Think.IconButton"); button.Click += (_, _) => SystemActions.Run(item.Target); grid.Children.Add(button);
+        }
+        if (grid.Children.Count > 0) favorites.Children.Add(grid);
+        else
+        {
+            var edit = new Button { Content = "Adicionar atalhos favoritos", Padding = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            edit.SetResourceReference(FrameworkElement.StyleProperty, "Think.IconButton");
+            edit.Click += (_, _) => ((App)Application.Current).OpenWidgetSettings(); favorites.Children.Add(edit);
         }
     }
     public void Dispose() => store.Changed -= SettingsChanged;

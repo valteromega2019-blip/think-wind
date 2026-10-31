@@ -70,6 +70,7 @@ public sealed class Preferences
     public string BarBackgroundColor { get; set; } = "#111318";
     public List<string> WidgetOrder { get; set; } = new() { "weather", "notes", "favorites" };
     public List<string> HiddenWidgets { get; set; } = new();
+    public bool UnifiedWidgetLayout { get; set; }
     public string WidgetNote { get; set; } = "";
     public List<Shortcut> WidgetFavorites { get; set; } = new();
     public double? DockOpacity { get; set; }
@@ -251,6 +252,15 @@ public sealed class SettingsStore
             if (!p.HiddenQuickControls.Contains("keyboard")) p.HiddenQuickControls.Add("keyboard");
         }
         p.QuickOrder = LayoutCatalog.Complete(p.QuickOrder, quickIds);
+        if (!p.UnifiedWidgetLayout)
+        {
+            var previousWidgets = LayoutCatalog.Complete(p.WidgetOrder, new[] { "weather", "notes", "favorites" });
+            p.ModuleOrder = (p.ModuleOrder ?? new()).SelectMany(id => id == "widgets" ? previousWidgets : new[] { id }.AsEnumerable()).ToList();
+            p.HiddenModules ??= new();
+            if (p.HiddenModules.Contains("widgets")) p.HiddenModules.AddRange(previousWidgets);
+            p.HiddenModules.AddRange(p.HiddenWidgets ?? new());
+            p.UnifiedWidgetLayout = true;
+        }
         p.ModuleOrder = LayoutCatalog.Complete(p.ModuleOrder, LayoutCatalog.Modules);
         p.HiddenQuickControls = (p.HiddenQuickControls ?? new()).Where(quickIds.Contains).Distinct().ToList();
         p.DisabledQuickControls = (p.DisabledQuickControls ?? new()).Where(id => id == "weather" || (id != "settings" && quickIds.Contains(id))).Distinct().ToList();

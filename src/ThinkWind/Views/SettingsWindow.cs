@@ -191,8 +191,8 @@ internal sealed partial class SettingsWindow : FloatingWindow
         // Detach reusable controls from their previous section when resetting.
         if (editing.Parent is Panel oldEditing) oldEditing.Children.Remove(editing);
         layout.Children.Add(editing);
-        Note(layout, "Na barra, arraste os ícones. Na central de controle, arraste os acessos rápidos ou o título de cada módulo. O puxador lateral ajusta a posição horizontal. Esc conclui a edição.");
-        Note(layout, "Os três primeiros módulos visíveis ficam em destaque. Calendário e bandeja têm áreas detalhadas. A engrenagem do Windows fica no compacto; a personalização do Think Wind aparece apenas no painel completo.");
+        Note(layout, "Na barra, arraste os ícones. Na central de controle, os títulos e puxadores dos widgets aparecem neste modo de edição. Esc conclui a edição.");
+        Note(layout, "Todos os blocos são widgets independentes. Organize ou oculte cada um também na aba Widgets. Os aplicativos em segundo plano ficam no painel expansível da bandeja, acessível pelos ícones superiores.");
         var islandIcons = Section("Ícones da central de controle", "Marque para mostrar na barra principal. Desmarque para mover aos acessos adicionais da área expandida. Use Ocultar nas duas áreas para desativar completamente.");
         Note(islandIcons, "No modo barra, relógio e clima ficam à esquerda, seguidos por desempenho e ferramentas. Os demais ícones aparecem à direita na ordem escolhida.");
         islandIcons.Children.Add(Button("Configurar ícone e cidade do clima", ShowWeatherSection));

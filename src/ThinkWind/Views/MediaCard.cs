@@ -12,7 +12,7 @@ namespace ThinkWind.Views;
 internal sealed class MediaCard : Grid, IDisposable
 {
     private readonly MediaService service;
-    private readonly StackPanel body = new() { Margin = new Thickness(6) };
+    private readonly StackPanel body = new() { Margin = new Thickness(12) };
     private readonly ImageBrush artworkBackground = new() { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };
     private readonly Border backgroundCover, backgroundShade;
     private readonly Image artwork = new() { Width = 64, Height = 64, Stretch = Stretch.UniformToFill };
@@ -33,8 +33,8 @@ internal sealed class MediaCard : Grid, IDisposable
     internal MediaCard()
     {
         service = new MediaService(Dispatcher);
-        backgroundCover = new Border { Background = artworkBackground, CornerRadius = new CornerRadius(14), IsHitTestVisible = false, Visibility = Visibility.Collapsed };
-        backgroundShade = new Border { CornerRadius = new CornerRadius(14), IsHitTestVisible = false, Visibility = Visibility.Collapsed,
+        backgroundCover = new Border { Background = artworkBackground, CornerRadius = new CornerRadius(20), IsHitTestVisible = false, Visibility = Visibility.Collapsed };
+        backgroundShade = new Border { CornerRadius = new CornerRadius(20), IsHitTestVisible = false, Visibility = Visibility.Collapsed,
             Background = new LinearGradientBrush(Color.FromArgb(155, 8, 12, 18), Color.FromArgb(220, 8, 12, 18), 90) };
         RenderOptions.SetBitmapScalingMode(backgroundCover, BitmapScalingMode.HighQuality);
         Children.Add(backgroundCover); Children.Add(backgroundShade); Children.Add(body);

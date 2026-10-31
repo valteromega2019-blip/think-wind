@@ -23,9 +23,9 @@ internal static class LayoutCatalog
         new("windows-settings", "Configurações do Windows", "\uE713", "ms-settings:"),
         new("settings", "Configurações do Think Wind", "\uE771", null)
     };
-    internal static readonly string[] Modules = { "connections", "media", "audio", "metrics", "calendar", "background", "notifications", "widgets" };
+    internal static readonly string[] Modules = { "connections", "media", "audio", "metrics", "calendar", "notifications", "weather", "notes", "favorites" };
     internal static string ModuleName(string id) => id switch
-    { "connections" => "Conexões", "media" => "Reprodução de mídia", "audio" => "Saída e microfone", "metrics" => "Monitoramento", "calendar" => "Calendário", "background" => "Aplicativos em segundo plano", "notifications" => "Notificações", "widgets" => "Widgets", _ => id };
+    { "connections" => "Conexões", "media" => "Reprodução de mídia", "audio" => "Saída e microfone", "metrics" => "Monitoramento", "calendar" => "Calendário", "notifications" => "Notificações", "weather" => "Clima", "notes" => "Notas rápidas", "favorites" => "Atalhos favoritos", _ => id };
     internal static List<string> Complete(IEnumerable<string>? order, IEnumerable<string> known) =>
         (order ?? Array.Empty<string>()).Where(known.Contains).Concat(known).Distinct(StringComparer.Ordinal).ToList();
     internal static void Move(List<string> order, string source, string target, bool after)
