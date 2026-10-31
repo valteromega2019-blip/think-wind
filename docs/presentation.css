@@ -1,6 +1,6 @@
-@font-face{font-family:Wind;src:local('Segoe UI Variable Display'),local('Segoe UI');font-display:swap}
+@font-face{font-family:Wind;src:local('Segoe UI Variable Display');font-style:normal;font-weight:100 900;font-display:swap}
 
-:root{color-scheme:dark;--bg:#10141c;--panel:#1a202c;--panel-high:#252e3d;--line:#ffffff14;--text:#f0f4fa;--muted:#a7b4c7;--accent:#60cdff;--ink:#092b43;font-family:Wind,Inter,system-ui,sans-serif;font-synthesis:none;scroll-behavior:smooth;scroll-padding-top:100px}
+:root{color-scheme:dark;--bg:#10141c;--panel:#1a202c;--panel-high:#252e3d;--line:#ffffff14;--text:#f0f4fa;--muted:#a7b4c7;--accent:#60cdff;--ink:#092b43;font-family:Wind,'Segoe UI',system-ui,sans-serif;font-synthesis:none;scroll-behavior:smooth;scroll-padding-top:100px}
 
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);line-height:1.6}
@@ -11,15 +11,18 @@ figure{margin:0}
 ::selection{background:var(--accent);color:var(--ink)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:6px}
 h1,h2,h3,p{margin:0}
-h1,h2,h3{font-weight:500;line-height:1.08;letter-spacing:-.045em}
+h1,h2,h3{line-height:1.08;letter-spacing:-.045em}
+h1,h2{font-weight:300}
+h3{font-weight:600;letter-spacing:-.025em}
+h2 strong{font-weight:700;letter-spacing:-.05em}
 h1{font-size:clamp(54px,6.2vw,96px)}
 h2{font-size:clamp(36px,4.4vw,64px)}
 h3{font-size:25px}
 p{color:var(--muted)}
-strong{font-weight:600}
+strong{font-weight:700}
 .container{width:min(1240px,calc(100% - 80px));margin-inline:auto}
 .section{padding-top:120px}
-.eyebrow{font-size:10px;font-weight:650;letter-spacing:.17em;color:var(--accent);margin-bottom:24px;text-transform:uppercase}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.17em;color:var(--accent);margin-bottom:24px;text-transform:uppercase}
 .fine-print{font-size:11px;line-height:1.75;color:#929eb2}
 .skip{position:fixed;top:-100px;left:16px;padding:10px 20px;background:var(--accent);color:var(--ink);z-index:100}
 .skip:focus{top:12px}
@@ -32,7 +35,7 @@ strong{font-weight:600}
 .nav a:hover{color:var(--text)}
 .nav-github{border:1px solid var(--line);border-radius:50px;padding:9px 18px}
 .hero{padding-top:88px;padding-bottom:70px;display:grid;grid-template-columns:1fr 1.05fr;gap:50px;align-items:center}
-.hero h1 span{color:var(--accent)}
+.hero h1 span{color:var(--accent);font-weight:750;letter-spacing:-.06em}
 .hero .lead{font-size:16px;line-height:1.8;max-width:440px;margin-top:28px}
 .hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
 .button{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:48px;border-radius:50px;padding:13px 22px;font-size:12px;font-weight:600;border:1px solid var(--line);transition:background .2s,color .2s}
