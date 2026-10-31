@@ -12,7 +12,7 @@ internal sealed partial class IslandWindow
     private Button? stripWeatherButton;
     private SystemToolsWindow? systemTools;
     private bool SystemToolsOpen => systemTools?.IsVisible == true;
-    private bool IsQuickVisible(string id) => !Store.Value.HiddenQuickControls.Contains(id);
+    private bool IsQuickVisible(string id) => !Store.Value.HiddenQuickControls.Contains(id) && !Store.Value.DisabledQuickControls.Contains(id);
 
     private Button WeatherButton(bool strip)
     {
@@ -39,7 +39,7 @@ internal sealed partial class IslandWindow
         string tip = value is null ? "Escolha uma cidade em Personalizar > Clima" : $"{Store.Value.WeatherCity} · {WeatherService.Description(value.Code)} · atualizado {value.Updated:HH:mm}";
         foreach (var label in new[] { headerWeather, stripWeather })
             if (label is not null) { label.Text = text; label.ToolTip = tip; }
-        if (stripWeatherButton is not null) stripWeatherButton.Visibility = Store.Value.ShowWeatherInHeader ? Visibility.Visible : Visibility.Collapsed;
+        if (stripWeatherButton is not null) stripWeatherButton.Visibility = Store.Value.ShowWeatherInHeader && WeatherEnabled ? Visibility.Visible : Visibility.Collapsed;
     }
     private Button SystemToolsButton(bool strip)
     {

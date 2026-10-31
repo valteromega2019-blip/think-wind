@@ -24,6 +24,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly Grid hoverModules = new();
     private readonly Border mediaSlot = new(), outputSlot = new(), microphoneSlot = new(), hoverMediaSlot = new(), hoverOutputSlot = new(), hoverMicrophoneSlot = new();
     private readonly WrapPanel hoverQuick = new() { HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly Viewbox secondaryQuickViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock hoverStatus = new() { FontSize = 11, Margin = new Thickness(8), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
     private readonly DispatcherTimer hoverEnter = new() { Interval = TimeSpan.FromMilliseconds(80) };
     private readonly DispatcherTimer hoverLeave = new() { Interval = TimeSpan.FromMilliseconds(450) };
@@ -75,12 +76,14 @@ internal sealed partial class IslandWindow : FloatingWindow
         output.LayoutChanged += ModuleSizeChanged; microphone.LayoutChanged += ModuleSizeChanged;
         headerViewport = new Viewbox { Child = header, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
         DockPanel.SetDock(headerViewport, Dock.Top); root.Children.Add(headerViewport);
+        secondaryQuickViewport.Child = hoverQuick;
+        DockPanel.SetDock(secondaryQuickViewport, Dock.Top); root.Children.Add(secondaryQuickViewport);
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition());
         var hoverAudio = new StackPanel(); hoverAudio.Children.Add(hoverOutputSlot); hoverAudio.Children.Add(hoverMicrophoneSlot);
         var hoverMedia = HoverCard("Reprodução", hoverMediaSlot); var hoverVolume = HoverCard("Áudio e microfone", hoverAudio);
         Grid.SetColumn(hoverVolume, 1); hoverModules.Children.Add(hoverMedia); hoverModules.Children.Add(hoverVolume);
-        hoverPanel.Children.Add(hoverModules); hoverPanel.Children.Add(hoverQuick); hoverPanel.Children.Add(hoverStatus);
+        hoverPanel.Children.Add(hoverModules); hoverPanel.Children.Add(hoverStatus);
         hoverViewport.Child = hoverPanel;
         DockPanel.SetDock(hoverViewport, Dock.Top); root.Children.Add(hoverViewport);
         moduleViewport.Child = modules;
@@ -270,7 +273,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 clockButton.Padding = new Thickness(0); clockButton.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
                 LayoutDrag.Attach(clockButton, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
                 header.Children.Add(clockButton);
-                if (Store.Value.ShowWeatherInHeader) header.Children.Add(WeatherButton(false));
+                if (Store.Value.ShowWeatherInHeader && WeatherEnabled) header.Children.Add(WeatherButton(false));
                 continue;
             }
             var button = ActionButton(control.Name, () =>
@@ -291,7 +294,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             if (id is not ("settings" or "windows-settings")) LayoutDrag.Attach(button, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
             header.Children.Add(button);
         }
-        if (!IsQuickVisible("clock") && Store.Value.ShowWeatherInHeader && !(Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing))
+        if (!IsQuickVisible("clock") && Store.Value.ShowWeatherInHeader && WeatherEnabled && !(Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing))
             header.Children.Add(WeatherButton(false));
         if (IsQuickVisible("tools")) header.Children.Add(SystemToolsButton(false));
         if (Stage == IslandStage.Full || Store.IsEditing)
@@ -315,7 +318,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             var expand = ActionButton("Abrir painel completo", OpenFull);
             expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(expand);
         }
-        hoverQuick.Visibility = Visibility.Collapsed;
+        BuildSecondaryQuickControls();
     }
     private void UpdateClock()
     {
@@ -373,6 +376,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     {
         hoverViewport.Visibility = Stage == IslandStage.Hover ? Visibility.Visible : Visibility.Collapsed;
         fullPanel.Visibility = Stage == IslandStage.Full ? Visibility.Visible : Visibility.Collapsed;
+        secondaryQuickViewport.Visibility = Stage != IslandStage.Compact && hoverQuick.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         bool hover = Stage == IslandStage.Hover;
         if (IsVisible && Stage == IslandStage.Compact) activation.Start(); else activation.Stop();
         Rehost(media, hover ? hoverMediaSlot : mediaSlot);
@@ -384,7 +388,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         hoverModules.ColumnDefinitions[1].Width = new GridLength(Store.ModuleVisible("audio") ? 1 : 0, GridUnitType.Star);
         media.SetActive(IsVisible && Stage != IslandStage.Compact && Store.ModuleVisible("media"));
         weather.SetActive(IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("widgets"));
-        weather.SetHeaderActive(IsVisible && Store.Value.ShowWeatherInHeader);
+        weather.SetHeaderActive(IsVisible && WeatherEnabled && (Store.Value.ShowWeatherInHeader || Stage != IslandStage.Compact));
         RefreshHeaderWeather();
     }
     private static void Rehost(FrameworkElement element, Border slot)
@@ -552,6 +556,10 @@ internal sealed partial class IslandWindow : FloatingWindow
         double width = Stage == IslandStage.Compact ? compact : Stage == IslandStage.Hover ? Math.Min(Display.Width - 16, Math.Max(compact, Math.Min(540, p.IslandExpandedWidth))) : Math.Min(Display.Width - 16, p.IslandExpandedWidth);
         headerViewport.Width = Math.Max(1, width - 24);
         double headerHeight = Math.Max(40, 36 * p.IslandScale) + 10;
+        secondaryQuickViewport.Width = headerViewport.Width;
+        hoverQuick.Width = Math.Min(288, Math.Max(36, hoverQuick.Children.OfType<FrameworkElement>().Sum(item => item.Width + item.Margin.Left + item.Margin.Right)));
+        secondaryQuickViewport.Measure(new Size(headerViewport.Width, double.PositiveInfinity));
+        if (Stage != IslandStage.Compact && hoverQuick.Children.Count > 0) headerHeight += secondaryQuickViewport.DesiredSize.Height;
         double limit = Stage == IslandStage.Full ? Math.Max(120, Math.Min(620, Display.Height * .64)) : CompactLayout.PanelHeight(Display.Height);
         double inner = Math.Max(1, width - 24);
         hoverViewport.Width = inner; hoverPanel.Width = inner;

@@ -84,6 +84,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
             try { weatherVisibilityCheck.IsChecked = store.Value.ShowWeatherInHeader; }
             finally { building = previous; }
         }
+        if (weatherVisibilityCheck is not null) weatherVisibilityCheck.IsEnabled = !store.Value.DisabledQuickControls.Contains("weather");
         weatherSettings.Configure();
         RefreshAppearance();
         editing.Content = store.IsEditing ? "Concluir edição visual" : "Editar layout na tela";
@@ -101,7 +102,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
             Bottom = screen.Work.Top + gap + (int)Math.Round(Height * screen.Scale)
         });
     }
-    private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio + store.Value.ShowWeatherInHeader;
+    private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.DisabledQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio + store.Value.ShowWeatherInHeader;
     private void PersistenceChanged(object? sender, EventArgs e) => UpdateStatus();
     private void UpdateStatus()
     {
@@ -185,7 +186,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         layout.Children.Add(editing);
         Note(layout, "Na barra, arraste os ícones. Na ilha, arraste os acessos rápidos ou o título de cada módulo. O puxador lateral ajusta a posição horizontal. Esc conclui a edição.");
         Note(layout, "Os três primeiros módulos visíveis ficam em destaque. Calendário e bandeja têm áreas detalhadas. A engrenagem do Windows fica no compacto; a personalização do Think Wind aparece apenas no painel completo.");
-        var islandIcons = Section("Ícones da ilha", "Marque os controles que devem aparecer e ajuste sua ordem pelas setas ou arrastando. A personalização e o botão de expansão permanecem acessíveis.");
+        var islandIcons = Section("Ícones da ilha", "Marque para mostrar na barra principal. Desmarque para mover aos acessos adicionais da área expandida. Use Ocultar nas duas áreas para desativar completamente.");
         Note(islandIcons, "No modo barra, relógio e clima ficam à esquerda, seguidos por desempenho e ferramentas. Os demais ícones aparecem à direita na ordem escolhida.");
         islandIcons.Children.Add(Button("Configurar ícone e cidade do clima", ShowWeatherSection));
         if (quickRows.Parent is Panel oldQuick) oldQuick.Children.Remove(quickRows);
@@ -249,13 +250,18 @@ internal sealed partial class SettingsWindow : FloatingWindow
     {
         layoutSignature = LayoutSignature();
         quickRows.Children.Clear(); moduleRows.Children.Clear();
-        Check(quickRows, "Clima ao lado do relógio", store.Value.ShowWeatherInHeader, value => Change(p => p.ShowWeatherInHeader = value));
+        var weatherPrimary = Check(quickRows, "Clima na barra principal", store.Value.ShowWeatherInHeader && !store.Value.DisabledQuickControls.Contains("weather"), value => Change(p => p.ShowWeatherInHeader = value));
+        weatherPrimary.IsEnabled = !store.Value.DisabledQuickControls.Contains("weather");
+        AddDisabledIconOption(quickRows, "weather", "Clima");
         foreach (var id in store.Value.QuickOrder.Where(id => id != "settings").ToArray())
         {
             string label = LayoutCatalog.QuickControls.First(q => q.Id == id).Name;
-            LayoutRow(quickRows, "quick-settings", id, label, !store.Value.HiddenQuickControls.Contains(id), store.Value.QuickOrder,
+            bool disabled = store.Value.DisabledQuickControls.Contains(id);
+            LayoutRow(quickRows, "quick-settings", id, label, !store.Value.HiddenQuickControls.Contains(id) && !disabled, store.Value.QuickOrder,
                 enabled => store.Update(p => { if (enabled) p.HiddenQuickControls.Remove(id); else p.HiddenQuickControls.Add(id); }),
                 (from, to, after) => store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
+            ((FrameworkElement)quickRows.Children[quickRows.Children.Count - 1]).IsEnabled = !disabled;
+            AddDisabledIconOption(quickRows, id, label);
         }
         foreach (var id in store.Value.ModuleOrder.ToArray())
         {

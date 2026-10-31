@@ -56,7 +56,7 @@ internal sealed partial class IslandWindow
     private string statusControlsSignature = "";
     private void BuildStatusRow()
     {
-        string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls);
+        string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls) + ":" + string.Join('|', Store.Value.DisabledQuickControls);
         if (statusBuilt && statusControlsSignature == signature) return;
         if (statusBuilt) { DismissMinis(); systemTools?.Close(); }
         statusControlsSignature = signature;

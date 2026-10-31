@@ -70,6 +70,7 @@ public sealed class Preferences
     public List<string> DockOrder { get; set; } = new();
     public List<string> QuickOrder { get; set; } = new() { "clock", "wifi", "bluetooth", "audio", "tray", "notifications", "calendar", "airplane", "settings" };
     public List<string> HiddenQuickControls { get; set; } = new() { "calendar", "airplane", "settings", "keyboard" };
+    public List<string> DisabledQuickControls { get; set; } = new();
     public List<string> ModuleOrder { get; set; } = new() { "connections", "media", "audio", "metrics", "calendar" };
     public List<string> HiddenModules { get; set; } = new();
     public List<Shortcut> Shortcuts { get; set; } = new() { new("Explorador", "explorer.exe"), new("Configurações", "ms-settings:") };
@@ -150,7 +151,8 @@ public sealed class SettingsStore
         {
             var defaults = new Preferences();
             p.ModuleOrder = defaults.ModuleOrder; p.HiddenModules.Clear();
-            p.QuickOrder = defaults.QuickOrder; p.HiddenQuickControls = defaults.HiddenQuickControls;
+            p.QuickOrder = defaults.QuickOrder; p.HiddenQuickControls = defaults.HiddenQuickControls; p.DisabledQuickControls.Clear();
+            p.ShowWeatherInHeader = defaults.ShowWeatherInHeader;
             p.IslandScale = 1; p.IslandExpandedWidth = defaults.IslandExpandedWidth; p.IslandSpacing = defaults.IslandSpacing;
             p.IslandRadius = defaults.IslandRadius; p.IslandHorizontalOffset = 0;
             p.IslandPanelSide = defaults.IslandPanelSide;
@@ -208,6 +210,7 @@ public sealed class SettingsStore
         p.QuickOrder = LayoutCatalog.Complete(p.QuickOrder, quickIds);
         p.ModuleOrder = LayoutCatalog.Complete(p.ModuleOrder, LayoutCatalog.Modules);
         p.HiddenQuickControls = (p.HiddenQuickControls ?? new()).Where(quickIds.Contains).Distinct().ToList();
+        p.DisabledQuickControls = (p.DisabledQuickControls ?? new()).Where(id => id == "weather" || (id != "settings" && quickIds.Contains(id))).Distinct().ToList();
         p.HiddenModules = (p.HiddenModules ?? new()).Where(LayoutCatalog.Modules.Contains).Distinct().ToList();
     }
     private static string Material(string? value) => value is "Acrylic" or "Mica" or "Solid" ? value : "Acrylic";
