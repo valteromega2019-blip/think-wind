@@ -1,3 +1,11 @@
+## Em desenvolvimento — restauração do arrastar e soltar no Dock
+
+- Reconhece arquivos, texto/HTML, imagens, links e descritores de arquivos virtuais para manter a barra aberta e ativar janelas durante o arrasto. Não interfere na reorganização interna dos ícones.
+- Enquanto o botão esquerdo estiver pressionado, a área inferior de aproximação abrange a largura do monitor e revela a barra sem animação de espera. Sem novos hooks ou temporizadores globais.
+- Preparação do arrasto é executada uma vez por operação; a ativação de janelas minimizadas recebe tentativas assíncronas curtas, canceladas quando o alvo muda.
+- Para arquivos sobre aplicativos fechados, mantém o receptor OLE nativo como prioridade e oferece abertura por argumentos para executáveis/atalhos locais quando ele não aceita o arrasto. Nunca solicita efeito de mover/excluir nem entrega duas vezes. Compatibilidade final depende do aplicativo.
+- Conteúdo de navegador deve ser solto dentro da janela de destino após sua ativação, sem conversão ou criação de arquivos pelo launcher.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura de código e diff; confirmação interativa pendente.
 ## 0.18 Alfa — revisão 1
 
 Empacota a seleção de GPU aprovada pelo usuário, com prioridade automática à dedicada. Sem novos testes nesta publicação. [Notas](RELEASE-0.18.1-ALFA.md).

@@ -19,6 +19,31 @@ internal static class SystemActions
             || extension.Equals(".lnk", StringComparison.OrdinalIgnoreCase);
     }
     internal static void RunAsAdministrator(string target) => Launch(target, true);
+    internal static bool CanOpenFiles(string target)
+    {
+        target = Environment.ExpandEnvironmentVariables(target.Trim().Trim('"'));
+        return Path.IsPathFullyQualified(target) && Path.GetExtension(target).ToLowerInvariant() is ".exe" or ".com" or ".lnk";
+    }
+    internal static bool TryOpenFiles(string target, string[] files)
+    {
+        if (!CanOpenFiles(target) || files.Length == 0) return false;
+        try
+        {
+            target = Environment.ExpandEnvironmentVariables(target.Trim().Trim('"'));
+            var info = new ProcessStartInfo(target) { UseShellExecute = true };
+            if (Path.GetExtension(target).Equals(".exe", StringComparison.OrdinalIgnoreCase))
+                info.WorkingDirectory = Path.GetDirectoryName(target)!;
+            foreach (string file in files)
+            {
+                if (string.IsNullOrWhiteSpace(file) || !Path.IsPathFullyQualified(file)) return false;
+                info.ArgumentList.Add(file);
+            }
+            Process.Start(info);
+            return true;
+        }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or IOException or ArgumentException or NotSupportedException)
+        { return false; }
+    }
     internal static bool Launch(string target, bool administrator = false)
     {
         try

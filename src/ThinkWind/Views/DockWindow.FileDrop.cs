@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using ThinkWind.Native;
+using ThinkWind.Services;
 
 namespace ThinkWind.Views;
 internal sealed partial class DockWindow
@@ -21,13 +22,24 @@ internal sealed partial class DockWindow
     private void InitializeFileDrop()
     {
         AllowDrop = true;
-        PreviewDragEnter += (_, e) => { if (HasFiles(e)) BeginFileDrag(); };
-        PreviewDragOver += (_, e) => { if (HasFiles(e)) { BeginFileDrag(); e.Effects = DragDropEffects.None; } };
-        Drop += (_, e) => { if (HasFiles(e) && !e.Handled) { e.Effects = DragDropEffects.None; e.Handled = true; FinishFileDrag(); } };
-        activateDrop.Tick += (_, _) =>
+        PreviewDragEnter += (_, e) => { if (HasDragContent(e)) BeginFileDrag(); };
+        PreviewDragOver += (_, e) => { if (HasDragContent(e)) { BeginFileDrag(); e.Effects = DragDropEffects.None; } };
+        Drop += (_, e) => { if (HasDragContent(e) && !e.Handled) { e.Effects = DragDropEffects.None; e.Handled = true; FinishFileDrag(); } };
+        activateDrop.Tick += async (_, _) =>
         {
             activateDrop.Stop(); if (!fileDragging || !Desktop.LeftButtonDown || dropWindow == 0) return;
-            bool activated = Desktop.RestoreAndActivate(dropWindow);
+            nint target = dropWindow;
+            bool activated = false;
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                if (!fileDragging || !Desktop.LeftButtonDown || target != dropWindow) return;
+                activated = Desktop.RestoreAndActivate(target);
+                if (activated) break;
+                // Restoring a minimized app is asynchronous. Keep the drag
+                // alive and retry without blocking OLE's message processing.
+                await System.Threading.Tasks.Task.Delay(80);
+            }
+            if (target != dropWindow) return;
             if (dropButton is not null) dropButton.ToolTip = activated ? "Janela ativada. Continue arrastando até a área de destino do aplicativo." : "O Windows não permitiu ativar esta janela. Continue até o aplicativo manualmente.";
         };
         pageDrop.Tick += (_, _) =>
@@ -42,22 +54,41 @@ internal sealed partial class DockWindow
         try { return e.Data.GetDataPresent(DataFormats.FileDrop, false); }
         catch (Exception error) when (error is COMException or InvalidOperationException) { return false; }
     }
+    private static bool HasDragContent(DragEventArgs e)
+    {
+        if (LayoutDrag.Active) return false;
+        try
+        {
+            if (HasFiles(e)) return true;
+            return e.Data.GetDataPresent(DataFormats.UnicodeText) || e.Data.GetDataPresent(DataFormats.Text)
+                || e.Data.GetDataPresent(DataFormats.Html) || e.Data.GetDataPresent(DataFormats.Bitmap)
+                || e.Data.GetDataPresent("UniformResourceLocatorW", false)
+                || e.Data.GetDataPresent("UniformResourceLocator", false)
+                || e.Data.GetDataPresent("FileGroupDescriptorW", false)
+                || e.Data.GetDataPresent("FileGroupDescriptor", false);
+        }
+        catch (Exception error) when (error is COMException or InvalidOperationException) { return false; }
+    }
     private void BeginFileDrag()
     {
-        StopPreviews();
-        magnifier.Reset();
-        fileDragging = true; lastHover = DateTime.UtcNow;
-        launcher?.Dismiss();
+        if (!fileDragging)
+        {
+            StopPreviews(); magnifier.Reset(); fileDragging = true;
+            launcher?.Dismiss();
+        }
+        lastHover = DateTime.UtcNow;
         // The entire visible collapsed strip is a real OLE drop target at the screen edge.
+        if (!IsVisible) Show();
         SetHidden(false, false);
     }
     private void AttachFileTarget(Button button, Item item, Border marker)
     {
         if (item.Target is null && item.Windows.Count == 0) return;
         button.AllowDrop = true;
+        bool launchOnDrop = false;
         void Over(DragEventArgs e)
         {
-            if (!HasFiles(e)) return;
+            if (!HasDragContent(e)) return;
             BeginFileDrag(); e.Handled = true;
             if (fileTarget != item.Key)
             {
@@ -68,27 +99,42 @@ internal sealed partial class DockWindow
                     dropWindow = window.Handle; marker.Visibility = Visibility.Visible;
                     button.ToolTip = "Mantenha o arquivo aqui para ativar a janela; depois continue o arrasto para dentro dela."; activateDrop.Start();
                 }
-                else if (item.Target is not null)
+                else if (item.Target is not null && HasFiles(e))
                     shellDrop = ShellDropSession.Open(item.Target, e.Data, e.AllowedEffects, e.KeyStates, out _);
             }
             if (dropWindow != 0) { e.Effects = DragDropEffects.None; return; }
             e.Effects = shellDrop?.Over(e.AllowedEffects, e.KeyStates) ?? DragDropEffects.None;
+            bool launchFiles = e.Effects == DragDropEffects.None && HasFiles(e) && item.Target is not null
+                && SystemActions.CanOpenFiles(item.Target) && e.AllowedEffects.HasFlag(DragDropEffects.Copy);
+            launchOnDrop = launchFiles;
+            if (launchFiles) e.Effects = DragDropEffects.Copy;
             marker.Visibility = e.Effects == DragDropEffects.None ? Visibility.Hidden : Visibility.Visible;
-            button.ToolTip = e.Effects == DragDropEffects.None ? "Este atalho não expôs um receptor compatível. Abra o aplicativo e continue o arrasto até sua janela." : "Solte para abrir os arquivos pelo receptor nativo deste aplicativo.";
+            button.ToolTip = launchFiles ? "Solte para tentar abrir os arquivos com este aplicativo. A compatibilidade depende do programa."
+                : e.Effects == DragDropEffects.None ? "Este atalho não expôs um receptor compatível. Abra o aplicativo e continue o arrasto até sua janela." : "Solte para abrir os arquivos pelo receptor nativo deste aplicativo.";
         }
         button.PreviewDragEnter += (_, e) => Over(e); button.PreviewDragOver += (_, e) => Over(e);
         button.PreviewDragLeave += (_, e) =>
         {
-            if (!HasFiles(e) || fileTarget != item.Key) return;
+            if (!HasDragContent(e) || fileTarget != item.Key) return;
             var point = e.GetPosition(button);
             if (point.X < 0 || point.Y < 0 || point.X >= button.ActualWidth || point.Y >= button.ActualHeight) ClearFileTarget();
         };
         button.PreviewDrop += (_, e) =>
         {
-            if (!HasFiles(e)) return;
+            if (!HasDragContent(e)) return;
             e.Handled = true;
             // Existing windows receive files only when the user drops inside their own UI.
-            e.Effects = fileTarget == item.Key && dropWindow == 0 ? shellDrop?.Deliver(e.AllowedEffects, e.KeyStates) ?? DragDropEffects.None : DragDropEffects.None;
+            e.Effects = fileTarget == item.Key && dropWindow == 0 && !launchOnDrop ? shellDrop?.Deliver(e.AllowedEffects, e.KeyStates) ?? DragDropEffects.None : DragDropEffects.None;
+            if (launchOnDrop && fileTarget == item.Key && dropWindow == 0 && item.Windows.Count == 0 && item.Target is not null
+                && e.AllowedEffects.HasFlag(DragDropEffects.Copy) && HasFiles(e))
+            {
+                try
+                {
+                    if (e.Data.GetData(DataFormats.FileDrop) is string[] files && SystemActions.TryOpenFiles(item.Target, files))
+                        e.Effects = DragDropEffects.Copy;
+                }
+                catch (Exception error) when (error is COMException or InvalidOperationException) { }
+            }
             FinishFileDrag();
         };
     }
@@ -102,7 +148,7 @@ internal sealed partial class DockWindow
     private void AttachFilePageTarget(Button button, int direction)
     {
         button.AllowDrop = true;
-        button.PreviewDragEnter += (_, e) => { if (!HasFiles(e)) return; BeginFileDrag(); ClearFileTarget(); dropPageDirection = direction; pageDrop.Stop(); pageDrop.Start(); e.Effects = DragDropEffects.None; e.Handled = true; };
+        button.PreviewDragEnter += (_, e) => { if (!HasDragContent(e)) return; BeginFileDrag(); ClearFileTarget(); dropPageDirection = direction; pageDrop.Stop(); pageDrop.Start(); e.Effects = DragDropEffects.None; e.Handled = true; };
         button.PreviewDragLeave += (_, _) => pageDrop.Stop();
     }
     private void FinishFileDrag() { fileDragging = false; pageDrop.Stop(); ClearFileTarget(); lastHover = DateTime.UtcNow; signature = ""; }

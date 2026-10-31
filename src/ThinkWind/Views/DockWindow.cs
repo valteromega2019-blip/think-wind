@@ -186,13 +186,13 @@ internal sealed partial class DockWindow : FloatingWindow
         if (Store.Value.DockVisibleOnDesktop && !applicationOverDock)
         {
             lastHover = DateTime.UtcNow;
-            SetHidden(false);
+            SetHidden(false, !Desktop.LeftButtonDown);
         }
         bool pointerInsideReveal = PointerInsideRevealArea();
         if (hidden && !IsPositionAnimating && pointerInsideReveal)
         {
             lastHover = DateTime.UtcNow;
-            SetHidden(false);
+            SetHidden(false, !Desktop.LeftButtonDown);
         }
         if (activeContextMenu is { IsOpen: false } stale && DateTime.UtcNow - contextMenuRequested > TimeSpan.FromMilliseconds(250))
             FinishContextMenu(stale);
@@ -213,7 +213,7 @@ internal sealed partial class DockWindow : FloatingWindow
         var cursor = System.Windows.Forms.Cursor.Position;
         // Passive detection uses the existing timer, not a transparent window
         // over other applications. The visible handle remains 96 x 6 DIP.
-        int halfWidth = (int)Math.Round(88 * display.Scale);
+        int halfWidth = Desktop.LeftButtonDown ? display.Bounds.Width / 2 : (int)Math.Round(88 * display.Scale);
         int height = (int)Math.Round(32 * display.Scale);
         int center = display.Bounds.Left + display.Bounds.Width / 2;
         return cursor.X >= center - halfWidth && cursor.X < center + halfWidth
