@@ -1,3 +1,9 @@
+## Em desenvolvimento — acesso fullscreen e estabilidade do Iniciar
+
+- A alça superior de vídeos em tela cheia acompanha o monitor da janela de apresentação, incluindo monitores secundários habilitados. Ela é recriada após mudanças de configuração dos monitores mesmo quando o modo fullscreen já estava ativo.
+- Todas as ilhas podem devolver o acesso à alça após recolher, e seu estado temporário é encerrado ao sair do fullscreen.
+- O Iniciar não fecha por uma desativação transitória durante Show/Activate nem pelo simples retorno de foco à janela que o abriu. Clique externo e Esc continuam fechando; mudanças para outra janela são confirmadas em duas amostras do temporizador já existente.
+- Revisão somente por leitura e diff. Sem compilação, testes ou type check nesta etapa, conforme a preferência do usuário. Validação interativa pendente.
 ## Em desenvolvimento — monitor principal e abertura de aplicativos
 
 - Iniciar e pesquisa aparecem somente no monitor identificado como principal pelo Windows; a largura das barras secundárias não reserva espaços para esses controles.

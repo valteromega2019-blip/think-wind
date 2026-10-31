@@ -52,19 +52,41 @@ public partial class App
         {
             var bar = new DockWindow(store) { MonitorDeviceOverride = selected[index].DeviceName };
             var top = new IslandWindow(store, OpenSettings) { MonitorDeviceOverride = selected[index].DeviceName };
+            top.FullscreenRevealClosed += () =>
+            {
+                if (gameMode?.Active == true && gameMode.FullscreenPresentation
+                    && fullscreenHandle is { } handle && handle.MonitorDeviceOverride == top.MonitorDeviceOverride)
+                { handle.Show(); handle.Position(); }
+            };
             if (index == 0)
             {
                 dock = bar; island = top;
-                top.FullscreenRevealClosed += () =>
-                {
-                    if (gameMode?.Active == true && gameMode.FullscreenPresentation)
-                    { fullscreenHandle?.Show(); fullscreenHandle?.Position(); }
-                };
             }
             else extraMonitors.Add((bar, top));
             if (gameMode?.Active == true)
             { bar.SuspendForGame(true); gameHidden.Add(bar); gameHidden.Add(top); }
             else { bar.Show(); top.PrepareInitialLayout(); top.Show(); top.RefreshForegroundLayout(); }
         }
+        // A display rebuild retires the old fullscreen handle as well. Recreate
+        // it even when protection was already active before this rebuild.
+        if (gameMode?.Active == true) ChangeGameMode(true);
+    }
+
+    private void ShowFullscreenAccess()
+    {
+        if (gameMode?.PresentationWindow is not nint window || window == 0) return;
+        string device = Forms.Screen.FromHandle(window).DeviceName;
+        var target = new[] { island }.Concat(extraMonitors.Select(pair => (IslandWindow?)pair.Island))
+            .FirstOrDefault(top => top is not null && string.Equals(top.MonitorDeviceOverride, device, StringComparison.OrdinalIgnoreCase));
+        if (target is null) { fullscreenHandle?.Hide(); return; }
+        if (fullscreenHandle is not null && fullscreenHandle.MonitorDeviceOverride != device)
+        { fullscreenHandle.Retire(); fullscreenHandle = null; }
+        fullscreenHandle ??= new FullscreenHandleWindow(store, () =>
+        {
+            if (gameMode?.Active != true || !gameMode.FullscreenPresentation) return;
+            fullscreenHandle?.Hide();
+            target.RevealOverFullscreen();
+        }) { MonitorDeviceOverride = device };
+        fullscreenHandle.Show(); fullscreenHandle.Position();
     }
 }

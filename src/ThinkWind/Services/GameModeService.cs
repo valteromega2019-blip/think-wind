@@ -42,6 +42,7 @@ internal sealed class GameModeService : IDisposable
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(nint window, int attribute, out int value, int size);
     internal bool Active { get; private set; }
     internal bool FullscreenPresentation { get; private set; }
+    internal nint PresentationWindow => presentationWindow;
     internal bool RecognizedGame { get; private set; }
     internal event Action? ForegroundChanged;
     internal string CurrentProcess { get; private set; } = "";
@@ -103,7 +104,8 @@ internal sealed class GameModeService : IDisposable
                         RecognizedGame = recognized;
                         bool presentation = active && game.Fullscreen && !game.InstalledGame
                             && !include.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase));
-                        bool presentationChanged = FullscreenPresentation != presentation;
+                        bool presentationChanged = FullscreenPresentation != presentation
+                            || (presentation && presentationWindow != game.Handle);
                         presentationWindow = presentation ? game.Handle : 0;
                         if (presentation) GetWindowThreadProcessId(game.Handle, out presentationProcess);
                         else presentationProcess = 0;

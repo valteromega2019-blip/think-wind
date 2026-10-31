@@ -48,6 +48,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private bool updating, disposed, rowsQueued, modal;
     private bool foregroundClaimed;
     private nint openingForeground;
+    private nint outsideForeground;
     private OutsideClickObserver? outsideClicks;
     internal bool Busy => IsVisible || modal;
     internal event Action? Dismissed;
@@ -87,14 +88,21 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         category.SelectionChanged += (_, _) => { if (!updating) { page = 0; Reload(); } };
         debounce.Tick += async (_, _) => { debounce.Stop(); await ReadFiles(); };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
-        Deactivated += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() => { if (foregroundClaimed && !IsActive && !dockHasFocus() && menus == 0 && !modal) Dismiss(); }));
         visibility.Tick += (_, _) =>
         {
             if (!IsVisible || menus > 0 || modal) return;
             // A brief activation during Show is not enough: only consider the
             // focus acquired after observing the visible menu in its normal tick.
-            if (Desktop.ForegroundIsOurs()) { foregroundClaimed |= IsActive; return; }
-            if (foregroundClaimed || Desktop.GetForegroundWindow() != openingForeground) Dismiss();
+            if (Desktop.ForegroundIsOurs() || dockHasFocus())
+            { foregroundClaimed |= IsActive; outsideForeground = 0; return; }
+            var current = Desktop.GetForegroundWindow();
+            // Show/Activate may briefly hand focus back to the opener. That
+            // is not a user dismissal. Real outside clicks are observed below;
+            // keyboard focus changes to another window must persist two ticks.
+            if (current == 0 || current == openingForeground)
+            { outsideForeground = 0; return; }
+            if (foregroundClaimed && current == outsideForeground) Dismiss();
+            else outsideForeground = current;
         };
         refresh.Tick += async (_, _) => { if (IsVisible) await catalog.RefreshAsync(true); };
         IsVisibleChanged += (_, _) => { if (!IsVisible) { CancelDrawerMotion(); debounce.Stop(); visibility.Stop(); refresh.Stop(); cancellation?.Cancel(); } };
@@ -114,7 +122,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     }
     internal async void Present(LauncherPanelMode requested, string text = "", bool focusSearch = true)
     {
-        openingForeground = Desktop.GetForegroundWindow(); foregroundClaimed = IsActive;
+        openingForeground = Desktop.GetForegroundWindow(); foregroundClaimed = IsActive; outsideForeground = 0;
         mode = requested; section = requested == LauncherPanelMode.Library ? "Biblioteca" : requested == LauncherPanelMode.Start ? "Fixados" : "Todos";
         updating = true; query.Text = text; updating = false; page = 0;
         UpdateCategories(); Reload(); ShowActivated = focusSearch;

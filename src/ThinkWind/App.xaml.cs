@@ -237,13 +237,7 @@ public partial class App : Application
             windowsTaskbar?.Apply(store.Value.HideWindowsTaskbar);
             if (gameMode?.FullscreenPresentation == true)
             {
-                fullscreenHandle ??= new FullscreenHandleWindow(store, () =>
-                {
-                    if (gameMode?.Active != true || !gameMode.FullscreenPresentation) return;
-                    fullscreenHandle?.Hide();
-                    island?.RevealOverFullscreen();
-                }) { MonitorDeviceOverride = island?.MonitorDeviceOverride };
-                fullscreenHandle.Show(); fullscreenHandle.Position();
+                ShowFullscreenAccess();
             }
             else fullscreenHandle?.Hide();
         }
@@ -251,6 +245,7 @@ public partial class App : Application
         {
             fullscreenHandle?.Hide();
             island?.EndFullscreenReveal();
+            foreach (var pair in extraMonitors) pair.Island.EndFullscreenReveal();
             foreach (var window in gameHidden.Where(window => Windows.OfType<Window>().Contains(window)).ToArray())
             { if (ReferenceEquals(window, island) && !window.IsLoaded) island?.PrepareInitialLayout(); bool activate = window.ShowActivated; window.ShowActivated = false; window.Show(); window.ShowActivated = activate; }
             gameHidden.Clear(); windowsTaskbar?.Apply(store.Value.HideWindowsTaskbar);
