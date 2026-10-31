@@ -144,6 +144,7 @@ public partial class App : Application
         ConfigureMonitors();
         ApplyHardwareOverlay();
         startupPriority?.Dispose(); startupPriority = null;
+        if (!diagnosing && !initialGame) _ = WifiService.PrimeAsync();
         if (!diagnosing && !initialGame && ((store.Value.HardwareSensorsAutoSetup && !AdvancedSensorSetup.IsConfigured)
             || (store.Value.AutoAuthorizeWindowActions && !WindowActionSetup.IsConfigured)))
             Dispatcher.BeginInvoke(new Action(async () =>

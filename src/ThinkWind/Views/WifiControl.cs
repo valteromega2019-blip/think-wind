@@ -32,6 +32,7 @@ internal sealed class WifiControl : StackPanel, IDisposable
     {
         var commands = new WrapPanel(); commands.Children.Add(radio);
         commands.Children.Add(Button("Atualizar redes", () => Refresh(true)));
+        commands.Children.Add(Button("Redetectar adaptador", async () => await RediscoverAdapter()));
         Children.Add(adapters); Children.Add(commands); Children.Add(networks); Children.Add(navigation);
         System.Windows.Automation.AutomationProperties.SetName(adapters, "Adaptador Wi-Fi");
         System.Windows.Automation.AutomationProperties.SetName(password, "Senha da rede Wi-Fi");
@@ -52,6 +53,11 @@ internal sealed class WifiControl : StackPanel, IDisposable
         var button = new Button { Content = text, Padding = new Thickness(10, 5, 10, 5), FontSize = 11 };
         button.Click += (_, _) => action(); return button;
     }
+    private async Task RediscoverAdapter()
+    {
+        if (reading || operating || disposed || IsInteracting) return;
+        await Operate(service.RediscoverAsync, "Identificando adaptadores Wi-Fi…");
+    }
     internal void SetActive(bool value)
     {
         active = value;
@@ -66,8 +72,16 @@ internal sealed class WifiControl : StackPanel, IDisposable
         {
             bool requestScan = scan || DateTime.UtcNow >= nextScan;
             if (requestScan) nextScan = DateTime.UtcNow.AddSeconds(30);
-            var result = await service.ReadAsync(requestScan).ConfigureAwait(false);
+            bool firstSnapshot = snapshot.Adapters.Count == 0;
+            var result = await service.ReadAsync(requestScan && !firstSnapshot).ConfigureAwait(false);
             await OnUI(() => { if (!disposed && active && !operating) Apply(result); });
+            if (firstSnapshot && requestScan && !disposed && active)
+            {
+                // Render cached adapter/current networks before waiting for
+                // the Windows scan notification, which can take four seconds.
+                var scanned = await service.ReadAsync(true).ConfigureAwait(false);
+                await OnUI(() => { if (!disposed && active && !operating) Apply(scanned); });
+            }
         }
         catch (Exception error) when (error is WifiUnavailableException or System.Runtime.InteropServices.COMException or TaskCanceledException)
         { await OnUI(() => { if (active && !disposed) { status.Text = error.Message; LayoutChanged?.Invoke(); } }); }

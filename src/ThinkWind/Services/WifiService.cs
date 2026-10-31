@@ -20,6 +20,8 @@ internal sealed class WifiUnavailableException : Exception { internal WifiUnavai
 internal sealed class WifiService : IDisposable
 {
     private readonly StaWorker worker = new("Think Wind — WLAN");
+    private static readonly object adapterSync = new();
+    private static Task<Interface[]>? adapterDiscovery;
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct Interface
     { internal Guid Id; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)] internal string Name; internal uint State; }
     [StructLayout(LayoutKind.Sequential)] private struct Ssid
@@ -61,34 +63,58 @@ internal sealed class WifiService : IDisposable
         finally { if (client != 0) WlanCloseHandle(client, 0); }
     }
     internal Task<WifiSnapshot> ReadAsync(bool scan) => worker.Run(() => WithClient(client => Read(client, scan)));
-    private static WifiSnapshot Read(nint client, bool scan)
+    private static Task<Interface[]> DiscoverAdapters(bool force = false)
     {
-        var adapters = new List<WifiAdapterInfo>(); var networks = new List<WifiNetwork>(); nint interfaces = 0;
+        lock (adapterSync)
+            return !force && adapterDiscovery is not null ? adapterDiscovery
+                : adapterDiscovery = Task.Run(() => WithClient(ReadAdapterInventory));
+    }
+    internal static async Task PrimeAsync()
+    {
+        try { await DiscoverAdapters().ConfigureAwait(false); }
+        catch (Exception error) when (error is WifiUnavailableException or DllNotFoundException or EntryPointNotFoundException) { }
+    }
+    internal Task<WifiSnapshot> RediscoverAsync() => worker.Run(() =>
+    {
+        DiscoverAdapters(true).GetAwaiter().GetResult();
+        return WithClient(client => Read(client, false));
+    });
+    private static Interface[] ReadAdapterInventory(nint client)
+    {
+        nint data = 0;
         try
         {
-            Check(WlanEnumInterfaces(client, 0, out interfaces)); int count = Math.Clamp(Marshal.ReadInt32(interfaces), 0, 64);
-            for (int i = 0; i < count; i++)
-            {
-                var adapter = Marshal.PtrToStructure<Interface>(interfaces + 8 + i * Marshal.SizeOf<Interface>());
-                bool? radioOn = null; bool canToggle = false; string? error = null;
-                try
-                {
-                    var radios = ReadRadio(client, adapter.Id); radioOn = radios.Count > 0 ? radios.Any(radio => radio.Software == 1 && radio.Hardware == 1) : null;
-                    canToggle = radios.Count > 0 && radios.All(radio => radio.Hardware == 1);
-                }
-                catch (WifiUnavailableException) { }
-                try
-                {
-                    if (scan && radioOn != false)
-                        Wait(client, adapter.Id, new uint[] { 7, 8 }, () => Check(WlanScan(client, ref adapter.Id, 0, 0, 0)), 4000, false);
-                    if (radioOn != false) ReadNetworks(client, adapter.Id, networks);
-                }
-                catch (WifiUnavailableException failure) { error = failure.Message; }
-                adapters.Add(new(adapter.Id, adapter.Name, radioOn, canToggle, error));
-            }
-            return new(adapters, networks.OrderByDescending(network => network.Connected).ThenByDescending(network => network.Signal).ToArray());
+            Check(WlanEnumInterfaces(client, 0, out data));
+            int count = Math.Clamp(Marshal.ReadInt32(data), 0, 64);
+            var result = new Interface[count];
+            for (int i = 0; i < count; i++) result[i] = Marshal.PtrToStructure<Interface>(data + 8 + i * Marshal.SizeOf<Interface>());
+            return result;
         }
-        finally { if (interfaces != 0) WlanFreeMemory(interfaces); }
+        finally { if (data != 0) WlanFreeMemory(data); }
+    }
+    private static WifiSnapshot Read(nint client, bool scan)
+    {
+        var adapters = new List<WifiAdapterInfo>(); var networks = new List<WifiNetwork>();
+        foreach (var cached in DiscoverAdapters().GetAwaiter().GetResult())
+        {
+            var adapter = cached;
+            bool? radioOn = null; bool canToggle = false; string? error = null;
+            try
+            {
+                var radios = ReadRadio(client, adapter.Id); radioOn = radios.Count > 0 ? radios.Any(radio => radio.Software == 1 && radio.Hardware == 1) : null;
+                canToggle = radios.Count > 0 && radios.All(radio => radio.Hardware == 1);
+            }
+            catch (WifiUnavailableException) { }
+            try
+            {
+                if (scan && radioOn != false)
+                    Wait(client, adapter.Id, new uint[] { 7, 8 }, () => Check(WlanScan(client, ref adapter.Id, 0, 0, 0)), 4000, false);
+                if (radioOn != false) ReadNetworks(client, adapter.Id, networks);
+            }
+            catch (WifiUnavailableException failure) { error = failure.Message; }
+            adapters.Add(new(adapter.Id, adapter.Name, radioOn, canToggle, error));
+        }
+        return new(adapters, networks.OrderByDescending(network => network.Connected).ThenByDescending(network => network.Signal).ToArray());
     }
     private static List<Radio> ReadRadio(nint client, Guid adapter)
     {
