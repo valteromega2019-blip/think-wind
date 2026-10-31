@@ -1,5 +1,7 @@
 # Validação — 0.18 Alfa, revisão 3
 
+Atualização posterior em 31/10/2026: o usuário informou que o FPS também já foi testado. Essa confirmação manual não representa uma medição independente de precisão ou latência realizada pelo agente.
+
 Data: 31/10/2026. Execução autorizada explicitamente pelo usuário nesta entrega.
 
 ## Resultados
