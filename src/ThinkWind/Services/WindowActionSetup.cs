@@ -21,7 +21,7 @@ internal static class WindowActionSetup
     {
         get
         {
-            try { return File.Exists(Executable) && File.Exists(Marker) && File.ReadAllText(Marker) == AppBrand.Version + "|action-v1"; }
+            try { return File.Exists(Executable) && File.Exists(Marker) && File.ReadAllText(Marker) == AppBrand.Version + "|action-v2"; }
             catch (IOException) { return false; }
             catch (UnauthorizedAccessException) { return false; }
         }
@@ -76,7 +76,7 @@ internal static class WindowActionSetup
             ((dynamic)action).Arguments = "--authorized-window-action \"$(Arg0)\"";
             string security = "O:BAG:BAD:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGX;;;" + UserSid + ")";
             registered = ((dynamic)folder).RegisterTaskDefinition(TaskName, definition, 6 | 16, UserSid, null, 3, security);
-            File.WriteAllText(Marker, AppBrand.Version + "|action-v1"); exitCode = 0;
+            File.WriteAllText(Marker, AppBrand.Version + "|action-v2"); exitCode = 0;
         }
         catch (Exception error) when (error is COMException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
         { MessageBox.Show("Autorização do controle de janelas: " + error.Message, "Think Wind"); }

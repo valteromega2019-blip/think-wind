@@ -21,7 +21,7 @@ internal static class AdvancedSensorSetup
     internal static string TaskName => "ThinkWind-Sensors-" + UserSid;
     internal static string PipeName => "ThinkWind.Sensors.v3." + UserSid;
     private static string Marker => Path.Combine(DirectoryPath, "sensor-task-v3.enabled");
-    private static string PayloadRevision => AppBrand.Version + "|frames-v2|gpu-v1";
+    private static string PayloadRevision => AppBrand.Version + "|frames-v2|gpu-v1|payload-v2";
     internal static bool IsConfigured
     {
         get
@@ -156,6 +156,19 @@ internal static class AdvancedSensorSetup
         }
         // Flat .NET distribution only. No scripts, user settings, plugins or
         // external executable paths become scheduled elevated actions.
+        // A development build may replace a self-contained installation. Leaving
+        // its hostfxr/coreclr behind makes the new apphost load an incompatible
+        // local runtime before any managed setup or sensor code can execute.
+        var payloadNames = Directory.EnumerateFiles(AppContext.BaseDirectory)
+            .Where(path => new[] { ".exe", ".dll", ".json" }.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            .Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (string previous in Directory.EnumerateFiles(destinationDirectory))
+        {
+            if (!new[] { ".exe", ".dll", ".json" }.Contains(Path.GetExtension(previous), StringComparer.OrdinalIgnoreCase)
+                || payloadNames.Contains(Path.GetFileName(previous))) continue;
+            if ((File.GetAttributes(previous) & FileAttributes.ReparsePoint) != 0) throw new IOException("Destino inválido.");
+            File.Delete(previous);
+        }
         foreach (string source in Directory.EnumerateFiles(AppContext.BaseDirectory))
         {
             if (!new[] { ".exe", ".dll", ".json" }.Contains(Path.GetExtension(source), StringComparer.OrdinalIgnoreCase)) continue;
