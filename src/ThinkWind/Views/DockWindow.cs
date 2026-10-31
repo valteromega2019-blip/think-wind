@@ -46,6 +46,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private LauncherPanelWindow? launcher;
     private LauncherPanelMode panelMode;
     private bool temporaryFullscreenStart;
+    private bool clearingDockSearch;
     private readonly TextBox dockSearch = new() { BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(4), VerticalContentAlignment = VerticalAlignment.Center, MaxLength = 160 };
     private DateTime nextAppRefresh;
     private readonly ShellIcons icons = new();
@@ -78,9 +79,17 @@ internal sealed partial class DockWindow : FloatingWindow
         catalog.Changed += () => { signature = ""; nextAppRefresh = DateTime.MinValue; };
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
         System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Think Wind");
-        dockSearch.TextChanged += (_, _) => { if (dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); } };
+        dockSearch.TextChanged += (_, _) => { if (!clearingDockSearch && dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); } };
         dockSearch.GotKeyboardFocus += (_, _) => { AnimateSearch(true); EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); };
-        dockSearch.LostKeyboardFocus += (_, _) => AnimateSearch(false);
+        dockSearch.LostKeyboardFocus += (_, _) =>
+        {
+            AnimateSearch(false);
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                // Moving into the results is still part of this search.
+                if (!dockSearch.IsKeyboardFocusWithin && launcher?.IsVisible != true) ClearDockSearch();
+            }));
+        };
         dockSearch.PreviewMouseLeftButtonDown += (_, _) => Activate();
         dockSearch.PreviewKeyDown += (_, e) =>
         {
@@ -564,9 +573,16 @@ internal sealed partial class DockWindow : FloatingWindow
         launcher = new LauncherPanelWindow(Store, catalog, () => TargetBounds, () => dockSearch.IsKeyboardFocusWithin) { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
         launcher.Dismissed += () =>
         {
-            lastHover = DateTime.UtcNow; AnimateSearch(false);
+            ClearDockSearch(); lastHover = DateTime.UtcNow; AnimateSearch(false);
             if (temporaryFullscreenStart) { temporaryFullscreenStart = false; Hide(); }
         };
+    }
+    private void ClearDockSearch()
+    {
+        // Clearing a focused field must not reopen the search window.
+        clearingDockSearch = true;
+        try { dockSearch.Clear(); }
+        finally { clearingDockSearch = false; }
     }
     private void ShowPanel(LauncherPanelMode mode)
     { StopPreviews(); SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); }

@@ -211,7 +211,12 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         if (!IsVisible) return;
         searchFocusRevision++;
         focusSearchOnActivation = false;
-        cancellation?.Cancel(); debounce.Stop(); visibility.Stop(); refresh.Stop(); Hide(); Store.Flush(); Dismissed?.Invoke();
+        cancellation?.Cancel(); debounce.Stop(); visibility.Stop(); refresh.Stop(); Hide();
+        updating = true;
+        try { query.Clear(); }
+        finally { updating = false; }
+        page = 0;
+        Store.Flush(); Dismissed?.Invoke();
     }
     private void CatalogChanged() { if (!IsVisible) return; UpdateCategories(); Reload(false); }
     private void LayoutCompleted() { if (IsVisible) Reload(false); }
