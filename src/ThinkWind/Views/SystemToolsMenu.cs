@@ -60,9 +60,10 @@ internal static class SystemToolsMenu
             item.Click += (_, _) => SystemActions.Power(action); power.Items.Add(item);
         }
         menu.Items.Add(power);
-        Add("Área de Trabalho", () => ShellAction("MinimizeAll"));
+        Add("Área de Trabalho", ShowDesktop);
         return menu;
     }
+    internal static void ShowDesktop() => ShellAction("MinimizeAll");
     private static void ShellAction(string action)
     {
         object? shell = null;

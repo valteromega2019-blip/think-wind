@@ -311,7 +311,7 @@ internal sealed partial class DockWindow : FloatingWindow
         if (MenuOpen) return;
         fittedWidth = Display.Width;
         double searchWidth = Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36;
-        double available = Math.Max(60, fittedWidth - 16 - 20 - DockGeometry.StartWidth(Store.Value.IconSize * Store.Value.DockScale) - 8 - searchWidth - (Store.IsEditing ? 30 : 0));
+        double available = Math.Max(60, fittedWidth - 16 - 20 - DockGeometry.StartWidth(Store.Value.IconSize * Store.Value.DockScale) - 8 - searchWidth - ShowDesktopSlotWidth - (Store.IsEditing ? 30 : 0));
         var p = Store.Value;
         bool magnify = p.DockMagnification && SystemParameters.ClientAreaAnimation && !Store.IsEditing;
         magnificationReserve = magnify ? Math.Min(available * .32, (p.IconSize * p.DockScale + 20) * p.DockMagnificationAmount * (p.DockMagnificationNeighbors + 1) * 1.12) : 0;
@@ -341,6 +341,7 @@ internal sealed partial class DockWindow : FloatingWindow
             if (!entry.Key.StartsWith("system:", StringComparison.Ordinal)) magnified.Add(button);
         }
         if (pages > 1) items.Children.Add(PageButton(1, pages));
+        items.Children.Add(ShowDesktopButton());
         items.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         // Measure the individual slots, including their margins, independently
         // of the previous HWND width. The row must not keep its old layout slot.
