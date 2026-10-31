@@ -13,4 +13,4 @@ O catálogo e os ícones detalhados do próprio Orby priorizam seu PNG incorpora
 
 Configurações do Windows: leitura de ícone grande usa a identidade registrada do pacote, em vez do recurso do SystemSettings.exe. Caso a fonte não disponibilize imagem, há uma engrenagem do conjunto nativo Segoe Fluent Icons / MDL2. Imagens completamente vazias não são promovidas a retângulos opacos e não substituem o ícone de reserva.
 
-Revisão por leitura de código e diff. Sem compilação, testes, type check, instalação ou publicação nesta etapa. O instalador 0.20.0-beta já publicado permanece o anterior; estas alterações ainda precisam ser empacotadas em uma nova entrega.
+Revisão por leitura de código e diff. Compilação e empacotamento realizados para a 0.20.1 Beta, com publicação solicitada pelo usuário. Testes e type check separado não executados. A migração neste PC é explícita, com backup e importação das preferências; o instalador não faz essa importação automaticamente.
