@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using ThinkWind.Native;
 using ThinkWind.Services;
@@ -40,9 +41,11 @@ internal abstract class FloatingWindow : Window
     private BackdropHost? backdrop;
     internal nint BackdropHandle => backdrop?.Handle ?? 0;
     internal bool HasNativeMaterial => backdrop?.MaterialAvailable == true;
+    internal double AnimationMilliseconds => Store.Value.AnimationMilliseconds;
     protected bool IsPositionAnimating => animation.IsRunning;
     private double radius;
     private double animationDuration;
+    private UIElement? openingContent;
     private readonly Border centerGuide = new() { Width = 1, Opacity = .35, IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed };
     private (int Width, int Height, int Radius, bool Top, double Scale) lastClip;
     protected FloatingWindow(SettingsStore store)
@@ -76,8 +79,22 @@ internal abstract class FloatingWindow : Window
         };
         IsVisibleChanged += (_, _) =>
         {
-            if (!IsVisible) { if (animation.IsRunning) { animation.Stop(); if (placed) Move(target); } backdrop?.Hide(); }
-            else UpdateClip();
+            if (!IsVisible)
+            {
+                if (animation.IsRunning) { animation.Stop(); if (placed) Move(target); } backdrop?.Hide();
+                openingContent?.BeginAnimation(UIElement.OpacityProperty, null); openingContent = null;
+            }
+            else
+            {
+                UpdateClip();
+                if (SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0 && Surface.Child is UIElement content)
+                {
+                    openingContent = content;
+                    content.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(.9, 1,
+                        TimeSpan.FromMilliseconds(Math.Min(180, Store.Value.AnimationMilliseconds)))
+                    { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop }, HandoffBehavior.SnapshotAndReplace);
+                }
+            }
         };
         Loaded += (_, _) => Position();
         Closing += (_, e) => { if (!retiring && HideOnClose && Application.Current is App app && !app.IsExiting) { e.Cancel = true; Hide(); } };
@@ -85,7 +102,7 @@ internal abstract class FloatingWindow : Window
         animation.Tick += (_, _) =>
         {
             var progress = Math.Clamp(elapsed.Elapsed.TotalMilliseconds / Math.Max(1, animationDuration), 0, 1);
-            var eased = 1 - Math.Pow(1 - progress, 3);
+            var eased = progress * progress * (3 - 2 * progress);
             Move(new OverlayChrome.PixelRect
             {
                 Left = Blend(start.Left, target.Left, eased), Top = Blend(start.Top, target.Top, eased),

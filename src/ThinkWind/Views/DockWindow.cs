@@ -117,7 +117,7 @@ internal sealed partial class DockWindow : FloatingWindow
                 activeContextMenu = null;
             }
         };
-        Closed += (_, _) => { magnifier.Dispose(); timer.Stop(); DisposeFileDrop(); catalog.Dispose(); LayoutDrag.Completed -= DragCompleted; };
+        Closed += (_, _) => { iconsClosed = true; detailedIcons.Clear(); magnifier.Dispose(); timer.Stop(); DisposeFileDrop(); catalog.Dispose(); LayoutDrag.Completed -= DragCompleted; };
     }
     private void DragCompleted() { signature = ""; RefreshApps(); }
     internal void SuspendForGame(bool active)
@@ -420,13 +420,17 @@ internal sealed partial class DockWindow : FloatingWindow
             (!string.IsNullOrWhiteSpace(selected?.AppId) && string.Equals(app.AppId, selected?.AppId, StringComparison.OrdinalIgnoreCase))
             || (item.Target is not null && app.Target.Equals(item.Target, StringComparison.OrdinalIgnoreCase))) : null;
         var icon = item.Glyph is null ? catalogApp?.Icon ?? icons.Get(item.Target, selected?.Handle ?? 0, selected?.AppId) : null;
-        if (icon is not null) panel.Children.Add(new Image { Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform });
-        else
+        var image = new Image { Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
+        FrameworkElement? fallback = null;
+        if (item.Glyph is null) panel.Children.Add(image);
+        if (icon is null)
         {
             bool settingsIcon = item.Target?.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) == true
                 || string.Equals(System.IO.Path.GetFileName(selected?.Executable ?? item.Target ?? ""), "SystemSettings.exe", StringComparison.OrdinalIgnoreCase);
-            panel.Children.Add(new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? (settingsIcon ? "\uE713" : "\uE8A5"), 32) });
+            fallback = new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? (settingsIcon ? "\uE713" : "\uE8A5"), 32) };
+            panel.Children.Add(fallback);
         }
+        if (item.Glyph is null) PrepareDetailedIcon(image, catalogApp?.Target ?? item.Target, fallback);
         var indicator = new Border
         {
             Height = 3,

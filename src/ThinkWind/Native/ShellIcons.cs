@@ -29,9 +29,11 @@ internal sealed class ShellIcons
     private readonly Dictionary<string, string> resolved = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, long> resolvedVersions = new(StringComparer.OrdinalIgnoreCase);
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern uint ExtractIconEx(string file, int index, out nint large, out nint small, uint count);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "PrivateExtractIconsW")]
+    private static extern uint PrivateExtractIcons(string file, int index, int width, int height, out nint icon, out uint identifier, uint count, uint flags);
     private static long Stamp(string path)
     { try { return File.Exists(path) ? File.GetLastWriteTimeUtc(path).Ticks : 0; } catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { return 0; } }
-    private static ImageSource? ShortcutIcon(string target)
+    private static ImageSource? ShortcutIcon(string target, int pixels = 0)
     {
         if (!Path.GetExtension(target).Equals(".lnk", StringComparison.OrdinalIgnoreCase) || !File.Exists(target)) return null;
         object? shell = null, shortcut = null; nint large = 0, small = 0;
@@ -41,7 +43,12 @@ internal sealed class ShellIcons
             string location = ((dynamic)shortcut).IconLocation; int comma = location.LastIndexOf(',');
             string file = Environment.ExpandEnvironmentVariables((comma >= 0 ? location[..comma] : location).Trim().Trim('"'));
             int index = comma >= 0 && int.TryParse(location[(comma + 1)..], out int number) ? number : 0;
-            if (file.Length > 0 && File.Exists(file) && ExtractIconEx(file, index, out large, out small, 1) > 0 && large != 0) return FromIcon(large);
+            if (file.Length > 0 && File.Exists(file))
+            {
+                if (pixels > 0 && PrivateExtractIcons(file, index, pixels, pixels, out large, out _, 1, 0) == 1 && large != 0) return FromIcon(large);
+                if (large != 0) { DestroyIcon(large); large = 0; }
+                if (ExtractIconEx(file, index, out large, out small, 1) > 0 && large != 0) return FromIcon(large);
+            }
         }
         catch (Exception error) when (error is COMException or ArgumentException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException) { }
         finally { if (large != 0) DestroyIcon(large); if (small != 0) DestroyIcon(small); CoreAudio.Release(shortcut); CoreAudio.Release(shell); }
@@ -59,14 +66,15 @@ internal sealed class ShellIcons
     [DllImport("user32.dll")] private static extern nint GetDC(nint window);
     [DllImport("user32.dll")] private static extern int ReleaseDC(nint window, nint dc);
     // Called only by an STA worker: extracting a shell icon may perform disk I/O.
-    internal static ImageSource? ReadLarge(string target)
+    internal static ImageSource? ReadLarge(string target, int pixels = 192)
     {
-        var shortcutIcon = ShortcutIcon(target); if (shortcutIcon is not null) return shortcutIcon;
+        pixels = Math.Clamp(pixels, 48, 512);
+        var shortcutIcon = ShortcutIcon(target, pixels); if (shortcutIcon is not null) return shortcutIcon;
         ImageFactory? factory = null; nint bitmap = 0;
         try
         {
             string path = new ShellIcons().Resolve(target); var iid = typeof(ImageFactory).GUID;
-            if (SHCreateItemFromParsingName(path, 0, ref iid, out factory) < 0 || factory.GetImage(new ImageSize { Width = 96, Height = 96 }, 5, out bitmap) < 0 || bitmap == 0) return null;
+            if (SHCreateItemFromParsingName(path, 0, ref iid, out factory) < 0 || factory.GetImage(new ImageSize { Width = pixels, Height = pixels }, 5, out bitmap) < 0 || bitmap == 0) return null;
             if (GetBitmapObject(bitmap, Marshal.SizeOf<NativeBitmap>(), out var info) == 0 || info.Width is < 1 or > 512 || info.Height is < 1 or > 512) return null;
             var pixels = new byte[info.Width * info.Height * 4];
             var header = new BitmapHeader { Size = 40, Width = info.Width, Height = -info.Height, Planes = 1, Bits = 32 };

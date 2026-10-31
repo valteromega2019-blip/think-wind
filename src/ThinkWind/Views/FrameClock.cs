@@ -7,7 +7,16 @@ internal sealed class FrameClock
 {
     internal bool IsRunning { get; private set; }
     internal event EventHandler? Tick;
-    internal void Start() { if (IsRunning) return; IsRunning = true; CompositionTarget.Rendering += Rendering; }
+    private TimeSpan? previousFrame;
+    internal void Start() { if (IsRunning) return; previousFrame = null; IsRunning = true; CompositionTarget.Rendering += Rendering; }
     internal void Stop() { if (!IsRunning) return; IsRunning = false; CompositionTarget.Rendering -= Rendering; }
-    private void Rendering(object? sender, EventArgs args) => Tick?.Invoke(this, args);
+    private void Rendering(object? sender, EventArgs args)
+    {
+        if (args is RenderingEventArgs rendering)
+        {
+            if (previousFrame == rendering.RenderingTime) return;
+            previousFrame = rendering.RenderingTime;
+        }
+        Tick?.Invoke(this, args);
+    }
 }

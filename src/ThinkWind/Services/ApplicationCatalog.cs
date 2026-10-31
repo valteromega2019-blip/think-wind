@@ -62,6 +62,8 @@ internal sealed class ApplicationCatalog : IDisposable
     private readonly DispatcherTimer debounce = new() { Interval = TimeSpan.FromMilliseconds(700) };
     private bool loading, refreshAgain, disposed;
     private bool suspended;
+    internal Task<ImageSource?> ReadDockIconAsync(string target, int pixels) => worker.Run(() =>
+        disposed || suspended ? null : ShellIcons.ReadLarge(target, pixels));
     private DateTime refreshed;
     internal IReadOnlyList<AppEntry> Items { get; private set; } = Array.Empty<AppEntry>();
     internal string? Warning { get; private set; }

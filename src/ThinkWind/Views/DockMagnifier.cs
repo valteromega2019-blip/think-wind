@@ -64,7 +64,7 @@ internal sealed class DockMagnifier : IDisposable
     }
     private void Frame(object? sender, EventArgs args)
     {
-        double now = elapsed.Elapsed.TotalSeconds, dt = Math.Clamp(now - previous, 0, .04); previous = now;
+        double now = elapsed.Elapsed.TotalSeconds, dt = Math.Clamp(now - previous, 0, .1); previous = now;
         bool active = row.IsMouseOver && permitted();
         double pointer = Mouse.GetPosition(row).X, offset = 0;
         foreach (var item in items)
@@ -80,19 +80,19 @@ internal sealed class DockMagnifier : IDisposable
         var nearest = apps.MinBy(item => Math.Abs(pointer - item.Center))!;
         double radius = Math.Max(1, pitch * (neighbors == 0 ? .5 : neighbors + 1));
         double omega = 18 * speed;
+        double damping = .85 * omega, frequency = omega * Math.Sqrt(1 - .85 * .85);
+        double decay = Math.Exp(-damping * dt), cosine = Math.Cos(frequency * dt), sine = Math.Sin(frequency * dt);
         bool settled = true;
         foreach (var item in apps)
         {
             double distance = Math.Abs(pointer - item.Center);
             double target = active && (neighbors > 0 || ReferenceEquals(item, nearest)) && distance < radius
                 ? intensity * .5 * (1 + Math.Cos(Math.PI * distance / radius)) : 0;
-            // Substeps keep a lightly damped spring stable at slow frame rates.
-            int steps = Math.Max(1, (int)Math.Ceiling(dt * 120)); double step = dt / steps;
-            for (int i = 0; i < steps; i++)
-            {
-                item.Velocity += (omega * omega * (target - item.Growth) - 1.7 * omega * item.Velocity) * step;
-                item.Growth = Math.Clamp(item.Growth + item.Velocity * step, 0, intensity * 1.08);
-            }
+            // Exact damped-spring integration: the same response at low and
+            // high refresh rates, without a numerical substep loop per icon.
+            double displacement = item.Growth - target, velocity = item.Velocity;
+            item.Growth = Math.Clamp(target + decay * (displacement * cosine + (velocity + damping * displacement) / frequency * sine), 0, intensity * 1.08);
+            item.Velocity = decay * (velocity * cosine - (damping * velocity + omega * omega * displacement) / frequency * sine);
             if (Math.Abs(item.Growth - target) > .0003 || Math.Abs(item.Velocity) > .003) settled = false;
             else { item.Growth = target; item.Velocity = 0; }
         }

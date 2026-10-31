@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Animation;
 
 namespace ThinkWind.Views;
 
@@ -54,7 +55,12 @@ internal static class ColorPickerPopup
         EventHandler close = (_, _) => popup.IsOpen = false;
         if (owner is not null) { owner.LocationChanged += close; owner.Deactivated += close; owner.Closed += close; }
         popup.Closed += (_, _) => { if (owner is not null) { owner.LocationChanged -= close; owner.Deactivated -= close; owner.Closed -= close; } };
-        popup.IsOpen = true; wheel.Focus();
+        popup.IsOpen = true;
+        double duration = (owner as FloatingWindow)?.AnimationMilliseconds ?? 160;
+        if (SystemParameters.ClientAreaAnimation && duration > 0)
+            frame.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(.9, 1, TimeSpan.FromMilliseconds(Math.Min(180, duration)))
+            { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
+        wheel.Focus();
     }
 }
 

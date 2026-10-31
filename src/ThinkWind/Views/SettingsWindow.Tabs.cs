@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Media.Animation;
 
 namespace ThinkWind.Views;
 
@@ -46,6 +47,7 @@ internal sealed partial class SettingsWindow
     private void SelectSettingsTab(string name)
     {
         if (!settingsPages.ContainsKey(name)) return;
+        bool changedTab = selectedSettingsTab != name;
         if (settingsPages.TryGetValue(selectedSettingsTab, out var old) && old.Page.Visibility == Visibility.Visible)
             tabOffsets[selectedSettingsTab] = settingsScroll.VerticalOffset;
         selectedSettingsTab = name;
@@ -53,6 +55,10 @@ internal sealed partial class SettingsWindow
         {
             bool selected = entry.Key == name;
             entry.Value.Page.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+            entry.Value.Page.BeginAnimation(OpacityProperty, null);
+            if (selected && changedTab && IsVisible && SystemParameters.ClientAreaAnimation && store.Value.AnimationMilliseconds > 0)
+                entry.Value.Page.BeginAnimation(OpacityProperty, new DoubleAnimation(.9, 1, TimeSpan.FromMilliseconds(Math.Min(180, store.Value.AnimationMilliseconds)))
+                { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
             entry.Value.Tab.SetResourceReference(Control.BackgroundProperty, selected ? "Think.AccentSurface" : "Think.Control");
             entry.Value.Tab.SetResourceReference(Control.ForegroundProperty, selected ? "Think.AccentInk" : "Think.Text");
             entry.Value.Tab.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;

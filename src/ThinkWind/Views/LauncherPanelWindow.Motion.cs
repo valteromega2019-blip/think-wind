@@ -43,14 +43,16 @@ internal sealed partial class LauncherPanelWindow
         // Animate the whole grid through composition, never its cell dimensions.
         // SnapshotAndReplace keeps rapid wheel/tab changes from accumulating clocks.
         resultsGrid.RenderTransform = rowsMotion;
+        bool continuing = rowsMotion.HasAnimatedProperties || resultsGrid.HasAnimatedProperties;
+        double previousX = rowsMotion.X, previousY = rowsMotion.Y, previousOpacity = resultsGrid.Opacity;
         rowsMotion.BeginAnimation(TranslateTransform.XProperty, null);
         rowsMotion.BeginAnimation(TranslateTransform.YProperty, null);
         resultsGrid.BeginAnimation(OpacityProperty, null);
         rowsMotion.X = rowsMotion.Y = 0; resultsGrid.Opacity = 1;
         if (!hadRows || !DrawerAnimations) return;
-        if (direction == 0) rowsMotion.BeginAnimation(TranslateTransform.YProperty, Enter(6, 0), HandoffBehavior.SnapshotAndReplace);
-        else rowsMotion.BeginAnimation(TranslateTransform.XProperty, Enter(direction * 16, 0), HandoffBehavior.SnapshotAndReplace);
-        resultsGrid.BeginAnimation(OpacityProperty, Enter(.55, 1), HandoffBehavior.SnapshotAndReplace);
+        if (direction == 0) rowsMotion.BeginAnimation(TranslateTransform.YProperty, Enter(continuing ? previousY : 6, 0), HandoffBehavior.SnapshotAndReplace);
+        else rowsMotion.BeginAnimation(TranslateTransform.XProperty, Enter(continuing ? previousX : direction * 16, 0), HandoffBehavior.SnapshotAndReplace);
+        resultsGrid.BeginAnimation(OpacityProperty, Enter(continuing ? previousOpacity : .88, 1), HandoffBehavior.SnapshotAndReplace);
     }
 
     private void AnimateDrawerOpening()
@@ -59,8 +61,8 @@ internal sealed partial class LauncherPanelWindow
         content.BeginAnimation(OpacityProperty, null); openingMotion.BeginAnimation(TranslateTransform.YProperty, null);
         content.Opacity = 1; openingMotion.Y = 0;
         if (!DrawerAnimations) return;
-        content.BeginAnimation(OpacityProperty, Enter(.65, 1), HandoffBehavior.SnapshotAndReplace);
-        openingMotion.BeginAnimation(TranslateTransform.YProperty, Enter(10, 0), HandoffBehavior.SnapshotAndReplace);
+        content.BeginAnimation(OpacityProperty, Enter(.9, 1), HandoffBehavior.SnapshotAndReplace);
+        openingMotion.BeginAnimation(TranslateTransform.YProperty, Enter(6, 0), HandoffBehavior.SnapshotAndReplace);
     }
 
     private void CancelDrawerMotion()
