@@ -18,10 +18,10 @@ internal sealed class AudioEndpointControl : Border
     private readonly AudioService audio;
     private readonly CoreAudio.Flow flow;
     private readonly ComboBox devices = new() { DisplayMemberPath = nameof(Choice.Label), Margin = new Thickness(0, 8, 0, 6), MinHeight = 28 };
-    private readonly Slider level = new() { Minimum = 0, Maximum = 100, SmallChange = 1, LargeChange = 5, IsMoveToPointEnabled = true, VerticalAlignment = VerticalAlignment.Center, IsEnabled = false };
+    private readonly Slider level = new() { Minimum = 0, Maximum = 100, SmallChange = 1, LargeChange = 5, IsMoveToPointEnabled = true, Background = Brushes.Transparent, BorderBrush = Brushes.Transparent, VerticalAlignment = VerticalAlignment.Center, IsEnabled = false };
     private readonly TextBlock percent = new() { MinWidth = 42, TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap, FontSize = 11, Opacity = .8, Margin = new Thickness(0, 6, 0, 0) };
-    private readonly Button mute = new() { Content = "Mudo", IsEnabled = false, MinWidth = 78, Padding = new Thickness(8, 6, 8, 6) };
+    private readonly Button mute = new() { IsEnabled = false, MinWidth = 32, Width = 32, Height = 32, Padding = new Thickness(0), Margin = new Thickness(2, 0, 6, 0) };
     private AudioState? current;
     private string deviceSignature = "";
     private bool updating;
@@ -37,6 +37,7 @@ internal sealed class AudioEndpointControl : Border
     internal AudioEndpointControl(AudioService audioService, CoreAudio.Flow direction)
     {
         audio = audioService; flow = direction;
+        mute.SetResourceReference(StyleProperty, "Think.IconButton"); mute.Content = MuteGlyph(false);
         Margin = new Thickness(0, 4, 0, 4); Padding = new Thickness(12);
         CornerRadius = new CornerRadius(18);
         SetResourceReference(BackgroundProperty, "Think.GlassCard");
@@ -53,9 +54,12 @@ internal sealed class AudioEndpointControl : Border
         devicePicker.ToolTip = devices.ToolTip;
         panel.Children.Add(devices);
         var row = new DockPanel();
-        DockPanel.SetDock(mute, Dock.Right); row.Children.Add(mute);
+        DockPanel.SetDock(mute, Dock.Left); row.Children.Add(mute);
         DockPanel.SetDock(percent, Dock.Right); row.Children.Add(percent);
-        row.Children.Add(level); panel.Children.Add(row); panel.Children.Add(status); Child = panel;
+        row.Children.Add(level);
+        var capsule = new Border { Child = row, CornerRadius = new CornerRadius(22), MinHeight = 44, Padding = new Thickness(4, 0, 8, 0), BorderThickness = new Thickness(1) };
+        capsule.SetResourceReference(BackgroundProperty, "Think.Control"); capsule.SetResourceReference(BorderBrushProperty, "Think.Hover");
+        panel.Children.Add(capsule); panel.Children.Add(status); Child = panel;
         devices.SelectionChanged += (_, _) =>
         {
             if (updating) return;
@@ -122,9 +126,9 @@ internal sealed class AudioEndpointControl : Border
             // Mouse drags are excluded above; keyboard input runs synchronously.
             level.Value = current.Volume;
             percent.Text = $"{current.Volume:0}%";
-            mute.Content = compact ? MuteGlyph(current.Muted) : current.Muted ? "Ativar som" : "Mudo";
-            mute.ToolTip = current.Muted ? "Ativar som" : "Silenciar";
-            mute.SetResourceReference(Control.BackgroundProperty, current.Muted ? "Think.AccentSurface" : "Think.Control");
+            mute.Content = MuteGlyph(current.Muted);
+            mute.ToolTip = flow == CoreAudio.Flow.Capture ? current.Muted ? "Ativar microfone" : "Silenciar microfone" : current.Muted ? "Ativar som" : "Silenciar";
+            if (current.Muted) mute.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface"); else mute.Background = Brushes.Transparent;
             mute.SetResourceReference(Control.ForegroundProperty, "Think.Text");
             status.Text = selectionError ?? current.Name + (current.Muted ? " · silenciado" : "");
             status.Visibility = compact && selectionError is null ? Visibility.Collapsed : Visibility.Visible;
@@ -147,13 +151,13 @@ internal sealed class AudioEndpointControl : Border
         devicePicker.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
         Padding = new Thickness(value ? 4 : 12); Margin = new Thickness(0, 2, 0, 2);
         percent.Width = double.NaN; percent.MinWidth = value ? 40 : 42; percent.FontSize = 12;
-        mute.MinWidth = value ? 28 : 78; mute.Width = value ? 28 : double.NaN; mute.Height = value ? 28 : double.NaN;
-        mute.Padding = new Thickness(value ? 0 : 8); mute.Margin = new Thickness(3, 0, 0, 0);
-        if (current is not null) mute.Content = value ? MuteGlyph(current.Muted) : current.Muted ? "Ativar som" : "Mudo";
+        mute.MinWidth = mute.Width = mute.Height = 32;
+        mute.Padding = new Thickness(0); mute.Margin = new Thickness(2, 0, 6, 0);
+        if (current is not null) mute.Content = MuteGlyph(current.Muted);
     }
-    private static TextBlock MuteGlyph(bool muted)
+    private TextBlock MuteGlyph(bool muted)
     {
-        var glyph = new TextBlock { Text = muted ? "\uE74F" : "\uE767", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 14 };
+        var glyph = new TextBlock { Text = flow == CoreAudio.Flow.Capture ? "\uE720" : muted ? "\uE74F" : "\uE767", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 16 };
         glyph.SetResourceReference(TextBlock.ForegroundProperty, muted ? "Think.AccentInk" : "Think.Text"); return glyph;
     }
     private void OpenDeviceMenu()
