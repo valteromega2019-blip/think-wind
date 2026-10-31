@@ -205,11 +205,12 @@ public partial class App : Application
     }
     private void ConfigureStartHotkey()
     {
-        bool allowStart = gameMode?.Active != true || gameMode.FullscreenPresentation;
-        bool interceptWindows = store.Value.WindowsKeyOpensLauncher && allowStart;
+        // The isolated Windows key remains ours during games as requested.
+        // The dedicated hook only posts the action; it does no UI/system work.
+        bool interceptWindows = store.Value.WindowsKeyOpensLauncher;
         if (!interceptWindows) { launcherWindowsKey?.Dispose(); launcherWindowsKey = null; }
         else launcherWindowsKey ??= new LauncherWindowsKey(Dispatcher, OpenStartFromKeyboard);
-        bool enabled = store.Value.StartHotkeyEnabled && allowStart;
+        bool enabled = store.Value.StartHotkeyEnabled;
         if (!enabled) { startKey?.Dispose(); startKey = null; return; }
         if (startKey is not null) return;
         try { startKey = new WindowsStartKey(OpenStartFromKeyboard); }
@@ -217,8 +218,8 @@ public partial class App : Application
     }
     private void OpenStartFromKeyboard()
     {
-        if (IsExiting || (gameMode?.Active == true && !gameMode.FullscreenPresentation)) return;
-        PrimaryDock?.ToggleStartFromKeyboard(gameMode?.Active == true && gameMode.FullscreenPresentation);
+        if (IsExiting) return;
+        PrimaryDock?.ToggleStartFromKeyboard(gameMode?.Active == true);
     }
     private void ApplyHardwareOverlay()
     {

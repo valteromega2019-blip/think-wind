@@ -1,3 +1,9 @@
+## Em desenvolvimento — Iniciar próprio também durante jogos
+
+- Por solicitação do usuário, a tecla Windows isolada continua direcionada ao Think Wind durante jogos quando WindowsKeyOpensLauncher está habilitado. O atalho opcional do launcher também permanece disponível.
+- Mantido o callback mínimo do hook em thread dedicada, encaminhando a abertura para o Dispatcher. Combinações de teclas do Windows preservam o comportamento existente.
+- O menu pode abrir temporariamente sobre o jogo sem restaurar toda a interface do launcher; a detecção revalida a janela protegida enquanto o foco estiver no próprio launcher. O Dock temporário é ocultado ao fechar o menu.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Não foram feitas novas medições de latência nem validação em jogos.
 ## Em desenvolvimento — tecla Windows durante vídeos fullscreen
 
 - A tecla Windows isolada e o atalho opcional do Iniciar continuam habilitados durante apresentações fullscreen identificadas pelo launcher, respeitando a preferência WindowsKeyOpensLauncher. A suspensão dos atalhos durante jogos permanece.

@@ -42,7 +42,7 @@ internal sealed class GameModeService : IDisposable
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(nint window, int attribute, out int value, int size);
     internal bool Active { get; private set; }
     internal bool FullscreenPresentation { get; private set; }
-    internal nint PresentationWindow => presentationWindow;
+    internal nint PresentationWindow => FullscreenPresentation ? presentationWindow : 0;
     internal bool RecognizedGame { get; private set; }
     internal event Action? ForegroundChanged;
     internal string CurrentProcess { get; private set; } = "";
@@ -80,8 +80,8 @@ internal sealed class GameModeService : IDisposable
                 nint observedForeground = GetForegroundWindow();
                 GetWindowThreadProcessId(observedForeground, out uint foregroundProcess);
                 var game = Snapshot(observedForeground);
-                // Our overlay taking focus is not Alt+Tab away from the video.
-                // Recheck the real presentation HWND instead of trusting old state.
+                // Opening our Start menu is not Alt+Tab away from a game/video.
+                // Recheck its real HWND instead of restoring all launcher UI.
                 if (foregroundProcess == Environment.ProcessId && presentationWindow != 0
                     && IsWindowVisible(presentationWindow) && !IsIconic(presentationWindow)
                     && GetWindowThreadProcessId(presentationWindow, out uint owner) != 0 && owner == presentationProcess
@@ -106,8 +106,8 @@ internal sealed class GameModeService : IDisposable
                             && !include.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase));
                         bool presentationChanged = FullscreenPresentation != presentation
                             || (presentation && presentationWindow != game.Handle);
-                        presentationWindow = presentation ? game.Handle : 0;
-                        if (presentation) GetWindowThreadProcessId(game.Handle, out presentationProcess);
+                        presentationWindow = active ? game.Handle : 0;
+                        if (active) GetWindowThreadProcessId(game.Handle, out presentationProcess);
                         else presentationProcess = 0;
                         FullscreenPresentation = presentation;
                         if (Active != active) { Active = active; changed(active); }
