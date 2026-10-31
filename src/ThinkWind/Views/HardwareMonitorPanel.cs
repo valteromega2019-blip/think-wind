@@ -76,7 +76,7 @@ internal sealed class HardwareMonitorPanel : UserControl
         int errorAt = sample.Status.IndexOf("Coletor administrativo:", StringComparison.Ordinal);
         sensorNotice.Text = errorAt >= 0 ? sample.Status[errorAt..] : "";
         sensorNotice.Visibility = errorAt >= 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (IsVisible) { UpdateGpuPicker(); Render(); }
+        if (IsVisible) { UpdateGpuPicker(); Render(false); }
     }
     private void UpdateGpuPicker()
     {
@@ -115,14 +115,18 @@ internal sealed class HardwareMonitorPanel : UserControl
         if (selected) { button.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface"); button.SetResourceReference(Control.BorderBrushProperty, "Think.Accent"); }
         button.Click += (_, _) => action(); panel.Children.Add(button);
     }
-    private void Render()
+    private void Render(bool updateLayout = true)
     {
+        // Keep the board's allocated height throughout a telemetry refresh.
+        // New text/graph elements must not resize the surrounding Viewbox.
+        if (updateLayout) body.Height = double.NaN;
         body.Children.Clear();
         if (components) RenderComponents(); else RenderSummary();
-        // Sensor values change frequently; only ask the owning Acrylic window
-        // to resize when the board's natural geometry actually changes.
+        if (!updateLayout) return;
+        // Only explicit layout/settings changes may change the window geometry.
         double measureWidth = double.IsFinite(Width) && Width > 0 ? Width : 520;
         Measure(new Size(measureWidth, double.PositiveInfinity));
+        body.Height = Math.Ceiling(body.DesiredSize.Height);
         var size = new Size(Math.Ceiling(DesiredSize.Width), Math.Ceiling(DesiredSize.Height));
         if (Math.Abs(size.Width - lastLayoutSize.Width) > 1 || Math.Abs(size.Height - lastLayoutSize.Height) > 1)
         {
