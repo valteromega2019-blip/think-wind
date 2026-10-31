@@ -1,3 +1,7 @@
+## Ajuste após a prévia 0.18 — cor das métricas principais
+
+- Temperatura e uso de CPU/GPU utilizam a cor de destaque configurada no overlay, preservando a posição nas linhas e os tamanhos atuais. As demais métricas mantêm a cor de texto.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário.
 ## Ajuste após a prévia 0.18 — ativação da busca pela tecla Windows
 
 - Acrescentada tentativa de ativação quando SetForegroundWindow direto é recusado: somente na solicitação explícita de foco, a thread de interface conecta temporariamente sua fila à thread em primeiro plano, solicita ativação e desconecta em finally antes de qualquer operação WPF.

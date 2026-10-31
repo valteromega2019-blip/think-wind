@@ -120,7 +120,11 @@ internal sealed class HardwareOverlayWindow : Window
                 {
                     if (value.Inlines.Count > 0) value.Inlines.Add(new System.Windows.Documents.Run(" · "));
                     bool emphasized = metric.Key is "cpu_temp" or "cpu_load" or "gpu_temp" or "gpu_load";
-                    value.Inlines.Add(new System.Windows.Documents.Run(V(metric.Key)) { FontSize = emphasized ? 14 : 13 });
+                    value.Inlines.Add(new System.Windows.Documents.Run(V(metric.Key))
+                    {
+                        FontSize = emphasized ? 14 : 13,
+                        Foreground = B(emphasized ? palette.Accent : palette.Text)
+                    });
                 }
                 Grid.SetColumn(value, 2); line.Children.Add(value); rows.Children.Add(Block(line));
             }
