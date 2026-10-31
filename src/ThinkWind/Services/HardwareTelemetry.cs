@@ -34,6 +34,7 @@ internal sealed class HardwareTelemetry : IDisposable
     private bool disposed;
     private readonly AdvancedSensorClient? advanced;
     private readonly bool localFrameAccess;
+    private readonly bool publishOnDispatcher;
     private volatile string preferredGpu = "";
     private IReadOnlyList<GpuAdapterInfo> adapterInfo = Array.Empty<GpuAdapterInfo>();
     internal volatile bool CaptureFrames;
@@ -68,6 +69,7 @@ internal sealed class HardwareTelemetry : IDisposable
     internal HardwareTelemetry(Dispatcher ui, bool worker = false)
     {
         dispatcher = ui;
+        publishOnDispatcher = !worker;
         using var identity = WindowsIdentity.GetCurrent();
         localFrameAccess = !worker && new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
         if (!worker && !localFrameAccess) advanced = new AdvancedSensorClient();
@@ -136,7 +138,7 @@ internal sealed class HardwareTelemetry : IDisposable
                     catch (Exception error) when (error is not OutOfMemoryException)
                     {
                         try { computer?.Close(); } catch (Exception cleanup) when (cleanup is not OutOfMemoryException) { }
-                        computer = null; sensorStatus = "Sensores indisponíveis; exibindo os dados disponíveis do Windows.";
+                        computer = null; sensorStatus = "Sensores indisponíveis: " + error.GetType().Name + " (0x" + error.HResult.ToString("X8") + "). Exibindo dados disponíveis do Windows.";
                     }
                 }
                 try
@@ -146,15 +148,23 @@ internal sealed class HardwareTelemetry : IDisposable
                         sample = sample with { Frames = localFrames.GetForegroundStats(),
                             Status = sample.Status + (localFrames.Error is null ? "" : " FPS/ETW indisponível: " + localFrames.Error) };
                     sample = SelectGpuSample(sample);
-                    if (Needed && !dispatcher.HasShutdownStarted)
-                        _ = dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
-                        {
-                            if (!Needed) return;
-                            // A manual selection may have changed while this
-                            // background sample was waiting in the UI queue.
-                            var current = SelectGpuSample(sample);
-                            Latest = current; History.Enqueue(current); while (History.Count > 450) History.Dequeue(); Changed?.Invoke(current);
-                        }));
+                    void Publish()
+                    {
+                        if (!Needed) return;
+                        // A manual selection may have changed while this
+                        // background sample was waiting in the UI queue.
+                        var current = SelectGpuSample(sample);
+                        Latest = current; History.Enqueue(current); while (History.Count > 450) History.Dequeue(); Changed?.Invoke(current);
+                    }
+                    // The isolated collector has no visible UI. Deliver directly
+                    // to its bounded IPC queue, independently of WPF startup or
+                    // dispatcher load. Only the normal UI marshals its samples.
+                    if (publishOnDispatcher)
+                    {
+                        if (Needed && !dispatcher.HasShutdownStarted)
+                            _ = dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(Publish));
+                    }
+                    else Publish();
                 }
                 catch (Exception error) when (error is not OutOfMemoryException) { sensorStatus = "Falha temporária na leitura dos sensores."; }
                 // No frame loop, keyboard hook or per-control polling.

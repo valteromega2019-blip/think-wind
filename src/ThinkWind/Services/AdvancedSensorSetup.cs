@@ -21,7 +21,7 @@ internal static class AdvancedSensorSetup
     internal static string TaskName => "ThinkWind-Sensors-" + UserSid;
     internal static string PipeName => "ThinkWind.Sensors.v3." + UserSid;
     private static string Marker => Path.Combine(DirectoryPath, "sensor-task-v3.enabled");
-    private static string PayloadRevision => AppBrand.Version + "|frames-v2|gpu-v1|payload-v2";
+    private static string PayloadRevision => AppBrand.Version + "|frames-v2|gpu-v1|payload-v3|" + typeof(AdvancedSensorSetup).Assembly.ManifestModule.ModuleVersionId.ToString("N");
     internal static bool IsConfigured
     {
         get
