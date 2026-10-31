@@ -24,4 +24,6 @@
 
 - Prévia do Spotify no hover da barra de aplicativos: cartão de mídia acima do ícone, com capa, título, artista, reprodução/pausa, anterior/próxima e progresso quando disponibilizados pelo player. Sessões filtradas para Spotify, inclusive quando está na bandeja sem janela aberta; nenhum comando ativa sua janela. Reutiliza o visual de mídia do launcher, respeita a opção e o atraso das miniaturas e mantém a prévia durante interação. Eventos de mídia e atualização de progresso são suspensos ao fechar a prévia; demais aplicativos preservam suas miniaturas de janela.
 
+- Alinhamento dos sliders: trilho e controle circular compartilham altura de 32 DIP. A extensão do preenchimento sob o círculo é apenas visual, dentro do template; não altera mais a margem do componente que o Track usa para posicionar o controle, evitando deslocamento do círculo em relação à cápsula.
+
 Revisão por leitura de código e diff. Sem compilação, testes, type check ou conferência visual nesta etapa, conforme a preferência do usuário. A branch `feature/v0.19` não foi publicada e o instalador existente não foi alterado.
