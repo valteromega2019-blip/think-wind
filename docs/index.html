@@ -31,7 +31,7 @@
      <div class="status-preview"><span>10:24</span><span>◉ &nbsp; ♪ &nbsp; ⚙ &nbsp; ⌄</span></div>
      <div class="island-preview"><div class="preview-blocks"><div><small>REPRODUÇÃO</small><strong>No seu ritmo</strong><span class="media-symbols">‹ &nbsp; ▶ &nbsp; ›</span></div><div><small>ÁUDIO</small><span class="slider-preview"></span><small>MICROFONE</small><span class="slider-preview microphone"></span></div></div><div class="island-extra"><span>◷ Calendário</span><span>↗ Desempenho</span><span>☁ Clima</span></div></div>
      <div class="desktop-copy"><span>THINK WIND</span><strong>Espaço para<br>o que importa.</strong></div>
-     <div class="dock-preview"><span class="windows-mark"><i></i><i></i><i></i><i></i></span><span class="search-preview">⌕ <small>Pesquisar</small></span><span class="app-symbol folder-symbol">▰</span><span class="app-symbol browser-symbol">◉</span><span class="app-symbol music-symbol">♫</span><img src="assets/think-wind.png" width="28" height="28" alt=""></div>
+     <div class="dock-preview"><span class="windows-mark"><i></i><i></i><i></i><i></i></span><button type="button" class="search-preview" data-show-search aria-label="Experimentar a pesquisa de aplicativos">⌕ <small>Pesquisar</small></button><span class="app-symbol folder-symbol">▰</span><span class="app-symbol browser-symbol">◉</span><span class="app-symbol music-symbol">♫</span><img src="assets/think-wind.png" width="28" height="28" alt=""></div>
     </div><div class="island-demo-controls" role="group" aria-label="Experimentar os modos da barra superior"><button type="button" class="demo-chip" data-island-stage="bar" aria-pressed="true">Barra</button><button type="button" class="demo-chip" data-island-stage="island" aria-pressed="false">Ilha central</button><button type="button" class="demo-chip" data-island-stage="expanded" aria-pressed="false">Expandida</button></div><figcaption>Três modos: barra, ilha central colada ao topo e painel expandido abaixo. Ilustração interativa; não controla o aplicativo.</figcaption></figure>
    </div>
   </section>
@@ -47,6 +47,20 @@
     <button class="magnet-slot" type="button" aria-label="Demonstrar ampliação: Configurações"><span class="magnet-sprite settings-demo"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#aebdd1" d="m19 3 10 0 2 7 7 2 5 9-5 6 1 8-9 7-7-4-8 2-7-8 3-8-4-7 6-9 6 1z"/><circle cx="24" cy="24" r="9" fill="#263b56"/><circle cx="24" cy="24" r="5" fill="#7bbfe6"/></svg></span><span class="magnet-label">Ajustes</span></button>
    </div><p class="magnet-hint">Aproxime o cursor. Veja a diferença.</p><button type="button" class="demo-chip" id="replay-illustrations">↻ Repetir montagem</button></div>
    <p class="fine-print">Demonstração visual do efeito. Os ícones não abrem programas; a intensidade real é configurável no launcher.</p>
+  </section>
+  <section class="container section search-showcase" id="pesquisa" aria-labelledby="pesquisa-titulo">
+   <div class="search-showcase-copy"><p class="eyebrow">PESQUISE / DIGITE / ENTER</p><h2 id="pesquisa-titulo">Um nome.<br>Uma tecla.<br><strong>App aberto.</strong></h2><p>Clique na pesquisa da Barra de aplicativos e comece a digitar. O primeiro resultado já fica selecionado: pressione Enter para abrir, sem precisar escolher com o mouse.</p><p class="fine-print">Experimente a animação ao lado. Os aplicativos e a abertura são ilustrativos; esta página não executa programas no seu computador.</p><button type="button" class="demo-chip" id="replay-search">↻ Repetir busca</button></div>
+   <div class="search-demo" aria-label="Demonstração interativa da pesquisa de aplicativos">
+    <div class="search-demo-label">BARRA DE APLICATIVOS / PESQUISA</div>
+    <button type="button" class="search-demo-trigger" aria-expanded="false" aria-controls="search-demo-panel">⌕ <span>Pesquisar aplicativos</span></button>
+    <div class="search-demo-panel" id="search-demo-panel" hidden>
+     <label class="search-demo-field">⌕ <input id="search-demo-query" type="search" placeholder="Digite o nome de um app…" autocomplete="off" maxlength="50" aria-label="Nome do aplicativo na demonstração"><kbd class="search-demo-enter">Enter ↵</kbd></label>
+     <div class="search-demo-results" aria-label="Resultados da demonstração"></div>
+     <div class="search-demo-opened" hidden><span class="search-demo-opened-icon" aria-hidden="true">⌘</span><strong></strong><span>Demonstração de abertura</span></div>
+     <p class="search-demo-status" role="status" aria-live="polite">O primeiro resultado fica selecionado.</p>
+    </div>
+    <div class="search-demo-caption">CLIQUE NA PESQUISA · DIGITE · PRESSIONE ENTER</div>
+   </div>
   </section>
   <section class="container section player-news" id="player" aria-labelledby="player-titulo">
    <div class="player-news-copy"><p class="eyebrow">NOVIDADE / PLAYER + SPOTIFY</p><h2 id="player-titulo"><strong>A música fica.</strong><br>A janela não<br>precisa abrir.</h2><p>A capa do álbum agora preenche o fundo do player na Central de controle, com os comandos e as informações da música sobre a imagem.</p><ul class="player-news-list"><li><strong>Prévia do Spotify na barra:</strong> passe o mouse sobre o ícone para ver capa, música e artista, sem abrir o aplicativo.</li><li><strong>Controle direto:</strong> reproduza, pause, avance ou volte à faixa anterior. Consulte o progresso e ajuste a posição quando o player permitir.</li><li><strong>Visual integrado:</strong> controles em cápsula, cores personalizadas e a mesma linguagem visual do launcher.</li></ul><p class="fine-print">A prévia depende das miniaturas habilitadas e da sessão de mídia disponibilizada pelo Spotify ao Windows. Capa, duração e comandos aparecem conforme os dados e as funções oferecidos pelo player.</p></div>

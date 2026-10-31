@@ -170,9 +170,98 @@
     cleanup.push(() => { if (pendingFrame) cancelAnimationFrame(pendingFrame); });
     measure();
   }
+  function setupSearchDemo() {
+    const scene = document.querySelector('.search-demo');
+    if (!scene) return;
+    const trigger = scene.querySelector('.search-demo-trigger');
+    const panel = scene.querySelector('.search-demo-panel');
+    const input = scene.querySelector('input');
+    const results = scene.querySelector('.search-demo-results');
+    const opened = scene.querySelector('.search-demo-opened');
+    const status = scene.querySelector('.search-demo-status');
+    const enter = scene.querySelector('.search-demo-enter');
+    const examples = [
+      { name: 'Visual Studio Code', icon: '⌘', category: 'Aplicativo · Desenvolvimento' },
+      { name: 'Explorador de Arquivos', icon: '▰', category: 'Aplicativo · Arquivos' },
+      { name: 'Spotify', icon: '♫', category: 'Aplicativo · Música' }
+    ];
+    let matches = [];
+    let timers = [];
+    let userEdited = false;
+    let played = false;
+    function clearAuto() { for (const timer of timers) clearTimeout(timer); timers = []; }
+    function renderResults() {
+      const term = input.value.trim().toLocaleLowerCase('pt-BR');
+      matches = examples.filter(app => app.name.toLocaleLowerCase('pt-BR').includes(term));
+      results.replaceChildren(); results.hidden = false; opened.hidden = true;
+      enter.classList.remove('is-pressed');
+      for (let index = 0; index < matches.length; index++) {
+        const app = matches[index];
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'search-demo-result' + (index === 0 ? ' is-selected' : '');
+        button.dataset.result = String(index);
+        button.setAttribute('aria-label', app.name + (index === 0 ? ', pré-selecionado, Enter para abrir na demonstração' : ', abrir na demonstração'));
+        const icon = document.createElement('span'); icon.className = 'search-demo-result-icon'; icon.textContent = app.icon; icon.setAttribute('aria-hidden', 'true');
+        const details = document.createElement('span');
+        const name = document.createElement('strong'); name.textContent = app.name;
+        const category = document.createElement('small'); category.textContent = app.category;
+        details.append(name, category); button.append(icon, details);
+        if (index === 0) { const key = document.createElement('kbd'); key.textContent = '↵'; button.append(key); }
+        results.append(button);
+      }
+      const message = matches.length ? 'Primeiro resultado selecionado. Pressione Enter.' : 'Nenhum exemplo encontrado. Experimente Code, Spotify ou Arquivos.';
+      if (status.textContent !== message) status.textContent = message;
+    }
+    function openPanel(focus = false) {
+      trigger.hidden = true; trigger.setAttribute('aria-expanded', 'true'); panel.hidden = false;
+      renderResults();
+      if (!preference.matches) animate(panel, { opacity: [0, 1], y: [15, 0], scale: [.96, 1] }, { type: 'spring', stiffness: 240, damping: 25 });
+      if (focus) input.focus({ preventScroll: true });
+    }
+    function launch(app) {
+      if (!app) return;
+      enter.classList.add('is-pressed');
+      results.hidden = true; opened.hidden = false;
+      opened.querySelector('strong').textContent = app.name;
+      opened.querySelector('.search-demo-opened-icon').textContent = app.icon;
+      status.textContent = 'Enter → ' + app.name + '. Abertura ilustrativa, sem executar o programa.';
+      if (!preference.matches) animate(opened, { opacity: [0, 1], y: [12, 0], scale: [.95, 1] }, { type: 'spring', stiffness: 260, damping: 25 });
+    }
+    function play() {
+      clearAuto(); played = true; userEdited = false; input.value = '';
+      panel.hidden = true; trigger.hidden = false; trigger.setAttribute('aria-expanded', 'false');
+      if (preference.matches) { input.value = 'Code'; openPanel(); launch(matches[0]); return; }
+      const queue = (delay, action) => timers.push(setTimeout(action, delay));
+      queue(350, () => openPanel());
+      [...'Code'].forEach((character, index) => queue(750 + index * 190, () => { input.value += character; renderResults(); }));
+      queue(1900, () => { enter.classList.add('is-pressed'); animate(enter, { scale: [1, .9, 1] }, { duration: .22 }); });
+      queue(2080, () => launch(matches[0]));
+    }
+    function interact() { userEdited = true; clearAuto(); }
+    listen(trigger, 'click', () => { interact(); openPanel(true); });
+    listen(input, 'focus', interact);
+    listen(input, 'input', () => { interact(); renderResults(); });
+    listen(input, 'keydown', event => { if (event.key === 'Enter') { event.preventDefault(); interact(); launch(matches[0]); } });
+    listen(results, 'click', event => {
+      const result = event.target.closest('[data-result]');
+      if (result && results.contains(result)) { interact(); launch(matches[Number(result.dataset.result)]); }
+    });
+    const replay = document.querySelector('#replay-search');
+    if (replay) listen(replay, 'click', play);
+    for (const button of document.querySelectorAll('[data-show-search]')) listen(button, 'click', () => {
+      interact(); scene.scrollIntoView({ behavior: preference.matches ? 'instant' : 'smooth', block: 'center' }); openPanel(true);
+    });
+    listen(document, 'visibilitychange', () => { if (document.hidden) clearAuto(); });
+    if (!preference.matches) cleanup.push(motion.inView(scene, () => {
+      if (!played && !userEdited) play();
+      return clearAuto;
+    }, { amount: .5 }));
+    cleanup.push(clearAuto);
+  }
   function enable() {
     disable();
     setupIsland();
+    setupSearchDemo();
     const replay = document.querySelector('#replay-illustrations');
     if (replay) { replay.disabled = preference.matches; replay.title = preference.matches ? 'Movimento reduzido ativado no sistema' : 'Repetir a montagem dos ícones'; }
     if (preference.matches) return;
