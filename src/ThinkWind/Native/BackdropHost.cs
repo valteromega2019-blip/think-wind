@@ -29,6 +29,7 @@ internal sealed class BackdropHost : IDisposable
     internal bool MaterialAvailable { get; private set; }
     private BackdropComposition? composition;
     private bool compositionFailed;
+    private bool mica;
     private (int Width, int Height, int Radius, bool Top) lastGeometry;
     private OverlayChrome.PixelRect lastRectangle;
     private bool synchronized, lastVisible;
@@ -64,6 +65,8 @@ internal sealed class BackdropHost : IDisposable
     }
     internal void SetMaterial(string material, bool light)
     {
+        bool nextMica = material == "Mica";
+        if (mica != nextMica) { mica = nextMica; synchronized = false; }
         int dark = light ? 0 : 1, type = material == "Mica" ? 2 : material == "Acrylic" ? 3 : 1;
         DwmSetWindowAttribute(Handle, 20, ref dark, 4);
         if (material == "Acrylic")
@@ -94,7 +97,16 @@ internal sealed class BackdropHost : IDisposable
         int width = Math.Max(1, rectangle.Right - rectangle.Left), height = Math.Max(1, rectangle.Bottom - rectangle.Top);
         var geometry = (width, height, (int)Math.Round(radius), top);
         if (!synchronized || lastGeometry != geometry)
-        { composition?.Resize(width, height); OverlayChrome.Clip(Handle, width, height, radius, top); lastGeometry = geometry; }
+        {
+            // Mica is drawn by DWM, unlike the clipped Acrylic composition.
+            // Let DWM round its own surface as well as applying our custom
+            // region, rather than exposing a square native edge beneath WPF.
+            int corners = mica && !top && radius > 0 ? (radius < 8 ? 3 : 2) : 1;
+            DwmSetWindowAttribute(Handle, 33, ref corners, 4);
+            composition?.Resize(width, height);
+            OverlayChrome.Clip(Handle, width, height, radius, top);
+            lastGeometry = geometry;
+        }
         bool show = visible && MaterialAvailable;
         if (!synchronized || lastVisible != show || rectangle.Left != lastRectangle.Left || rectangle.Top != lastRectangle.Top || rectangle.Right != lastRectangle.Right || rectangle.Bottom != lastRectangle.Bottom)
             SetWindowPos(Handle, foreground, rectangle.Left, rectangle.Top, width, height, 0x0010 | (show ? 0x0040u : 0x0080u));
