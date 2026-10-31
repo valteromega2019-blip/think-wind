@@ -40,7 +40,7 @@
     const blocks = island.querySelector('.preview-blocks');
     const extra = island.querySelector('.island-extra');
     const clips = {
-      compact: 'inset(0% 22% 75% 22% round 22px)',
+      compact: 'inset(0% 0% 100% 0% round 18px)',
       partial: 'inset(0% 0% 25% 0% round 18px)',
       full: 'inset(0% 0% 0% 0% round 18px)'
     };
