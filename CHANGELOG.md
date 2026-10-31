@@ -1,3 +1,9 @@
+## Em desenvolvimento — conteúdo dos blocos expandidos
+
+- Títulos dos módulos, controles de conexão e cabeçalhos de áudio passam a quebrar linha; controles de conexão e grade da bandeja usam alturas mínimas em vez de alturas fixas. Percentuais de áudio podem crescer conforme a fonte.
+- Mídia exibe título, artista e player com quebra de linha e solicita nova medição quando os metadados mudam, mesmo que a sessão continue ativa. O tempo também aceita quebra de linha.
+- O painel completo invalida sua medição antes de calcular o tamanho natural dos blocos e arredonda a altura necessária para cima antes do ajuste à tela.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura de código e diff; confirmação visual pendente.
 ## Em desenvolvimento — ilha secundária opcional
 
 - Dynamic Island somente na tela principal do Windows por padrão. Nova opção Mostrar Dynamic Island nas telas secundárias em Personalizar > Monitores, desmarcada inclusive nos perfis existentes sem essa preferência.

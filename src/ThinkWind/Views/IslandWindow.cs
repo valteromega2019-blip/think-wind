@@ -160,8 +160,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         {
             var tile = ActionButton(control.Name, () => { if (control.Id == "wifi") ShowMini(MiniIslandKind.Network); else if (control.Id == "bluetooth") ShowMini(MiniIslandKind.Bluetooth); else SystemActions.Run(control.Target!); }, control.Id == "wifi" ? "Gerenciar redes Wi-Fi" : "Abrir configurações de " + control.Name);
             var content = new StackPanel(); content.Children.Add(Glyph(control.Glyph, 22));
-            content.Children.Add(new TextBlock { Text = control.Name, FontSize = 11, Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
-            tile.Content = content; tile.Width = 52; tile.Height = 62; tile.Padding = new Thickness(2); tile.Margin = new Thickness(2);
+            content.Children.Add(new TextBlock { Text = control.Name, FontSize = 11, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
+            tile.Content = content; tile.MinWidth = 52; tile.MinHeight = 62; tile.Padding = new Thickness(2); tile.Margin = new Thickness(2);
             ((TextBlock)content.Children[1]).FontSize = 11;
             if (control.Id == "airplane") ((TextBlock)content.Children[1]).Text = "Avião";
             connections.Children.Add(tile);
@@ -211,7 +211,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 if (body is FrameworkElement element && element.Parent is Panel parent) parent.Children.Remove(element);
                 var content = new StackPanel();
                 var title = new DockPanel { Margin = new Thickness(4, 0, 4, 8) };
-                var grip = new TextBlock { Text = Store.IsEditing ? "⋮⋮  " + LayoutCatalog.ModuleName(id) : LayoutCatalog.ModuleName(id), FontSize = 14, FontWeight = FontWeights.SemiBold, Padding = new Thickness(4), Opacity = .9, Cursor = Store.IsEditing ? Cursors.SizeAll : Cursors.Arrow };
+                var grip = new TextBlock { Text = Store.IsEditing ? "⋮⋮  " + LayoutCatalog.ModuleName(id) : LayoutCatalog.ModuleName(id), FontSize = 14, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(4), Opacity = .9, Cursor = Store.IsEditing ? Cursors.SizeAll : Cursors.Arrow };
                 grip.SetResourceReference(TextBlock.ForegroundProperty, Store.IsEditing ? "Think.Accent" : "Think.Text");
                 if (Store.IsEditing)
                 {
@@ -628,8 +628,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         moduleViewport.MaxHeight = contentLimit;
         if (Stage == IslandStage.Full && !secondAreaSelected)
         {
+            modules.InvalidateMeasure();
             modules.Measure(new Size(boardWidth, double.PositiveInfinity));
-            double naturalHeight = Math.Max(1, modules.DesiredSize.Height);
+            double naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
             double fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
             inner = Math.Max(1, boardWidth * fit);
             width = inner + Surface.Padding.Left + Surface.Padding.Right;

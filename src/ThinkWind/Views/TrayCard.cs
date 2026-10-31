@@ -14,7 +14,7 @@ namespace ThinkWind.Views;
 internal sealed class TrayCard : StackPanel
 {
     private readonly SettingsStore store;
-    private readonly UniformGrid grid = new() { Columns = 6, Rows = 4, Height = 248 };
+    private readonly UniformGrid grid = new() { Columns = 6, Rows = 4, MinHeight = 248 };
     private readonly TextBlock status = new() { FontSize = 10, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed, Margin = new Thickness(4) };
     private readonly StackPanel navigation = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly Dictionary<string, (Image Icon, TextBlock Name)> visuals = new();
