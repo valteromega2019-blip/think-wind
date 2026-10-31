@@ -30,11 +30,7 @@ internal sealed partial class IslandWindow
     private void RefreshHeaderWeather()
     {
         var value = weather.Reading;
-        string icon = value?.Code switch
-        {
-            0 => "☀", 1 or 2 => "⛅", 3 => "☁", 45 or 48 => "≋",
-            >= 71 and <= 77 or 85 or 86 => "❄", >= 95 => "⚡", null => "☁", _ => "☂"
-        };
+        string icon = WeatherService.Icon(value?.Code);
         string text = value is null ? icon + " —" : $"{icon} {value.Temperature:0}°C";
         string tip = value is null ? "Escolha uma cidade em Personalizar > Clima" : $"{Store.Value.WeatherCity} · {WeatherService.Description(value.Code)} · atualizado {value.Updated:HH:mm}";
         foreach (var label in new[] { headerWeather, stripWeather })

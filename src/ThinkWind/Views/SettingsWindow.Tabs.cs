@@ -37,7 +37,7 @@ internal sealed partial class SettingsWindow
     }
     private void FinishSettingsTabs()
     {
-        string[] order = { "Aparência", "Barra inferior", "Dynamic Island", "Ícones da ilha", "Clima", "Overlay e sensores", "Editor de layout", "Jogos", "Monitores", "Sistema", "Sobre e segurança" };
+        string[] order = { "Aparência", "Barra inferior", "Dynamic Island", "Ícones da ilha", "Widgets", "Clima", "Overlay e sensores", "Editor de layout", "Jogos", "Monitores", "Sistema", "Sobre e segurança" };
         foreach (string name in order.Concat(settingsPages.Keys).Distinct())
             if (settingsPages.TryGetValue(name, out var page)) tabNavigation.Children.Add(page.Tab);
         if (!settingsPages.ContainsKey(selectedSettingsTab)) selectedSettingsTab = settingsPages.Keys.First();

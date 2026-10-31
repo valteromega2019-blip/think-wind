@@ -68,6 +68,10 @@ public sealed class Preferences
     public string AccentColor { get; set; } = "#60CDFF";
     public bool UseCustomBarColor { get; set; }
     public string BarBackgroundColor { get; set; } = "#111318";
+    public List<string> WidgetOrder { get; set; } = new() { "weather", "notes", "favorites" };
+    public List<string> HiddenWidgets { get; set; } = new();
+    public string WidgetNote { get; set; } = "";
+    public List<Shortcut> WidgetFavorites { get; set; } = new();
     public double? DockOpacity { get; set; }
     public double? IslandOpacity { get; set; }
     public string DockMaterial { get; set; } = "Acrylic";
@@ -251,6 +255,11 @@ public sealed class SettingsStore
         p.HiddenQuickControls = (p.HiddenQuickControls ?? new()).Where(quickIds.Contains).Distinct().ToList();
         p.DisabledQuickControls = (p.DisabledQuickControls ?? new()).Where(id => id == "weather" || (id != "settings" && quickIds.Contains(id))).Distinct().ToList();
         p.HiddenModules = (p.HiddenModules ?? new()).Where(LayoutCatalog.Modules.Contains).Distinct().ToList();
+        p.WidgetOrder = LayoutCatalog.Complete(p.WidgetOrder, new[] { "weather", "notes", "favorites" });
+        p.HiddenWidgets = (p.HiddenWidgets ?? new()).Where(id => id is "weather" or "notes" or "favorites").Distinct().ToList();
+        p.WidgetNote = (p.WidgetNote ?? "")[..Math.Min(4000, (p.WidgetNote ?? "").Length)];
+        p.WidgetFavorites = (p.WidgetFavorites ?? new()).Where(item => item is not null && !string.IsNullOrWhiteSpace(item.Target))
+            .DistinctBy(item => item.Target, StringComparer.OrdinalIgnoreCase).Take(6).ToList();
     }
     private static string Material(string? value) => value is "Acrylic" or "Mica" or "Solid" ? value : "Acrylic";
 }

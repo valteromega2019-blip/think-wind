@@ -19,6 +19,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
     private readonly TextBox city = new() { MaxLength = 100, MinHeight = 30, Padding = new Thickness(6) };
     private readonly ComboBox choices = new() { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 4, 0, 0), MaxDropDownHeight = 180 };
     private readonly TextBlock temperature = new() { Text = "Escolha uma cidade", FontSize = 22, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock conditionIcon = new() { Text = "☁", FontSize = 32, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Top };
     private readonly TextBlock details = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
     private readonly TextBlock status = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxHeight = 32, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
     private CancellationTokenSource? request;
@@ -31,11 +32,11 @@ internal sealed class WeatherWidget : Grid, IDisposable
     private DateTimeOffset nextRefresh;
     internal bool IsInteracting => IsKeyboardFocusWithin || choices.IsDropDownOpen || IsMouseCaptureWithin;
 
-    internal WeatherWidget(SettingsStore settings, bool configureLocation = false)
+    internal WeatherWidget(SettingsStore settings, bool configureLocation = false, bool compact = false)
     {
-        store = settings; configurationMode = configureLocation; Height = configurationMode ? 160 : 112;
+        store = settings; configurationMode = configureLocation; Height = configurationMode ? 160 : compact ? 190 : 112;
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        if (!configurationMode) ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        if (!configurationMode && !compact) ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         var location = new StackPanel { Margin = new Thickness(0, 0, configurationMode ? 0 : 16, 0) };
         var find = new Button { Content = "Buscar", Padding = new Thickness(8, 4, 8, 4), Margin = new Thickness(4, 0, 0, 0) };
         DockPanel.SetDock(find, Dock.Right); setupRow.Children.Add(find); setupRow.Children.Add(city);
@@ -45,7 +46,11 @@ internal sealed class WeatherWidget : Grid, IDisposable
         location.Children.Add(source); Children.Add(location);
         if (!configurationMode)
         {
-            var reading = new StackPanel(); reading.Children.Add(temperature); reading.Children.Add(details); Grid.SetColumn(reading, 1); Children.Add(reading);
+            var reading = new StackPanel();
+            var current = new DockPanel(); DockPanel.SetDock(conditionIcon, Dock.Left); current.Children.Add(conditionIcon); current.Children.Add(temperature);
+            reading.Children.Add(current); reading.Children.Add(details);
+            if (compact) { temperature.FontSize = 18; details.FontSize = 11; location.Margin = new Thickness(0); location.Children.Insert(3, reading); }
+            else { Grid.SetColumn(reading, 1); Children.Add(reading); }
         }
         find.Click += async (_, _) => await Find();
         city.PreviewKeyDown += async (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) { e.Handled = true; await Find(); } };
@@ -66,6 +71,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
         if (configured == key) return;
         configured = key; Cancel(); city.Text = store.Value.WeatherCity;
         Reading = null; ReadingChanged?.Invoke();
+        conditionIcon.Text = WeatherService.Icon(null);
         bool editable = configurationMode || !HasLocation;
         setupRow.Visibility = editable ? Visibility.Visible : Visibility.Collapsed;
         locationName.Text = store.Value.WeatherCity;
@@ -118,6 +124,8 @@ internal sealed class WeatherWidget : Grid, IDisposable
             var weather = await WeatherService.ReadAsync(store.Value.WeatherLatitude!.Value, store.Value.WeatherLongitude!.Value, token);
             if (current != revision || !Requested || (!IsVisible && !headerActive)) return;
             Reading = weather; ReadingChanged?.Invoke();
+            conditionIcon.Text = WeatherService.Icon(weather.Code);
+            conditionIcon.ToolTip = WeatherService.Description(weather.Code);
             temperature.Text = $"{weather.Temperature:0}°C · {WeatherService.Description(weather.Code)}";
             details.Text = $"Sensação {weather.FeelsLike:0}° · mín. {weather.Minimum:0}° / máx. {weather.Maximum:0}°";
             status.Text = $"Atualizado {weather.Updated:HH:mm}";

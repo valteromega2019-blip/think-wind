@@ -88,6 +88,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         }
         if (weatherVisibilityCheck is not null) weatherVisibilityCheck.IsEnabled = !store.Value.DisabledQuickControls.Contains("weather");
         weatherSettings.Configure();
+        RefreshWidgetEditor();
         RefreshAppearance();
         editing.Content = store.IsEditing ? "Concluir edição visual" : "Editar layout na tela";
         if (!building && layoutSignature != LayoutSignature()) Dispatcher.BeginInvoke(new Action(RebuildLayoutRows));
@@ -183,6 +184,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         weatherVisibilityCheck = Check(weatherSection, "Mostrar clima ao lado do relógio", store.Value.ShowWeatherInHeader, value => Change(p => p.ShowWeatherInHeader = value));
         if (weatherSettings.Parent is Panel oldWeather) oldWeather.Children.Remove(weatherSettings);
         weatherSection.Children.Add(weatherSettings);
+        BuildWidgetEditor();
 
         var layout = Section("Editor de layout", "Arraste pelos puxadores no desktop. As linhas ciano indicam onde o item será inserido.");
         // Detach reusable controls from their previous section when resetting.

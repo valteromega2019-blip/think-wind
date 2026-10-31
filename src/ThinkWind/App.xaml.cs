@@ -171,6 +171,10 @@ public partial class App : Application
         OpenSettings();
         settings?.ShowWeatherSection();
     }
+    internal void OpenWidgetSettings()
+    {
+        OpenSettings(); settings?.ShowWidgetsSection();
+    }
     private void OpenSettings()
     {
         if (gameMode?.Active == true) return;

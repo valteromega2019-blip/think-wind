@@ -37,6 +37,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly BrightnessControl brightness;
     private readonly MediaCard media = new();
     private readonly WeatherWidget weather;
+    private readonly WidgetArea widgetArea;
     private readonly TrayCard trayCard;
     private readonly System.Windows.Controls.Calendar calendar = new() { IsTodayHighlighted = true, SelectionMode = CalendarSelectionMode.SingleDate };
     private readonly TextBlock connectionStatus = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4) };
@@ -65,7 +66,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     public IslandWindow(SettingsStore store, Action settings) : base(store)
     {
         Title = "Think Wind — Dynamic Island"; openSettings = settings;
-        weather = new WeatherWidget(store);
+        weather = new WeatherWidget(store, compact: true);
+        widgetArea = new WidgetArea(store, weather);
         weather.ReadingChanged += RefreshHeaderWeather;
         brightness = new BrightnessControl(() => Display.Bounds);
         trayCard = new TrayCard(store);
@@ -139,7 +141,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         IsVisibleChanged += (_, _) => RefreshApplicationInset();
         Closed += (_, _) => applicationInset.Dispose();
         Closed += (_, _) => fixedReservation?.Dispose();
-        Closed += (_, _) => { weather.ReadingChanged -= RefreshHeaderWeather; weather.Dispose(); };
+        Closed += (_, _) => { weather.ReadingChanged -= RefreshHeaderWeather; weather.Dispose(); widgetArea.Dispose(); };
         IsVisibleChanged += (_, _) => { if (!IsVisible) { weather.SetActive(false); weather.SetHeaderActive(false); systemTools?.Close(); } };
         IsVisibleChanged += (_, _) =>
         {
@@ -189,7 +191,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         var alerts = ActionButton("Abrir notificações", () => Desktop.Chord(0x5B, 0x4E)); alerts.Content = Glyph("\uE7F4", 20); alerts.Width = 36; alerts.Height = 36; alerts.Padding = new Thickness(4); notifications.Children.Add(alerts);
         var alertSettings = ActionButton("Configurar notificações", () => SystemActions.Run("ms-settings:notifications")); alertSettings.Content = Glyph("\uE713", 16); alertSettings.Width = 36; alertSettings.Height = 36; alertSettings.Padding = new Thickness(4); notifications.Children.Add(alertSettings);
         bodies["notifications"] = notifications;
-        bodies["widgets"] = weather;
+        bodies["widgets"] = widgetArea;
     }
     public override void RefreshSettings()
     {
@@ -441,7 +443,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         hoverModules.ColumnDefinitions[0].Width = new GridLength(Store.ModuleVisible("media") ? 1.35 : 0, GridUnitType.Star);
         hoverModules.ColumnDefinitions[1].Width = new GridLength(Store.ModuleVisible("audio") ? 1 : 0, GridUnitType.Star);
         media.SetActive(IsVisible && Stage != IslandStage.Compact && Store.ModuleVisible("media"));
-        weather.SetActive(IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("widgets"));
+        weather.SetActive(IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("widgets") && !Store.Value.HiddenWidgets.Contains("weather"));
         weather.SetHeaderActive(IsVisible && WeatherEnabled && (Store.Value.ShowWeatherInHeader || Stage != IslandStage.Compact));
         RefreshHeaderWeather();
     }
@@ -512,7 +514,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             return false;
         }
     }
-    private bool ControlsBusy => SystemToolsOpen || IsMouseCaptureWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || trayCard.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
+    private bool ControlsBusy => SystemToolsOpen || IsMouseCaptureWithin || widgetArea.IsKeyboardFocusWithin || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || trayCard.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
     private bool InteractionInProgress => Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
     private void CancelCollapse() { hoverLeave.Stop(); outsideSince = null; }
     private void WaitForBridge() { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(50); hoverLeave.Start(); }

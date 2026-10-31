@@ -50,4 +50,9 @@ internal static class WeatherService
         61 or 63 or 65 or 66 or 67 or 80 or 81 or 82 => "Chuva",
         71 or 73 or 75 or 77 or 85 or 86 => "Neve", 95 or 96 or 99 => "Trovoadas", _ => "Condições atuais"
     };
+    internal static string Icon(int? code) => code switch
+    {
+        0 => "☀", 1 or 2 => "⛅", 3 => "☁", 45 or 48 => "≋",
+        >= 71 and <= 77 or 85 or 86 => "❄", >= 95 => "⚡", null => "☁", _ => "☂"
+    };
 }
