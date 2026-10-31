@@ -2,6 +2,12 @@
 
 Desenvolvido pela **Think**. Novo nome e identidade do Think Wind, com atualização compatível das instalações anteriores.
 
+## 0.20 Beta (0.20.0-beta)
+
+[Baixar Orby Launcher](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.20.0-beta/OrbyLauncher-Setup-0.20.0-beta.exe) · [Notas e limitações](RELEASE-0.20-BETA.md) · [Site](https://valteromega2019-blip.github.io/think-wind-site/)
+
+Ícone no arquivo do instalador, no assistente e na entrada de desinstalação. Gradiente de marca em toda a frase Em outro ritmo. no site. Configurações e compatibilidade de atualização mantidas. Compilação e empacotamento sem novos testes ou type check separado.
+
 ## 0.19 Alfa — revisão 2 (0.19.2-alpha)
 
 [Baixar Orby Launcher](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.19.2-alpha/OrbyLauncher-Setup-0.19.2-alpha.exe) · [Notas e limitações](RELEASE-0.19.2.md) · [Apresentação](https://valteromega2019-blip.github.io/think-wind-site/)

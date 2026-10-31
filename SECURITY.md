@@ -1,13 +1,13 @@
 # Segurança do Orby Launcher
 
-Esta é uma versão Alfa. A seção Personalizar → Sobre e segurança reúne os links oficiais e as limitações conhecidas.
+Esta é uma versão Beta. A seção Personalizar → Sobre e segurança reúne os links oficiais e as limitações conhecidas.
 
 ## Distribuição oficial
 
 - Código e releases: https://github.com/valteromega2019-blip/think-wind
 - Apresentação: https://valteromega2019-blip.github.io/think-wind-site/
 - Compare o SHA-256 do instalador com o arquivo de checksums da mesma release. Isso confirma correspondência com o artefato publicado; não substitui assinatura digital ou auditoria de segurança.
-- Os instaladores Alfa ainda não têm assinatura digital. A instalação não exige desativar antivírus, proteção do Windows ou outras medidas de segurança.
+- Os instaladores Beta ainda não têm assinatura digital. A instalação não exige desativar antivírus, proteção do Windows ou outras medidas de segurança.
 
 ## Integração e dados locais
 

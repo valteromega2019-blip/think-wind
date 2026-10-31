@@ -1,7 +1,7 @@
 # Página pública Orby Launcher
 
 Fonte da página publicada em https://valteromega2019-blip.github.io/think-wind-site/ .
-Versão atual: 0.19 Alfa · revisão 2. Download e notas apontam para a release v0.19.2-alpha do repositório do aplicativo.
+Versão atual: 0.20 Beta. Download e notas apontam para a release v0.20.0-beta do repositório do aplicativo.
 
 ## Nova apresentação com Motion
 
@@ -22,4 +22,4 @@ Recriação preparada na branch `feature/site-motion`. A hospedagem continua no 
 
 Revisão por leitura de arquivos e diff. Testes, type check, auditorias e conferência em navegador não executados, conforme preferência do usuário. O instalador do app não foi modificado.
 
-Identidade: Orby Launcher, desenvolvido pela Think. Logo horizontal e ícone fornecidos pelo usuário em PNG, copiados sem editar as imagens. O aplicativo e o instalador da 0.19.2 Alfa usam a identidade Orby Launcher. Caminhos internos e identificação da instalação anterior foram preservados para atualização compatível.
+Identidade: Orby Launcher, desenvolvido pela Think. Logo horizontal e ícone fornecidos pelo usuário em PNG, copiados sem editar as imagens. O aplicativo e o instalador da 0.20 Beta usam a identidade Orby Launcher. Caminhos internos e identificação da instalação anterior foram preservados para atualização compatível.

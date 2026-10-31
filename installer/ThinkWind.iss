@@ -1,7 +1,7 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.19.2-alpha"
+#define MyAppVersion "0.20.0-beta"
 #ifndef PublishDir
-#define PublishDir "..\artifacts\publish-v0.19.2-alpha"
+#define PublishDir "..\artifacts\publish-v0.20.0-beta"
 #endif
 [Setup]
 AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
@@ -10,7 +10,7 @@ AppPublisher=Think
 VersionInfoCompany=Think
 VersionInfoDescription=Instalador do Orby Launcher
 AppVersion={#MyAppVersion}
-VersionInfoVersion=0.19.2.0
+VersionInfoVersion=0.20.0.0
 DefaultDirName={localappdata}\Programs\ThinkWind
 PrivilegesRequired=lowest
 DefaultGroupName=Orby Launcher
@@ -21,7 +21,8 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 SetupIconFile=..\src\ThinkWind\Assets\OrbyLauncher.ico
-UninstallDisplayIcon={app}\ThinkWind.exe
+WizardSmallImageFile=..\src\ThinkWind\Assets\OrbyLauncher.png
+UninstallDisplayIcon={app}\OrbyLauncher.ico
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
@@ -31,6 +32,7 @@ Name: "pawnio"; Description: "Instalar PawnIO oficial para sensores, se necessar
 [Files]
 Source: "..\artifacts\dependencies\PawnIO_setup.exe"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\src\ThinkWind\Assets\OrbyLauncher.ico"; DestDir: "{app}"; Flags: ignoreversion
 [InstallDelete]
 Type: files; Name: "{userprograms}\Think Wind\Think Wind.lnk"
 Type: dirifempty; Name: "{userprograms}\Think Wind"
