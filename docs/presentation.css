@@ -51,7 +51,7 @@ strong{font-weight:600}
 .desktop-preview{height:440px;position:relative;overflow:hidden;border-radius:22px;background:radial-gradient(ellipse at 90% 5%,#5578a5,transparent 60%),linear-gradient(145deg,#304665,#15243e 60%,#28374f);border:1px solid #ffffff20;box-shadow:0 24px 90px #0004}
 .wallpaper-orbit{position:absolute;border:1px solid #a4d9ff2a;border-radius:50%;width:500px;height:500px;right:-240px;top:30px;transform:rotate(-35deg)}
 .orbit-two{width:360px;height:600px;right:-100px;top:60px;border-width:35px;border-color:#a7d2ff0a}
-.status-preview{position:absolute;z-index:3;top:0;left:0;right:0;height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 15px;font-size:9px;color:#dce8f7;background:#101e35e8;backdrop-filter:blur(12px);border-bottom:1px solid #ffffff12}
+.status-preview{position:absolute;z-index:3;top:0;left:0;right:0;width:100%;margin-inline:auto;height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 15px;font-size:9px;color:#dce8f7;background:#101e35e8;backdrop-filter:blur(12px);border-bottom:1px solid #ffffff12;overflow:hidden;white-space:nowrap}
 .island-preview{position:absolute;z-index:2;top:36px;left:auto;right:12px;width:calc(100% - 24px);background:#101e35d9;border:1px solid #ffffff13;border-radius:15px;padding:15px;backdrop-filter:blur(12px);max-width:340px;margin:0}
 .preview-blocks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .preview-blocks>div{padding:12px;border-radius:10px;background:#ffffff06;display:flex;flex-direction:column}

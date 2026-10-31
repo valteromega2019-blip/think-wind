@@ -39,48 +39,55 @@
     const buttons = [...document.querySelectorAll('[data-island-stage]')];
     const blocks = island.querySelector('.preview-blocks');
     const extra = island.querySelector('.island-extra');
-    const clips = {
-      compact: 'inset(0% 0% 100% 0% round 18px)',
-      partial: 'inset(0% 0% 25% 0% round 18px)',
-      full: 'inset(0% 0% 0% 0% round 18px)'
-    };
-    let stage = 'compact';
+    const statusBar = region.querySelector('.status-preview');
+    let stage = 'bar';
+    let baseMode = 'bar';
     let closeTimer;
     let touched = false;
     const timers = [];
     function setStage(next, instant = false) {
       stage = next;
+      if (next !== 'expanded') baseMode = next;
       for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.islandStage === next));
-      const expanded = next !== 'compact';
+      const expanded = next === 'expanded';
+      const centered = baseMode === 'island';
+      const clip = expanded ? 'inset(0% 0% 0% 0% round 18px)' : 'inset(0% 0% 100% 0% round 18px)';
+      const barWidth = centered ? 190 : region.querySelector('.desktop-preview').clientWidth;
+      const barRadius = centered ? '0px 0px 18px 18px' : '0px 0px 0px 0px';
+      island.style.left = centered ? '12px' : 'auto';
+      island.style.right = '12px';
+      island.style.marginInline = centered ? 'auto' : '0';
       if (instant || preference.matches) {
-        island.style.clipPath = clips[next];
+        island.style.clipPath = clip;
+        if (statusBar) { statusBar.style.width = barWidth + 'px'; statusBar.style.borderRadius = barRadius; }
         blocks.style.opacity = expanded ? '1' : '0';
-        extra.style.opacity = next === 'full' ? '1' : '0';
+        extra.style.opacity = expanded ? '1' : '0';
         blocks.style.removeProperty('transform');
         extra.style.removeProperty('transform');
       } else {
-        animate(island, { clipPath: clips[next] }, { duration: .55, ease: [.22, 1, .36, 1] });
+        animate(island, { clipPath: clip }, { duration: .55, ease: [.22, 1, .36, 1] });
+        if (statusBar) animate(statusBar, { width: barWidth, borderRadius: barRadius }, { duration: .5, ease: [.22, 1, .36, 1] });
         animate(blocks, { opacity: expanded ? 1 : 0, y: expanded ? 0 : -8 }, { duration: .3 });
-        animate(extra, { opacity: next === 'full' ? 1 : 0, y: next === 'full' ? 0 : -6 }, { duration: .3 });
+        animate(extra, { opacity: expanded ? 1 : 0, y: expanded ? 0 : -6 }, { duration: .3 });
       }
     }
     function interact() { touched = true; clearTimeout(closeTimer); }
-    setStage('compact', true);
+    setStage('bar', true);
     for (const button of buttons) listen(button, 'click', () => { interact(); setStage(button.dataset.islandStage); });
     const expandOnHover = event => {
       if (event.pointerType === 'touch') return;
-      interact(); if (stage === 'compact') setStage('partial');
+      interact(); if (stage !== 'expanded') setStage('expanded');
     };
     listen(island, 'pointerenter', expandOnHover);
-    const statusBar = region.querySelector('.status-preview');
     if (statusBar) listen(statusBar, 'pointerenter', expandOnHover);
+    listen(window, 'resize', () => setStage(stage, true), { passive: true });
     listen(region, 'pointerenter', () => clearTimeout(closeTimer));
     listen(region, 'pointerleave', () => {
       clearTimeout(closeTimer);
-      closeTimer = setTimeout(() => { if (!region.contains(document.activeElement)) setStage('compact'); }, 900);
+      closeTimer = setTimeout(() => { if (!region.contains(document.activeElement)) setStage(baseMode); }, 900);
     });
     if (!preference.matches) cleanup.push(motion.inView(island, () => {
-      for (const [delay, next] of [[650, 'partial'], [1600, 'full'], [3300, 'compact']]) {
+      for (const [delay, next] of [[850, 'island'], [1900, 'expanded'], [3900, 'bar']]) {
         timers.push(setTimeout(() => { if (!touched) setStage(next); }, delay));
       }
     }));
