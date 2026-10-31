@@ -66,15 +66,15 @@ internal sealed class ShellIcons
     [DllImport("user32.dll")] private static extern nint GetDC(nint window);
     [DllImport("user32.dll")] private static extern int ReleaseDC(nint window, nint dc);
     // Called only by an STA worker: extracting a shell icon may perform disk I/O.
-    internal static ImageSource? ReadLarge(string target, int pixels = 192)
+    internal static ImageSource? ReadLarge(string target, int requestedPixels = 192)
     {
-        pixels = Math.Clamp(pixels, 48, 512);
-        var shortcutIcon = ShortcutIcon(target, pixels); if (shortcutIcon is not null) return shortcutIcon;
+        requestedPixels = Math.Clamp(requestedPixels, 48, 512);
+        var shortcutIcon = ShortcutIcon(target, requestedPixels); if (shortcutIcon is not null) return shortcutIcon;
         ImageFactory? factory = null; nint bitmap = 0;
         try
         {
             string path = new ShellIcons().Resolve(target); var iid = typeof(ImageFactory).GUID;
-            if (SHCreateItemFromParsingName(path, 0, ref iid, out factory) < 0 || factory.GetImage(new ImageSize { Width = pixels, Height = pixels }, 5, out bitmap) < 0 || bitmap == 0) return null;
+            if (SHCreateItemFromParsingName(path, 0, ref iid, out factory) < 0 || factory.GetImage(new ImageSize { Width = requestedPixels, Height = requestedPixels }, 5, out bitmap) < 0 || bitmap == 0) return null;
             if (GetBitmapObject(bitmap, Marshal.SizeOf<NativeBitmap>(), out var info) == 0 || info.Width is < 1 or > 512 || info.Height is < 1 or > 512) return null;
             var pixels = new byte[info.Width * info.Height * 4];
             var header = new BitmapHeader { Size = 40, Width = info.Width, Height = -info.Height, Planes = 1, Bits = 32 };
