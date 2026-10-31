@@ -1,3 +1,10 @@
+## Em desenvolvimento — acionamento do coletor administrativo
+
+- Identificada rejeição do parâmetro em IRegisteredTask.Run antes de iniciar a tarefa: object[] gerava um array de VARIANTs, enquanto a API aceita BSTR ou array de BSTR. A chamada agora envia diretamente a string fixa sensors/frames, substituída em Arg0.
+- Ao acionar o coletor existente com uma string, a tarefa iniciou o executável protegido com --sensor-worker sensors. Isso confirma o erro de acionamento, não uma falta de elevação na configuração da tarefa. Leitura completa de sensores/FPS pelo cliente ainda requer a nova compilação.
+- Falhas de configuração, início, conexão e leitura agora aparecem no status de fallback; o painel e o overlay informam indisponibilidade do coletor em vez de mostrar somente valores ausentes.
+- Interface continua normal para OLE Drag & Drop; tarefa administrativa e verificações de identidade do IPC permanecem.
+- Referência: https://learn.microsoft.com/en-us/windows/win32/api/taskschd/nf-taskschd-iregisteredtask-run . Sem compilação, suíte de testes ou type check nesta alteração, conforme a preferência do usuário.
 ## Prévia de permissões — compilação e abertura
 
 Compilação Release concluída sem erros/avisos por solicitação do usuário. Corrigida a criação do processo normal para usar uma cópia primária do token do desktop; o uso direto do token retornava Acesso negado neste PC. A interface permaneceu aberta com o marcador desktop-user-ui, enquanto a tarefa de sensores mantém nível elevado. Sem execução de suíte de testes ou type check separado nesta etapa.

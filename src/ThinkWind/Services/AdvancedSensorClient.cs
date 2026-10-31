@@ -23,10 +23,14 @@ internal sealed class AdvancedSensorClient
     private NamedPipeClientStream? pipe;
     private DateTime retryAfter;
     private bool frameMode;
+    internal string? LastError { get; private set; }
     internal async Task<HardwareSample?> Read(CancellationToken stop, bool frames = false)
     {
         if (pipe is not null && frameMode != frames) { Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(3); }
-        if (!AdvancedSensorSetup.IsConfigured || DateTime.UtcNow < retryAfter) return null;
+        if (!AdvancedSensorSetup.IsConfigured)
+        { LastError = "Coletor administrativo: autorize ou atualize os sensores em Personalizar."; return null; }
+        if (DateTime.UtcNow < retryAfter) return null;
+        string stage = "iniciar a tarefa";
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
@@ -34,6 +38,7 @@ internal sealed class AdvancedSensorClient
             if (pipe is null)
             {
                 AdvancedSensorSetup.StartTask(frames);
+                stage = "conectar ao coletor";
                 var next = new NamedPipeClientStream(".", AdvancedSensorSetup.PipeName + (frames ? ".frames" : ".sensors"), PipeDirection.In, PipeOptions.Asynchronous, TokenImpersonationLevel.Identification);
                 try
                 {
@@ -45,6 +50,7 @@ internal sealed class AdvancedSensorClient
                 catch { next.Dispose(); throw; }
             }
             byte[] lengthBytes = new byte[4];
+            stage = "receber as leituras";
             var stream = pipe ?? throw new IOException("Coletor desconectado.");
             await stream.ReadExactlyAsync(lengthBytes, timeout.Token).ConfigureAwait(false);
             int length = BitConverter.ToInt32(lengthBytes);
@@ -53,12 +59,12 @@ internal sealed class AdvancedSensorClient
             await stream.ReadExactlyAsync(bytes, timeout.Token).ConfigureAwait(false);
             var sample = JsonSerializer.Deserialize<HardwareSample>(bytes);
             if (sample is null || (DateTime.Now - sample.Time).Duration() > TimeSpan.FromSeconds(30)) throw new IOException("Leitura expirada.");
-            return sample;
+            LastError = null; return sample;
         }
         catch (OperationCanceledException) when (!stop.IsCancellationRequested)
-        { Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(15); return null; }
+        { LastError = "Coletor administrativo: tempo esgotado ao " + stage + "."; Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(15); return null; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or COMException or System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException)
-        { Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(15); return null; }
+        { LastError = "Coletor administrativo: falha ao " + stage + " (0x" + error.HResult.ToString("X8") + ")."; Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(15); return null; }
     }
     private static bool Trusted(NamedPipeClientStream pipe)
     {

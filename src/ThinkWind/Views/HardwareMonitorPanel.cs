@@ -18,6 +18,7 @@ internal sealed class HardwareMonitorPanel : UserControl
     private readonly OverlayToggleButton overlay;
     private sealed record GpuChoice(string Id, string Label);
     private readonly ComboBox gpuPicker = new() { DisplayMemberPath = nameof(GpuChoice.Label), MinHeight = 32, Margin = new Thickness(4, 0, 4, 10) };
+    private readonly TextBlock sensorNotice = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 0, 4, 8), Visibility = Visibility.Collapsed };
     private bool syncingGpu;
     private string gpuChoiceSignature = "";
     private bool components;
@@ -45,7 +46,9 @@ internal sealed class HardwareMonitorPanel : UserControl
             if (!syncingGpu && gpuPicker.SelectedItem is GpuChoice choice && store.Value.MonitoringGpuId != choice.Id)
                 store.Update(p => p.MonitoringGpuId = choice.Id);
         };
-        root.Children.Add(gpuPicker); root.Children.Add(body);
+        root.Children.Add(gpuPicker);
+        sensorNotice.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); root.Children.Add(sensorNotice);
+        root.Children.Add(body);
         var footer = new WrapPanel { Margin = new Thickness(4, 8, 4, 0), VerticalAlignment = VerticalAlignment.Center };
         footer.Children.Add(overlay);
         AddButton(footer, "Personalizar overlay", () => ((App)Application.Current).OpenOverlaySettings());
@@ -57,7 +60,14 @@ internal sealed class HardwareMonitorPanel : UserControl
     }
     private void SettingsChanged(object? sender, EventArgs e) { MonitoringDesign.Install(Resources, store.Value); UpdateGpuPicker(); Render(); }
     internal static string Number(double? value, string unit, string format = "0") => value is { } number && double.IsFinite(number) ? number.ToString(format) + unit : "—";
-    private void Update(HardwareSample sample) { latest = sample; if (IsVisible) { UpdateGpuPicker(); Render(); } }
+    private void Update(HardwareSample sample)
+    {
+        latest = sample;
+        int errorAt = sample.Status.IndexOf("Coletor administrativo:", StringComparison.Ordinal);
+        sensorNotice.Text = errorAt >= 0 ? sample.Status[errorAt..] : "";
+        sensorNotice.Visibility = errorAt >= 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (IsVisible) { UpdateGpuPicker(); Render(); }
+    }
     private void UpdateGpuPicker()
     {
         var gpus = latest?.Gpus ?? Array.Empty<GpuReading>();

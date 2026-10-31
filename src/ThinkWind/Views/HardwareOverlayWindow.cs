@@ -89,6 +89,7 @@ internal sealed class HardwareOverlayWindow : Window
             if (sample?.Frames is null)
             {
                 int errorAt = sample?.Status.IndexOf("FPS/ETW indisponível:", StringComparison.Ordinal) ?? -1;
+                if (errorAt < 0) errorAt = sample?.Status.IndexOf("Coletor administrativo:", StringComparison.Ordinal) ?? -1;
                 rows.Children.Add(Text(errorAt >= 0 ? sample!.Status[errorAt..]
                     : "Aguardando eventos FPS · DXGI / D3D9", 10, true));
             }

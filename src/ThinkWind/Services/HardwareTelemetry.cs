@@ -132,7 +132,7 @@ internal sealed class HardwareTelemetry : IDisposable
                 }
                 try
                 {
-                    var sample = remote ?? Read(computer, sensorStatus);
+                    var sample = remote ?? Read(computer, sensorStatus + (advanced?.LastError is { } error ? " " + error : ""));
                     if (localFrameAccess && CaptureFrames)
                         sample = sample with { Frames = localFrames.GetForegroundStats(),
                             Status = sample.Status + (localFrames.Error is null ? "" : " FPS/ETW indisponível: " + localFrames.Error) };

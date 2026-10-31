@@ -179,7 +179,9 @@ internal static class AdvancedSensorSetup
             task = ((dynamic)folder).GetTask(TaskName);
             // Only the fixed sensor mode is substituted. The worker rejects
             // all arguments except exactly 'sensors' or 'frames'.
-            running = ((dynamic)task).Run(new object[] { frames ? "frames" : "sensors" });
+            // IRegisteredTask.Run accepts a BSTR (Arg0), not a SAFEARRAY of
+            // VARIANTs. object[] was rejected with E_INVALIDARG before launch.
+            running = ((dynamic)task).Run(frames ? "frames" : "sensors");
         }
         finally { foreach (var item in new[] { running, task, folder, service }) CoreAudio.Release(item); }
     }
