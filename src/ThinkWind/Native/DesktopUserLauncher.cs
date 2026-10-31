@@ -55,7 +55,7 @@ internal static class DesktopUserLauncher
             process = OpenProcess(0x1000, false, id);
             if (process == 0 || !OpenProcessToken(process, 0xB, out token)) throw new Win32Exception(Marshal.GetLastWin32Error());
             using var desktopIdentity = new WindowsIdentity(token);
-            if (desktopIdentity.User is null || !desktopIdentity.User.Equals(current.User)) throw new InvalidOperationException("Use a mesma conta do desktop para iniciar o Think Wind. A interface não será transferida para outro usuário.");
+            if (desktopIdentity.User is null || current.User is null || !desktopIdentity.User.Equals(current.User)) throw new InvalidOperationException("Use a mesma conta do desktop para iniciar o Think Wind. A interface não será transferida para outro usuário.");
             if (!GetTokenInformation(token, 20, out int elevated, 4, out _)) throw new Win32Exception(Marshal.GetLastWin32Error());
             // With UAC disabled, Explorer itself can be elevated. The source and
             // target already share its level; there is no medium desktop token.
