@@ -96,8 +96,10 @@ internal static class LayoutChecks
         Require(GameModeService.Eligible(new("WardogsClient-Win64-Shipping", false, false), true, new[] { "WardogsClient-Win64-Shipping.exe" }, Array.Empty<string>()));
         Require(GameModeService.Eligible(new("game", true, false), true, Array.Empty<string>(), Array.Empty<string>()));
         Require(!GameModeService.Eligible(new("explorer", true, true), true, Array.Empty<string>(), Array.Empty<string>()));
-        Require(!GameModeService.Eligible(new("game", true, false), false, Array.Empty<string>(), Array.Empty<string>()));
-        Require(!GameModeService.Eligible(new("player", true, false), true, Array.Empty<string>(), new[] { "player.exe" }));
+        Require(!GameModeService.Eligible(new("game", true, false), false, Array.Empty<string>(), Array.Empty<string>(), hideFullscreen: false));
+        Require(!GameModeService.Eligible(new("player", true, false), true, Array.Empty<string>(), new[] { "player.exe" }, hideFullscreen: false));
+        Require(GameModeService.Eligible(new("player", true, false), false, Array.Empty<string>(), new[] { "player.exe" }, hideFullscreen: true));
+        Require(GameModeService.Eligible(new("installed", false, false, InstalledGame: true), true, Array.Empty<string>(), Array.Empty<string>()));
         Require(!GameModeService.Eligible(new("other", false, false), true, new[] { "game.exe" }, Array.Empty<string>()));
     }
     internal static void DockCapacity()

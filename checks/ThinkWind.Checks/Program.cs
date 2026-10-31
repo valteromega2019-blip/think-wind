@@ -124,6 +124,23 @@ internal static class Program
             preferences.Flush(); var loaded = Store("dock-new");
             Require(loaded.Value.DockMagnificationAmount == .6 && loaded.Value.DockMagnificationNeighbors == 4 && loaded.Value.DockMagnificationSpeed == 1.5 && loaded.Value.HideWindowsTaskbar);
         });
+        Run("0.18: posição personalizada e ilha secundária persistem", () =>
+        {
+            var store = Store("overlay-position");
+            Require(!store.Value.SecondaryIslandsEnabled && !store.Value.OverlayCustomPosition);
+            store.Value.SecondaryIslandsEnabled = true;
+            store.Value.OverlayCustomPosition = true; store.Value.OverlayPositionX = 37.2; store.Value.OverlayPositionY = 63.4;
+            store.Value.OverlayCorner = "BR"; store.Value.OverlayScale = 1.4; store.Save();
+            var p = Store("overlay-position").Value;
+            Require(p.SecondaryIslandsEnabled && p.OverlayCustomPosition && p.OverlayPositionX == 37.2 && p.OverlayPositionY == 63.4 && p.OverlayCorner == "BR" && p.OverlayScale == 1.4);
+        });
+        Run("0.18: posição do overlay é limitada à área disponível", () =>
+        {
+            File.WriteAllText(PathFor("overlay-limits"), "{\"OverlayPositionX\":-20,\"OverlayPositionY\":150}");
+            var p = Store("overlay-limits").Value;
+            Require(p.OverlayPositionX == 0 && p.OverlayPositionY == 100);
+        });
+        Run("0.18: calendário não recorta células em fontes maiores", Release018Checks.CalendarCells);
         Console.WriteLine($"RESULTADO: {passed} aprovados; {failed} falhos; {skipped} ignorados.");
         Console.WriteLine("Arquivos temporários isolados: " + Root);
         BackdropComposition.Shutdown();

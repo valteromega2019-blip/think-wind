@@ -1,13 +1,13 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.17.0-alpha"
+#define MyAppVersion "0.18.0-alpha"
 #ifndef PublishDir
-#define PublishDir "..\artifacts\publish-v0.17.0-alpha"
+#define PublishDir "..\artifacts\publish-v0.18.0-alpha"
 #endif
 [Setup]
 AppId={{05EC91A4-D290-4AB9-B291-988D4C61CA6A}
 AppName=Think Wind
 AppVersion={#MyAppVersion}
-VersionInfoVersion=0.17.0.0
+VersionInfoVersion=0.18.0.0
 DefaultDirName={localappdata}\Programs\ThinkWind
 PrivilegesRequired=lowest
 DefaultGroupName=Think Wind

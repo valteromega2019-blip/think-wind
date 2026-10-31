@@ -1,3 +1,7 @@
+## 0.18 Alfa — entrega local
+
+47 verificações aprovadas, zero falhas e zero ignoradas. [Escopo, comandos e limites](VALIDACAO-0.18-ALFA.md).
+
 # Relatórios de validação
 
 ## Validação mais recente — 0.10 Alfa

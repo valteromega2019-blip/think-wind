@@ -1,3 +1,7 @@
+## 0.18 Alfa — empacotamento local
+
+Consolida as correções desta branch e os ajustes do overlay. Validação final: 47 testes aprovados, 0 falhos e 0 ignorados. Instalador local com PawnIO oficial opcional; sem publicação remota nesta etapa. [Notas](RELEASE-0.18-ALFA.md).
+
 ## Em desenvolvimento — foco nativo na pesquisa
 
 - A solicitação de foco da pesquisa também aplica SetFocus ao HWND do menu, que pertence à própria thread de interface, antes de selecionar o TextBox no WPF.
