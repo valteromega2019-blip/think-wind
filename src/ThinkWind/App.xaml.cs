@@ -35,6 +35,7 @@ public partial class App : Application
     private SettingsStore store = null!;
     private PreferenceStamp? preferenceStamp;
     private StartupPriority? startupPriority;
+    private readonly object startupSensorConsumer = new();
     internal bool IsExiting { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -98,6 +99,8 @@ public partial class App : Application
         ThemeService.Apply(store.Value);
         Telemetry = new HardwareTelemetry(Dispatcher);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
+        // Populate the shared cache before any monitoring panel is opened.
+        if (!diagnosing && !initialGame) Telemetry.SetActive(startupSensorConsumer, true);
         hardwareOverlay = new HardwareOverlayWindow(store, Telemetry);
         dock = new DockWindow(store);
         island = new IslandWindow(store, OpenSettings);
@@ -149,7 +152,8 @@ public partial class App : Application
                 try
                 {
                     if (store.Value.HardwareSensorsAutoSetup) store.Update(p => p.HardwareSensorsSetupAttempted = true);
-                    await StartupPermissions.Prepare(store.Value.HardwareSensorsAutoSetup, store.Value.AutoAuthorizeWindowActions);
+                    if (await StartupPermissions.Prepare(store.Value.HardwareSensorsAutoSetup, store.Value.AutoAuthorizeWindowActions))
+                        Telemetry.RefreshAuthorizedSensors();
                 }
                 catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)
                 { MessageBox.Show("Não foi possível preparar os auxiliares: " + error.Message, "Think Wind"); }
@@ -258,6 +262,7 @@ public partial class App : Application
     private void ApplyHardwareOverlay()
     {
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
+        if (!diagnosing) Telemetry.SetActive(startupSensorConsumer, !IsExiting && gameMode?.Active != true);
         hardwareOverlay?.Apply(gameMode?.RecognizedGame == true);
         if (!store.Value.OverlayHotkeyEnabled) { overlayHotkey?.Dispose(); overlayHotkey = null; }
         else if (overlayHotkey is null)

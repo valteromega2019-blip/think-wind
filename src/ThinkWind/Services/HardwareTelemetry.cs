@@ -38,6 +38,12 @@ internal sealed class HardwareTelemetry : IDisposable
     private IReadOnlyList<GpuAdapterInfo> adapterInfo = Array.Empty<GpuAdapterInfo>();
     internal volatile bool CaptureFrames;
     private long lastIdle, lastTotal;
+    private int authorizationChanged;
+    internal void RefreshAuthorizedSensors()
+    {
+        Interlocked.Exchange(ref authorizationChanged, 1);
+        lock (sync) { if (!disposed && wake.CurrentCount == 0) wake.Release(); }
+    }
     internal HardwareSample? Latest { get; private set; }
     internal System.Collections.Generic.Queue<HardwareSample> History { get; } = new();
     internal event Action<HardwareSample>? Changed;
@@ -98,6 +104,9 @@ internal sealed class HardwareTelemetry : IDisposable
                     await wake.WaitAsync(stop.Token).ConfigureAwait(false);
                     continue;
                 }
+                // The setup may have completed while a local-only read or an
+                // earlier connection backoff was active. Retry immediately.
+                if (Interlocked.Exchange(ref authorizationChanged, 0) != 0) advanced?.ResetAuthorization();
                 HardwareSample? remote = advanced is null ? null : await advanced.Read(stop.Token, CaptureFrames).ConfigureAwait(false);
                 if (localFrameAccess && CaptureFrames)
                 {

@@ -85,4 +85,6 @@ internal sealed class AdvancedSensorClient
         finally { CloseHandle(process); }
     }
     internal void Disconnect() { Interlocked.Exchange(ref pipe, null)?.Dispose(); }
+    // Called only by the telemetry loop, never concurrently with Read.
+    internal void ResetAuthorization() { Disconnect(); retryAfter = DateTime.MinValue; LastError = null; }
 }
