@@ -10,13 +10,13 @@ Instalação independente com OrbyLauncher.exe e correções dos ícones do pró
 
 ## 0.20 Beta (0.20.0-beta)
 
-[Baixar Orby Launcher](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.20.0-beta/OrbyLauncher-Setup-0.20.0-beta.exe) · [Notas e limitações](RELEASE-0.20-BETA.md) · [Site](https://valteromega2019-blip.github.io/orby-launcher/)
+[Baixar Orby Launcher](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.20.0-beta/OrbyLauncher-Setup-0.20.0-beta.exe) · [Notas e limitações](RELEASE-0.20-BETA.md) · [Site](https://thinkdeveloper-br.github.io/orby-launcher/)
 
 Ícone no arquivo do instalador, no assistente e na entrada de desinstalação. Gradiente de marca em toda a frase Em outro ritmo. no site. Configurações e compatibilidade de atualização mantidas. Compilação e empacotamento sem novos testes ou type check separado.
 
 ## 0.19 Alfa — revisão 2 (0.19.2-alpha)
 
-[Baixar Orby Launcher](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.19.2-alpha/OrbyLauncher-Setup-0.19.2-alpha.exe) · [Notas e limitações](RELEASE-0.19.2.md) · [Apresentação](https://valteromega2019-blip.github.io/orby-launcher/)
+[Baixar Orby Launcher](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.19.2-alpha/OrbyLauncher-Setup-0.19.2-alpha.exe) · [Notas e limitações](RELEASE-0.19.2.md) · [Apresentação](https://thinkdeveloper-br.github.io/orby-launcher/)
 
 Nome e ícone atualizados no aplicativo e no instalador. Novo site com identidade azul, ciano e violeta, exemplos interativos e animações Motion. Dados e identificadores internos de atualização preservados. Compilação e empacotamento realizados sem novos testes ou type check separado.
 
@@ -106,7 +106,7 @@ Distribuição Release independente compilada e instalador gerado. Bateria atual
 
 Correção de recortes em ícones grandes no Dock e controle de opacidade dos blocos/controles internos. **37 checks aprovados**, publicação Release sem erros/avisos e instalador atualizado. [Release pública 0.08 Alfa](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.8.0-alpha) · [Relatório de validação](VALIDACAO-0.08-ALFA.md).
 
-[Página de apresentação](https://valteromega2019-blip.github.io/orby-launcher/) · [Release anterior 0.07 Alfa](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.7.0-alpha)
+[Página de apresentação](https://thinkdeveloper-br.github.io/orby-launcher/) · [Release anterior 0.07 Alfa](https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.7.0-alpha)
 
 O código e os instaladores deste projeto são públicos. A apresentação continua publicada separadamente em `think-wind-site`.
 

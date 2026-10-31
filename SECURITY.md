@@ -5,7 +5,7 @@ Esta é uma versão Beta. A seção Personalizar → Sobre e segurança reúne o
 ## Distribuição oficial
 
 - Código e releases: https://github.com/valteromega2019-blip/think-wind
-- Apresentação: https://valteromega2019-blip.github.io/orby-launcher/
+- Apresentação: https://thinkdeveloper-br.github.io/orby-launcher/
 - Compare o SHA-256 do instalador com o arquivo de checksums da mesma release. Isso confirma correspondência com o artefato publicado; não substitui assinatura digital ou auditoria de segurança.
 - Os instaladores Beta ainda não têm assinatura digital. A instalação não exige desativar antivírus, proteção do Windows ou outras medidas de segurança.
 
