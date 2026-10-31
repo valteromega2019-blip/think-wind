@@ -29,7 +29,10 @@ internal static class DesktopUserLauncher
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
     [DllImport("kernel32.dll", SetLastError = true)] private static extern nint OpenProcess(uint access, bool inherit, uint process);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
+    [DllImport("kernel32.dll")] private static extern bool GetExitCodeProcess(nint process, out uint code);
+    [DllImport("user32.dll")] private static extern uint WaitForInputIdle(nint process, uint milliseconds);
     [DllImport("advapi32.dll", SetLastError = true)] private static extern bool OpenProcessToken(nint process, uint access, out nint token);
+    [DllImport("advapi32.dll", SetLastError = true)] private static extern bool DuplicateTokenEx(nint token, uint access, nint attributes, int level, int type, out nint duplicate);
     [DllImport("advapi32.dll", SetLastError = true)] private static extern bool GetTokenInformation(nint token, int kind, out int value, int length, out int needed);
     [DllImport("userenv.dll", SetLastError = true)] private static extern bool CreateEnvironmentBlock(out nint environment, nint token, bool inherit);
     [DllImport("userenv.dll")] private static extern bool DestroyEnvironmentBlock(nint environment);
@@ -45,7 +48,7 @@ internal static class DesktopUserLauncher
         nint shell = GetShellWindow();
         if (shell == 0) throw new InvalidOperationException("O Explorador precisa estar aberto para iniciar a interface com suporte a arrastar e soltar.");
         GetWindowThreadProcessId(shell, out uint id);
-        nint process = 0, token = 0, environment = 0;
+        nint process = 0, token = 0, primary = 0, environment = 0;
         var created = new ProcessInfo();
         try
         {
@@ -60,13 +63,23 @@ internal static class DesktopUserLauncher
             // With UAC disabled, Explorer itself can be elevated. The source and
             // target already share its level; there is no medium desktop token.
             if (elevated != 0) return false;
-            if (!CreateEnvironmentBlock(out environment, token, false)) throw new Win32Exception(Marshal.GetLastWin32Error());
+            if (!DuplicateTokenEx(token, 0x02000000, 0, 2, 1, out primary)) throw new Win32Exception(Marshal.GetLastWin32Error());
+            if (!CreateEnvironmentBlock(out environment, primary, false)) throw new Win32Exception(Marshal.GetLastWin32Error());
             string executable = Environment.ProcessPath ?? throw new InvalidOperationException("Executável do Think Wind indisponível.");
             string command = string.Join(" ", new[] { executable }.Concat(args).Append(RelaunchFlag).Select(Quote));
             if (command.Length >= 1024) throw new InvalidOperationException("Argumentos de inicialização muito longos para reabrir a interface.");
             var startup = new StartupInfo { Size = (uint)Marshal.SizeOf<StartupInfo>(), Desktop = @"winsta0\default" };
-            if (!CreateProcessWithTokenW(token, 0, executable, new StringBuilder(command), 0x400, environment,
-                Path.GetDirectoryName(executable)!, ref startup, out created)) throw new Win32Exception(Marshal.GetLastWin32Error());
+            // A build tool may put its children in a kill-on-exit job. The UI
+            // must outlive this short bootstrap; break away when permitted.
+            bool launched = CreateProcessWithTokenW(primary, 0, executable, new StringBuilder(command), 0x1000400, environment,
+                Path.GetDirectoryName(executable)!, ref startup, out created);
+            if (!launched && Marshal.GetLastWin32Error() == 5)
+                launched = CreateProcessWithTokenW(primary, 0, executable, new StringBuilder(command), 0x400, environment,
+                    Path.GetDirectoryName(executable)!, ref startup, out created);
+            if (!launched) throw new Win32Exception(Marshal.GetLastWin32Error());
+            WaitForInputIdle(created.Process, 5000);
+            if (GetExitCodeProcess(created.Process, out uint code) && code != 259)
+                throw new InvalidOperationException("A interface normal encerrou ao iniciar. Código: " + code + ". Abra o executável pelo Explorador.");
             return true;
         }
         finally
@@ -74,6 +87,7 @@ internal static class DesktopUserLauncher
             if (created.Thread != 0) CloseHandle(created.Thread);
             if (created.Process != 0) CloseHandle(created.Process);
             if (environment != 0) DestroyEnvironmentBlock(environment);
+            if (primary != 0) CloseHandle(primary);
             if (token != 0) CloseHandle(token);
             if (process != 0) CloseHandle(process);
         }

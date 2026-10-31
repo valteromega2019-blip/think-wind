@@ -1,3 +1,7 @@
+## Prévia de permissões — compilação e abertura
+
+Compilação Release concluída sem erros/avisos por solicitação do usuário. Corrigida a criação do processo normal para usar uma cópia primária do token do desktop; o uso direto do token retornava Acesso negado neste PC. A interface permaneceu aberta com o marcador desktop-user-ui, enquanto a tarefa de sensores mantém nível elevado. Sem execução de suíte de testes ou type check separado nesta etapa.
+
 ## Em desenvolvimento — uma linha de ícones na expansão
 
 - Controles anteriormente mostrados na segunda fileira passam para a mesma linha horizontal dos controles superiores nos estágios expandidos, antes do botão de recolher.

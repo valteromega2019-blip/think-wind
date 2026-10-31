@@ -57,6 +57,13 @@ public partial class App : Application
             try { if (DesktopUserLauncher.RelaunchIfElevated(e.Args)) { Shutdown(); return; } }
             catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or UnauthorizedAccessException or System.Security.SecurityException)
             {
+                try
+                {
+                    string log = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThinkWind");
+                    System.IO.Directory.CreateDirectory(log);
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(log, "desktop-ui-startup.log"), DateTime.UtcNow.ToString("O") + Environment.NewLine + error);
+                }
+                catch (Exception logError) when (logError is System.IO.IOException or UnauthorizedAccessException) { }
                 MessageBox.Show("Não foi possível abrir a interface com permissões compatíveis com o arrasto do Explorador.\n\n" + error.Message,
                     "Think Wind", MessageBoxButton.OK, MessageBoxImage.Information);
                 Shutdown(1); return;
