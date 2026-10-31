@@ -1,3 +1,7 @@
+## 0.18 Alfa — revisão 1
+
+Empacota a seleção de GPU aprovada pelo usuário, com prioridade automática à dedicada. Sem novos testes nesta publicação. [Notas](RELEASE-0.18.1-ALFA.md).
+
 ## Em desenvolvimento — seleção da GPU monitorada
 
 - Modo automático prioriza adaptador dedicado em vez de escolher pela ordem do fornecedor. Consulta DXCore (IsIntegrated e memória dedicada) ao abrir o inventário dos sensores, fora da thread de interface; identificação por nome normalizado e fallback conservador por modelo quando a informação nativa não está disponível.

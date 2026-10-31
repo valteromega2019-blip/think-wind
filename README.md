@@ -1,5 +1,12 @@
 # Think Wind
 
+## 0.18 Alfa — revisão 1 (0.18.1-alpha)
+
+[Instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.18.1-alpha/ThinkWind-Setup-0.18.1-alpha.exe) · [Notas](RELEASE-0.18.1-ALFA.md)
+
+Prioriza a GPU dedicada e permite escolher a placa monitorada. Preferências preservadas; sem novos testes nesta revisão.
+
+
 ## 0.18 Alfa — 0.18.0-alpha
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.18.0-alpha/ThinkWind-Setup-0.18.0-alpha.exe) · [Notas e limitações](RELEASE-0.18-ALFA.md)
