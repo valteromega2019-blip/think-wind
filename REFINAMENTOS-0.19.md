@@ -26,4 +26,6 @@
 
 - Alinhamento dos sliders: trilho e controle circular compartilham altura de 32 DIP. A extensão do preenchimento sob o círculo é apenas visual, dentro do template; não altera mais a margem do componente que o Track usa para posicionar o controle, evitando deslocamento do círculo em relação à cápsula.
 
+- Pesquisa: primeiro resultado visível pré-selecionado ao digitar, com superfície suave e contorno na cor de destaque. O foco permanece no texto; Enter no campo do menu ou na barra inferior abre o mesmo item destacado, inclusive após paginação e atualização dos resultados indexados. Sem destaque permanente nas grades quando não há pesquisa.
+
 Revisão por leitura de código e diff. Sem compilação, testes, type check ou conferência visual nesta etapa, conforme a preferência do usuário. A branch `feature/v0.19` não foi publicada e o instalador existente não foi alterado.

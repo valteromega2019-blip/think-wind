@@ -91,7 +91,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         footer.Children.Add(new TextBlock { Text = Environment.UserName, ToolTip = Environment.UserDomainName + "\\" + Environment.UserName, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); content.Children.Add(footer);
         viewport.Child = content; Surface.Child = viewport;
         query.TextChanged += (_, _) => { if (!updating) { page = 0; Reload(); } };
-        query.PreviewKeyDown += (_, e) => { if (e.Key == Key.Enter && results.Count > 0) { Launch(results[0]); e.Handled = true; } };
+        query.PreviewKeyDown += (_, e) => { if (e.Key == Key.Enter) { OpenFirstResult(); e.Handled = true; } };
         Activated += (_, _) =>
         {
             if (!focusSearchOnActivation) return;
@@ -169,7 +169,11 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         if (!IsVisible || mode != LauncherPanelMode.Search) { Present(LauncherPanelMode.Search, text, false); return; }
         updating = true; query.Text = text; updating = false; page = 0; Reload();
     }
-    internal void OpenFirstResult() { if (IsVisible && results.Count > 0) Launch(results[0]); }
+    internal void OpenFirstResult()
+    {
+        int index = query.Text.Trim().Length > 0 ? page * perPage : 0;
+        if (IsVisible && index >= 0 && index < results.Count) Launch(results[index]);
+    }
     internal void FocusSearch()
     {
         if (!IsVisible) return;
@@ -303,14 +307,15 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         }
         int direction = DrawerDirection();
         resultsGrid.Children.Clear();
-        foreach (var entry in visible) resultsGrid.Children.Add(ResultRow(entry));
+        for (int index = 0; index < visible.Length; index++)
+            resultsGrid.Children.Add(ResultRow(visible[index], index == 0 && query.Text.Trim().Length > 0));
         bool hadRows = renderedStamp.Length > 0;
         renderedStamp = stamp; renderedSection = section; renderedPage = page;
         pagination.Text = $"{page + 1} / {pages} · {results.Count} itens"; previous.IsEnabled = page > 0; next.IsEnabled = page + 1 < pages;
         Position();
         AnimateDrawerRows(direction, hadRows);
     }
-    private FrameworkElement ResultRow(AppEntry entry)
+    private FrameworkElement ResultRow(AppEntry entry, bool selected = false)
     {
         var main = ActionButton(entry.Name, () => Launch(entry)); main.Style = (Style)FindResource("Think.IconButton"); main.Padding = new Thickness(6); main.ToolTip = entry.Name;
         var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
@@ -321,6 +326,18 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         inside.Children.Add(new TextBlock { Text = entry.Name, FontSize = 12, LineHeight = 16, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Height = 32, Width = 96, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 8, 0, 0) });
         main.Content = inside;
         var card = new Border { Child = main, Margin = new Thickness(4), Height = AppDrawerLayout.CellHeight - 8 };
+        // Reserve the same border space for every tile so selecting a result
+        // does not move its icon or take keyboard focus away from the query.
+        card.CornerRadius = new CornerRadius(14);
+        card.BorderThickness = new Thickness(1);
+        card.BorderBrush = Brushes.Transparent;
+        if (selected)
+        {
+            card.SetResourceReference(Border.BackgroundProperty, "Think.AccentSurface");
+            card.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
+            main.ToolTip = entry.Name + " · Enter para abrir";
+            System.Windows.Automation.AutomationProperties.SetHelpText(main, "Resultado pré-selecionado. Pressione Enter na pesquisa para abrir.");
+        }
         if (mode == LauncherPanelMode.Library)
         {
             card.Child = null; var tile = new Grid(); tile.Children.Add(main); card.Child = tile;
