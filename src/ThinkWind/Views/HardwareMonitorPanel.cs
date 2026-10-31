@@ -27,7 +27,7 @@ internal sealed class HardwareMonitorPanel : UserControl
         set { if (wideLayout == value) return; wideLayout = value; Render(); }
     }
     private readonly ComboBox gpuPicker = new() { DisplayMemberPath = nameof(GpuChoice.Label), MinHeight = 32, Margin = new Thickness(4, 0, 4, 10) };
-    private readonly TextBlock sensorNotice = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 0, 4, 8), Visibility = Visibility.Collapsed };
+    private readonly TextBlock sensorNotice = new() { FontSize = 11, Height = 28, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(4, 0, 4, 8), Visibility = Visibility.Hidden };
     private bool syncingGpu;
     private string gpuChoiceSignature = "";
     private bool components;
@@ -35,7 +35,22 @@ internal sealed class HardwareMonitorPanel : UserControl
     private string chartMetric = "Temperatura";
     private HardwareSample? latest;
     internal event Action? LayoutChanged;
-    private Size lastLayoutSize;
+    private bool boardLayoutDirty = true;
+    private double boardWidth = double.NaN;
+    internal Size MeasureBoard(double width)
+    {
+        if (!boardLayoutDirty && Math.Abs(boardWidth - width) < .5) return new Size(width, Height);
+        Width = width;
+        FontSizing.PrepareForMeasure(this);
+        // Measure the content itself, unconstrained by the panel's previous
+        // fixed height or the Viewbox that hosts it. Include the footer.
+        if (Content is not FrameworkElement content) return new Size(width, 1);
+        content.InvalidateMeasure();
+        content.Measure(new Size(width, double.PositiveInfinity));
+        Height = Math.Max(1, Math.Ceiling(content.DesiredSize.Height) + 2);
+        boardWidth = width; boardLayoutDirty = false;
+        return new Size(width, Height);
+    }
     internal HardwareMonitorPanel(SettingsStore settings, HardwareTelemetry source)
     {
         store = settings; telemetry = source;
@@ -75,7 +90,8 @@ internal sealed class HardwareMonitorPanel : UserControl
         latest = sample;
         int errorAt = sample.Status.IndexOf("Coletor administrativo:", StringComparison.Ordinal);
         sensorNotice.Text = errorAt >= 0 ? sample.Status[errorAt..] : "";
-        sensorNotice.Visibility = errorAt >= 0 ? Visibility.Visible : Visibility.Collapsed;
+        sensorNotice.ToolTip = sensorNotice.Text;
+        sensorNotice.Visibility = errorAt >= 0 ? Visibility.Visible : Visibility.Hidden;
         if (IsVisible) { UpdateGpuPicker(); Render(false); }
     }
     private void UpdateGpuPicker()
@@ -117,28 +133,14 @@ internal sealed class HardwareMonitorPanel : UserControl
     }
     private void Render(bool updateLayout = true)
     {
-        // Keep the board's allocated height throughout a telemetry refresh.
-        // New text/graph elements must not resize the surrounding Viewbox.
-        if (updateLayout) { Height = double.NaN; body.Height = double.NaN; }
         body.Children.Clear();
         if (components) RenderComponents(); else RenderSummary();
         // Loaded also applies font scaling. Do it now, while the new controls
         // already inherit this panel's scale, so they cannot grow after measure.
         FontSizing.PrepareForMeasure(this);
         if (!updateLayout) return;
-        // Only explicit layout/settings changes may change the window geometry.
-        double measureWidth = double.IsFinite(Width) && Width > 0 ? Width : 520;
-        Measure(new Size(measureWidth, double.PositiveInfinity));
-        body.Height = Math.Ceiling(body.DesiredSize.Height);
-        var size = new Size(Math.Ceiling(DesiredSize.Width), Math.Ceiling(DesiredSize.Height));
-        // Freeze the complete board, not only its body: status messages and
-        // picker text must not change the Viewbox scale on every sensor sample.
-        Height = Math.Max(1, size.Height);
-        if (Math.Abs(size.Width - lastLayoutSize.Width) > 1 || Math.Abs(size.Height - lastLayoutSize.Height) > 1)
-        {
-            lastLayoutSize = size;
-            LayoutChanged?.Invoke();
-        }
+        boardLayoutDirty = true;
+        LayoutChanged?.Invoke();
     }
     private void RenderSummary()
     {

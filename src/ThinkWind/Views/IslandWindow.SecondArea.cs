@@ -112,7 +112,8 @@ internal sealed class EmptyIslandAreaWindow : FloatingWindow
         FontSizing.PrepareForMeasure(monitorViewport);
         if (monitorViewport.Child is not FrameworkElement panel) return;
         panel.Measure(new Size(520, double.PositiveInfinity));
-        double naturalHeight = System.Math.Max(1, panel.DesiredSize.Height);
+        double naturalHeight = panel is HardwareMonitorPanel board
+            ? board.MeasureBoard(520).Height : System.Math.Max(1, panel.DesiredSize.Height);
         double scale = System.Math.Min(1, System.Math.Min(System.Math.Max(1, Display.Width - 48) / 520, System.Math.Max(1, Display.Height - 72) / naturalHeight));
         monitorViewport.Width = 520 * scale; monitorViewport.Height = naturalHeight * scale;
         Place(monitorViewport.Width + 24, monitorViewport.Height + 24, false);

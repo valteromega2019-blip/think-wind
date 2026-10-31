@@ -667,7 +667,8 @@ internal sealed partial class IslandWindow : FloatingWindow
             FontSizing.PrepareForMeasure(monitorPanel);
             monitorPanel.InvalidateMeasure();
             monitorPanel.Measure(new Size(monitorWidth, double.PositiveInfinity));
-            double monitorHeight = Math.Max(1, Math.Ceiling(monitorPanel.DesiredSize.Height));
+            double monitorHeight = monitorPanel is HardwareMonitorPanel board
+                ? board.MeasureBoard(monitorWidth).Height : Math.Max(1, Math.Ceiling(monitorPanel.DesiredSize.Height));
             double fit = Math.Min(1, Math.Min(inner / monitorWidth, contentLimit / monitorHeight));
             inner = monitorWidth * fit;
             width = inner + Surface.Padding.Left + Surface.Padding.Right;
