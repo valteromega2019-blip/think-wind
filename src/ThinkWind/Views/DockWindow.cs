@@ -442,13 +442,16 @@ internal sealed partial class DockWindow : FloatingWindow
         if (item.Glyph is null) PrepareDetailedIcon(image, catalogApp?.Target ?? item.Target, fallback);
         var indicator = new Border
         {
-            Height = 3,
-            Width = focused is not null ? 18 : minimized ? 10 : 5,
-            CornerRadius = new CornerRadius(2), Margin = new Thickness(0, 0, 0, 4), VerticalAlignment = VerticalAlignment.Bottom,
-            Opacity = item.Windows.Count == 0 ? 0 : minimized ? .45 : 1
+            Height = focused is not null ? 6 : 5,
+            Width = focused is not null ? 26 : minimized ? 10 : 14,
+            CornerRadius = new CornerRadius(3), Margin = new Thickness(0, 0, 0, 4), VerticalAlignment = VerticalAlignment.Bottom,
+            BorderThickness = new Thickness(1),
+            Opacity = item.Windows.Count == 0 ? 0 : 1,
+            IsHitTestVisible = false
         };
         indicator.RenderTransform = new TranslateTransform(0, 7);
-        indicator.SetResourceReference(Border.BackgroundProperty, focused is not null ? "Think.Accent" : "Think.Muted");
+        indicator.SetResourceReference(Border.BackgroundProperty, focused is not null ? "Think.AccentInk" : "Think.Text");
+        indicator.SetResourceReference(Border.BorderBrushProperty, "Think.Background");
         panel.Children.Add(indicator);
         var dropIndicator = new Border { Height = 2, Width = 20, CornerRadius = new CornerRadius(1), VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Hidden };
         dropIndicator.RenderTransform = new TranslateTransform(0, 7);
