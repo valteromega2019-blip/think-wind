@@ -44,7 +44,20 @@
     let baseMode = 'bar';
     let closeTimer;
     let touched = false;
-    const timers = [];
+    let cycleTimer;
+    let visible = false;
+    let cycleIndex = 0;
+    const modes = ['bar', 'island', 'expanded'];
+    function stopCycle() { clearInterval(cycleTimer); cycleTimer = undefined; }
+    function startCycle() {
+      stopCycle();
+      if (preference.matches || !visible || document.hidden || touched) return;
+      cycleIndex = Math.max(0, modes.indexOf(stage));
+      cycleTimer = setInterval(() => {
+        cycleIndex = (cycleIndex + 1) % modes.length;
+        setStage(modes[cycleIndex]);
+      }, 1400);
+    }
     function setStage(next, instant = false) {
       stage = next;
       if (next !== 'expanded') baseMode = next;
@@ -71,7 +84,7 @@
         animate(extra, { opacity: expanded ? 1 : 0, y: expanded ? 0 : -6 }, { duration: .3 });
       }
     }
-    function interact() { touched = true; clearTimeout(closeTimer); }
+    function interact() { touched = true; clearTimeout(closeTimer); stopCycle(); }
     setStage('bar', true);
     for (const button of buttons) listen(button, 'click', () => { interact(); setStage(button.dataset.islandStage); });
     const expandOnHover = event => {
@@ -84,14 +97,20 @@
     listen(region, 'pointerenter', () => clearTimeout(closeTimer));
     listen(region, 'pointerleave', () => {
       clearTimeout(closeTimer);
-      closeTimer = setTimeout(() => { if (!region.contains(document.activeElement)) setStage(baseMode); }, 900);
+      closeTimer = setTimeout(() => {
+        if (region.contains(document.activeElement)) return;
+        setStage(baseMode); touched = false; startCycle();
+      }, 900);
     });
+    listen(region, 'focusout', event => {
+      if (!region.contains(event.relatedTarget) && !region.matches(':hover')) { touched = false; startCycle(); }
+    });
+    listen(document, 'visibilitychange', () => { if (document.hidden) stopCycle(); else startCycle(); });
     if (!preference.matches) cleanup.push(motion.inView(island, () => {
-      for (const [delay, next] of [[850, 'island'], [1900, 'expanded'], [3900, 'bar']]) {
-        timers.push(setTimeout(() => { if (!touched) setStage(next); }, delay));
-      }
+      visible = true; startCycle();
+      return () => { visible = false; stopCycle(); };
     }));
-    cleanup.push(() => { clearTimeout(closeTimer); for (const timer of timers) clearTimeout(timer); });
+    cleanup.push(() => { clearTimeout(closeTimer); stopCycle(); });
   }
   function setupMagnets() {
     const row = document.querySelector('.magnet-dock');
