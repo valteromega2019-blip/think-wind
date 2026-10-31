@@ -1,3 +1,8 @@
+## Em desenvolvimento — foco nativo na pesquisa
+
+- A solicitação de foco da pesquisa também aplica SetFocus ao HWND do menu, que pertence à própria thread de interface, antes de selecionar o TextBox no WPF.
+- A ativação tardia faz a mesma sincronização. Não são compartilhadas filas de entrada com jogos/outros processos, nem capturados caracteres globalmente.
+- A causa exata da falha relatada ainda depende de confirmação em uso. Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário.
 ## Em desenvolvimento — destaque de temperatura e uso no overlay
 
 - CPU e GPU passam a abrir a lista do overlay, com temperatura primeiro e uso ao lado, ambos com números de 20 DIP em negrito. A temperatura utiliza a cor de destaque.

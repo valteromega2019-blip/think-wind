@@ -19,6 +19,7 @@ internal enum LauncherPanelMode { Start, Library, Search }
 internal sealed partial class LauncherPanelWindow : FloatingWindow
 {
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(nint window);
+    [DllImport("user32.dll", EntryPoint = "SetFocus")] private static extern nint SetNativeFocus(nint window);
     private int searchFocusRevision;
     private bool focusSearchOnActivation;
     protected override bool AttachedTop => false;
@@ -94,6 +95,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
             Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
             {
                 if (!IsVisible || !IsActive || !focusSearchOnActivation || menus > 0 || modal) return;
+                SetNativeFocus(new System.Windows.Interop.WindowInteropHelper(this).Handle);
                 FocusManager.SetFocusedElement(this, query);
                 Keyboard.Focus(query); query.Focus();
             }));
@@ -173,8 +175,14 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         void Focus()
         {
             if (!IsVisible || revision != searchFocusRevision || menus > 0 || modal) return;
-            SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            SetForegroundWindow(handle);
             Activate();
+            // WPF logical focus alone does not attach the keyboard to this HWND
+            // after opening from the dedicated Windows-key notification thread.
+            // This window belongs to our UI thread; no shared input queues,
+            // synthetic characters or hooks for ordinary typing are needed.
+            SetNativeFocus(handle);
             FocusManager.SetFocusedElement(this, query);
             Keyboard.Focus(query); query.Focus(); query.CaretIndex = query.Text.Length;
         }
