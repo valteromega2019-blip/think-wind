@@ -1,3 +1,7 @@
+## 0.18 Alfa — revisão 3
+
+Correções de dependências do coletor, preparação de permissões na abertura e dimensionamento do monitoramento. 47 testes aprovados; publish Release com avisos tratados como erros e instalador gerados. Escopo e limites em [VALIDACAO-0.18.3-ALFA.md](VALIDACAO-0.18.3-ALFA.md); novidades em [RELEASE-0.18.3-ALFA.md](RELEASE-0.18.3-ALFA.md).
+
 ## Em desenvolvimento — autorização única para janelas administrativas
 
 - Substituída a solicitação UAC por clique por uma tarefa sob demanda: primeira autorização/atualização copia o auxiliar para Program Files protegido e registra uma ação fixa com nível elevado. Não há gatilho de logon nem processo permanente para essa função.

@@ -1,3 +1,7 @@
+## 0.18 Alfa — revisão 3
+
+47 verificações aprovadas, zero falhas e zero ignoradas nesta entrega. Publish Release com avisos tratados como erros e instalador concluídos. [Escopo e limites](VALIDACAO-0.18.3-ALFA.md).
+
 ## 0.18 Alfa — entrega local
 
 47 verificações aprovadas, zero falhas e zero ignoradas. [Escopo, comandos e limites](VALIDACAO-0.18-ALFA.md).
