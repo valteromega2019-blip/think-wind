@@ -72,13 +72,33 @@ internal sealed class HardwareOverlayWindow : Window
         surface.BorderBrush = SystemParameters.HighContrast ? SystemColors.WindowTextBrush : B(palette.Border);
         surface.CornerRadius = new CornerRadius(options.SyncWithAppTheme ? Math.Clamp(store.Value.IslandRadius, 0, 24) : options.CornerRadius);
         rows.Children.Clear();
-        TextBlock Text(string value, double size = 12, bool muted = false) => new() {
+        TextBlock Text(string value, double size = 13, bool muted = false) => new() {
             Text = value, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = size,
+            FontWeight = muted ? FontWeights.Medium : FontWeights.SemiBold,
             Foreground = B(muted ? palette.Muted : palette.Text), TextWrapping = TextWrapping.Wrap, MaxWidth = 420 };
         Border Block(UIElement content) => new() { Background = B(palette.Block), CornerRadius = surface.CornerRadius,
             Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 3), Child = content };
         var selected = store.Value.OverlayVisibleMetrics;
         string V(string key) => sample is null ? "—" : OverlayReadings.Value(sample, key);
+        // Temperatures lead the overlay; utilization has equal visual weight.
+        // Respect individually disabled metrics and avoid repeating them below.
+        foreach (var component in new[] { (Name: "CPU", Prefix: "cpu"), (Name: "GPU", Prefix: "gpu") })
+        {
+            string temperature = component.Prefix + "_temp", usage = component.Prefix + "_load";
+            if (!selected.Contains(temperature) && !selected.Contains(usage)) continue;
+            var panel = new StackPanel();
+            panel.Children.Add(Text(component.Name, 13));
+            var values = new WrapPanel { MaxWidth = 420 };
+            foreach (string key in new[] { temperature, usage }.Where(selected.Contains))
+            {
+                var metric = new StackPanel { Margin = new Thickness(0, 5, 18, 0) };
+                metric.Children.Add(Text(key == temperature ? "Temperatura" : "Uso", 11, true));
+                var number = Text(V(key), 20); number.FontWeight = FontWeights.Bold;
+                if (key == temperature) number.Foreground = B(palette.Accent);
+                metric.Children.Add(number); values.Children.Add(metric);
+            }
+            panel.Children.Add(values); rows.Children.Add(Block(panel));
+        }
         if (selected.Contains("fps") || selected.Contains("frametime"))
         {
             var frameRow = new StackPanel { Orientation = Orientation.Horizontal };
@@ -107,7 +127,7 @@ internal sealed class HardwareOverlayWindow : Window
             rows.Children.Add(new Border { Background = B(palette.Graph), CornerRadius = surface.CornerRadius, Padding = new Thickness(5, 3, 5, 3), Margin = new Thickness(0, 6, 0, 4), Child = canvas });
         }
         if (sample is not null)
-            foreach (var row in OverlayReadings.Rows(sample, selected))
+            foreach (var row in OverlayReadings.Rows(sample, selected.Where(key => key is not ("cpu_temp" or "cpu_load" or "gpu_temp" or "gpu_load")).ToArray()))
             {
                 var line = new Grid(); line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) }); line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) }); line.ColumnDefinitions.Add(new ColumnDefinition());
                 line.Children.Add(new Border { Background = B(palette.Accent), CornerRadius = new CornerRadius(1) });

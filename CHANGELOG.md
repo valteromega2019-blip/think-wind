@@ -1,3 +1,9 @@
+## Em desenvolvimento — destaque de temperatura e uso no overlay
+
+- CPU e GPU passam a abrir a lista do overlay, com temperatura primeiro e uso ao lado, ambos com números de 20 DIP em negrito. A temperatura utiliza a cor de destaque.
+- Textos gerais do overlay passam a 13 DIP e seminegrito para melhorar legibilidade sobre o Acrylic. Métricas desmarcadas continuam ocultas e os valores destacados não se repetem nas linhas secundárias.
+- Os valores principais usam distribuição com quebra para evitar recortes em larguras menores.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura do código e diff; confirmação visual pendente.
 ## Em desenvolvimento — Acrylic no overlay de métricas
 
 - O overlay agora utiliza BackdropHost e composição nativa Acrylic, como a ilha, em vez de somente pintar uma superfície semitransparente.
