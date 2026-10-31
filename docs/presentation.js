@@ -25,12 +25,13 @@
     cleanup.push(() => element.removeEventListener(name, callback, options));
   }
   function assemble(selector, distance = 30) {
-    if (preference.matches) return;
-    document.querySelectorAll(selector).forEach((element, index) => {
+    if (preference.matches) return () => {};
+    const animations = [...document.querySelectorAll(selector)].map((element, index) =>
       animate(element, { opacity: [0, 1], y: [distance, 0], scale: [.88, 1] }, {
         type: 'spring', stiffness: 190, damping: 22, delay: index * .09
-      });
-    });
+      })
+    );
+    return () => { for (const animation of animations) animation.complete(); };
   }
   function setupIsland() {
     const island = document.querySelector('.island-preview');
@@ -107,6 +108,7 @@
     });
     listen(document, 'visibilitychange', () => { if (document.hidden) stopCycle(); else startCycle(); });
     if (!preference.matches) cleanup.push(motion.inView(region.querySelector('.desktop-preview'), () => {
+      if (!region.contains(document.activeElement)) { touched = false; setStage('bar', true); }
       visible = true; startCycle();
       return () => { visible = false; stopCycle(); };
     }));
@@ -259,6 +261,7 @@
     });
     if (!preference.matches) cleanup.push(motion.inView(scene, () => {
       visible = true;
+      if (!scene.contains(document.activeElement)) userEdited = false;
       if (!userEdited && !document.hidden) play();
       return () => { visible = false; clearAuto(); };
     }, { amount: .5 }));
@@ -317,9 +320,10 @@
     listen(document, 'visibilitychange', () => { if (document.hidden) stop(); else start(); });
     apply(index, true);
     if (!preference.matches) cleanup.push(motion.inView(scene, () => {
+      if (!scene.contains(document.activeElement)) { manual = false; apply(0, true); }
       visible = true; start();
-      assemble('.color-glass-blocks > div', 20);
-      return () => { visible = false; stop(); };
+      const finishAssembly = assemble('.color-glass-blocks > div', 20);
+      return () => { visible = false; stop(); finishAssembly(); };
     }, { amount: .3 }));
     cleanup.push(() => { stop(); tintAnimation?.stop(); });
   }
@@ -333,7 +337,8 @@
     if (preference.matches) return;
     setupMagnets();
     cleanup.push(motion.inView('[data-reveal]', element => {
-      animate(element, { opacity: [0, 1], y: [18, 0] }, { duration: .48, ease: [.22, 1, .36, 1] });
+      const entrance = animate(element, { opacity: [0, 1], y: [18, 0] }, { duration: .48, ease: [.22, 1, .36, 1] });
+      return () => entrance.complete();
     }, { amount: .12 }));
     cleanup.push(motion.hover('.button', element => {
       animate(element, { y: -2 }, { type: 'spring', stiffness: 420, damping: 30 });
@@ -344,17 +349,20 @@
       return () => animate(element, { y: 0, scale: 1 }, { type: 'spring', stiffness: 360, damping: 23 });
     }));
     cleanup.push(motion.inView('.hero-visual', () => {
-      assemble('.island-preview', -30);
-      assemble('.dock-preview > *', 36);
+      const finishIsland = assemble('.island-preview', -30);
+      const finishDock = assemble('.dock-preview > *', 36);
+      return () => { finishIsland(); finishDock(); };
     }));
     cleanup.push(motion.inView('.magnet-scene', () => assemble('.magnet-slot', 50)));
     cleanup.push(motion.inView('.monitor-visual', () => {
-      assemble('.monitor-components > div', 28);
-      assemble('.monitor-history, .monitor-overlay, .overlay-demo', 22);
+      const finishComponents = assemble('.monitor-components > div', 28);
+      const finishDetails = assemble('.monitor-history, .monitor-overlay, .overlay-demo', 22);
+      return () => { finishComponents(); finishDetails(); };
     }));
     cleanup.push(motion.inView('.player-news-visual', () => {
-      assemble('.player-news-card', 34);
-      assemble('.player-news-dock > span', 24);
+      const finishPlayer = assemble('.player-news-card', 34);
+      const finishDock = assemble('.player-news-dock > span', 24);
+      return () => { finishPlayer(); finishDock(); };
     }));
     if (replay) listen(replay, 'click', () => assemble('.magnet-slot', 50));
   }
