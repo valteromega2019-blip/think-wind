@@ -33,6 +33,7 @@ public sealed class OverlayAppearancePanel : UserControl
     public OverlayAppearancePanel()
     {
         MonitoringDesign.Install(Resources);
+        Resources[typeof(CheckBox)] = SelectionCircleStyle.Create();
         NameScope.SetNameScope(this, new NameScope());
         var card = new Border(); card.SetResourceReference(StyleProperty, "CardBorder"); Content = card;
         var root = new StackPanel(); card.Child = root;

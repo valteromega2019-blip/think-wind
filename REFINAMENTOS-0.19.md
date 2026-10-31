@@ -6,5 +6,6 @@
 - Clima com o mesmo ícone de condição usado no cabeçalho; os dois usam um único mapeamento de códigos meteorológicos.
 - Área com Clima, Notas rápidas (até 4.000 caracteres, salvas localmente) e Atalhos favoritos (até seis destinos reais, com ícones do sistema). Nenhum temporizador ou serviço adicional para os dois novos widgets.
 - Aba Widgets acessível pelo botão Editar widgets: prévia da ordem, mostrar/ocultar, arrastar por puxadores, setas e restauração da disposição sem apagar notas ou favoritos. Editor de notas e favoritos com importação dos atalhos da barra, seleção de arquivo, remoção e ordenação. Mudanças estruturais atualizam a ilha; digitar uma nota não reconstrói sua organização.
+- Seletores de personalização, ícones e widgets com indicador circular ON/OFF: círculo aceso na cor de destaque quando marcado e apagado quando desmarcado. Mantidos o estado, eventos, navegação por teclado e TogglePattern do CheckBox. Rótulos continuam clicáveis e quebram linha; o texto ON/OFF cabe no círculo mesmo com fonte ampliada. O botão oblongo do overlay permanece com seu formato próprio.
 
 Revisão por leitura de código e diff. Sem compilação, testes, type check ou conferência visual nesta etapa, conforme a preferência do usuário. A branch `feature/v0.19` não foi publicada e o instalador existente não foi alterado.

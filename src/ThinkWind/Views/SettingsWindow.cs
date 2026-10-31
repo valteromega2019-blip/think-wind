@@ -29,6 +29,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     public SettingsWindow(SettingsStore settings) : base(settings)
     {
         store = settings;
+        Resources[typeof(CheckBox)] = SelectionCircleStyle.Create();
         weatherSettings = new WeatherWidget(store, true);
         Title = "Think Wind · Personalização";
         SizeToContent = SizeToContent.Manual;
@@ -322,7 +323,8 @@ internal sealed partial class SettingsWindow : FloatingWindow
         DockPanel.SetDock(actions, Dock.Right); row.Children.Add(actions);
         var grip = new TextBlock { Text = "⋮⋮", Width = 26, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.SizeAll };
         grip.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); row.Children.Add(grip);
-        var visible = new CheckBox { Content = name, IsChecked = enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 4, 0, 4) };
+        var visible = new CheckBox { Content = new TextBlock { Text = name, TextWrapping = TextWrapping.Wrap }, IsChecked = enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 4, 0, 4) };
+        System.Windows.Automation.AutomationProperties.SetName(visible, name);
         visible.Checked += (_, _) => { if (!building) toggle(true); };
         visible.Unchecked += (_, _) => { if (!building) toggle(false); };
         row.Children.Add(visible); parent.Children.Add(row);
