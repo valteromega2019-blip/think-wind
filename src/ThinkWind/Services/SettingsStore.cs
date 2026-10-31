@@ -33,6 +33,9 @@ public sealed class Preferences
     public OverlayAppearanceOptions OverlayAppearance { get; set; } = new();
     public List<string> OverlayVisibleMetrics { get; set; } = OverlayMetrics.Defaults().ToList();
     public string OverlayCorner { get; set; } = "TL";
+    public bool OverlayCustomPosition { get; set; }
+    public double OverlayPositionX { get; set; }
+    public double OverlayPositionY { get; set; }
     public double OverlayScale { get; set; } = 1;
     public bool HardwareSensorsSetupAttempted { get; set; } = false;
     public bool HardwareSensorsAutoSetup { get; set; } = true;
@@ -191,6 +194,8 @@ public sealed class SettingsStore
         Value.OverlayVisibleMetrics = (Value.OverlayVisibleMetrics ?? OverlayMetrics.Defaults().ToList())
             .Where(key => OverlayMetrics.All.Any(metric => metric.Key == key)).Distinct().ToList();
         Value.OverlayCorner = Value.OverlayCorner is "TL" or "TR" or "BL" or "BR" ? Value.OverlayCorner : "TL";
+        Value.OverlayPositionX = double.IsFinite(Value.OverlayPositionX) ? Math.Clamp(Value.OverlayPositionX, 0, 100) : 0;
+        Value.OverlayPositionY = double.IsFinite(Value.OverlayPositionY) ? Math.Clamp(Value.OverlayPositionY, 0, 100) : 0;
         Value.OverlayScale = double.IsFinite(Value.OverlayScale) ? Math.Clamp(Value.OverlayScale, .7, 1.5) : 1;
         var p = Value;
         p.ActiveMonitors = (p.ActiveMonitors ?? new()).Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();

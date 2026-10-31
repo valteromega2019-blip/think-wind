@@ -18,6 +18,10 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
     private readonly OverlayAppearancePanel appearance = new();
     private readonly StackPanel metricGroups = new();
     private bool loading;
+    private bool syncingPosition;
+    private readonly Slider positionX = new(), positionY = new();
+    private readonly TextBlock positionXLabel = new(), positionYLabel = new();
+    private readonly System.Collections.Generic.Dictionary<string, RadioButton> cornerButtons = new();
     internal OverlaySettingsWindow(SettingsStore store) : base(store)
     {
         settings = store; Title = "Think Wind — Personalização do overlay"; ShowActivated = true;
@@ -48,11 +52,15 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
         var choices = new WrapPanel { Margin = new Thickness(0, 0, 0, 12) };
         foreach (var item in new[] { ("TL", "Superior esquerdo"), ("TR", "Superior direito"), ("BL", "Inferior esquerdo"), ("BR", "Inferior direito") })
         {
-            var radio = new RadioButton { Content = item.Item2, GroupName = "Corner", IsChecked = store.Value.OverlayCorner == item.Item1, Margin = new Thickness(0, 0, 12, 8) };
+            var radio = new RadioButton { Content = item.Item2, GroupName = "Corner", IsChecked = !store.Value.OverlayCustomPosition && store.Value.OverlayCorner == item.Item1, Margin = new Thickness(0, 0, 12, 8) };
             radio.SetResourceReference(Control.ForegroundProperty, "Fg");
-            radio.Checked += (_, _) => settings.Update(p => p.OverlayCorner = item.Item1); choices.Children.Add(radio);
+            radio.Checked += (_, _) => { if (!syncingPosition) settings.Update(p => { p.OverlayCorner = item.Item1; p.OverlayCustomPosition = false; }); };
+            cornerButtons.Add(item.Item1, radio); choices.Children.Add(radio);
         }
         content.Children.Add(choices);
+        AddPositionSlider(content, positionX, positionXLabel, true);
+        AddPositionSlider(content, positionY, positionYLabel, false);
+        SyncPositionControls();
         var sizeTitle = new TextBlock { Text = $"Tamanho do overlay · {store.Value.OverlayScale:P0}", FontSize = 14, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 8) };
         sizeTitle.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); content.Children.Add(sizeTitle);
         var size = new Slider { Minimum = 70, Maximum = 150, Value = store.Value.OverlayScale * 100,
@@ -88,7 +96,40 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
         settings.Changed += RefreshTheme;
         Closed += (_, _) => settings.Changed -= RefreshTheme;
     }
-    private void RefreshTheme(object? sender, EventArgs e) { MonitoringDesign.Install(Resources, settings.Value); appearance.IslandAppearance = settings.Value; appearance.RefreshPreview(); RefreshAppearance(); }
+    private void RefreshTheme(object? sender, EventArgs e) { MonitoringDesign.Install(Resources, settings.Value); appearance.IslandAppearance = settings.Value; appearance.RefreshPreview(); SyncPositionControls(); RefreshAppearance(); }
+    private void AddPositionSlider(Panel parent, Slider slider, TextBlock label, bool horizontal)
+    {
+        label.FontSize = 12; label.Margin = new Thickness(0, 2, 0, 6);
+        label.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); parent.Children.Add(label);
+        slider.Minimum = 0; slider.Maximum = 100; slider.SmallChange = .1; slider.LargeChange = 5;
+        slider.TickFrequency = 1; slider.IsMoveToPointEnabled = true;
+        slider.Margin = new Thickness(0, 0, 0, 14);
+        slider.ToolTip = horizontal ? "0%: esquerda · 50%: centro · 100%: direita" : "0%: topo · 50%: centro · 100%: base";
+        System.Windows.Automation.AutomationProperties.SetName(slider, horizontal ? "Posição horizontal do overlay" : "Posição vertical do overlay");
+        slider.ValueChanged += (_, _) =>
+        {
+            if (syncingPosition) return;
+            // Read both sliders before changing mode so the other axis keeps
+            // the current preset's coordinate on the first adjustment.
+            double x = positionX.Value, y = positionY.Value;
+            settings.Update(p => { p.OverlayCustomPosition = true; p.OverlayPositionX = x; p.OverlayPositionY = y; });
+        };
+        parent.Children.Add(slider);
+    }
+    private void SyncPositionControls()
+    {
+        syncingPosition = true;
+        try
+        {
+            var p = settings.Value;
+            positionX.Value = p.OverlayCustomPosition ? p.OverlayPositionX : p.OverlayCorner.EndsWith("R") ? 100 : 0;
+            positionY.Value = p.OverlayCustomPosition ? p.OverlayPositionY : p.OverlayCorner.StartsWith("B") ? 100 : 0;
+            positionXLabel.Text = $"Posição horizontal · {positionX.Value:0.0}%";
+            positionYLabel.Text = $"Posição vertical · {positionY.Value:0.0}%";
+            foreach (var pair in cornerButtons) pair.Value.IsChecked = !p.OverlayCustomPosition && pair.Key == p.OverlayCorner;
+        }
+        finally { syncingPosition = false; }
+    }
     private void BuildMetrics()
     {
         loading = true;

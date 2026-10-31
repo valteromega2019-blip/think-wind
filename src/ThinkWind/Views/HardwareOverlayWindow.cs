@@ -114,8 +114,12 @@ internal sealed class HardwareOverlayWindow : Window
         var display = OverlayChrome.GetDisplay(store.Value.MonitorIndex, store.Value.MonitorDeviceName);
         int margin = (int)Math.Round(12 * display.Scale), width = bounds.Right - bounds.Left, height = bounds.Bottom - bounds.Top;
         bool right = store.Value.OverlayCorner.EndsWith("R"), bottom = store.Value.OverlayCorner.StartsWith("B");
-        int x = right ? display.Bounds.Right - width - margin : display.Bounds.Left + margin;
-        int y = bottom ? display.Bounds.Bottom - height - margin : display.Bounds.Top + margin;
+        int availableX = Math.Max(0, display.Bounds.Width - width - 2 * margin);
+        int availableY = Math.Max(0, display.Bounds.Height - height - 2 * margin);
+        double horizontal = store.Value.OverlayCustomPosition ? store.Value.OverlayPositionX / 100 : right ? 1 : 0;
+        double vertical = store.Value.OverlayCustomPosition ? store.Value.OverlayPositionY / 100 : bottom ? 1 : 0;
+        int x = display.Bounds.Left + margin + (int)Math.Round(availableX * horizontal);
+        int y = display.Bounds.Top + margin + (int)Math.Round(availableY * vertical);
         SetWindowPos(window, (nint)(-1), Math.Max(display.Bounds.Left, x), Math.Max(display.Bounds.Top, y), 0, 0, 0x0010 | 0x0001 | 0x0200);
     }
 }

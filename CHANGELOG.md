@@ -1,3 +1,9 @@
+## Em desenvolvimento — posição personalizada do overlay
+
+- Adicionados sliders de posição horizontal e vertical, de 0% a 100% da área disponível, com indicação decimal e ajuste de 0,1 ponto percentual pelas setas do teclado.
+- Mantidos os quatro presets de canto. Selecionar um preset restaura o alinhamento e atualiza os sliders; ajustar um eixo mantém a coordenada do outro e ativa posição personalizada.
+- Posição é salva automaticamente e aplicada em tempo real, considerando o tamanho atual do overlay e a escala do monitor, com margens para evitar posicionamento além da tela.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura de código e diff; confirmação visual pendente.
 ## Em desenvolvimento — números do calendário sem recorte
 
 - Removida a altura fixa de 224 DIP das grades mensal/anual. As linhas agora medem o conteúdo dos dias e períodos, com altura mínima dos dias e menor preenchimento interno.
