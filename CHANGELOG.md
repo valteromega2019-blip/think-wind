@@ -1,3 +1,7 @@
+## 0.18 Alfa — revisão 4
+
+Ícones compactos preservados na primeira linha, controles expandidos na segunda e ícone de retorno à área principal ao abrir diagnóstico. FPS confirmado manualmente pelo usuário. Compilação e instalador preparados, sem nova rodada de testes ou type check separados. [Notas](RELEASE-0.18.4-ALFA.md).
+
 ## 0.18 Alfa — revisão 3
 
 Correções de dependências do coletor, preparação de permissões na abertura e dimensionamento do monitoramento. 47 testes aprovados; publish Release com avisos tratados como erros e instalador gerados. Escopo e limites em [VALIDACAO-0.18.3-ALFA.md](VALIDACAO-0.18.3-ALFA.md); novidades em [RELEASE-0.18.3-ALFA.md](RELEASE-0.18.3-ALFA.md).
