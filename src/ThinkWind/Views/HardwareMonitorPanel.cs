@@ -35,6 +35,7 @@ internal sealed class HardwareMonitorPanel : UserControl
     private string chartMetric = "Temperatura";
     private HardwareSample? latest;
     internal event Action? LayoutChanged;
+    private Size lastLayoutSize;
     internal HardwareMonitorPanel(SettingsStore settings, HardwareTelemetry source)
     {
         store = settings; telemetry = source;
@@ -118,7 +119,16 @@ internal sealed class HardwareMonitorPanel : UserControl
     {
         body.Children.Clear();
         if (components) RenderComponents(); else RenderSummary();
-        LayoutChanged?.Invoke();
+        // Sensor values change frequently; only ask the owning Acrylic window
+        // to resize when the board's natural geometry actually changes.
+        double measureWidth = double.IsFinite(Width) && Width > 0 ? Width : 520;
+        Measure(new Size(measureWidth, double.PositiveInfinity));
+        var size = new Size(Math.Ceiling(DesiredSize.Width), Math.Ceiling(DesiredSize.Height));
+        if (Math.Abs(size.Width - lastLayoutSize.Width) > 1 || Math.Abs(size.Height - lastLayoutSize.Height) > 1)
+        {
+            lastLayoutSize = size;
+            LayoutChanged?.Invoke();
+        }
     }
     private void RenderSummary()
     {

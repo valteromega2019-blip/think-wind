@@ -16,6 +16,7 @@ internal sealed class IslandStatusWindow : FloatingWindow
     protected override bool FullWidthTop => true;
     private Color? sampled;
     private DateTime nextSample;
+    private Color? pendingTint;
     private bool MatchApp => Store.Value.IslandMatchAppColor && !SystemParameters.HighContrast;
     protected override Color MaterialTint => MatchApp && sampled.HasValue ? sampled.Value : base.MaterialTint;
     protected override bool MaterialLight => MatchApp && sampled.HasValue ? IsLight(sampled.Value) : base.MaterialLight;
@@ -55,7 +56,16 @@ internal sealed class IslandStatusWindow : FloatingWindow
         finally { ReleaseDC(0, dc); }
         if (pixel == 0xFFFFFFFF) return;
         var color = Color.FromRgb((byte)pixel, (byte)(pixel >> 8), (byte)(pixel >> 16));
-        if (sampled is Color previous && Math.Abs(color.R - previous.R) + Math.Abs(color.G - previous.G) + Math.Abs(color.B - previous.B) <= 3) return;
+        static int Difference(Color a, Color b) => Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B);
+        // Ignore tiny composition fluctuations and require a stable sample before
+        // changing an established tint. Animated content must not pulse the bar.
+        if (sampled is Color previous)
+        {
+            if (Difference(color, previous) <= 24) { pendingTint = null; return; }
+            if (pendingTint is not Color pending || Difference(color, pending) > 12)
+            { pendingTint = color; return; }
+        }
+        pendingTint = null;
         var old = (Surface.Background as SolidColorBrush)?.Color;
         sampled = color;
         base.RefreshAppearance(); ApplyTextContrast();
