@@ -1,3 +1,9 @@
+## Em desenvolvimento — números do calendário sem recorte
+
+- Removida a altura fixa de 224 DIP das grades mensal/anual. As linhas agora medem o conteúdo dos dias e períodos, com altura mínima dos dias e menor preenchimento interno.
+- O calendário completo usa ajuste proporcional à largura disponível, evitando apertar números dentro de células menores que o conteúdo.
+- A ilha solicita nova medição após carregar o calendário ou mudar o mês.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura do código e diff; confirmação visual pendente.
 ## Em desenvolvimento — conteúdo dos blocos expandidos
 
 - Títulos dos módulos, controles de conexão e cabeçalhos de áudio passam a quebrar linha; controles de conexão e grade da bandeja usam alturas mínimas em vez de alturas fixas. Percentuais de áudio podem crescer conforme a fonte.

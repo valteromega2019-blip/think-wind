@@ -71,6 +71,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         trayCard = new TrayCard(store);
         calendar.SetResourceReference(StyleProperty, "Think.Calendar");
         calendar.FontSize = 14;
+        calendar.Loaded += (_, _) => ModuleSizeChanged();
+        calendar.DisplayDateChanged += (_, _) => ModuleSizeChanged();
         calendar.Language = System.Windows.Markup.XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag);
         var audio = new AudioService();
         output = new AudioEndpointControl(audio, CoreAudio.Flow.Render);
