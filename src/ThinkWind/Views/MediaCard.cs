@@ -13,10 +13,10 @@ internal sealed class MediaCard : StackPanel, IDisposable
 {
     private readonly MediaService service;
     private readonly Image artwork = new() { Width = 64, Height = 64, Stretch = Stretch.UniformToFill };
-    private readonly TextBlock title = new() { FontSize = 15, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly TextBlock artist = new() { FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly TextBlock player = new() { FontSize = 10, TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly TextBlock time = new() { FontSize = 10, HorizontalAlignment = HorizontalAlignment.Right };
+    private readonly TextBlock title = new() { FontSize = 16, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock artist = new() { FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock player = new() { FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock time = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Right };
     private readonly Slider progress = new() { Minimum = 0, Margin = new Thickness(0, 8, 0, 0), IsMoveToPointEnabled = true };
     private readonly Button previous, toggle, next;
     private readonly Border cover;
@@ -71,7 +71,6 @@ internal sealed class MediaCard : StackPanel, IDisposable
         bool wasAvailable = Tag is true; Tag = Available;
         var state = service.State; artwork.Source = state?.Artwork;
         cover.Visibility = transport.Visibility = Available ? Visibility.Visible : Visibility.Collapsed;
-        title.FontSize = Available ? 14 : 12;
         title.Text = state?.Title ?? "Nenhuma mídia ativa"; artist.Text = state?.Artist ?? service.Error ?? "Abra um player compatível com o Windows"; player.Text = state?.Player ?? "";
         toggle.Content = Icon(state?.Playing == true ? "\uE769" : "\uE768");
         title.ToolTip = title.Text; artist.ToolTip = artist.Text; player.ToolTip = player.Text;

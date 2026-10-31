@@ -14,7 +14,7 @@ namespace ThinkWind.Views;
 internal sealed class TrayCard : StackPanel
 {
     private readonly SettingsStore store;
-    private readonly UniformGrid grid = new() { Columns = 6, Rows = 4, Height = 224 };
+    private readonly UniformGrid grid = new() { Columns = 6, Rows = 4, Height = 248 };
     private readonly TextBlock status = new() { FontSize = 10, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed, Margin = new Thickness(4) };
     private readonly StackPanel navigation = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly Dictionary<string, (Image Icon, TextBlock Name)> visuals = new();
@@ -91,8 +91,8 @@ internal sealed class TrayCard : StackPanel
         foreach (var entry in shown)
         {
             string key = entry.Key;
-            var image = new Image { Source = entry.Icon, Width = 25, Height = 25, Stretch = Stretch.Uniform };
-            var label = new TextBlock { Text = entry.DisplayName, FontSize = 9, MaxWidth = 58, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
+            var image = new Image { Source = entry.Icon, Width = 28, Height = 28, Stretch = Stretch.Uniform };
+            var label = new TextBlock { Text = entry.DisplayName, FontSize = 12, MaxWidth = 58, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
             var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; content.Children.Add(image); content.Children.Add(label);
             var button = new Button { Content = content, Margin = new Thickness(2), Padding = new Thickness(2), ToolTip = entry.Name + "\nCtrl + botão direito: fixar, abrir ou encerrar aplicativo" };
             button.SetResourceReference(StyleProperty, "Think.IconButton"); System.Windows.Automation.AutomationProperties.SetName(button, entry.DisplayName);

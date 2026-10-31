@@ -19,8 +19,8 @@ internal sealed class WeatherWidget : Grid, IDisposable
     private readonly TextBox city = new() { MaxLength = 100, MinHeight = 30, Padding = new Thickness(6) };
     private readonly ComboBox choices = new() { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 4, 0, 0), MaxDropDownHeight = 180 };
     private readonly TextBlock temperature = new() { Text = "Escolha uma cidade", FontSize = 22, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock details = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
-    private readonly TextBlock status = new() { FontSize = 10, TextWrapping = TextWrapping.Wrap, MaxHeight = 28, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
+    private readonly TextBlock details = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
+    private readonly TextBlock status = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxHeight = 32, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
     private CancellationTokenSource? request;
     private string configured = "";
     private bool active, headerActive, busy, disposed;
@@ -40,7 +40,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
         var find = new Button { Content = "Buscar", Padding = new Thickness(8, 4, 8, 4), Margin = new Thickness(4, 0, 0, 0) };
         DockPanel.SetDock(find, Dock.Right); setupRow.Children.Add(find); setupRow.Children.Add(city);
         location.Children.Add(setupRow); location.Children.Add(choices); location.Children.Add(locationName); location.Children.Add(status);
-        var source = new Button { Content = "Dados: Open-Meteo ↗", FontSize = 9, Padding = new Thickness(0), Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
+        var source = new Button { Content = "Dados: Open-Meteo ↗", FontSize = 11, Padding = new Thickness(0), Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
         source.SetResourceReference(StyleProperty, "Think.IconButton"); source.Click += (_, _) => SystemActions.Run("https://open-meteo.com/");
         location.Children.Add(source); Children.Add(location);
         if (!configurationMode)

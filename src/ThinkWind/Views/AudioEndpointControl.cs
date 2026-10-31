@@ -43,7 +43,7 @@ internal sealed class AudioEndpointControl : Border
         var panel = new StackPanel();
         var name = direction == CoreAudio.Flow.Render ? "SAÍDA DE ÁUDIO" : "MICROFONE";
         var heading = new DockPanel(); DockPanel.SetDock(devicePicker, Dock.Right); heading.Children.Add(devicePicker);
-        heading.Children.Add(new TextBlock { Text = name, FontSize = 10, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); panel.Children.Add(heading);
+        heading.Children.Add(new TextBlock { Text = name, FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); panel.Children.Add(heading);
         devicePicker.Click += (_, _) => OpenDeviceMenu();
         System.Windows.Automation.AutomationProperties.SetName(devicePicker, "Escolher dispositivo · " + name);
         System.Windows.Automation.AutomationProperties.SetName(devices, "Dispositivo a controlar · " + name);
@@ -146,7 +146,7 @@ internal sealed class AudioEndpointControl : Border
         devices.Visibility = status.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
         devicePicker.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
         Padding = new Thickness(value ? 4 : 12); Margin = new Thickness(0, 2, 0, 2);
-        percent.Width = value ? 32 : 42; percent.FontSize = value ? 10 : 12;
+        percent.Width = value ? 40 : 42; percent.FontSize = 12;
         mute.MinWidth = value ? 28 : 78; mute.Width = value ? 28 : double.NaN; mute.Height = value ? 28 : double.NaN;
         mute.Padding = new Thickness(value ? 0 : 8); mute.Margin = new Thickness(3, 0, 0, 0);
         if (current is not null) mute.Content = value ? MuteGlyph(current.Muted) : current.Muted ? "Ativar som" : "Mudo";

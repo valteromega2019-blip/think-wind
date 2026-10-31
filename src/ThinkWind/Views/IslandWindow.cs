@@ -39,7 +39,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly WeatherWidget weather;
     private readonly TrayCard trayCard;
     private readonly System.Windows.Controls.Calendar calendar = new() { IsTodayHighlighted = true, SelectionMode = CalendarSelectionMode.SingleDate };
-    private readonly TextBlock connectionStatus = new() { FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4) };
+    private readonly TextBlock connectionStatus = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4) };
     private string moduleStructure = "";
     private readonly IslandMotion motion = new();
     private bool resizeQueued, updatingLayout, dismissingMinis, contentResizePending, readingNetwork;
@@ -50,8 +50,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     private bool collapseEnabled;
     private double collapseSeconds = -1;
     private readonly TextBlock clock = new() { FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 10, 0) };
-    private readonly TextBlock metrics = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4), FontSize = 13 };
-    private readonly TextBlock calendarDate = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock metrics = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4), FontSize = 16 };
+    private readonly TextBlock calendarDate = new() { FontSize = 15, TextWrapping = TextWrapping.Wrap };
     private DateTime calendarToday = DateTime.Today;
     private readonly AudioEndpointControl output, microphone;
     private readonly Dictionary<string, Border> cards = new();
@@ -70,6 +70,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         brightness = new BrightnessControl(() => Display.Bounds);
         trayCard = new TrayCard(store);
         calendar.SetResourceReference(StyleProperty, "Think.Calendar");
+        calendar.FontSize = 14;
         calendar.Language = System.Windows.Markup.XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag);
         var audio = new AudioService();
         output = new AudioEndpointControl(audio, CoreAudio.Flow.Render);
@@ -158,21 +159,21 @@ internal sealed partial class IslandWindow : FloatingWindow
             var tile = ActionButton(control.Name, () => { if (control.Id == "wifi") ShowMini(MiniIslandKind.Network); else if (control.Id == "bluetooth") ShowMini(MiniIslandKind.Bluetooth); else SystemActions.Run(control.Target!); }, control.Id == "wifi" ? "Gerenciar redes Wi-Fi" : "Abrir configurações de " + control.Name);
             var content = new StackPanel(); content.Children.Add(Glyph(control.Glyph, 22));
             content.Children.Add(new TextBlock { Text = control.Name, FontSize = 11, Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
-            tile.Content = content; tile.Width = 42; tile.Height = 56; tile.Padding = new Thickness(2); tile.Margin = new Thickness(2);
-            ((TextBlock)content.Children[1]).FontSize = 8;
+            tile.Content = content; tile.Width = 52; tile.Height = 62; tile.Padding = new Thickness(2); tile.Margin = new Thickness(2);
+            ((TextBlock)content.Children[1]).FontSize = 11;
             if (control.Id == "airplane") ((TextBlock)content.Children[1]).Text = "Avião";
             connections.Children.Add(tile);
         }
         var connectionPanel = new StackPanel(); connectionPanel.Children.Add(connections); connectionPanel.Children.Add(brightness);
         connectionPanel.Children.Insert(1, connectionStatus);
-        var displaySettings = ActionButton("Tela", () => SystemActions.Run("ms-settings:display")); displaySettings.Padding = new Thickness(6, 3, 6, 3); displaySettings.FontSize = 10;
+        var displaySettings = ActionButton("Tela", () => SystemActions.Run("ms-settings:display")); displaySettings.Padding = new Thickness(6, 3, 6, 3); displaySettings.FontSize = 12;
         connectionPanel.Children.Add(displaySettings);
         bodies["connections"] = connectionPanel;
         bodies["media"] = mediaSlot;
         var audio = new StackPanel(); audio.Children.Add(outputSlot); audio.Children.Add(microphoneSlot);
         var audioSettings = new WrapPanel();
-        var sound = ActionButton("Som", () => SystemActions.Run("ms-settings:sound")); sound.Padding = new Thickness(6, 3, 6, 3); sound.FontSize = 10; audioSettings.Children.Add(sound);
-        var privacy = ActionButton("Microfone", () => SystemActions.Run("ms-settings:privacy-microphone")); privacy.Padding = sound.Padding; privacy.FontSize = 10; audioSettings.Children.Add(privacy);
+        var sound = ActionButton("Som", () => SystemActions.Run("ms-settings:sound")); sound.Padding = new Thickness(6, 3, 6, 3); sound.FontSize = 12; audioSettings.Children.Add(sound);
+        var privacy = ActionButton("Microfone", () => SystemActions.Run("ms-settings:privacy-microphone")); privacy.Padding = sound.Padding; privacy.FontSize = 12; audioSettings.Children.Add(privacy);
         audio.Children.Add(audioSettings);
         bodies["audio"] = audio;
         bodies["metrics"] = metrics;
@@ -208,8 +209,8 @@ internal sealed partial class IslandWindow : FloatingWindow
                 if (body is FrameworkElement element && element.Parent is Panel parent) parent.Children.Remove(element);
                 var content = new StackPanel();
                 var title = new DockPanel { Margin = new Thickness(4, 0, 4, 8) };
-                var grip = new TextBlock { Text = Store.IsEditing ? "⋮⋮  " + LayoutCatalog.ModuleName(id) : LayoutCatalog.ModuleName(id), FontSize = 11, FontWeight = FontWeights.SemiBold, Padding = new Thickness(4), Cursor = Store.IsEditing ? Cursors.SizeAll : Cursors.Arrow };
-                grip.SetResourceReference(TextBlock.ForegroundProperty, Store.IsEditing ? "Think.Accent" : "Think.Muted");
+                var grip = new TextBlock { Text = Store.IsEditing ? "⋮⋮  " + LayoutCatalog.ModuleName(id) : LayoutCatalog.ModuleName(id), FontSize = 14, FontWeight = FontWeights.SemiBold, Padding = new Thickness(4), Opacity = .9, Cursor = Store.IsEditing ? Cursors.SizeAll : Cursors.Arrow };
+                grip.SetResourceReference(TextBlock.ForegroundProperty, Store.IsEditing ? "Think.Accent" : "Think.Text");
                 if (Store.IsEditing)
                 {
                     var hide = ActionButton("Ocultar", () => Store.Update(p => p.HiddenModules.Add(id)));
@@ -230,7 +231,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             card.Margin = new Thickness(0); card.Padding = new Thickness(prominent ? 10 : 8);
             card.CornerRadius = new CornerRadius(prominent ? 20 : 16);
             if (card.Child is StackPanel content && content.Children[0] is DockPanel title)
-                foreach (var label in title.Children.OfType<TextBlock>()) label.FontSize = prominent ? 11 : 10;
+                foreach (var label in title.Children.OfType<TextBlock>()) label.FontSize = 14;
         }
         modules.Gap = Math.Max(6, Store.Value.IslandSpacing + 2);
         modules.SetCards(ordered.Select(id => cards[id]));

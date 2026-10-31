@@ -10,7 +10,7 @@ internal sealed class BrightnessControl : Border
 {
     private readonly Func<System.Drawing.Rectangle> display;
     private readonly Slider level = new() { Minimum = 0, Maximum = 100, SmallChange = 1, LargeChange = 10, Visibility = Visibility.Collapsed, IsMoveToPointEnabled = true };
-    private readonly TextBlock label = new() { Text = "Brilho · verificar suporte do monitor", FontSize = 11, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock label = new() { Text = "Brilho · verificar suporte do monitor", FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private BrightnessState? state;
     private bool busy, dragging;
     private DateTime refreshAfter;
