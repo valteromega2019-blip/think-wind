@@ -128,7 +128,9 @@ internal static class Desktop
             RestoreAndActivate(hwnd);
             popup = GetLastActivePopup(hwnd);
             nint target = popup != 0 && IsWindowVisible(popup) ? popup : hwnd;
-            if (!IsIconic(hwnd) && IsWindowVisible(target) && GetForegroundWindow() == target) return true;
+            nint foreground = GetForegroundWindow();
+            if (!IsIconic(hwnd) && IsWindowVisible(target)
+                && (foreground == target || IsActiveWindow(hwnd, foreground))) return true;
             if (attempt < 3) await System.Threading.Tasks.Task.Delay(80 * (attempt + 1)).ConfigureAwait(false);
         }
         return false;

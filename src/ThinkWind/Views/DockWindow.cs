@@ -517,13 +517,13 @@ internal sealed partial class DockWindow : FloatingWindow
                 // A denied foreground request must not start another instance.
                 if (Desktop.WindowExists(selected.Handle))
                 {
-                    if (ElevatedWindowAction.IsElevatedTarget(selected.Handle))
+                    if (ElevatedWindowAction.NeedsAdminFallback(selected.Handle))
                     {
                         await ElevatedWindowAction.Request(selected.Handle, close: false,
-                            minimize: shouldMinimize);
+                            minimize: shouldMinimize, owner: this);
                         return;
                     }
-                    MessageBox.Show("O Windows não permitiu ativar esta janela. Se o aplicativo estiver sendo executado como administrador, suas permissões podem impedir a ativação pelo launcher.", "Think Wind");
+                    MessageBox.Show("Não foi possível colocar esta janela em primeiro plano. Tente novamente quando o aplicativo responder.", "Think Wind");
                     return;
                 }
             }

@@ -1,3 +1,10 @@
+## Em desenvolvimento — fallback para janelas administrativas
+
+- O VS Code observado está com título Administrator. Corrigida a decisão de autorização: falha ao consultar o token de uma janela existente não é mais classificada como aplicativo normal. Após uma ação explícita falhar, casos elevados ou indeterminados podem acionar o auxiliar UAC de uma operação.
+- A mesma política é aplicada ao Dock e às miniaturas para ativar, minimizar e solicitar fechamento. A interface principal continua com permissões normais para preservar OLE Drag & Drop.
+- O solicitante é ativado antes de abrir o auxiliar para possibilitar a concessão de foco. Permanecem as verificações de HWND, PID, horário de criação e sessão no auxiliar; não é iniciado outro aplicativo quando a janela já existe.
+- Reconhece ativação de janela/modal pertencente à janela raiz, reduzindo falsos negativos de primeiro plano. Mensagem de falha normal não atribui causa administrativa sem evidência.
+- Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Revisão por leitura de código e diff; operação prática com VS Code elevado pendente.
 ## Em desenvolvimento — margens da área central de monitoramento
 
 - A página central de monitoramento mede seu conteúdo e ajusta a largura da ilha à largura efetivamente renderizada, removendo as grandes faixas vazias laterais causadas pelo painel fixo de 520 DIP dentro de uma janela mais larga.

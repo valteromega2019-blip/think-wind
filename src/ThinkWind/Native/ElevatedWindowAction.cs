@@ -20,24 +20,29 @@ internal static class ElevatedWindowAction
     [DllImport("advapi32.dll", SetLastError = true)] private static extern bool GetTokenInformation(nint token, int kind, out int value, int length, out int needed);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
     [DllImport("kernel32.dll")] private static extern nint OpenProcess(uint access, bool inherit, uint process);
-    internal static bool IsElevatedTarget(nint window)
+    internal static bool NeedsAdminFallback(nint window)
     {
+        if (!Desktop.WindowExists(window)) return false;
         GetWindowThreadProcessId(window, out uint id);
+        if (id == 0) return false;
         try
         {
             nint process = OpenProcess(0x1000, false, id);
-            if (process == 0) return false;
+            // A normal-integrity UI may be unable to inspect a high-integrity
+            // process/token. Unknown is not evidence of a non-elevated target.
+            // Callers ask only after a user-requested native action has failed.
+            if (process == 0) return Desktop.WindowExists(window);
             try
             {
-                if (!OpenProcessToken(process, 8, out var token)) return false;
-                try { return GetTokenInformation(token, 20, out int elevated, 4, out _) && elevated != 0; }
+                if (!OpenProcessToken(process, 8, out var token)) return Desktop.WindowExists(window);
+                try { return !GetTokenInformation(token, 20, out int elevated, 4, out _) || elevated != 0; }
                 finally { CloseHandle(token); }
             }
             finally { CloseHandle(process); }
         }
-        catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { return false; }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { return Desktop.WindowExists(window); }
     }
-    internal static async Task<bool> Request(nint window, bool close, bool minimize = false)
+    internal static async Task<bool> Request(nint window, bool close, bool minimize = false, Window? owner = null)
     {
         if (!Desktop.WindowExists(window)) return false;
         GetWindowThreadProcessId(window, out uint id);
@@ -50,6 +55,9 @@ internal static class ElevatedWindowAction
             info.ArgumentList.Add(window.ToInt64().ToString(CultureInfo.InvariantCulture));
             info.ArgumentList.Add(id.ToString(CultureInfo.InvariantCulture));
             info.ArgumentList.Add(target.StartTime.ToUniversalTime().Ticks.ToString(CultureInfo.InvariantCulture));
+            // This follows an explicit click, not a hover. Activating our own
+            // requester lets it grant foreground permission to the UAC helper.
+            if (owner?.IsVisible == true) owner.Activate();
             using var helper = Process.Start(info);
             if (helper is null) return false;
             AllowSetForegroundWindow((uint)helper.Id);
