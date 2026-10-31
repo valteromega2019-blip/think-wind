@@ -45,6 +45,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private readonly ApplicationCatalog catalog;
     private LauncherPanelWindow? launcher;
     private LauncherPanelMode panelMode;
+    private bool temporaryFullscreenStart;
     private readonly TextBox dockSearch = new() { BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(4), VerticalContentAlignment = VerticalAlignment.Center, MaxLength = 160 };
     private DateTime nextAppRefresh;
     private readonly ShellIcons icons = new();
@@ -120,7 +121,11 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private void DragCompleted() { signature = ""; RefreshApps(); }
     internal void SuspendForGame(bool active)
-    { catalog.SetSuspended(active); if (active) { StopPreviews(); magnifier.Reset(); timer.Stop(); launcher?.Dismiss(); FinishFileDrag(); } }
+    {
+        if (!active) temporaryFullscreenStart = false;
+        catalog.SetSuspended(active);
+        if (active) { StopPreviews(); magnifier.Reset(); timer.Stop(); launcher?.Dismiss(); FinishFileDrag(); }
+    }
     private nint NoActivate(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
         // Keep normal hover/left-click nonactivating, but let a right-click
@@ -553,13 +558,22 @@ internal sealed partial class DockWindow : FloatingWindow
     {
         if (launcher is not null) return;
         launcher = new LauncherPanelWindow(Store, catalog, () => TargetBounds, () => dockSearch.IsKeyboardFocusWithin) { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
-        launcher.Dismissed += () => { lastHover = DateTime.UtcNow; AnimateSearch(false); };
+        launcher.Dismissed += () =>
+        {
+            lastHover = DateTime.UtcNow; AnimateSearch(false);
+            if (temporaryFullscreenStart) { temporaryFullscreenStart = false; Hide(); }
+        };
     }
     private void ShowPanel(LauncherPanelMode mode)
     { StopPreviews(); SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); }
     private void ToggleStart()
     { if (launcher?.IsVisible == true && panelMode == LauncherPanelMode.Start) launcher.Dismiss(); else ShowPanel(LauncherPanelMode.Start); }
-    internal void ToggleStartFromKeyboard() { if (!IsVisible) Show(); ToggleStart(); }
+    internal void ToggleStartFromKeyboard(bool overFullscreen = false)
+    {
+        temporaryFullscreenStart |= overFullscreen && !IsVisible;
+        if (!IsVisible) Show();
+        ToggleStart();
+    }
     public override void RefreshAppearance() { base.RefreshAppearance(); magnifier.Configure(Store.Value, magnificationReserve); launcher?.RefreshAppearance(); }
     private void MoveOne(string source, int direction)
     {

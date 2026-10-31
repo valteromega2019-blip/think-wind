@@ -1,3 +1,8 @@
+## Em desenvolvimento — tecla Windows durante vídeos fullscreen
+
+- A tecla Windows isolada e o atalho opcional do Iniciar continuam habilitados durante apresentações fullscreen identificadas pelo launcher, respeitando a preferência WindowsKeyOpensLauncher. A suspensão dos atalhos durante jogos permanece.
+- O Iniciar é aberto na tela principal mesmo quando o Dock está oculto pelo vídeo. Ao fechar o menu, o Dock mostrado temporariamente volta a ficar oculto. Ao sair do fullscreen, o comportamento normal é restaurado.
+- Revisão por leitura do diff, sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário. Confirmação interativa pendente.
 ## Em desenvolvimento — acesso fullscreen e estabilidade do Iniciar
 
 - A alça superior de vídeos em tela cheia acompanha o monitor da janela de apresentação, incluindo monitores secundários habilitados. Ela é recriada após mudanças de configuração dos monitores mesmo quando o modo fullscreen já estava ativo.

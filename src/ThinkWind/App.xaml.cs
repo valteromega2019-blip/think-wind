@@ -205,14 +205,20 @@ public partial class App : Application
     }
     private void ConfigureStartHotkey()
     {
-        bool interceptWindows = store.Value.WindowsKeyOpensLauncher && gameMode?.Active != true;
+        bool allowStart = gameMode?.Active != true || gameMode.FullscreenPresentation;
+        bool interceptWindows = store.Value.WindowsKeyOpensLauncher && allowStart;
         if (!interceptWindows) { launcherWindowsKey?.Dispose(); launcherWindowsKey = null; }
-        else launcherWindowsKey ??= new LauncherWindowsKey(Dispatcher, () => { if (!IsExiting && gameMode?.Active != true) PrimaryDock?.ToggleStartFromKeyboard(); });
-        bool enabled = store.Value.StartHotkeyEnabled && gameMode?.Active != true;
+        else launcherWindowsKey ??= new LauncherWindowsKey(Dispatcher, OpenStartFromKeyboard);
+        bool enabled = store.Value.StartHotkeyEnabled && allowStart;
         if (!enabled) { startKey?.Dispose(); startKey = null; return; }
         if (startKey is not null) return;
-        try { startKey = new WindowsStartKey(() => { if (!IsExiting && gameMode?.Active != true) PrimaryDock?.ToggleStartFromKeyboard(); }); }
+        try { startKey = new WindowsStartKey(OpenStartFromKeyboard); }
         catch (System.ComponentModel.Win32Exception) { /* Shortcut remains unavailable; normal Start button works. */ }
+    }
+    private void OpenStartFromKeyboard()
+    {
+        if (IsExiting || (gameMode?.Active == true && !gameMode.FullscreenPresentation)) return;
+        PrimaryDock?.ToggleStartFromKeyboard(gameMode?.Active == true && gameMode.FullscreenPresentation);
     }
     private void ApplyHardwareOverlay()
     {
