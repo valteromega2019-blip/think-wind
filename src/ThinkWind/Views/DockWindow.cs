@@ -19,6 +19,8 @@ internal sealed class DockItemsPanel : StackPanel
 
 internal sealed partial class DockWindow : FloatingWindow
 {
+    internal bool HasPrimaryControls => System.Windows.Forms.Screen.AllScreens.Any(screen =>
+        screen.Primary && screen.Bounds == Display.Bounds);
     protected override bool AttachedTop => false;
     protected override bool CollapsedDock => hidden;
     private readonly DockItemsPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
@@ -324,8 +326,10 @@ internal sealed partial class DockWindow : FloatingWindow
     {
         if (MenuOpen) return;
         fittedWidth = Display.Width;
-        double searchWidth = Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36;
-        double available = Math.Max(60, fittedWidth - 16 - 20 - DockGeometry.StartWidth(Store.Value.IconSize * Store.Value.DockScale) - 8 - searchWidth - ShowDesktopSlotWidth - (Store.IsEditing ? 30 : 0));
+        bool primaryControls = HasPrimaryControls;
+        double searchWidth = primaryControls ? Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36 : 0;
+        double fixedControls = primaryControls ? DockGeometry.StartWidth(Store.Value.IconSize * Store.Value.DockScale) + 8 + searchWidth : 0;
+        double available = Math.Max(60, fittedWidth - 16 - 20 - fixedControls - ShowDesktopSlotWidth - (Store.IsEditing ? 30 : 0));
         var p = Store.Value;
         bool magnify = p.DockMagnification && SystemParameters.ClientAreaAnimation && !Store.IsEditing;
         magnificationReserve = magnify ? Math.Min(available * .32, (p.IconSize * p.DockScale + 20) * p.DockMagnificationAmount * (p.DockMagnificationNeighbors + 1) * 1.12) : 0;
@@ -338,10 +342,13 @@ internal sealed partial class DockWindow : FloatingWindow
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Width = double.NaN;
         items.Children.Clear();
-        var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
-        AttachStartTools(start);
-        items.Children.Add(SearchSlot(searchWidth));
-        start.Margin = new Thickness(0, 0, 8, 0);
+        if (primaryControls)
+        {
+            var start = ActionButton("Iniciar Think Wind", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
+            AttachStartTools(start);
+            items.Children.Add(SearchSlot(searchWidth));
+            start.Margin = new Thickness(0, 0, 8, 0);
+        }
         if (Store.IsEditing)
         {
             var grip = Glyph("\uE784", 16); grip.Width = 22; grip.Margin = new Thickness(4);

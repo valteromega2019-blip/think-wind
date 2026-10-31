@@ -38,6 +38,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        LaunchEnvironment.RemoveDevelopmentBootstrap();
         if (AdvancedSensorSetup.RunSetup(e.Args, out int sensorSetupExitCode)) { Shutdown(sensorSetupExitCode); return; }
         if (e.Args.Length > 0 && e.Args[0] == "--sensor-worker")
         {
@@ -206,11 +207,11 @@ public partial class App : Application
     {
         bool interceptWindows = store.Value.WindowsKeyOpensLauncher && gameMode?.Active != true;
         if (!interceptWindows) { launcherWindowsKey?.Dispose(); launcherWindowsKey = null; }
-        else launcherWindowsKey ??= new LauncherWindowsKey(Dispatcher, () => { if (!IsExiting && gameMode?.Active != true) dock?.ToggleStartFromKeyboard(); });
+        else launcherWindowsKey ??= new LauncherWindowsKey(Dispatcher, () => { if (!IsExiting && gameMode?.Active != true) PrimaryDock?.ToggleStartFromKeyboard(); });
         bool enabled = store.Value.StartHotkeyEnabled && gameMode?.Active != true;
         if (!enabled) { startKey?.Dispose(); startKey = null; return; }
         if (startKey is not null) return;
-        try { startKey = new WindowsStartKey(() => { if (!IsExiting && gameMode?.Active != true) dock?.ToggleStartFromKeyboard(); }); }
+        try { startKey = new WindowsStartKey(() => { if (!IsExiting && gameMode?.Active != true) PrimaryDock?.ToggleStartFromKeyboard(); }); }
         catch (System.ComponentModel.Win32Exception) { /* Shortcut remains unavailable; normal Start button works. */ }
     }
     private void ApplyHardwareOverlay()

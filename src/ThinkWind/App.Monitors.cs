@@ -9,6 +9,8 @@ namespace ThinkWind;
 
 public partial class App
 {
+    private DockWindow? PrimaryDock => dock?.HasPrimaryControls == true ? dock
+        : extraMonitors.Select(pair => pair.Dock).FirstOrDefault(bar => bar.HasPrimaryControls);
     private void RefreshForegroundLayouts()
     {
         island?.RefreshForegroundLayout();
@@ -32,7 +34,8 @@ public partial class App
             ? screens.Where(s => p.AllMonitors || p.ActiveMonitors.Contains(s.DeviceName, StringComparer.OrdinalIgnoreCase)).ToArray()
             : new[] { primary };
         if (selected.Length == 0) selected = new[] { primary };
-        string signature = string.Join("|", selected.Select(s => $"{s.DeviceName}:{s.Bounds}"));
+        selected = selected.OrderByDescending(s => s.Primary).ToArray();
+        string signature = string.Join("|", selected.Select(s => $"{s.DeviceName}:{s.Bounds}:{s.Primary}"));
         if (signature == monitorSignature) return;
         monitorSignature = signature;
         // Retire the complete window families, including their native materials,

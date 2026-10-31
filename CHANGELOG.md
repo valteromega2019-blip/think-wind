@@ -1,3 +1,10 @@
+## Em desenvolvimento — monitor principal e abertura de aplicativos
+
+- Iniciar e pesquisa aparecem somente no monitor identificado como principal pelo Windows; a largura das barras secundárias não reserva espaços para esses controles.
+- A família da tela principal é priorizada, e a troca da tela principal invalida a configuração dos monitores mesmo quando suas dimensões não mudam. Os atalhos do Iniciar seguem a barra principal, quando ela está habilitada.
+- Removidas, apenas do ambiente do processo do launcher, as variáveis internas `VSCODE_*`, `ELECTRON_RUN_AS_NODE` e `ELECTRON_NO_ASAR`. Elas podiam contaminar a abertura de aplicativos Electron ao iniciar o launcher a partir do IDE. As variáveis persistentes do usuário e do Windows são preservadas.
+- Evidência: o ambiente desta sessão continha `ELECTRON_RUN_AS_NODE=1`; a relação com cada falha relatada ainda precisa de confirmação em uso.
+- Revisão por leitura de código e diff. Sem compilação, testes ou type check nesta alteração, conforme a preferência do usuário.
 ## 0.17 Alfa — 0.17.0-alpha
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.17.0-alpha/ThinkWind-Setup-0.17.0-alpha.exe) · [Notas e limitações](RELEASE-0.17-ALFA.md)
