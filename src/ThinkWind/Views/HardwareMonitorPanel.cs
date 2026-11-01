@@ -31,6 +31,8 @@ internal sealed class HardwareMonitorPanel : UserControl
     private bool syncingGpu;
     private string gpuChoiceSignature = "";
     private bool components;
+    private bool optimizing;
+    private readonly GameOptimizerPanel optimizerPanel;
     private int minutes = 5;
     private string chartMetric = "Temperatura";
     private HardwareSample? latest;
@@ -54,12 +56,14 @@ internal sealed class HardwareMonitorPanel : UserControl
     internal HardwareMonitorPanel(SettingsStore settings, HardwareTelemetry source)
     {
         store = settings; telemetry = source;
+        optimizerPanel = new GameOptimizerPanel(store);
         overlay = new OverlayToggleButton(store);
         MonitoringDesign.Install(Resources, store.Value);
         var root = new StackPanel();
         var navigation = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 4, 6) };
-        AddButton(navigation, "Resumo", () => { components = false; Render(); });
-        AddButton(navigation, "Componentes", () => { components = true; Render(); });
+        AddButton(navigation, "Resumo", () => { optimizing = false; components = false; Render(); });
+        AddButton(navigation, "Otimizador", () => { optimizing = true; Render(); });
+        AddButton(navigation, "Componentes", () => { optimizing = false; components = true; Render(); });
         root.Children.Add(navigation);
         var gpuLabel = new TextBlock { Text = "GPU monitorada", FontSize = 12, Margin = new Thickness(4, 2, 4, 6) };
         gpuLabel.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); root.Children.Add(gpuLabel);
@@ -133,8 +137,10 @@ internal sealed class HardwareMonitorPanel : UserControl
     }
     private void Render(bool updateLayout = true)
     {
+        if (optimizing && body.Children.Contains(optimizerPanel)) return;
         body.Children.Clear();
-        if (components) RenderComponents(); else RenderSummary();
+        if (optimizing) body.Children.Add(optimizerPanel);
+        else if (components) RenderComponents(); else RenderSummary();
         // Loaded also applies font scaling. Do it now, while the new controls
         // already inherit this panel's scale, so they cannot grow after measure.
         FontSizing.PrepareForMeasure(this);

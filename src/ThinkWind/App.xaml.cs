@@ -19,6 +19,7 @@ public partial class App : Application
     private readonly List<(DockWindow Dock, IslandWindow? Island)> extraMonitors = new();
     private string monitorSignature = "";
     private SettingsWindow? settings;
+    internal GameOptimizer Optimizer { get; } = new();
     private VirtualKeyboardWindow? virtualKeyboard;
     internal UpdateController Updates { get; private set; } = null!;
     private UpdateNotice? updateNotice;
@@ -112,6 +113,7 @@ public partial class App : Application
             { MessageBox.Show("Não foi possível configurar a inicialização automática: " + error.Message, "Orby Launcher"); }
         }
         ThemeService.Apply(store.Value);
+        Optimizer.Recover();
         InitializeUpdates();
         Telemetry = new HardwareTelemetry(Dispatcher);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
@@ -239,6 +241,7 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        Optimizer.Restore();
         virtualKeyboard?.Retire();
         updateNotice?.Close(); Updates?.Dispose();
         tutorial?.Close();
@@ -302,6 +305,7 @@ public partial class App : Application
     }
     private void ApplyHardwareOverlay()
     {
+        Optimizer.Apply(gameMode?.RecognizedGame == true, store.Value);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         if (!diagnosing) Telemetry.SetActive(startupSensorConsumer, !IsExiting && gameMode?.Active != true);
         hardwareOverlay?.Apply(gameMode?.RecognizedGame == true);

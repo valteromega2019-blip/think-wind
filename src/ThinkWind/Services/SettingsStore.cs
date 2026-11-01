@@ -10,6 +10,8 @@ public sealed record Shortcut(string Name, string Target);
 public sealed record TrayActivity(int Count, DateTime LastUsedUtc, DateTime FirstSeenUtc);
 public sealed class Preferences
 {
+    public bool OptimizerEnabled { get; set; }
+    public string OptimizerPowerPlan { get; set; } = "Keep";
     public bool KeyboardUseNative { get; set; }
     public bool KeyboardNumberPad { get; set; } = true;
     public double KeyboardScale { get; set; } = 1;
