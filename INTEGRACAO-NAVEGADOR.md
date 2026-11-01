@@ -60,3 +60,16 @@ Arquivos: `Services/BrowserTabs.cs`, `CallIntegration.cs`, `MediaService.cs`,
 `MediaCard.cs`, `WindowPreview.cs`, `WindowPreview.Browser.cs`.
 O rascunho anterior de integração genérica dos players foi incluído neste commit,
 pois a correção do navegador utiliza sua seleção de sessão e identidade.
+
+## Validação adicional da sala
+
+A página inicial (`/` ou `/meet/`) não é aceita como sala. URLs com código de
+reunião ou `lookup` são apenas candidatas: os botões de microfone e sair continuam
+obrigatórios. Controles sem área de apresentação não mantêm uma chamada ativa
+quando o navegador conserva partes antigas da interface. A condição é revalidada
+antes de executar um comando. Ter um código aberto não comprova participação.
+
+A execução em abas que o navegador torna inacessíveis depende da solução escolhida
+pelo usuário: ativação da aba após clique explícito ou uma integração opcional no
+navegador. Não foi adicionada extensão nem ativação automática de abas neste ajuste.
+Esta revisão recebeu somente leitura de código e diff, sem testes, type check ou build.

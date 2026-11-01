@@ -103,8 +103,9 @@ internal static class CallIntegration
         {
             cancellation.ThrowIfCancellationRequested();
             var element = pending.Pop(); var current = element.Current;
-            if ((!current.IsOffscreen || app == "Google Meet") && current.IsEnabled && current.ControlType == ControlType.Button
+            if (current.IsEnabled && current.ControlType == ControlType.Button
                 && Classify(current.Name, app) is CallAction action
+                && ExposedCallControl(element, app)
                 && (element.TryGetCurrentPattern(InvokePattern.Pattern, out _) || element.TryGetCurrentPattern(TogglePattern.Pattern, out _)))
             {
                 if (!matches.TryGetValue(action, out var list)) matches[action] = list = new();
@@ -136,6 +137,7 @@ internal static class CallIntegration
         var exact = root.FindAll(TreeScope.Descendants, new AndCondition(conditions.ToArray()));
         if (exact.Count != 1) return false;
         var target = exact[0];
+        if (!ExposedCallControl(target, app)) return false;
         cancellation.ThrowIfCancellationRequested();
         if (target.TryGetCurrentPattern(InvokePattern.Pattern, out var invoke)) { ((InvokePattern)invoke).Invoke(); return true; }
         if (target.TryGetCurrentPattern(TogglePattern.Pattern, out var toggle)) { ((TogglePattern)toggle).Toggle(); return true; }
@@ -143,8 +145,6 @@ internal static class CallIntegration
     }
     private static AutomationElement? MeetDocument(AutomationElement window, CancellationToken cancellation)
     {
-        static bool MeetAddress(string address) => Uri.TryCreate(address.Contains("://") ? address : "https://" + address,
-            UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.Host.Equals("meet.google.com", StringComparison.OrdinalIgnoreCase);
         var pending = new Stack<AutomationElement>(); pending.Push(window);
         var documents = new List<AutomationElement>(); var verified = new List<AutomationElement>();
         AutomationElement? documentWithoutAddress = null;
@@ -160,14 +160,14 @@ internal static class CallIntegration
                 if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var documentValue))
                 {
                     string address = ((ValuePattern)documentValue).Current.Value;
-                    if (MeetAddress(address)) verified.Add(element);
+                    if (MeetRoomAddress(address)) verified.Add(element);
                     else if (string.IsNullOrWhiteSpace(address)) documentWithoutAddress = element;
                 }
                 else documentWithoutAddress = element;
                 continue; // Never accept a web page's own text fields as browser origin.
             }
             if (info.ControlType == ControlType.Edit && element.TryGetCurrentPattern(ValuePattern.Pattern, out var value)
-                && MeetAddress(((ValuePattern)value).Current.Value)) addressBar = true;
+                && MeetRoomAddress(((ValuePattern)value).Current.Value)) addressBar = true;
             var children = new List<AutomationElement>();
             for (var child = walker.GetFirstChild(element); child is not null && children.Count < 100 && clock.ElapsedMilliseconds < 400; child = walker.GetNextSibling(child)) children.Add(child);
             for (int i = children.Count - 1; i >= 0; i--) pending.Push(children[i]);
@@ -175,6 +175,27 @@ internal static class CallIntegration
         if (verified.Count == 1) return verified[0];
         // The native address bar is a fallback only for a unique exposed document.
         return verified.Count == 0 && addressBar && documents.Count == 1 ? documentWithoutAddress : null;
+    }
+    private static bool MeetRoomAddress(string address)
+    {
+        if (!Uri.TryCreate(address.Contains("://") ? address : "https://" + address, UriKind.Absolute, out var uri)
+            || uri.Scheme != "https" || !uri.Host.Equals("meet.google.com", StringComparison.OrdinalIgnoreCase)) return false;
+        var path = uri.AbsolutePath.Trim('/').Split('/');
+        // A homepage (/ or /meet/) is not a room. A room URL is still only
+        // a candidate: microphone + leave controls must prove the call below.
+        if (path.Length == 2 && path[0].Equals("lookup", StringComparison.OrdinalIgnoreCase)) return !string.IsNullOrWhiteSpace(path[1]);
+        if (path.Length != 1) return false;
+        string code = path[0].Replace("-", "", StringComparison.Ordinal);
+        return code.Length == 10 && code.All(char.IsAsciiLetter);
+    }
+    private static bool ExposedCallControl(AutomationElement element, string app)
+    {
+        var info = element.Current;
+        if (app != "Google Meet") return !info.IsOffscreen;
+        // Hidden, zero-size toolbar remnants must not keep a finished meeting
+        // alive just because its room URL and old control labels still exist.
+        var bounds = info.BoundingRectangle;
+        return !bounds.IsEmpty && bounds.Width > 0 && bounds.Height > 0;
     }
     private static CallAction? Classify(string name, string app)
     {
