@@ -182,6 +182,7 @@ internal abstract class FloatingWindow : Window
             ((Grid)Content).Clip = null; lastClip = default;
             rectangle.Left += (int)Math.Round(inset.Left * scale); rectangle.Right -= (int)Math.Round(inset.Right * scale);
             rectangle.Top += (int)Math.Round(inset.Top * scale); rectangle.Bottom -= (int)Math.Round(inset.Bottom * scale);
+            AlignSurfaceCorners(rectangle, scale);
             if (rectangle.Right > rectangle.Left && rectangle.Bottom > rectangle.Top)
                 backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible);
             else backdrop?.Hide();
@@ -189,6 +190,7 @@ internal abstract class FloatingWindow : Window
         }
         // The foreground is per-pixel alpha; only the material HWND uses an HRGN.
         // Transparent pixels outside this WPF geometry do not receive mouse input.
+        AlignSurfaceCorners(rectangle, scale);
         if (next != lastClip)
         {
             lastClip = next;
@@ -210,6 +212,11 @@ internal abstract class FloatingWindow : Window
             geometry.Freeze(); ((Grid)Content).Clip = geometry;
         }
         backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible);
+    }
+    private void AlignSurfaceCorners(OverlayChrome.PixelRect rectangle, double scale)
+    {
+        double effective = Math.Clamp(radius, 0, Math.Max(0, Math.Min(rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top)) / (2 * scale));
+        Surface.CornerRadius = SquareTopCorners ? new CornerRadius(0, 0, effective, effective) : new CornerRadius(effective);
     }
     protected void Place(double width, double height, bool animate = false)
     {
