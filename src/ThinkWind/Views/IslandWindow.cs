@@ -244,6 +244,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         modules.Gap = Math.Max(6, Store.Value.IslandSpacing + 2);
         modules.SetCards(ordered.Select(id => cards[id]));
         if (Store.IsEditing) interaction.OpenFull();
+        TutorialGuide.Mark(header, "island");
         BuildHeader(); UpdateStageVisibility();
         UpdateClock(); Position(); RefreshAudio();
         updatingLayout = false;
@@ -325,7 +326,9 @@ internal sealed partial class IslandWindow : FloatingWindow
                     secondAreaSelected = true;
                     OpenFull();
                 }
+                TutorialGuide.Notify("monitor-open");
             });
+            TutorialGuide.Mark(monitor, "monitor");
             monitor.Style = (Style)FindResource("Think.IconButton");
             monitor.Content = Glyph(monitoringOpen ? "\uE80F" : "\uE9D9", 17 * scale);
             monitor.Width = monitor.Height = 32 * scale;
@@ -339,6 +342,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             if (Stage == IslandStage.Full)
             {
                 var settingsButton = ActionButton("Personalizar launcher", openSettings);
+                TutorialGuide.Mark(settingsButton, "customize");
                 settingsButton.Content = Glyph(LayoutCatalog.QuickControls.First(q => q.Id == "settings").Glyph, 17 * scale);
                 StyleSecondaryControl(settingsButton); hoverQuick.Children.Add(settingsButton);
                 var widgetsButton = ActionButton("Editar widgets", () => ((App)Application.Current).OpenWidgetSettings());
@@ -358,6 +362,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         else
         {
             var expand = ActionButton("Abrir painel completo", OpenFull);
+            TutorialGuide.Mark(expand, "expand");
             expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(expand);
         }
         hoverQuick.Visibility = hoverQuick.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -393,6 +398,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     {
         var before = motion.Capture(MotionElements());
         var previous = Stage; change();
+        if (Stage == IslandStage.Hover) TutorialGuide.Notify("island-hover");
+        if (Stage == IslandStage.Full) TutorialGuide.Notify("island-full");
         if (previous == Stage) return;
         int revision = ++expansionRevision;
         preparingFullReveal = false;
@@ -520,7 +527,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         }
     }
     private bool ControlsBusy => SystemToolsOpen || IsMouseCaptureWithin || widgetArea.IsInteracting || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
-    private bool InteractionInProgress => Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
+    private bool InteractionInProgress => TutorialGuide.KeepIslandOpen || Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
     private void CancelCollapse() { hoverLeave.Stop(); outsideSince = null; }
     private void WaitForBridge() { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(50); hoverLeave.Start(); }
     private void ScheduleCollapse()

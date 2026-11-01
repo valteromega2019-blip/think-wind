@@ -62,7 +62,9 @@ internal abstract class FloatingWindow : Window
         // non-client frame. Only our alpha-clipped content is painted.
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetBinding(ContentPresenter.ContentProperty, new Binding("Content") { RelativeSource = RelativeSource.TemplatedParent });
-        Template = new ControlTemplate(typeof(Window)) { VisualTree = presenter };
+        var adorners = new FrameworkElementFactory(typeof(System.Windows.Documents.AdornerDecorator));
+        adorners.AppendChild(presenter);
+        Template = new ControlTemplate(typeof(Window)) { VisualTree = adorners };
         SetResourceReference(ForegroundProperty, "Think.Text");
         FontFamily = new FontFamily("Segoe UI Variable Text");
         Surface = new Border { BorderThickness = new Thickness(0), Padding = new Thickness(10), SnapsToDevicePixels = true };

@@ -33,12 +33,13 @@ internal sealed partial class SettingsWindow
         tab.Padding = new Thickness(10, 6, 10, 6); tab.Margin = new Thickness(2);
         tab.FontSize = 11; tab.ToolTip = name;
         AutomationProperties.SetName(tab, "Configurações: " + name);
+        if (name == "Aparência") TutorialGuide.Mark(tab, "appearance");
         page.Visibility = Visibility.Collapsed;
         settingsPages[name] = (page, tab);
     }
     private void FinishSettingsTabs()
     {
-        string[] order = { "Aparência", "Barra de aplicativos", "Central de controle", "Ícones da central de controle", "Widgets", "Clima", "Overlay e sensores", "Editor de layout", "Jogos", "Monitores", "Sistema", "Sobre e segurança" };
+        string[] order = { "Aparência", "Barra de aplicativos", "Central de controle", "Ícones da central de controle", "Widgets", "Clima", "Overlay e sensores", "Editor de layout", "Jogos", "Monitores", "Sistema", "Sobre e segurança", "Tutorial" };
         foreach (string name in order.Concat(settingsPages.Keys).Distinct())
             if (settingsPages.TryGetValue(name, out var page)) tabNavigation.Children.Add(page.Tab);
         if (!settingsPages.ContainsKey(selectedSettingsTab)) selectedSettingsTab = settingsPages.Keys.First();
@@ -47,6 +48,7 @@ internal sealed partial class SettingsWindow
     private void SelectSettingsTab(string name)
     {
         if (!settingsPages.ContainsKey(name)) return;
+        if (name == "Aparência") TutorialGuide.Notify("appearance-open");
         bool changedTab = selectedSettingsTab != name;
         if (settingsPages.TryGetValue(selectedSettingsTab, out var old) && old.Page.Visibility == Visibility.Visible)
             tabOffsets[selectedSettingsTab] = settingsScroll.VerticalOffset;

@@ -107,6 +107,7 @@ internal sealed partial class IslandWindow
         statusWeather.Visibility = Store.Value.ShowWeatherInHeader ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(statusWeather, Dock.Left); statusRow.Children.Add(statusWeather);
         var extraArea = ActionButton("Abrir área 2 à esquerda", ToggleLeftArea);
+        TutorialGuide.Mark(extraArea, "monitor");
         extraArea.Style = (Style)FindResource("Think.IconButton"); extraArea.Content = Glyph("\uE9D9", 13);
         extraArea.Width = 28; extraArea.Height = 24; extraArea.Padding = new Thickness(3);
         extraArea.Margin = new Thickness(0, 0, 8, 0);
@@ -118,6 +119,7 @@ internal sealed partial class IslandWindow
         void Add(string label, string glyph, Action action)
         {
             var button = ActionButton(label, action); button.Style = (Style)FindResource("Think.IconButton");
+            if (label == "Expandir central de controle") TutorialGuide.Mark(button, "expand");
             button.Content = Glyph(glyph, 13); button.Width = 28; button.Height = 24; button.Padding = new Thickness(3);
             controls.Children.Add(button);
         }

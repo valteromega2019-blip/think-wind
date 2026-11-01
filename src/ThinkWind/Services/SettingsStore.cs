@@ -10,6 +10,7 @@ public sealed record Shortcut(string Name, string Target);
 public sealed record TrayActivity(int Count, DateTime LastUsedUtc, DateTime FirstSeenUtc);
 public sealed class Preferences
 {
+    public bool TutorialPending { get; set; }
     public double DockScale { get; set; } = 1;
     public double TintOpacity { get; set; } = .72;
     public double InnerSurfaceOpacity { get; set; } = .5;
@@ -116,12 +117,15 @@ public sealed class SettingsStore
     public bool IsEditing { get; private set; }
     internal bool IsCustomizing { get; private set; }
     internal int DockLayoutRevision { get; private set; }
+    internal bool IsNewProfile { get; private set; }
+    internal string TutorialStatePath => Path.Combine(Path.GetDirectoryName(path)!, "tutorial.json");
     public Preferences Value { get; private set; } = new();
     public string? LoadWarning { get; private set; }
     public SettingsStore() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher", "settings.json")) { }
     internal SettingsStore(string settingsPath)
     {
         path = Path.GetFullPath(settingsPath);
+        IsNewProfile = !File.Exists(path);
         saveTimer.Tick += (_, _) => Flush();
         try
         {

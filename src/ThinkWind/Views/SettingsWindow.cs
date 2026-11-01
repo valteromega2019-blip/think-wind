@@ -280,6 +280,9 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Note(about, "As preferências ficam neste usuário do Windows. Alterações de tema e ocultação automática afetam as preferências do sistema. Desinstalação de aplicativos usa os mecanismos registrados no Windows. Rede, áudio e Bluetooth dependem das permissões do sistema.");
         about.Children.Add(Button("Downloads oficiais", () => SystemActions.Run("https://github.com/valteromega2019-blip/think-wind/releases")));
         about.Children.Add(Button("Informações de segurança", () => SystemActions.Run("https://github.com/valteromega2019-blip/think-wind/blob/main/SECURITY.md")));
+        var tutorialSection = Section("Tutorial", "Conheça as três áreas principais com instruções animadas e ações reais.");
+        tutorialSection.Children.Add(Button("Repetir tutorial", () => ((App)Application.Current).RepeatTutorial()));
+        tutorialSection.Children.Add(Button("Continuar tutorial interrompido", () => ((App)Application.Current).ContinueTutorial()));
         building = false; FinishSettingsTabs(); StoreChanged(this, EventArgs.Empty);
     }
     private void RebuildLayoutRows()

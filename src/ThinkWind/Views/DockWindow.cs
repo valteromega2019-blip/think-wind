@@ -70,6 +70,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private sealed record Item(string Key, string Name, string? Target, string? Glyph, List<Desktop.RunningWindow> Windows, Shortcut? Pin, Action? Action);
     public DockWindow(SettingsStore store) : base(store)
     {
+        TutorialGuide.Mark(Surface, "dock");
         Title = "Orby Launcher — Barra de aplicativos";
         items.VerticalAlignment = VerticalAlignment.Bottom;
         items.Background = Brushes.Transparent;
@@ -79,7 +80,8 @@ internal sealed partial class DockWindow : FloatingWindow
         catalog.Changed += () => { signature = ""; nextAppRefresh = DateTime.MinValue; };
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
         System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Orby Launcher");
-        dockSearch.TextChanged += (_, _) => { if (!clearingDockSearch && dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); } };
+        TutorialGuide.Mark(dockSearch, "search");
+        dockSearch.TextChanged += (_, _) => { if (!clearingDockSearch && dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); if (!string.IsNullOrWhiteSpace(dockSearch.Text)) TutorialGuide.Notify("search-typed"); } };
         dockSearch.GotKeyboardFocus += (_, _) => { AnimateSearch(true); EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); };
         dockSearch.LostKeyboardFocus += (_, _) =>
         {
@@ -111,7 +113,7 @@ internal sealed partial class DockWindow : FloatingWindow
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
         IsVisibleChanged += (_, _) => { if (IsVisible) timer.Start(); else { timer.Stop(); magnifier.Reset(); launcher?.Dismiss(); } };
         timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
-        MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); };
+        MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); TutorialGuide.Notify("dock-hover"); };
         MouseLeave += (_, _) => lastHover = DateTime.UtcNow;
         LayoutDrag.Completed += DragCompleted;
         InitializeFileDrop();
@@ -213,7 +215,7 @@ internal sealed partial class DockWindow : FloatingWindow
             && DateTime.UtcNow - lastHover >= TimeSpan.FromMilliseconds(350)) StopPreviews();
         // An ordinary focused button isn't an ongoing interaction. In particular,
         // activating the owner for a right-click must not pin the dock forever.
-        if (Store.Value.AutoHide && (!Store.Value.DockVisibleOnDesktop || applicationOverDock) && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !pointerInside && !IsMouseCaptureWithin && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
+        if (Store.Value.AutoHide && (!Store.Value.DockVisibleOnDesktop || applicationOverDock) && !TutorialGuide.KeepDockOpen && !Store.IsEditing && !Store.IsCustomizing && !LayoutDrag.Active && !fileDragging && launcher?.Busy != true && preview?.IsVisible != true && !MenuOpen && !pointerInside && !IsMouseCaptureWithin && DateTime.UtcNow - lastHover >= TimeSpan.FromSeconds(Store.Value.DockCollapseSeconds)) SetHidden(true);
     }
     private bool PointerInsideRevealArea()
     {
@@ -360,6 +362,7 @@ internal sealed partial class DockWindow : FloatingWindow
         {
             var start = ActionButton("Iniciar Orby Launcher", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
             AttachStartTools(start);
+            TutorialGuide.Mark(start, "start");
             items.Children.Add(SearchSlot(searchWidth));
             start.Margin = new Thickness(0, 0, 8, 0);
         }
@@ -587,7 +590,7 @@ internal sealed partial class DockWindow : FloatingWindow
         finally { clearingDockSearch = false; }
     }
     private void ShowPanel(LauncherPanelMode mode)
-    { StopPreviews(); SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); }
+    { StopPreviews(); SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); if (mode == LauncherPanelMode.Start) TutorialGuide.Notify("start-open"); }
     private void ToggleStart()
     { if (launcher?.IsVisible == true && panelMode == LauncherPanelMode.Start) launcher.Dismiss(); else ShowPanel(LauncherPanelMode.Start); }
     internal void ToggleStartFromKeyboard(bool overFullscreen = false)

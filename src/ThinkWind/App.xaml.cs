@@ -19,6 +19,17 @@ public partial class App : Application
     private readonly List<(DockWindow Dock, IslandWindow? Island)> extraMonitors = new();
     private string monitorSignature = "";
     private SettingsWindow? settings;
+    private TutorialWindow? tutorial;
+    internal void RepeatTutorial()
+    {
+        tutorial ??= new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
+        tutorial.Repeat();
+    }
+    internal void ContinueTutorial()
+    {
+        tutorial ??= new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
+        tutorial.Continue();
+    }
     private WindowsTaskbar? windowsTaskbar;
     private WindowsStartKey? startKey;
     private LauncherWindowsKey? launcherWindowsKey;
@@ -160,6 +171,11 @@ public partial class App : Application
                 catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)
                 { MessageBox.Show("Não foi possível preparar os auxiliares: " + error.Message, "Orby Launcher"); }
             }), System.Windows.Threading.DispatcherPriority.ContextIdle);
+        if (!diagnosing)
+        {
+            tutorial = new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
+            Dispatcher.BeginInvoke(new Action(() => { tutorial.OfferFirstRun(); tutorial.Suspend(gameMode?.Active == true); }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
         if (diagnosing)
         {
             var exit = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
@@ -180,6 +196,7 @@ public partial class App : Application
     private void OpenSettings()
     {
         if (gameMode?.Active == true) return;
+        TutorialGuide.Notify("settings-open");
         if (settings is not null) { settings.Activate(); return; }
         store.SetCustomizing(true);
         settings = new SettingsWindow(store);
@@ -207,6 +224,7 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        tutorial?.Close();
         startupPriority?.Dispose(); startupPriority = null;
         windowsTaskbar?.Dispose();
         startKey?.Dispose();
@@ -279,6 +297,7 @@ public partial class App : Application
     }
     private void ChangeGameMode(bool active)
     {
+        tutorial?.Suspend(active);
         if (IsExiting) return; gameTransitions++;
         ConfigureStartHotkey();
         dock?.SuspendForGame(active);

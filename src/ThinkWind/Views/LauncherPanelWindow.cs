@@ -90,7 +90,8 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         var manual = ActionButton("Executável manual…", ManualShortcut); manual.FontSize = 10; manual.Padding = new Thickness(6, 4, 6, 4); DockPanel.SetDock(manual, Dock.Right); footer.Children.Add(manual);
         footer.Children.Add(new TextBlock { Text = Environment.UserName, ToolTip = Environment.UserDomainName + "\\" + Environment.UserName, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); content.Children.Add(footer);
         viewport.Child = content; Surface.Child = viewport;
-        query.TextChanged += (_, _) => { if (!updating) { page = 0; Reload(); } };
+        TutorialGuide.Mark(query, "search");
+        query.TextChanged += (_, _) => { if (!updating) { page = 0; Reload(); if (query.IsKeyboardFocusWithin && !string.IsNullOrWhiteSpace(query.Text)) TutorialGuide.Notify("search-typed"); } };
         query.PreviewKeyDown += (_, e) => { if (e.Key == Key.Enter) { OpenFirstResult(); e.Handled = true; } };
         Activated += (_, _) =>
         {

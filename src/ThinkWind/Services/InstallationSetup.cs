@@ -28,6 +28,7 @@ internal static class InstallationSetup
         {
             var settings = new SettingsStore();
             if (settings.LoadWarning is not null) throw new IOException(settings.LoadWarning);
+            if (settings.IsNewProfile) settings.Value.TutorialPending = true;
             SystemActions.ApplyStartupDefault(settings, installation: true);
             if (data.Window == 0) throw new InvalidOperationException("A barra do Windows não está disponível. Inicie o Explorador e tente novamente.");
             original = SHAppBarMessage(4, ref data); // ABM_GETSTATE

@@ -28,7 +28,9 @@ internal sealed partial class IslandWindow
                         else { secondAreaSelected = true; OpenFull(); }
                     }
                     else ToggleLeftArea();
+                    TutorialGuide.Notify("monitor-open");
                 });
+                TutorialGuide.Mark(monitor, "monitor");
                 monitor.Content = Glyph(monitoringOpen ? "\uE80F" : "\uE9D9", 17); StyleSecondaryControl(monitor); hoverQuick.Children.Add(monitor); continue;
             }
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);

@@ -62,7 +62,7 @@ internal sealed partial class IslandWindow
     {
         leftArea ??= new EmptyIslandAreaWindow(Store, ((App)Application.Current).Telemetry) { MonitorDeviceOverride = MonitorDeviceOverride };
         if (leftArea.IsVisible) leftArea.Hide();
-        else { leftArea.Show(); leftArea.Position(); }
+        else { leftArea.Show(); leftArea.Position(); TutorialGuide.Notify("monitor-open"); }
     }
 }
 
