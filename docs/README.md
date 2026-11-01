@@ -1,7 +1,7 @@
 # Página pública Orby Launcher
 
 Fonte da página publicada em https://thinkdeveloper-br.github.io/orby-launcher/ .
-Versão atual: 0.22 Beta. Download e notas apontam para a release v0.22.0-beta do repositório do aplicativo.
+Versão atual: 0.23 Beta. Download e notas apontam para a release v0.23.0-beta do repositório do aplicativo.
 
 O destaque do Spotify agora apresenta também as integrações de chamadas com Discord e Google Meet, com ilustrações dos estados ativo/mudo e comandos de saída. Os cartões entram com a sequência Motion existente e respeitam movimento reduzido. O texto informa as limitações de acessibilidade e que não exige extensão no navegador.
 

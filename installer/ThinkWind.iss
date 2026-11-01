@@ -1,7 +1,7 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.22.0-beta"
+#define MyAppVersion "0.23.0-beta"
 #ifndef PublishDir
-#define PublishDir "..\artifacts\publish-v0.22.0-beta"
+#define PublishDir "..\artifacts\publish-v0.23.0-beta"
 #endif
 [Setup]
 AppId={{B7408A21-58E2-4E3A-A842-84EF85965350}
@@ -10,7 +10,7 @@ AppPublisher=Think
 VersionInfoCompany=Think
 VersionInfoDescription=Instalador do Orby Launcher
 AppVersion={#MyAppVersion}
-VersionInfoVersion=0.22.0.0
+VersionInfoVersion=0.23.0.0
 DefaultDirName={localappdata}\Programs\OrbyLauncher
 PrivilegesRequired=lowest
 DefaultGroupName=Orby Launcher
