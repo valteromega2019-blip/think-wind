@@ -117,7 +117,7 @@ internal static class CallIntegration
         foreach (var pair in matches.Where(pair => pair.Value.Count == 1))
         {
             string name = pair.Value[0].Name;
-            commands.Add(new(pair.Key, name, MutedState(pair.Key, name)));
+            commands.Add(new(pair.Key, name, MutedState(pair.Key, name, pair.Value[0].Element, app)));
         }
         if (execute is null || !commands.Any(c => c.Action == CallAction.Leave) || !commands.Any(c => c.Action == CallAction.Microphone)) return false;
         var selected = commands.FirstOrDefault(c => c.Action == execute.Action && c.AccessibleName == execute.AccessibleName);
@@ -156,9 +156,24 @@ internal static class CallIntegration
             if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark) result.Append(char.ToLowerInvariant(c));
         return result.ToString().Trim();
     }
-    private static bool? MutedState(CallAction action, string name)
+    private static bool? MutedState(CallAction action, string name, AutomationElement element, string app)
     {
         if (action == CallAction.Leave) return null;
+        // Discord can retain the label "Mute" even when aria-pressed is on.
+        // Prefer the actual toggle/pressed state exposed by accessibility.
+        if (app == "Discord" && element.TryGetCurrentPattern(TogglePattern.Pattern, out var toggle))
+        {
+            var state = ((TogglePattern)toggle).Current.ToggleState;
+            if (state != ToggleState.Indeterminate) return state == ToggleState.On;
+        }
+        if (app == "Discord" && element.TryGetCurrentPattern(LegacyIAccessiblePattern.Pattern, out var legacy))
+        {
+            var state = ((LegacyIAccessiblePattern)legacy).Current;
+            if ((state.State & (8u | 16u)) != 0) return true; // PRESSED / CHECKED
+            string actionName = Fold(state.DefaultAction ?? "");
+            if (actionName is "uncheck" or "desmarcar") return true;
+            if (actionName is "check" or "marcar") return false;
+        }
         string value = Fold(name).Split('(')[0].Trim();
         if (value is "unmute" or "undeafen" or "ativar som" or "reativar som" or "ativar audio" or "desensurdecer"
             or "ativar microfone" or "ativar o microfone" or "turn on microphone" or "unmute microphone"

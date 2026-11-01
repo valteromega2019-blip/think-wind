@@ -23,6 +23,8 @@ Os rótulos reconhecidos são em português e inglês. Isso representa suporte c
 
 As ações da chamada exibem os nomes acessíveis originais e não apresentam estados otimistas de sucesso. Depois de uma ação, os controles são redescobertos. O processo proprietário da janela é conferido e o botão alvo deve ter um único nome exato, estar habilitado e visível.
 
+No Discord, estados Toggle/Pressed/Checked de acessibilidade têm prioridade sobre rótulos estáticos como Mute. Mudo usa ícone riscado e vermelho. A âncora da prévia permanece no ícone original enquanto aberta, mesmo que a mudança de foco reconstrua o Dock. A permanência usa a posição física do cursor; uma reconstrução dos botões não é tratada como saída do mouse. Leituras temporariamente vazias não substituem o cartão sob o cursor, e botões inalterados não são reconstruídos a cada consulta. Mensagens de estado usam uma linha com tooltip para não deslocar o painel ao clicar.
+
 ## Recursos e permissões
 
 UI Automation (`AutomationElement`, `TreeWalker`, `InvokePattern`, `TogglePattern`) executa fora do Dispatcher, sem hooks ou injeção de atalhos. A descoberta tem limite de nós e orçamento cooperativo de tempo. Chamadas individuais a provedores UIA podem ultrapassar esse orçamento; o semáforo global impede consultas concorrentes. Cancelamento evita reaproveitar resultados obsoletos.

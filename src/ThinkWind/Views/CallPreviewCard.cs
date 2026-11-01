@@ -13,8 +13,8 @@ namespace OrbyLauncher.Views;
 
 internal sealed class CallPreviewCard : StackPanel, IDisposable
 {
-    private readonly TextBlock heading = new() { FontSize = 17, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock status = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 4) };
+    private readonly TextBlock heading = new() { FontSize = 17, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock status = new() { FontSize = 11, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, MinHeight = 18, Margin = new Thickness(0, 8, 0, 4) };
     private readonly WrapPanel controls = new();
     private readonly Button globalMute = new() { FontSize = 11, Padding = new Thickness(10, 7, 10, 7), HorizontalAlignment = HorizontalAlignment.Left };
     private readonly Button outputMute = new() { FontSize = 11, Padding = new Thickness(10, 7, 10, 7), HorizontalAlignment = HorizontalAlignment.Left };
@@ -24,12 +24,17 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     private CallSnapshot? snapshot;
     private List<Desktop.RunningWindow> windows = new();
     private bool busy;
+    private bool callAvailable = true;
+    private int missingReads;
+    private string controlsSignature = "";
     private (AudioState Mic, AudioState Output)? restore;
     internal bool IsInteracting => busy || IsMouseCaptureWithin;
     internal event Action? LayoutChanged;
     internal event Action? CallEnded;
     internal CallPreviewCard()
     {
+        status.SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = status });
+        heading.SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = heading });
         Children.Add(heading); Children.Add(controls);
         var open = new Button { Content = "Abrir chamada", FontSize = 11, Padding = new Thickness(10, 7, 10, 7), HorizontalAlignment = HorizontalAlignment.Left };
         open.Click += async (_, _) =>
@@ -61,8 +66,8 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
             {
                 var current = await CallIntegration.FindAsync(windows, token);
                 if (token.IsCancellationRequested) return;
-                if (current is null) { Stop(); CallEnded?.Invoke(); return; }
-                snapshot = current; Render();
+                if (current is null) { MissingCall(); return; }
+                missingReads = 0; callAvailable = true; snapshot = current; Render();
             }
             catch (OperationCanceledException) { }
             finally { busy = false; }
@@ -70,58 +75,77 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     }
     internal void Present(CallSnapshot call, IEnumerable<Desktop.RunningWindow> source)
     {
-        Stop(); snapshot = call; windows = source.Where(w => w.Handle == call.Window).ToList();
+        Stop(); callAvailable = true; missingReads = 0; snapshot = call; windows = source.Where(w => w.Handle == call.Window).ToList();
         lifetime = new CancellationTokenSource(); Render(); refresh.Start();
     }
     internal void Stop() { refresh.Stop(); lifetime?.Cancel(); lifetime?.Dispose(); lifetime = null; }
+    private void MissingCall()
+    {
+        missingReads++;
+        // Native controls can disappear briefly while Discord applies a command.
+        // Never replace this card under the user's pointer during that interval.
+        if (missingReads < 2) { status.Text = "Atualizando os controles da chamada…"; return; }
+        callAvailable = false;
+        heading.Text = (snapshot?.App ?? "Aplicativo") + " · Verificando chamada";
+        controls.IsEnabled = false;
+        status.Text = "Controles temporariamente indisponíveis. A prévia permanece aberta enquanto você estiver sobre ela.";
+        if (Window.GetWindow(this) is WindowPreview owner && owner.PointerInside) return;
+        Stop(); CallEnded?.Invoke();
+    }
     private void Render()
     {
         if (snapshot is null) return;
         heading.Text = snapshot.App + " · Em chamada";
-        controls.Children.Clear();
-        foreach (var command in snapshot.Commands)
+        controls.IsEnabled = callAvailable;
+        string nextSignature = snapshot.App + string.Join("|", snapshot.Commands.Select(command => $"{command.Action}:{command.AccessibleName}:{command.Muted}"));
+        if (controlsSignature != nextSignature)
         {
-            string glyph = command.Action switch { CallAction.Microphone => "\uE720", CallAction.Headphones => "\uE7F6", _ => "\uE717" };
-            var symbol = new Grid { Width = 30, Height = 30, HorizontalAlignment = HorizontalAlignment.Center };
-            symbol.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
-            if (command.Muted == true)
-                symbol.Children.Add(new System.Windows.Shapes.Line { X1 = 4, Y1 = 26, X2 = 26, Y2 = 4, Stroke = new SolidColorBrush(Color.FromRgb(248, 92, 106)), StrokeThickness = 2.5, IsHitTestVisible = false });
-            string label = command.Action switch
+            controlsSignature = nextSignature;
+            controls.Children.Clear();
+            foreach (var command in snapshot.Commands)
             {
-                CallAction.Leave => "Sair da chamada",
-                CallAction.Microphone => command.Muted == true ? "Mic mudo" : command.Muted == false ? "Mic aberto" : "Microfone",
-                _ => command.Muted == true ? "Áudio mudo" : command.Muted == false ? "Áudio ativo" : "Áudio"
-            };
-            var button = new Button { Content = new StackPanel { Children =
+                string glyph = command.Action switch { CallAction.Microphone => "\uE720", CallAction.Headphones => "\uE7F6", _ => "\uE717" };
+                var symbol = new Grid { Width = 30, Height = 30, HorizontalAlignment = HorizontalAlignment.Center };
+                symbol.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+                if (command.Muted == true)
+                    symbol.Children.Add(new System.Windows.Shapes.Line { X1 = 4, Y1 = 26, X2 = 26, Y2 = 4, Stroke = new SolidColorBrush(Color.FromRgb(248, 92, 106)), StrokeThickness = 2.5, IsHitTestVisible = false });
+                string label = command.Action switch
                 {
-                    symbol,
-                    new TextBlock { Text = label, MaxWidth = 82, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0) }
-                } }, ToolTip = command.AccessibleName, MinWidth = 86, MinHeight = 84, Padding = new Thickness(10), Margin = new Thickness(3, 10, 3, 0) };
-            System.Windows.Automation.AutomationProperties.SetName(button, command.AccessibleName);
-            if (command.Muted == true || command.Action == CallAction.Leave) button.Foreground = new SolidColorBrush(Color.FromRgb(248, 92, 106));
-            else if (command.Muted == false) button.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
-            button.SetResourceReference(Control.BackgroundProperty, command.Muted == false ? "Think.AccentSurface" : "Think.Control");
-            button.Click += async (_, _) =>
-            {
-                if (busy || lifetime is null || snapshot is null) return;
-                busy = true; controls.IsEnabled = false; var token = lifetime.Token;
-                try
-                {
-                    bool sent = await CallIntegration.ExecuteAsync(snapshot, command, token);
-                    if (token.IsCancellationRequested) return;
-                    status.Text = sent ? "Comando enviado ao aplicativo." : "Controle indisponível. Abra a chamada para continuar.";
-                    if (sent)
+                    CallAction.Leave => "Sair da chamada",
+                    CallAction.Microphone => command.Muted == true ? "Mic mudo" : command.Muted == false ? "Mic aberto" : "Microfone",
+                    _ => command.Muted == true ? "Áudio mudo" : command.Muted == false ? "Áudio ativo" : "Áudio"
+                };
+                var button = new Button { Content = new StackPanel { Children =
                     {
-                        var updated = await CallIntegration.FindAsync(windows, token);
+                        symbol,
+                        new TextBlock { Text = label, MaxWidth = 82, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0) }
+                    } }, ToolTip = command.AccessibleName, MinWidth = 86, MinHeight = 84, Padding = new Thickness(10), Margin = new Thickness(3, 10, 3, 0) };
+                System.Windows.Automation.AutomationProperties.SetName(button, command.AccessibleName);
+                if (command.Muted == true || command.Action == CallAction.Leave) button.Foreground = new SolidColorBrush(Color.FromRgb(248, 92, 106));
+                else if (command.Muted == false) button.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
+                button.SetResourceReference(Control.BackgroundProperty, command.Muted == false ? "Think.AccentSurface" : "Think.Control");
+                button.Click += async (_, _) =>
+                {
+                    if (busy || lifetime is null || snapshot is null) return;
+                    busy = true; controls.IsEnabled = false; var token = lifetime.Token;
+                    try
+                    {
+                        bool sent = await CallIntegration.ExecuteAsync(snapshot, command, token);
                         if (token.IsCancellationRequested) return;
-                        if (updated is null) { Stop(); CallEnded?.Invoke(); }
-                        else { snapshot = updated; Render(); }
+                        status.Text = sent ? "Comando enviado ao aplicativo." : "Controle indisponível. Abra a chamada para continuar.";
+                        if (sent)
+                        {
+                            var updated = await CallIntegration.FindAsync(windows, token);
+                            if (token.IsCancellationRequested) return;
+                            if (updated is null) MissingCall();
+                            else { missingReads = 0; callAvailable = true; snapshot = updated; Render(); }
+                        }
                     }
-                }
-                catch (OperationCanceledException) { }
-                finally { busy = false; controls.IsEnabled = true; }
-            };
-            controls.Children.Add(button);
+                    catch (OperationCanceledException) { }
+                    finally { busy = false; controls.IsEnabled = callAvailable; }
+                };
+                controls.Children.Add(button);
+            }
         }
         globalMute.Content = restore.HasValue ? "Restaurar mic + áudio padrão" : "Silenciar mic + áudio padrão";
         try

@@ -12,6 +12,7 @@ internal sealed partial class DockWindow
     private WindowPreview? preview;
     private Item? previewItem;
     private FrameworkElement? previewAnchor;
+    private OverlayChrome.PixelRect? retainedPreviewAnchor;
     private bool previewIconHovered;
     private CancellationTokenSource? callProbe;
     private readonly DispatcherTimer previewOpen = new();
@@ -29,6 +30,7 @@ internal sealed partial class DockWindow
                 preview.MouseLeave += (_, _) => { lastHover = DateTime.UtcNow; previewClose.Start(); };
             }
             var requested = previewItem;
+            retainedPreviewAnchor = CurrentPreviewIconBounds();
             if (IsSpotify(requested)) preview.PresentSpotify();
             else
             {
@@ -56,7 +58,7 @@ internal sealed partial class DockWindow
         previewClose.Tick += (_, _) =>
         {
             if (preview?.IsInteracting == true) return;
-            previewClose.Stop(); if (preview?.IsMouseOver != true && !previewIconHovered) preview?.Hide();
+            previewClose.Stop(); if (preview?.PointerInside != true && !previewIconHovered) preview?.Hide();
         };
     }
     private static bool IsSpotify(Item item) => string.Equals(item.Name, "Spotify", StringComparison.OrdinalIgnoreCase)
@@ -77,6 +79,13 @@ internal sealed partial class DockWindow
     }
     private OverlayChrome.PixelRect PreviewIconBounds()
     {
+        // A foreground change can rebuild the dock and detach the original icon.
+        // Keep the opening anchor until the user leaves this preview.
+        if (preview?.IsVisible == true && retainedPreviewAnchor is { } retained) return retained;
+        return CurrentPreviewIconBounds();
+    }
+    private OverlayChrome.PixelRect CurrentPreviewIconBounds()
+    {
         if (previewAnchor is not { IsLoaded: true } element || PresentationSource.FromVisual(element) is null) return TargetBounds;
         var first = element.PointToScreen(new Point());
         var last = element.PointToScreen(new Point(element.ActualWidth, element.ActualHeight));
@@ -86,5 +95,5 @@ internal sealed partial class DockWindow
             Top = Math.Min(TargetBounds.Top, (int)Math.Floor(first.Y)), Bottom = (int)Math.Ceiling(last.Y)
         };
     }
-    private void StopPreviews() { callProbe?.Cancel(); callProbe?.Dispose(); callProbe = null; previewIconHovered = false; previewOpen.Stop(); previewClose.Stop(); previewItem = null; previewAnchor = null; preview?.Hide(); }
+    private void StopPreviews() { callProbe?.Cancel(); callProbe?.Dispose(); callProbe = null; previewIconHovered = false; previewOpen.Stop(); previewClose.Stop(); previewItem = null; previewAnchor = null; preview?.Hide(); retainedPreviewAnchor = null; }
 }

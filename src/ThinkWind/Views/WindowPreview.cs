@@ -28,6 +28,15 @@ internal sealed partial class WindowPreview : FloatingWindow
     private bool spotifyMode;
     private CallPreviewCard? call;
     private bool callMode;
+    internal bool PointerInside
+    {
+        get
+        {
+            if (!IsVisible || !OverlayChrome.GetWindowRect(new WindowInteropHelper(this).Handle, out var bounds)) return false;
+            var point = System.Windows.Forms.Cursor.Position;
+            return point.X >= bounds.Left && point.X < bounds.Right && point.Y >= bounds.Top && point.Y < bounds.Bottom;
+        }
+    }
     internal bool IsInteracting => (spotifyMode && spotify?.IsInteracting == true) || (callMode && call?.IsInteracting == true);
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
