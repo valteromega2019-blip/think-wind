@@ -19,71 +19,102 @@ internal sealed partial class WindowPreview
     private IReadOnlyList<BrowserTab> browserTabs = Array.Empty<BrowserTab>();
     private CancellationTokenSource? browserLifetime;
     private string browserSignature = "";
-    internal void PresentBrowser(IEnumerable<Desktop.RunningWindow> source, IReadOnlyList<BrowserTab> tabs, CallSnapshot? meeting = null)
+    private MusicPreviewSelection? browserMusic;
+    private CallSnapshot? browserMeeting;
+    private bool browserPreferMusic;
+    private string browserContext = "";
+    private bool BrowserControlsBusy => WindowActionInteracting || musicCard?.IsInteracting == true || call?.IsUserInteracting == true;
+    internal void PresentBrowser(IEnumerable<Desktop.RunningWindow> source, IReadOnlyList<BrowserTab> tabs, CallSnapshot? meeting = null, MusicPreviewSelection? music = null)
     {
+        var currentWindows = source.ToList();
+        string context = string.Join('|', currentWindows.Select(window => window.Handle).OrderBy(handle => handle));
+        if (!browserMode || browserContext != context || browserMeeting is null && meeting is not null) browserPreferMusic = false;
+        browserContext = context; browserMeeting = meeting;
         refresh.Stop(); browserLifetime?.Cancel(); browserLifetime?.Dispose(); browserLifetime = new CancellationTokenSource();
-        Release(); spotifyMode = false; spotify?.SetActive(false); call?.Stop();
+        Release(); musicMode = false; musicCard?.SetActive(false); call?.Stop();
         viewport.Child = null;
         DetachCallCard();
-        browserMode = true; callMode = meeting is not null;
-        windows = source.ToList(); browserTabs = tabs.ToArray(); browserSignature = TabsSignature(tabs);
+        browserMode = true; callMode = meeting is not null && (!browserPreferMusic || music is null);
+        browserMusic = music;
+        windows = currentWindows; browserTabs = tabs.ToArray(); browserSignature = TabsSignature(tabs);
         Surface.Padding = new Thickness(10); browserLayout.Children.Clear();
         browserFan ??= new BrowserTabFan();
         browserFan.DismissRequested -= DismissBrowser; browserFan.DismissRequested += DismissBrowser;
         var shown = tabs.Count > 0 ? tabs : windows.Take(1).Select(window => new BrowserTab(window.Handle, 0, window.Title, Array.Empty<int>(), true)).ToArray();
         browserFan.Present(shown, new WindowInteropHelper(this).EnsureHandle(), Store.Value);
         browserLayout.Children.Add(browserFan);
-        if (meeting is not null)
+        var integration = new StackPanel { Width = 320, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10, 0, 0, 12) };
+        if (meeting is not null && music is not null)
+        {
+            var choices = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+            AddChoice("Reunião", false); AddChoice("Música", true);
+            integration.Children.Add(choices);
+            void AddChoice(string label, bool showMusic)
+            {
+                var button = new Button { Content = label, Padding = new Thickness(12, 6, 12, 6), Margin = new Thickness(3, 0, 3, 6) };
+                button.SetResourceReference(Control.BackgroundProperty, browserPreferMusic == showMusic ? "Think.AccentSurface" : "Think.Control");
+                button.SetResourceReference(Control.ForegroundProperty, browserPreferMusic == showMusic ? "Think.AccentInk" : "Think.Text");
+                button.Click += (_, _) =>
+                {
+                    browserPreferMusic = showMusic;
+                    PresentBrowser(windows.ToArray(), browserTabs, browserMeeting, browserMusic);
+                };
+                choices.Children.Add(button);
+            }
+        }
+        if (callMode && meeting is not null)
         {
             if (call is null)
             {
                 call = new CallPreviewCard();
                 call.LayoutChanged += () => { if (IsVisible && callMode) Position(); };
-                call.CallEnded += () => { if (IsVisible && callMode) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs); else Present(windows.ToArray()); } };
+                call.CallEnded += () => { if (IsVisible && callMode) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs, music: browserMusic); else Present(windows.ToArray()); } };
             }
             call.ConfigureCompact(true);
             call.Width = 300; call.Margin = new Thickness(0);
-            var compactCall = new Viewbox { Width = 320, Height = 160, Margin = new Thickness(10, 0, 0, 12), VerticalAlignment = VerticalAlignment.Bottom,
+            var compactCall = new Viewbox { Width = 320, Height = 160, VerticalAlignment = VerticalAlignment.Bottom,
                 Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = WithWindowActions(call, windows, meeting.Window) };
-            browserLayout.Children.Add(compactCall); call.Present(meeting, windows);
+            integration.Children.Add(compactCall); call.Present(meeting, windows);
         }
-        else if (Store.Value.CallPreviewsEnabled && tabs.FirstOrDefault(tab => tab.IsMeet) is { } meet)
+        else if (music is not null)
         {
-            var details = new StackPanel { Width = 290, Margin = new Thickness(18, 10, 6, 6) };
-            details.Children.Add(new TextBlock { Text = "Google Meet", FontSize = 18, FontWeight = FontWeights.SemiBold });
-            details.Children.Add(new TextBlock { Text = "Aba encontrada. Abra a reunião para disponibilizar os controles de chamada.", FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 10) });
-            var open = new Button { Content = "Abrir aba do Meet", Padding = new Thickness(10, 8, 10, 8) };
-            open.Click += async (_, _) =>
-            {
-                var token = browserLifetime?.Token ?? CancellationToken.None;
-                try { if (await BrowserTabs.SelectAsync(meet, token)) { await Desktop.ActivateFromDock(meet.Window, false); Hide(); } }
-                catch (OperationCanceledException) { }
-            };
-            details.Children.Add(open); browserLayout.Children.Add(details);
+            PrepareMusic(music); ConfigurePlayerSurface(); musicCard!.Width = 320;
+            var playerBox = new Viewbox { Width = 320, Height = 230, VerticalAlignment = VerticalAlignment.Bottom,
+                Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = WithWindowActions(musicCard!, windows) };
+            integration.Children.Add(playerBox); musicCard.SetActive(true);
         }
+        if (integration.Children.Count > 0) browserLayout.Children.Add(integration);
         viewport.Child = browserLayout; Show(); Position(); refresh.Interval = TimeSpan.FromSeconds(2); refresh.Start();
     }
     private void DismissBrowser() => Hide();
     private static string TabsSignature(IReadOnlyList<BrowserTab> tabs) => string.Join("|", tabs.Select(tab => $"{tab.Window}:{string.Join(",", tab.RuntimeId)}:{tab.Selected}:{tab.Title}:{tab.Cached}"));
     private async Task RefreshBrowserAsync()
     {
-        if (browserReading || browserLifetime is null || IsInteracting) return;
+        if (browserReading || browserLifetime is null || BrowserControlsBusy) return;
         browserReading = true; var token = browserLifetime.Token;
         try
         {
             var tabs = await BrowserTabs.ReadAsync(windows, token);
             if (token.IsCancellationRequested || !IsVisible || !browserMode) return;
-            if (TabsSignature(tabs) != browserSignature)
+            var meeting = Store.Value.CallPreviewsEnabled
+                ? callMode ? call?.CurrentCall : await CallIntegration.FindAsync(windows, token) : null;
+            var ids = windows.Select(window => window.AppId).Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            var titles = await BrowserTabs.KnownTitlesAsync(windows, token);
+            var identity = new MediaAppIdentity(ids, windows.Select(window => window.Executable).Where(path => !string.IsNullOrWhiteSpace(path)).Select(path => path!).ToArray(),
+                windows.Select(window => window.Title).Concat(titles).ToArray(), "", !ids.Any(id => id.Contains("_crx_", StringComparison.OrdinalIgnoreCase)));
+            var music = await MediaService.FindForAppAsync(identity, token);
+            if (token.IsCancellationRequested || !IsVisible || !browserMode || BrowserControlsBusy) return;
+            if (TabsSignature(tabs) != browserSignature || MeetingSignature(meeting) != MeetingSignature(browserMeeting)
+                || music?.SourceId != browserMusic?.SourceId || !callMode && music is not null && musicCard?.Available == false)
             {
-                // A tab change can change the call as well. Re-identify both,
-                // rather than assigning the last active tab's image to a new title.
-                var meeting = Store.Value.CallPreviewsEnabled ? await CallIntegration.FindAsync(windows, token) : null;
-                if (!token.IsCancellationRequested && IsVisible && browserMode) PresentBrowser(windows.ToArray(), tabs, meeting);
+                PresentBrowser(windows.ToArray(), tabs, meeting, music);
             }
+            else { browserMeeting = meeting; if (callMode) browserMusic = music; }
         }
         catch (OperationCanceledException) { }
         finally { browserReading = false; }
     }
+    private static string MeetingSignature(CallSnapshot? meeting) => meeting is null ? "" : $"{meeting.Window}:{meeting.ProcessId}:{meeting.App}";
     private void PositionBrowser()
     {
         var bounds = anchor();

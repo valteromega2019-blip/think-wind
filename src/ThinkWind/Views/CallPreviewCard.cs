@@ -32,13 +32,16 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     private CallSnapshot? snapshot;
     private List<Desktop.RunningWindow> windows = new();
     private bool busy;
+    private bool commandPending;
     private bool callAvailable = true;
     private int missingReads;
     private string controlsSignature = "";
     private (AudioState Mic, AudioState Output)? restore;
     internal bool IsInteracting => busy || IsMouseCaptureWithin || audioMenu?.IsOpen == true;
+    internal bool IsUserInteracting => commandPending || IsMouseCaptureWithin || audioMenu?.IsOpen == true;
     internal event Action? LayoutChanged;
     internal event Action? CallEnded;
+    internal CallSnapshot? CurrentCall => callAvailable ? snapshot : null;
     internal void SetWindowActions(FrameworkElement actions)
     {
         if (windowActions is not null) headingRow.Children.Remove(windowActions);
@@ -167,7 +170,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
                 button.Click += async (_, _) =>
                 {
                     if (busy || lifetime is null || snapshot is null) return;
-                    busy = true; controls.IsEnabled = false; var token = lifetime.Token;
+                    busy = commandPending = true; controls.IsEnabled = false; var token = lifetime.Token;
                     try
                     {
                         bool sent = await CallIntegration.ExecuteAsync(snapshot, command, token);
@@ -182,7 +185,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
                         }
                     }
                     catch (OperationCanceledException) { }
-                    finally { busy = false; controls.IsEnabled = callAvailable; }
+                    finally { busy = commandPending = false; controls.IsEnabled = callAvailable; }
                 };
                 controls.Children.Add(button);
             }

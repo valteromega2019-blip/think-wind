@@ -89,22 +89,21 @@ internal static class CallIntegration
     private static bool InspectControls(AutomationElement root, string app, CancellationToken cancellation, CallCommand? execute, out List<CallCommand> commands)
     {
         commands = new();
+        if (app == "Google Meet")
+        {
+            var document = MeetDocument(root, cancellation);
+            if (document is null) return false;
+            root = document;
+        }
         var matches = new Dictionary<CallAction, List<(AutomationElement Element, string Name)>>();
         var walker = TreeWalker.ControlViewWalker;
         var pending = new Stack<AutomationElement>(); pending.Push(root);
         var clock = Stopwatch.StartNew(); int nodes = 0;
-        bool meetOrigin = app != "Google Meet";
         while (pending.Count > 0 && nodes++ < 900 && clock.ElapsedMilliseconds < 600)
         {
             cancellation.ThrowIfCancellationRequested();
             var element = pending.Pop(); var current = element.Current;
-            if (current.ControlType == ControlType.Edit && app == "Google Meet" && element.TryGetCurrentPattern(ValuePattern.Pattern, out var value))
-            {
-                string address = ((ValuePattern)value).Current.Value;
-                if (Uri.TryCreate(address.Contains("://") ? address : "https://" + address, UriKind.Absolute, out var uri)
-                    && uri.Host.Equals("meet.google.com", StringComparison.OrdinalIgnoreCase)) meetOrigin = true;
-            }
-            if (!current.IsOffscreen && current.IsEnabled && current.ControlType == ControlType.Button
+            if ((!current.IsOffscreen || app == "Google Meet") && current.IsEnabled && current.ControlType == ControlType.Button
                 && Classify(current.Name, app) is CallAction action
                 && (element.TryGetCurrentPattern(InvokePattern.Pattern, out _) || element.TryGetCurrentPattern(TogglePattern.Pattern, out _)))
             {
@@ -116,7 +115,6 @@ internal static class CallIntegration
             for (var child = walker.GetFirstChild(element); child is not null && children.Count < 150 && clock.ElapsedMilliseconds < 600; child = walker.GetNextSibling(child)) children.Add(child);
             for (int index = children.Count - 1; index >= 0; index--) pending.Push(children[index]);
         }
-        if (!meetOrigin) return false;
         foreach (var pair in matches.Where(pair => pair.Value.Count == 1))
         {
             string name = pair.Value[0].Name;
@@ -126,19 +124,57 @@ internal static class CallIntegration
         var selected = commands.FirstOrDefault(c => c.Action == execute.Action && c.AccessibleName == execute.AccessibleName);
         if (selected is null) return false;
         cancellation.ThrowIfCancellationRequested();
-        // Resolve the exact visible label uniquely over the full window before
-        // executing; a bounded discovery must never choose an ambiguous control.
-        var exact = root.FindAll(TreeScope.Descendants, new AndCondition(
+        // Resolve the exact label uniquely in the verified document/window;
+        // a bounded discovery must never choose an ambiguous control.
+        var conditions = new List<Condition>
+        {
             new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
             new PropertyCondition(AutomationElement.NameProperty, selected.AccessibleName),
-            new PropertyCondition(AutomationElement.IsEnabledProperty, true),
-            new PropertyCondition(AutomationElement.IsOffscreenProperty, false)));
+            new PropertyCondition(AutomationElement.IsEnabledProperty, true)
+        };
+        if (app != "Google Meet") conditions.Add(new PropertyCondition(AutomationElement.IsOffscreenProperty, false));
+        var exact = root.FindAll(TreeScope.Descendants, new AndCondition(conditions.ToArray()));
         if (exact.Count != 1) return false;
         var target = exact[0];
         cancellation.ThrowIfCancellationRequested();
         if (target.TryGetCurrentPattern(InvokePattern.Pattern, out var invoke)) { ((InvokePattern)invoke).Invoke(); return true; }
         if (target.TryGetCurrentPattern(TogglePattern.Pattern, out var toggle)) { ((TogglePattern)toggle).Toggle(); return true; }
         return false;
+    }
+    private static AutomationElement? MeetDocument(AutomationElement window, CancellationToken cancellation)
+    {
+        static bool MeetAddress(string address) => Uri.TryCreate(address.Contains("://") ? address : "https://" + address,
+            UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.Host.Equals("meet.google.com", StringComparison.OrdinalIgnoreCase);
+        var pending = new Stack<AutomationElement>(); pending.Push(window);
+        var documents = new List<AutomationElement>(); var verified = new List<AutomationElement>();
+        AutomationElement? documentWithoutAddress = null;
+        bool addressBar = false; int nodes = 0; var clock = Stopwatch.StartNew();
+        var walker = TreeWalker.ControlViewWalker;
+        while (pending.Count > 0 && nodes++ < 350 && clock.ElapsedMilliseconds < 400)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            var element = pending.Pop(); var info = element.Current;
+            if (info.ControlType == ControlType.Document)
+            {
+                documents.Add(element);
+                if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var documentValue))
+                {
+                    string address = ((ValuePattern)documentValue).Current.Value;
+                    if (MeetAddress(address)) verified.Add(element);
+                    else if (string.IsNullOrWhiteSpace(address)) documentWithoutAddress = element;
+                }
+                else documentWithoutAddress = element;
+                continue; // Never accept a web page's own text fields as browser origin.
+            }
+            if (info.ControlType == ControlType.Edit && element.TryGetCurrentPattern(ValuePattern.Pattern, out var value)
+                && MeetAddress(((ValuePattern)value).Current.Value)) addressBar = true;
+            var children = new List<AutomationElement>();
+            for (var child = walker.GetFirstChild(element); child is not null && children.Count < 100 && clock.ElapsedMilliseconds < 400; child = walker.GetNextSibling(child)) children.Add(child);
+            for (int i = children.Count - 1; i >= 0; i--) pending.Push(children[i]);
+        }
+        if (verified.Count == 1) return verified[0];
+        // The native address bar is a fallback only for a unique exposed document.
+        return verified.Count == 0 && addressBar && documents.Count == 1 ? documentWithoutAddress : null;
     }
     private static CallAction? Classify(string name, string app)
     {

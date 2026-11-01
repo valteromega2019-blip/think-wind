@@ -31,29 +31,36 @@ internal sealed partial class DockWindow
             }
             var requested = previewItem;
             retainedPreviewAnchor = CurrentPreviewIconBounds();
-            if (IsSpotify(requested)) preview.PresentSpotify(requested.Windows);
-            else
+            preview.Present(requested.Windows);
+            callProbe?.Cancel(); callProbe?.Dispose(); callProbe = new CancellationTokenSource(); var token = callProbe.Token;
+            try
             {
-                preview.Present(requested.Windows);
                 bool browser = requested.Windows.Any(BrowserTabs.IsBrowser);
-                if (!browser && (!Store.Value.CallPreviewsEnabled || !requested.Windows.Any(CallIntegration.IsCandidate))) return;
-                callProbe?.Cancel(); callProbe?.Dispose(); callProbe = new CancellationTokenSource(); var token = callProbe.Token;
-                try
+                bool Current() => !token.IsCancellationRequested && ReferenceEquals(previewItem, requested) && IsVisible && !MenuOpen
+                    && Store.Value.WindowPreviewsEnabled && (preview.IsVisible || previewIconHovered);
+                if (browser)
                 {
-                    if (browser)
-                    {
-                        var tabs = await BrowserTabs.ReadAsync(requested.Windows, token);
-                        if (token.IsCancellationRequested || !ReferenceEquals(previewItem, requested) || !preview.IsVisible) return;
-                        preview.PresentBrowser(requested.Windows, tabs);
-                    }
-                    if (!Store.Value.CallPreviewsEnabled) return;
+                    var tabs = await BrowserTabs.ReadAsync(requested.Windows, token);
+                    if (!Current()) return;
+                    var identity = MediaIdentity(requested);
+                    var titles = await BrowserTabs.KnownTitlesAsync(requested.Windows, token);
+                    identity = identity with { WindowTitles = identity.WindowTitles.Concat(titles).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() };
+                    var meeting = Store.Value.CallPreviewsEnabled ? await CallIntegration.FindAsync(requested.Windows, token) : null;
+                    var browserMedia = await MediaService.FindForAppAsync(identity, token);
+                    if (Current()) preview.PresentBrowser(requested.Windows, tabs, meeting, browserMedia);
+                    return;
+                }
+                var media = await MediaService.FindForAppAsync(MediaIdentity(requested), token);
+                if (!Current()) return;
+                if (media is not null) preview.PresentMusic(media, requested.Windows);
+                if (Store.Value.CallPreviewsEnabled && requested.Windows.Any(CallIntegration.IsCandidate))
+                {
                     var call = await CallIntegration.FindAsync(requested.Windows, token);
-                    if (!token.IsCancellationRequested && call is not null && ReferenceEquals(previewItem, requested)
-                        && IsVisible && !MenuOpen && Store.Value.CallPreviewsEnabled && preview.IsVisible)
+                    if (Current() && call is not null && Store.Value.CallPreviewsEnabled)
                         preview.PresentCall(call, requested.Windows);
                 }
-                catch (OperationCanceledException) { }
             }
+            catch (OperationCanceledException) { }
         };
         previewClose.Tick += (_, _) =>
         {
@@ -61,15 +68,27 @@ internal sealed partial class DockWindow
             previewClose.Stop(); if (preview?.PointerInside != true && !previewIconHovered) preview?.Hide();
         };
     }
-    private static bool IsSpotify(Item item) => string.Equals(item.Name, "Spotify", StringComparison.OrdinalIgnoreCase)
-        || (item.Target?.Contains("spotify", StringComparison.OrdinalIgnoreCase) == true)
-        || item.Windows.Any(window => window.Executable?.Contains("spotify", StringComparison.OrdinalIgnoreCase) == true);
+    private MediaAppIdentity MediaIdentity(Item item)
+    {
+        var appIds = item.Windows.Select(window => window.AppId).Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id!).ToList();
+        var paths = item.Windows.Select(window => window.Executable).Where(path => !string.IsNullOrWhiteSpace(path)).Select(path => path!).ToList();
+        if (item.Target is { } target)
+        {
+            var registered = catalog.Items.FirstOrDefault(app => app.Target.Equals(target, StringComparison.OrdinalIgnoreCase));
+            if (registered?.AppId is { } appId) appIds.Add(appId);
+            if (target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase)) appIds.Add(target[@"shell:AppsFolder\".Length..]);
+            paths.Add(icons.Resolve(target));
+        }
+        bool browserGroup = item.Windows.Count > 0 && item.Windows.All(BrowserTabs.IsBrowser)
+            && !appIds.Any(id => id.Contains("_crx_", StringComparison.OrdinalIgnoreCase));
+        return new(appIds.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), item.Windows.Select(window => window.Title).ToArray(), item.Name, browserGroup);
+    }
     private void AttachPreview(FrameworkElement element, Item item)
     {
         element.MouseEnter += (_, _) =>
         {
             if (MenuOpen) return;
-            if (item.Windows.Count == 0 && !IsSpotify(item)) { StopPreviews(); return; }
+            if (item.Windows.Count == 0 && item.Target is null) { StopPreviews(); return; }
             previewIconHovered = true;
             previewClose.Stop(); previewOpen.Stop(); previewItem = item; previewAnchor = element;
             previewOpen.Interval = TimeSpan.FromMilliseconds(Store.Value.WindowPreviewDelayMilliseconds);

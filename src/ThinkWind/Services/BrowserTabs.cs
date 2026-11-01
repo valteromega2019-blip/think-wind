@@ -10,10 +10,7 @@ using OrbyLauncher.Native;
 
 namespace OrbyLauncher.Services;
 
-internal sealed record BrowserTab(nint Window, int ProcessId, string Title, int[] RuntimeId, bool Selected, bool Cached = false)
-{
-    internal bool IsMeet => Title.StartsWith("Meet -", StringComparison.OrdinalIgnoreCase) || Title.Contains("Google Meet", StringComparison.OrdinalIgnoreCase);
-}
+internal sealed record BrowserTab(nint Window, int ProcessId, string Title, int[] RuntimeId, bool Selected, bool Cached = false);
 internal static class BrowserTabs
 {
     private static readonly SemaphoreSlim gate = new(1, 1);
@@ -76,15 +73,31 @@ internal static class BrowserTabs
                     catch (Exception e) when (Unavailable(e)) { }
                     if (found.Count > 0)
                     {
-                        var saved = found.OrderByDescending(tab => tab.Selected).ThenByDescending(tab => tab.IsMeet).Take(4).ToArray();
+                        // Keep metadata beyond the four visual slots so music in
+                        // another tab remains associated with this browser.
+                        var saved = found.OrderByDescending(tab => tab.Selected).Take(64).ToArray();
                         cache[window.Handle] = new(process, saved, DateTime.UtcNow); result.AddRange(saved);
                     }
                     else if (previous is not null) result.AddRange(previous.Tabs.Select(tab => tab with { Cached = true }));
                 }
                 foreach (var handle in cache.OrderByDescending(entry => entry.Value.Updated).Skip(16).Select(entry => entry.Key).ToArray()) cache.Remove(handle);
-                // Keep the active tab and Meet discoverable, then fill the four slots.
-                return result.OrderByDescending(tab => tab.Selected).ThenByDescending(tab => tab.IsMeet).Take(4).OrderBy(tab => tab.Selected).ToArray();
+                // Four visual slots; titles never establish whether a call is active.
+                return result.OrderByDescending(tab => tab.Selected).Take(4).OrderBy(tab => tab.Selected).ToArray();
             }, cancellation);
+        }
+        finally { gate.Release(); }
+    }
+    internal static async Task<IReadOnlyList<string>> KnownTitlesAsync(IEnumerable<Desktop.RunningWindow> windows, CancellationToken cancellation)
+    {
+        await gate.WaitAsync(cancellation);
+        try
+        {
+            return windows.Where(IsBrowser).SelectMany(window =>
+            {
+                GetWindowThreadProcessId(window.Handle, out uint process);
+                return cache.TryGetValue(window.Handle, out var saved) && saved.Process == process
+                    ? saved.Tabs.Select(tab => tab.Title) : Enumerable.Empty<string>();
+            }).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
         finally { gate.Release(); }
     }

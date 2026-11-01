@@ -24,8 +24,9 @@ internal sealed partial class WindowPreview : FloatingWindow
     private readonly ShellIcons icons = new();
     private List<Desktop.RunningWindow> windows = new();
     private int page, perPage = 4;
-    private MediaCard? spotify;
-    private bool spotifyMode;
+    private MediaCard? musicCard;
+    private bool musicMode;
+    private MusicPreviewSelection? selectedMusic;
     private CallPreviewCard? call;
     private bool callMode;
     internal bool PointerInside
@@ -37,50 +38,59 @@ internal sealed partial class WindowPreview : FloatingWindow
             return point.X >= bounds.Left && point.X < bounds.Right && point.Y >= bounds.Top && point.Y < bounds.Bottom;
         }
     }
-    internal bool IsInteracting => WindowActionInteracting || (spotifyMode && spotify?.IsInteracting == true) || (callMode && call?.IsInteracting == true);
+    internal bool IsInteracting => WindowActionInteracting || ((musicMode || browserMode && !callMode) && musicCard?.IsInteracting == true) || (callMode && call?.IsInteracting == true);
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         anchor = getAnchor; Title = "Orby Launcher — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;
         refresh.Tick += async (_, _) => { if (browserMode) { await RefreshBrowserAsync(); return; } if (windows.Any(window => !WindowThumbnail.IsWindow(window.Handle))) { windows.RemoveAll(window => !WindowThumbnail.IsWindow(window.Handle)); Render(); } };
         LayoutUpdated += (_, _) => PlaceThumbnails();
-        IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); browserLifetime?.Cancel(); Release(); spotify?.SetActive(false); call?.Stop(); } };
-        Closed += (_, _) => { browserLifetime?.Cancel(); browserLifetime?.Dispose(); Release(); spotify?.Dispose(); call?.Dispose(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); browserLifetime?.Cancel(); Release(); musicCard?.SetActive(false); call?.Stop(); } };
+        Closed += (_, _) => { browserLifetime?.Cancel(); browserLifetime?.Dispose(); Release(); musicCard?.Dispose(); call?.Dispose(); };
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape) Hide(); };
     }
     internal void Present(IEnumerable<Desktop.RunningWindow> source)
     {
         browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(10);
-        callMode = false; call?.Stop(); spotifyMode = false; spotify?.SetActive(false); viewport.Child = body;
+        callMode = false; call?.Stop(); musicMode = false; musicCard?.SetActive(false); viewport.Child = body;
         windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
         if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Interval = TimeSpan.FromSeconds(1); refresh.Start();
     }
-    internal void PresentSpotify(IEnumerable<Desktop.RunningWindow> source)
+    internal void PresentMusic(MusicPreviewSelection selection, IEnumerable<Desktop.RunningWindow> source)
     {
+        if (source.Any(BrowserTabs.IsBrowser)) { PresentBrowser(source, browserTabs, music: selection); return; }
         browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(0);
         callMode = false; call?.Stop();
-        refresh.Stop(); Release(); spotifyMode = true; windows = source.ToList();
-        if (spotify is null)
-        {
-            spotify = new MediaCard("spotify");
-            spotify.LayoutChanged += () => { if (IsVisible && spotifyMode) Position(); };
-        }
+        refresh.Stop(); Release(); musicMode = true;
+        PrepareMusic(selection);
         ConfigurePlayerSurface();
-        viewport.Child = WithWindowActions(spotify, windows); Show(); Position(); spotify.SetActive(true);
+        viewport.Child = WithWindowActions(musicCard!, source); Show(); Position(); musicCard!.SetActive(true);
+    }
+    private void PrepareMusic(MusicPreviewSelection selection)
+    {
+        if (musicCard is not null && ReferenceEquals(selectedMusic?.Session, selection.Session))
+        {
+            if (musicCard.Parent is Viewbox oldBox) oldBox.Child = null;
+            return;
+        }
+        if (musicCard?.Parent is Viewbox parent) parent.Child = null;
+        musicCard?.Dispose(); selectedMusic = selection;
+        musicCard = new MediaCard(selection: selection);
+        musicCard.LayoutChanged += () => { if (IsVisible && (musicMode || browserMode)) Position(); };
     }
     internal void PresentCall(CallSnapshot snapshot, IEnumerable<Desktop.RunningWindow> source)
     {
-        if (snapshot.App == "Google Meet") { PresentBrowser(source, browserTabs, snapshot); return; }
+        if (snapshot.App == "Google Meet") { PresentBrowser(source, browserTabs, snapshot, browserMusic); return; }
         browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(10);
-        refresh.Stop(); Release(); spotifyMode = false; spotify?.SetActive(false); callMode = true;
+        refresh.Stop(); Release(); musicMode = false; musicCard?.SetActive(false); callMode = true;
         windows = source.ToList();
         if (call is null)
         {
             call = new CallPreviewCard();
             call.LayoutChanged += () => { if (IsVisible && callMode) Position(); };
-            call.CallEnded += () => { if (IsVisible && callMode) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs); else Present(windows.ToArray()); } };
+            call.CallEnded += () => { if (IsVisible && callMode) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs, music: browserMusic); else Present(windows.ToArray()); } };
         }
         DetachCallCard();
         call.ConfigureCompact(false);
@@ -98,8 +108,8 @@ internal sealed partial class WindowPreview : FloatingWindow
         base.RefreshAppearance();
         ConfigurePlayerSurface();
         browserFan?.ConfigureAppearance(Store.Value);
-        if (IsVisible && browserMode && !Store.Value.CallPreviewsEnabled && browserLayout.Children.Count > 1) PresentBrowser(windows.ToArray(), browserTabs);
-        if (IsVisible && callMode && !Store.Value.CallPreviewsEnabled) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs); else Present(windows.ToArray()); }
+        if (IsVisible && browserMode && !Store.Value.CallPreviewsEnabled && browserMeeting is not null) PresentBrowser(windows.ToArray(), browserTabs, music: browserMusic);
+        if (IsVisible && callMode && !Store.Value.CallPreviewsEnabled) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs, music: browserMusic); else Present(windows.ToArray()); }
     }
     public override void RefreshSettings()
     {
@@ -110,7 +120,7 @@ internal sealed partial class WindowPreview : FloatingWindow
     {
         var p = Store.Value;
         double opacity = p.DockOpacity ?? p.TintOpacity;
-        spotify?.ConfigurePreviewSurface(p.DockRadius, opacity);
+        musicCard?.ConfigurePreviewSurface(p.DockRadius, opacity);
     }
     private void Render()
     {
@@ -186,12 +196,12 @@ internal sealed partial class WindowPreview : FloatingWindow
             viewport.Measure(new Size(viewport.Width, viewport.MaxHeight));
             PlaceAbove(callWidth, viewport.DesiredSize.Height + 20, callBounds, false); return;
         }
-        if (spotifyMode && spotify is not null)
+        if (musicMode && musicCard is not null)
         {
             double mediaWidth = Math.Max(1, Math.Min(360, Display.Width - 16));
             var mediaBounds = anchor();
             viewport.Width = mediaWidth;
-            spotify.Width = viewport.Width;
+            musicCard.Width = viewport.Width;
             viewport.MaxHeight = Math.Max(48, Math.Min(420, (mediaBounds.Top - Display.Work.Top) / Display.Scale - 36));
             viewport.Measure(new Size(viewport.Width, viewport.MaxHeight));
             PlaceAbove(mediaWidth, viewport.DesiredSize.Height, mediaBounds, false);

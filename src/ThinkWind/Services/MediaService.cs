@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -27,6 +28,7 @@ internal sealed class MediaService : IDisposable
 {
     private readonly Dispatcher dispatcher;
     private readonly string? requiredSource;
+    private readonly MusicPreviewSelection? selectedPreview;
     private GlobalSystemMediaTransportControlsSessionManager? manager;
     private GlobalSystemMediaTransportControlsSession? session;
     private volatile bool active, disposed;
@@ -40,7 +42,32 @@ internal sealed class MediaService : IDisposable
     internal MediaState? State { get; private set; }
     internal string? Error { get; private set; }
     internal event Action? Changed;
-    internal MediaService(Dispatcher uiDispatcher, string? sourceFilter = null) { dispatcher = uiDispatcher; requiredSource = sourceFilter; }
+    internal MediaService(Dispatcher uiDispatcher, string? sourceFilter = null, MusicPreviewSelection? selection = null) { dispatcher = uiDispatcher; requiredSource = sourceFilter; selectedPreview = selection; }
+    internal static async Task<MusicPreviewSelection?> FindForAppAsync(MediaAppIdentity identity, CancellationToken cancellation)
+    {
+        try
+        {
+            var sessions = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+            var matches = new List<MusicPreviewSelection>();
+            foreach (var candidate in sessions.GetSessions())
+            {
+                cancellation.ThrowIfCancellationRequested();
+                try
+                {
+                    var playback = candidate.GetPlaybackInfo();
+                    if (playback.PlaybackStatus is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed or GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped
+                        || !MusicSessionPolicy.HasControls(playback.Controls)) continue;
+                    var properties = await candidate.TryGetMediaPropertiesAsync(); cancellation.ThrowIfCancellationRequested();
+                    if (MusicSessionPolicy.Matches(candidate.SourceAppUserModelId, properties.Title, identity, out bool dedicated)
+                        && MusicSessionPolicy.IsMusic(candidate.SourceAppUserModelId, properties.PlaybackType, dedicated)) matches.Add(new(candidate, dedicated));
+                }
+                catch (Exception error) when (Unavailable(error)) { }
+            }
+            // Do not choose arbitrarily between sessions sharing one browser ID.
+            return matches.Count == 1 ? matches[0] : null;
+        }
+        catch (Exception error) when (Unavailable(error)) { return null; }
+    }
     internal async Task SetActiveAsync(bool value)
     {
         if (disposed || active == value) return;
@@ -77,8 +104,8 @@ internal sealed class MediaService : IDisposable
             do
             {
                 refreshAgain = false;
-                var candidates = manager.GetSessions().Where(s => !BrowserSource(s.SourceAppUserModelId)
-                    && (requiredSource is null || s.SourceAppUserModelId.Contains(requiredSource, StringComparison.OrdinalIgnoreCase))).ToArray();
+                var candidates = selectedPreview is not null ? new[] { selectedPreview.Session }
+                    : manager.GetSessions().Where(s => requiredSource is null || s.SourceAppUserModelId.Contains(requiredSource, StringComparison.OrdinalIgnoreCase)).ToArray();
                 Watch(candidates);
                 var next = await SelectMusic(candidates);
                 if (!active || disposed) return;
@@ -160,12 +187,6 @@ internal sealed class MediaService : IDisposable
         catch (Exception e) when (Unavailable(e) || e is ArgumentException) { }
         return string.IsNullOrWhiteSpace(id) ? "Player de mídia" : id;
     }
-    private static bool BrowserSource(string id)
-    {
-        string source = id.ToLowerInvariant();
-        return new[] { "chrome", "msedge", "microsoftedge", "firefox", "brave", "opera", "vivaldi", "browser", "youtube" }
-            .Any(source.Contains);
-    }
     private async Task<GlobalSystemMediaTransportControlsSession?> SelectMusic(GlobalSystemMediaTransportControlsSession[] candidates)
     {
         foreach (var candidate in candidates.OrderByDescending(s => s.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing))
@@ -174,11 +195,10 @@ internal sealed class MediaService : IDisposable
             {
                 var playback = candidate.GetPlaybackInfo();
                 if (playback.PlaybackStatus is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed or GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped) continue;
+                if (!MusicSessionPolicy.HasControls(playback.Controls)) continue;
                 var properties = await candidate.TryGetMediaPropertiesAsync();
                 if (!active || disposed) return null;
-                if (properties.PlaybackType == Windows.Media.MediaPlaybackType.Music) return candidate;
-                string source = candidate.SourceAppUserModelId.ToLowerInvariant();
-                if (properties.PlaybackType is null && new[] { "spotify", "musicbee", "foobar", "aimp", "itunes", "applemusic", "zunemusic", "tidal", "deezer", "qobuz", "winamp" }.Any(source.Contains)) return candidate;
+                if (MusicSessionPolicy.IsMusic(candidate.SourceAppUserModelId, properties.PlaybackType, selectedPreview?.MusicIdentity == true)) return candidate;
             }
             catch (Exception e) when (Unavailable(e)) { /* A disappearing player must not hide another music session. */ }
         }

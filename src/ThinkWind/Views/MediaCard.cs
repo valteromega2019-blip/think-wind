@@ -49,9 +49,9 @@ internal sealed class MediaCard : Grid, IDisposable
         // retain their contrast and hit areas.
         backgroundCover.Opacity = backgroundShade.Opacity = SystemParameters.HighContrast ? 1 : Math.Clamp(opacity, .05, 1);
     }
-    internal MediaCard(string? sourceFilter = null)
+    internal MediaCard(string? sourceFilter = null, MusicPreviewSelection? selection = null)
     {
-        service = new MediaService(Dispatcher, sourceFilter);
+        service = new MediaService(Dispatcher, sourceFilter, selection);
         backgroundCover = new Border { Background = artworkBackground, CornerRadius = new CornerRadius(20), IsHitTestVisible = false, Visibility = Visibility.Collapsed };
         backgroundShade = new Border { CornerRadius = new CornerRadius(20), IsHitTestVisible = false, Visibility = Visibility.Collapsed,
             Background = new LinearGradientBrush(Color.FromArgb(155, 8, 12, 18), Color.FromArgb(220, 8, 12, 18), 90) };
