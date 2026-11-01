@@ -61,6 +61,7 @@ internal sealed class WindowsTaskbar : IDisposable
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
     [DllImport("user32.dll")] private static extern bool ShowWindow(nint window, int command);
+    [DllImport("user32.dll")] private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] private static extern bool IsWindowEnabled(nint window);
     [DllImport("user32.dll")] private static extern bool EnableWindow(nint window, bool enabled);
     private delegate void ShellEvent(nint hook, uint kind, nint window, int objectId, int childId, uint thread, uint time);
@@ -72,7 +73,7 @@ internal sealed class WindowsTaskbar : IDisposable
     {
         if (args.Length == 0 || args[0] != "--taskbar-guard") return false;
         var hidden = new Dictionary<nint, (uint Process, bool Enabled, bool Visible)>();
-        nint shellHook = 0;
+        nint shellHook = 0, foregroundHook = 0, switchHook = 0, stateHook = 0;
         try
         {
             if (args.Length != 3 || !int.TryParse(args[1], out int pid) || !args[2].StartsWith(@"Local\OrbyLauncher.Taskbar.", StringComparison.Ordinal)) return true;
@@ -85,14 +86,31 @@ internal sealed class WindowsTaskbar : IDisposable
                 if (!hidden.TryGetValue(window, out var previous) || previous.Process != process)
                     hidden[window] = (process, IsWindowEnabled(window), IsWindowVisible(window));
                 if (IsWindowEnabled(window)) EnableWindow(window, false);
-                if (IsWindowVisible(window)) ShowWindow(window, 0);
+                if (IsWindowVisible(window))
+                {
+                    // Hide without activation, movement or a z-order change.
+                    // Explorer can reveal/reposition an existing taskbar during
+                    // Alt+Tab without producing a new object-show notification.
+                    SetWindowPos(window, 0, 0, 0, 0, 0, 0x0080 | 0x0010 | 0x0001 | 0x0002 | 0x0004);
+                    if (IsWindowVisible(window)) ShowWindow(window, 0);
+                }
             }
             void Sweep() => EnumWindows((window, _) => { Suppress(window); return true; }, 0);
             // The helper owns its message pump: shell show events are handled
             // here, without keyboard/mouse hooks or work on the launcher UI.
-            ShellEvent shown = (_, _, window, objectId, childId, _, _) =>
-            { if (window != 0 && objectId == 0 && childId == 0) Suppress(window); };
+            ShellEvent shown = (_, kind, window, objectId, childId, _, _) =>
+            {
+                if (window == 0 || objectId != 0 || childId != 0) return;
+                // State/location events are frequent in games: reject unrelated
+                // HWNDs before querying their class or invoking shell APIs.
+                if (kind != 0x8002 && !hidden.ContainsKey(window)) return;
+                Suppress(window);
+            };
             shellHook = SetWinEventHook(0x8002, 0x8002, 0, shown, 0, 0, 2);
+            ShellEvent changed = (_, _, _, _, _, _, _) => Sweep();
+            foregroundHook = SetWinEventHook(0x0003, 0x0003, 0, changed, 0, 0, 2);
+            switchHook = SetWinEventHook(0x0014, 0x0015, 0, changed, 0, 0, 2);
+            stateHook = SetWinEventHook(0x800A, 0x800B, 0, shown, 0, 0, 2);
             using var context = new System.Windows.Forms.ApplicationContext();
             using var recovery = new System.Windows.Forms.Timer { Interval = 250 };
             recovery.Tick += (_, _) =>
@@ -103,11 +121,15 @@ internal sealed class WindowsTaskbar : IDisposable
             Sweep(); recovery.Start();
             System.Windows.Forms.Application.Run(context);
             System.GC.KeepAlive(shown);
+            System.GC.KeepAlive(changed);
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or WaitHandleCannotBeOpenedException or UnauthorizedAccessException or System.ComponentModel.Win32Exception) { }
         finally
         {
             if (shellHook != 0) UnhookWinEvent(shellHook);
+            if (foregroundHook != 0) UnhookWinEvent(foregroundHook);
+            if (switchHook != 0) UnhookWinEvent(switchHook);
+            if (stateHook != 0) UnhookWinEvent(stateHook);
             foreach (var entry in hidden)
             {
                 GetWindowThreadProcessId(entry.Key, out uint process);
