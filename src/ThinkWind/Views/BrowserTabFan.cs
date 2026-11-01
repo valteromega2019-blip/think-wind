@@ -96,9 +96,11 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     internal void ConfigureAppearance(Preferences preferences)
     {
         var tint = preferences.UseCustomBarColor ? (Color)ColorConverter.ConvertFromString(preferences.BarBackgroundColor) : ThemeService.BaseColor;
-        // Each rounded surface transmits the preview's existing native Acrylic;
-        // no second opaque fill or simulated blur is placed over it.
-        tint.A = (byte)Math.Round(255 * Math.Clamp((preferences.DockOpacity ?? preferences.TintOpacity) * .48, .025, .65));
+        // Match the dock's material tint rather than reducing it to 48% again.
+        // The existing native Acrylic remains behind each rounded card.
+        double opacity = Math.Clamp(preferences.DockOpacity ?? preferences.TintOpacity, .05, 1);
+        if (ThemeService.Light) opacity = Math.Max(opacity, .82);
+        tint.A = (byte)Math.Round(255 * opacity);
         foreach (var surface in surfaces)
         {
             surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(tint);

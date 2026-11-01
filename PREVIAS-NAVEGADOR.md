@@ -5,6 +5,7 @@
 - Até quatro abas acessíveis em um leque vertical, com abertura por clique e animação curta que respeita movimento reduzido.
 - Cartões alinhados pelo mesmo eixo, com inclinação progressiva discreta somente nos cartões traseiros. Cada cartão tem superfície translúcida arredondada sobre o Acrylic nativo da prévia, acompanhando cor e opacidade configuradas. A área reserva espaço para os cantos inclinados. O cartão frontal e a área de comandos do Meet ficam alinhados pela base.
 - A inclinação traseira é em profundidade vertical, em torno do eixo X, com `Viewport2DVisual3D`; não é uma rotação lateral no plano da tela. A miniatura frontal continua reta, preservando o posicionamento nativo DWM.
+- A tonalidade de cada cartão usa a opacidade da barra sem o redutor extra de 48%, evitando transparência excessiva. O tema claro mantém o mesmo piso de contraste usado pela barra; cor personalizada e mudanças de opacidade continuam aplicadas em tempo real.
 - Seleção por UI Automation (`SelectionItemPattern`), usando o identificador de runtime e conferindo o processo proprietário. Abas ARIA dentro de páginas são descartadas.
 - As abas selecionadas e a aba reconhecida como Meet têm prioridade dentro do limite de quatro.
 - Um cartão lateral do Meet preserva o navegador. Os controles só aparecem após reconhecer a chamada real. Se apenas a aba for encontrada, aparece uma opção de abrir a reunião.
