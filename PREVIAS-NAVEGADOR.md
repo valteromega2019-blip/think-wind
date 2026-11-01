@@ -10,7 +10,7 @@
 
 ## Limitação de imagens por aba
 
-DWM disponibiliza imagens por HWND, não por aba interna do navegador. Apenas a aba ativa à frente do leque usa a imagem ao vivo da janela. As demais mostram título e opção de abertura; não repetem uma captura de outra aba. Uma imagem independente de todas as abas em segundo plano exige uma integração adicional do navegador e não foi implementada nesta alteração.
+DWM disponibiliza imagens por HWND, não por aba interna do navegador. Sem extensão, apenas a aba ativa à frente do leque usa a imagem ao vivo da janela; as demais mostram título e opção de abertura. A integração opcional em `extensions/orby-tabs` fornece a última captura de abas visitadas. Veja `EXTENSAO-NAVEGADOR.md` para instalação, autorização e limitações.
 
 Não são trocadas abas automaticamente para capturar imagens. O clique do usuário seleciona a aba e ativa a janela. Não são armazenadas capturas ou histórico das abas em disco.
 

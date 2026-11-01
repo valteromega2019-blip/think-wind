@@ -60,7 +60,7 @@ internal sealed partial class WindowPreview
         viewport.Child = browserLayout; Show(); Position(); refresh.Interval = TimeSpan.FromSeconds(2); refresh.Start();
     }
     private void DismissBrowser() => Hide();
-    private static string TabsSignature(IReadOnlyList<BrowserTab> tabs) => string.Join("|", tabs.Select(tab => $"{tab.Window}:{string.Join(",", tab.RuntimeId)}:{tab.Selected}:{tab.Title}"));
+    private static string TabsSignature(IReadOnlyList<BrowserTab> tabs) => string.Join("|", tabs.Select(tab => $"{tab.Window}:{string.Join(",", tab.RuntimeId)}:{tab.Selected}:{tab.Title}:{tab.CapturedAt}"));
     private async Task RefreshBrowserAsync()
     {
         if (browserReading || browserLifetime is null || IsInteracting) return;

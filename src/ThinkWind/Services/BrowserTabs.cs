@@ -10,7 +10,7 @@ using OrbyLauncher.Native;
 
 namespace OrbyLauncher.Services;
 
-internal sealed record BrowserTab(nint Window, int ProcessId, string Title, int[] RuntimeId, bool Selected)
+internal sealed record BrowserTab(nint Window, int ProcessId, string Title, int[] RuntimeId, bool Selected, string? PreviewImage = null, long CapturedAt = 0)
 {
     internal bool IsMeet => Title.StartsWith("Meet -", StringComparison.OrdinalIgnoreCase) || Title.Contains("Google Meet", StringComparison.OrdinalIgnoreCase);
 }
@@ -18,7 +18,7 @@ internal static class BrowserTabs
 {
     private static readonly SemaphoreSlim gate = new(1, 1);
     internal static bool IsBrowser(Desktop.RunningWindow window) =>
-        Path.GetFileNameWithoutExtension(window.Executable ?? "").ToLowerInvariant() is "msedge" or "chrome" or "firefox" or "brave";
+        Path.GetFileNameWithoutExtension(window.Executable ?? "").ToLowerInvariant() is "msedge" or "chrome" or "firefox" or "brave" or "chromium" or "opera" or "vivaldi";
     internal static async Task<IReadOnlyList<BrowserTab>> ReadAsync(IEnumerable<Desktop.RunningWindow> windows, CancellationToken cancellation)
     {
         await gate.WaitAsync(cancellation);
@@ -27,12 +27,14 @@ internal static class BrowserTabs
             return await Task.Run<IReadOnlyList<BrowserTab>>(() =>
             {
                 var result = new List<BrowserTab>();
+                var titles = new Dictionary<nint, string>();
                 foreach (var window in windows.Where(IsBrowser).Take(4))
                 {
                     cancellation.ThrowIfCancellationRequested();
                     try
                     {
                         var root = AutomationElement.FromHandle(window.Handle);
+                        titles[window.Handle] = root.Current.Name;
                         foreach (AutomationElement element in root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem)))
                         {
                             cancellation.ThrowIfCancellationRequested();
@@ -43,7 +45,8 @@ internal static class BrowserTabs
                     catch (Exception e) when (Unavailable(e)) { }
                 }
                 // Keep the active tab and Meet discoverable, then fill the four slots.
-                return result.OrderByDescending(tab => tab.Selected).ThenByDescending(tab => tab.IsMeet).Take(4).OrderBy(tab => tab.Selected).ToArray();
+                return BrowserBridge.ApplyImages(result, titles).OrderByDescending(tab => tab.Selected).ThenByDescending(tab => tab.IsMeet)
+                    .ThenByDescending(tab => tab.PreviewImage is not null).ThenByDescending(tab => tab.CapturedAt).Take(4).OrderBy(tab => tab.Selected).ToArray();
             }, cancellation);
         }
         finally { gate.Release(); }

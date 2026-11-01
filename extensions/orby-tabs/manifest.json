@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Orby · Abas do navegador",
+  "version": "0.1.0",
+  "description": "Compartilha prévias locais das abas visitadas com o Orby Launcher, mediante autorização.",
+  "permissions": ["tabs", "storage", "nativeMessaging"],
+  "optional_host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "worker.js" },
+  "action": { "default_popup": "popup.html", "default_title": "Orby · Prévias de abas" },
+  "incognito": "not_allowed"
+}

@@ -31,7 +31,7 @@ internal static class CallIntegration
         if (exe is "zoom" or "zoomworkplace") return "Zoom";
         // The active tab/title can change without replacing the HWND. Origin
         // verification in InspectControls decides whether this really is Meet.
-        if (exe is "chrome" or "msedge" or "firefox" or "brave")
+        if (exe is "chrome" or "msedge" or "firefox" or "brave" or "chromium" or "opera" or "vivaldi")
             return "Google Meet";
         return null;
     }
