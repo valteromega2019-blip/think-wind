@@ -41,6 +41,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     {
         status.SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = status });
         heading.SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = heading });
+        controls.HorizontalAlignment = HorizontalAlignment.Center;
         Children.Add(heading); Children.Add(controls);
         openCall.Click += async (_, _) =>
         {
@@ -125,9 +126,10 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
         {
             controlsSignature = nextSignature;
             controls.Children.Clear();
-            foreach (var command in snapshot.Commands)
+            foreach (var command in snapshot.Commands.OrderBy(command => command.Action switch
+                { CallAction.Microphone => 0, CallAction.Camera => 1, CallAction.Headphones => 2, _ => 3 }))
             {
-                string glyph = command.Action switch { CallAction.Microphone => "\uE720", CallAction.Headphones => "\uE7F6", _ => "\uE717" };
+                string glyph = command.Action switch { CallAction.Microphone => "\uE720", CallAction.Camera => "\uE714", CallAction.Headphones => "\uE7F6", _ => "\uE717" };
                 var symbol = new Grid { Width = 30, Height = 30, HorizontalAlignment = HorizontalAlignment.Center };
                 symbol.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = compact ? 18 : 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
                 if (command.Muted == true)
@@ -136,6 +138,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
                 {
                     CallAction.Leave => "Sair da chamada",
                     CallAction.Microphone => command.Muted == true ? "Mic mudo" : command.Muted == false ? "Mic aberto" : "Microfone",
+                    CallAction.Camera => command.Muted == true ? "Câmera desligada" : command.Muted == false ? "Câmera ligada" : "Câmera",
                     _ => command.Muted == true ? "Áudio mudo" : command.Muted == false ? "Áudio ativo" : "Áudio"
                 };
                 var button = new Button { Content = new StackPanel { Children =
@@ -143,10 +146,13 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
                         symbol,
                         new TextBlock { Text = label, MaxWidth = 82, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0) }
                     } }, ToolTip = command.AccessibleName, MinWidth = compact ? 76 : 86, MinHeight = compact ? 62 : 84, Padding = new Thickness(compact ? 6 : 10), Margin = new Thickness(3, compact ? 5 : 10, 3, 0) };
+                if (snapshot.Commands.Count >= 4) button.Width = compact ? 138 : 154;
                 System.Windows.Automation.AutomationProperties.SetName(button, command.AccessibleName);
                 if (command.Muted == true || command.Action == CallAction.Leave) button.Foreground = new SolidColorBrush(Color.FromRgb(248, 92, 106));
                 else if (command.Muted == false) button.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
                 button.SetResourceReference(Control.BackgroundProperty, command.Muted == false ? "Think.AccentSurface" : "Think.Control");
+                foreach (var text in ((StackPanel)button.Content).Children.OfType<TextBlock>().Concat(symbol.Children.OfType<TextBlock>()))
+                    text.SetBinding(TextBlock.ForegroundProperty, new System.Windows.Data.Binding(nameof(Button.Foreground)) { Source = button });
                 button.Click += async (_, _) =>
                 {
                     if (busy || lifetime is null || snapshot is null) return;

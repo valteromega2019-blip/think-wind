@@ -13,7 +13,7 @@ using OrbyLauncher.Native;
 
 namespace OrbyLauncher.Services;
 
-internal enum CallAction { Microphone, Headphones, Leave }
+internal enum CallAction { Microphone, Headphones, Leave, Camera }
 internal sealed record CallCommand(CallAction Action, string AccessibleName, bool? Muted = null);
 internal sealed record CallSnapshot(nint Window, int ProcessId, string App, string Title, IReadOnlyList<CallCommand> Commands);
 
@@ -143,6 +143,9 @@ internal static class CallIntegration
     private static CallAction? Classify(string name, string app)
     {
         string value = Fold(name);
+        // Strip shortcut suffixes and match actions, not a generic settings button.
+        int suffix = value.IndexOf(" ("); if (suffix >= 0) value = value[..suffix];
+        if (CameraDisabled(value).HasValue) return CallAction.Camera;
         if (app == "Tretalk")
         {
             if (value == "sair da voz") return CallAction.Leave;
@@ -150,8 +153,6 @@ internal static class CallIntegration
             if (value is "som ligado" or "som desligado") return CallAction.Headphones;
             return null;
         }
-        // Strip documented shortcut suffixes, retaining strict action labels.
-        int suffix = value.IndexOf(" ("); if (suffix >= 0) value = value[..suffix];
         if (value is "disconnect" or "desconectar" or "leave call" or "leave meeting" or "sair da chamada" or "sair da reuniao" or "sair da ligacao" or "hang up" or "desligar") return CallAction.Leave;
         if (value is "mute" or "unmute" or "silenciar" or "reativar som" or "ativar som" or "ativar microfone" or "desativar microfone" or "turn off microphone" or "turn on microphone" or "mute microphone" or "unmute microphone" or "ativar o microfone" or "desativar o microfone") return CallAction.Microphone;
         if ((app is "Microsoft Teams" or "Zoom") && (value is "mute my audio" or "unmute my audio" or "desativar meu audio" or "ativar meu audio" or "ativar mudo" or "desativar mudo")) return CallAction.Microphone;
@@ -169,6 +170,19 @@ internal static class CallIntegration
     private static bool? MutedState(CallAction action, string name, AutomationElement element, string app, nint window)
     {
         if (action == CallAction.Leave) return null;
+        if (action == CallAction.Camera)
+        {
+            // "Turn on" describes the next action: the camera is currently off.
+            // Camera toggles use the opposite meaning to Discord's mute toggle.
+            string cameraLabel = Fold(name).Split('(')[0].Trim();
+            if (CameraDisabled(cameraLabel) is bool disabled) return disabled;
+            if (element.TryGetCurrentPattern(TogglePattern.Pattern, out var cameraToggle))
+            {
+                var state = ((TogglePattern)cameraToggle).Current.ToggleState;
+                if (state != ToggleState.Indeterminate) return state == ToggleState.Off;
+            }
+            return null;
+        }
         if (app == "Tretalk")
         {
             string label = Fold(name);
@@ -193,6 +207,16 @@ internal static class CallIntegration
             or "mute my audio" or "desativar meu audio" or "ativar mudo") return false;
         return null;
     }
+    private static bool? CameraDisabled(string label) => label switch
+    {
+        "turn on camera" or "turn camera on" or "enable camera" or "turn on video" or "start video" or "start my video"
+            or "ativar camera" or "ativar a camera" or "ligar camera" or "ligar a camera"
+            or "iniciar video" or "iniciar meu video" or "ativar video" or "ativar o video" => true,
+        "turn off camera" or "turn camera off" or "disable camera" or "turn off video" or "stop video" or "stop my video"
+            or "desativar camera" or "desativar a camera" or "desligar camera" or "desligar a camera"
+            or "parar video" or "parar meu video" or "desativar video" or "desativar o video" => false,
+        _ => null
+    };
     private static bool? ReadAccessibleMute(nint window, string name)
     {
         var iid = new Guid("618736E0-3C3D-11CF-810C-00AA00389B71");
