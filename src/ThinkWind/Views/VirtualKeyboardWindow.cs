@@ -16,6 +16,8 @@ internal sealed partial class VirtualKeyboardWindow : FloatingWindow
     protected override bool AttachedTop => false;
     protected override bool UsesIslandAppearance => true;
     private readonly Grid keys = new();
+    private readonly HeaderIconMagnifier keyMagnifier;
+    private static readonly ControlTemplate keyTemplate = CreateKeyTemplate();
     private readonly TextBlock message = new() { Text = "Clique em um campo de texto e use as teclas abaixo.", FontSize = 11, TextWrapping = TextWrapping.Wrap };
     private readonly HashSet<string> modifiers = new();
     private readonly List<(Button Button, string Id)> modifierButtons = new();
@@ -28,6 +30,7 @@ internal sealed partial class VirtualKeyboardWindow : FloatingWindow
     internal VirtualKeyboardWindow(SettingsStore store) : base(store)
     {
         Title = "Orby Launcher · Teclado"; Focusable = false;
+        keyMagnifier = new HeaderIconMagnifier(keys, () => !resizing && !Store.IsEditing, includeText: true, highlightKeys: true);
         Surface.Padding = new Thickness(14); Surface.CornerRadius = new CornerRadius(20);
         var panel = new DockPanel(); var heading = new DockPanel { Margin = new Thickness(2, 0, 2, 10) };
         var close = Tool("Fechar", () => Hide()); DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
@@ -52,7 +55,7 @@ internal sealed partial class VirtualKeyboardWindow : FloatingWindow
         };
         IsVisibleChanged += (_, _) => { if (!IsVisible) { modifiers.Clear(); accent = ""; RefreshLetters(); RefreshModifierColors(); } };
         store.Changed += PreferencesChanged;
-        Closed += (_, _) => store.Changed -= PreferencesChanged;
+        Closed += (_, _) => { store.Changed -= PreferencesChanged; keyMagnifier.Dispose(); };
         Build(); keyboardLayout = LayoutPreferences();
         AddResizeEdges();
     }
@@ -127,16 +130,36 @@ internal sealed partial class VirtualKeyboardWindow : FloatingWindow
     private Button Add(int row, int column, string label, string? text, ushort key = 0, int span = 1, Func<string>? dynamicText = null)
     {
         var button = Tool(label, () => Press(dynamicText?.Invoke() ?? text, key)); button.MinWidth = 0; button.MinHeight = 0; button.Padding = new Thickness(2); button.FontSize = 13;
+        button.Content = new TextBlock { Text = label, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        button.Template = keyTemplate;
         AutomationProperties.SetName(button, label == " " ? "Espaço" : label);
         Grid.SetRow(button, row); Grid.SetColumn(button, column); Grid.SetColumnSpan(button, span); keys.Children.Add(button);
         if (text is { Length: > 1 } && text.StartsWith('@')) modifierButtons.Add((button, text[1..]));
         return button;
     }
+    private static ControlTemplate CreateKeyTemplate()
+    {
+        // The shared button template paints its own hover background. Keep
+        // this template bound to the key background so the accent can shine.
+        var surface = new FrameworkElementFactory(typeof(Border));
+        surface.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+        surface.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
+        surface.SetValue(Border.CornerRadiusProperty, new CornerRadius(12));
+        var content = new FrameworkElementFactory(typeof(ContentPresenter));
+        content.SetValue(ContentPresenter.ContentProperty, new TemplateBindingExtension(ContentControl.ContentProperty));
+        content.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        content.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+        surface.AppendChild(content);
+        var template = new ControlTemplate(typeof(Button)) { VisualTree = surface };
+        var pressed = new Trigger { Property = System.Windows.Controls.Primitives.ButtonBase.IsPressedProperty, Value = true };
+        pressed.Setters.Add(new Setter(UIElement.OpacityProperty, .85)); template.Triggers.Add(pressed);
+        return template;
+    }
     private string Letter(char plain, char upper) => (char.IsLetter(plain) ? (caps ^ modifiers.Contains("Shift") ? char.ToUpperInvariant(plain) : plain) : modifiers.Contains("Shift") ? upper : plain).ToString();
     private void RefreshLetters()
     {
         foreach (var entry in letterButtons)
-        { string label = Letter(entry.Plain, entry.Upper); entry.Button.Content = label; AutomationProperties.SetName(entry.Button, label); }
+        { string label = Letter(entry.Plain, entry.Upper); if (entry.Button.Content is TextBlock text) text.Text = label; AutomationProperties.SetName(entry.Button, label); }
     }
     private void RefreshModifierColors()
     {

@@ -25,6 +25,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
         internal readonly ScaleTransform Scale = new(1, 1);
         internal double Growth, Velocity;
         private Brush? highlight;
+        private Brush? highlightFill;
         internal Item(Button button, TextBlock glyph)
         {
             Button = button; Glyph = glyph; Original = glyph.RenderTransform; Origin = glyph.RenderTransformOrigin;
@@ -37,10 +38,11 @@ internal sealed class HeaderIconMagnifier : IDisposable
             if (!ReferenceEquals(Glyph.RenderTransform, Transform)) return;
             Glyph.RenderTransform = Original; Glyph.RenderTransformOrigin = Origin;
         }
-        internal void Highlight(Brush? brush)
+        internal void Highlight(Brush? brush, Brush? fill = null)
         {
-            if (ReferenceEquals(highlight, brush)) return;
-            highlight = brush;
+            if (ReferenceEquals(highlight, brush) && ReferenceEquals(highlightFill, fill)) return;
+            bool updateFill = highlightFill is not null || fill is not null;
+            highlight = brush; highlightFill = fill;
             // Animate the effective value, keeping the original style/binding
             // intact underneath so leaving restores the current theme ink.
             ObjectAnimationUsingKeyFrames? animation = null;
@@ -50,37 +52,45 @@ internal sealed class HeaderIconMagnifier : IDisposable
                 animation.KeyFrames.Add(new DiscreteObjectKeyFrame(brush, KeyTime.FromTimeSpan(TimeSpan.Zero)));
             }
             Glyph.BeginAnimation(TextBlock.ForegroundProperty, animation);
+            ObjectAnimationUsingKeyFrames? background = null;
+            if (fill is not null)
+            {
+                background = new ObjectAnimationUsingKeyFrames { Duration = TimeSpan.Zero, FillBehavior = FillBehavior.HoldEnd };
+                background.KeyFrames.Add(new DiscreteObjectKeyFrame(fill, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            }
+            if (updateFill) Button.BeginAnimation(Control.BackgroundProperty, background);
         }
     }
     private readonly Panel row;
     private readonly Func<bool> permitted;
+    private readonly bool includeText, highlightKeys;
     private readonly FrameClock clock = new();
     private readonly Stopwatch elapsed = new();
     private readonly List<Item> items = new();
     private double previous;
     private bool disposed;
-    internal HeaderIconMagnifier(Panel panel, Func<bool> canAnimate)
+    internal HeaderIconMagnifier(Panel panel, Func<bool> canAnimate, bool includeText = false, bool highlightKeys = false)
     {
-        row = panel; permitted = canAnimate; clock.Tick += Frame;
+        row = panel; permitted = canAnimate; this.includeText = includeText; this.highlightKeys = highlightKeys; clock.Tick += Frame;
         row.MouseMove += PointerChanged; row.MouseEnter += PointerChanged; row.MouseLeave += PointerChanged;
         row.Loaded += Loaded; row.Unloaded += Unloaded; row.IsVisibleChanged += VisibilityChanged;
         ThemeService.Changed += RefreshHighlight;
     }
-    private static IEnumerable<(Button Button, TextBlock Glyph)> Targets(Panel panel)
+    private static IEnumerable<(Button Button, TextBlock Glyph)> Targets(Panel panel, bool includeText)
     {
         foreach (UIElement child in panel.Children)
         {
             if (child is Button button && button.Content is TextBlock glyph
-                && (glyph.FontFamily.Source.Contains("Icons", StringComparison.OrdinalIgnoreCase)
+                && (includeText || glyph.FontFamily.Source.Contains("Icons", StringComparison.OrdinalIgnoreCase)
                     || glyph.FontFamily.Source.Contains("MDL2", StringComparison.OrdinalIgnoreCase)))
                 yield return (button, glyph);
             else if (child is Panel nested)
-                foreach (var target in Targets(nested)) yield return target;
+                foreach (var target in Targets(nested, includeText)) yield return target;
         }
     }
     private void RefreshTargets()
     {
-        var targets = Targets(row).ToArray();
+        var targets = Targets(row, includeText).ToArray();
         if (targets.Length == items.Count && targets.Zip(items).All(pair => ReferenceEquals(pair.First.Glyph, pair.Second.Glyph))) return;
         Reset(); foreach (var item in items) item.Restore(); items.Clear();
         foreach (var target in targets) items.Add(new Item(target.Button, target.Glyph));
@@ -88,8 +98,11 @@ internal sealed class HeaderIconMagnifier : IDisposable
     private void RefreshHighlight()
     {
         foreach (var item in items)
-            item.Highlight(row.IsVisible && item.Button.IsMouseOver && item.Button.IsEnabled && item.Glyph.IsVisible
-                ? item.Glyph.TryFindResource("Think.Accent") as Brush : null);
+        {
+            bool hover = row.IsVisible && item.Button.IsMouseOver && item.Button.IsEnabled && item.Glyph.IsVisible;
+            item.Highlight(hover ? item.Glyph.TryFindResource(highlightKeys ? "Think.OnAccent" : "Think.Accent") as Brush : null,
+                hover && highlightKeys ? item.Button.TryFindResource("Think.Accent") as Brush : null);
+        }
     }
     private void PointerChanged(object sender, MouseEventArgs args) { RefreshTargets(); RefreshHighlight(); Wake(); }
     private void Loaded(object sender, RoutedEventArgs args) { RefreshTargets(); RefreshHighlight(); Wake(); }

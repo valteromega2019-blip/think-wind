@@ -19,6 +19,7 @@ Implementação isolada na branch `feature/teclado-virtual`, a partir da base 0.
 - WS_EX_NOACTIVATE e WM_MOUSEACTIVATE impedem a janela do teclado de tomar foco durante cliques. O botão da ilha também preserva o foco antes da ativação. O último destino externo é observado pelos eventos de primeiro plano já existentes, sem novos hooks globais.
 - Não registra, armazena nem transmite o conteúdo digitado. O reconhecimento de modificadores físicos é uma consulta pontual por clique, sem polling em loop.
 - Nenhum serviço ou temporizador próprio. Letras e estados são atualizados sem reconstruir a grade a cada tecla. A janela é criada sob demanda, ocultada pelo Modo Jogo existente e libera modificadores locais ao ocultar.
+- Hover das teclas usa o mesmo mecanismo de composição e mola dos ícones superiores: destaque na cor do tema com contraste automático e zoom gradual por distância, incluindo as vizinhas. Apenas o conteúdo visual cresce, sem mudar as áreas de clique ou o tamanho da janela. O relógio de animação existente para quando o movimento estabiliza e quando o teclado é ocultado; respeita a opção de animações do Windows. Modificadores recuperam sua indicação de selecionado ao sair do hover.
 
 ## Limitações explícitas
 
