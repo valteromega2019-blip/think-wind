@@ -79,7 +79,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
         ((Panel)choices.Parent).Children.Remove(choices);
         ((Panel)locationName.Parent).Children.Remove(locationName);
         ((Panel)status.Parent).Children.Remove(status);
-        for (int i = 0; i < 5; i++) RowDefinitions.Add(new RowDefinition { Height = i == 2 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
+        for (int i = 0; i < 5; i++) RowDefinitions.Add(new RowDefinition { Height = i == 3 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
         var header = new StackPanel { Margin = new Thickness(2, 2, 2, 0) };
         header.Children.Add(setupRow); header.Children.Add(choices);
         locationName.FontSize = 14; locationName.MaxHeight = double.PositiveInfinity;
@@ -93,13 +93,14 @@ internal sealed class WeatherWidget : Grid, IDisposable
         condition.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         reading.Children.Add(temperature); reading.Children.Add(condition); Grid.SetColumn(reading, 1); current.Children.Add(reading);
         Grid.SetRow(current, 1); Children.Add(current);
-        var metrics = new Grid { Margin = new Thickness(2, 6, 2, 12) };
+        var metrics = new Grid { Margin = new Thickness(2, 12, 2, 16) };
         string[] labels = { "Sensação", "Mínima", "Máxima" }; TextBlock[] values = { feelsLike, minimum, maximum };
         for (int i = 0; i < values.Length; i++)
         {
             metrics.ColumnDefinitions.Add(new ColumnDefinition());
-            var cell = new StackPanel { Margin = new Thickness(i == 0 ? 0 : 6, 0, 0, 0) };
-            var label = new TextBlock { Text = labels[i], FontSize = 11, Margin = new Thickness(0, 0, 0, 4), TextWrapping = TextWrapping.Wrap };
+            var cell = new StackPanel { Margin = new Thickness(i == 0 ? 0 : 6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            var label = new TextBlock { Text = labels[i], FontSize = 14, Margin = new Thickness(0, 0, 0, 6), TextWrapping = TextWrapping.Wrap };
+            values[i].FontSize = 26;
             label.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
             cell.Children.Add(label); cell.Children.Add(values[i]); Grid.SetColumn(cell, i); metrics.Children.Add(cell);
         }
@@ -107,7 +108,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
         var footer = new DockPanel { Margin = new Thickness(2, 0, 2, 0) };
         source.Content = "Open-Meteo ↗"; source.Margin = new Thickness(6, 0, 0, 0); source.VerticalAlignment = VerticalAlignment.Bottom;
         source.ToolTip = "Dados meteorológicos: Open-Meteo"; DockPanel.SetDock(source, Dock.Right); footer.Children.Add(source);
-        status.FontSize = 10; status.Margin = new Thickness(0); status.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); footer.Children.Add(status);
+        status.FontSize = 11; status.Margin = new Thickness(0); status.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); footer.Children.Add(status);
         Grid.SetRow(footer, 4); Children.Add(footer);
     }
     private bool HasLocation => store.Value.WeatherLatitude is double lat && double.IsFinite(lat) && lat is >= -90 and <= 90
