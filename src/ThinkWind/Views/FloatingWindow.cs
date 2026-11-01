@@ -59,6 +59,9 @@ internal abstract class FloatingWindow : Window
     private UIElement? openingContent;
     private readonly Border centerGuide = new() { Width = 1, Opacity = .35, IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed };
     private (int Width, int Height, int Radius, bool Top, double Scale) lastClip;
+    private readonly RectangleGeometry roundedClip = new();
+    private readonly RectangleGeometry topClip = new();
+    private GeometryGroup? roundedTopClip;
     protected FloatingWindow(SettingsStore store)
     {
         Store = store;
@@ -164,7 +167,8 @@ internal abstract class FloatingWindow : Window
             Surface.Background = new LinearGradientBrush(
                 Color.FromArgb(235, 132, 149, 168), Color.FromArgb(220, 76, 91, 110), 90);
         }
-        Surface.CornerRadius = SquareTopCorners ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
+        var corners = SquareTopCorners ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
+        if (Surface.CornerRadius != corners) Surface.CornerRadius = corners;
         Surface.Margin = TransparentInsets;
         centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;
         UpdateClip();
@@ -198,29 +202,30 @@ internal abstract class FloatingWindow : Window
         if (next != lastClip)
         {
             lastClip = next;
-            var geometry = new StreamGeometry();
             double width = next.Item1 / scale, height = next.Item2 / scale;
             double r = Math.Min(radius, Math.Min(width, height) / 2);
-            using (var context = geometry.Open())
+            roundedClip.Rect = new Rect(0, 0, width, height);
+            roundedClip.RadiusX = roundedClip.RadiusY = r;
+            Geometry geometry = roundedClip;
+            if (SquareTopCorners)
             {
-                context.BeginFigure(new Point(SquareTopCorners ? 0 : r, 0), true, true);
-                context.LineTo(new Point(SquareTopCorners ? width : width - r, 0), true, false);
-                if (!SquareTopCorners) context.ArcTo(new Point(width, r), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
-                context.LineTo(new Point(width, height - r), true, false);
-                context.ArcTo(new Point(width - r, height), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
-                context.LineTo(new Point(r, height), true, false);
-                context.ArcTo(new Point(0, height - r), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
-                context.LineTo(new Point(0, SquareTopCorners ? 0 : r), true, false);
-                if (!SquareTopCorners) context.ArcTo(new Point(r, 0), new Size(r, r), 0, false, SweepDirection.Clockwise, true, false);
+                if (roundedTopClip is null)
+                {
+                    roundedTopClip = new GeometryGroup { FillRule = FillRule.Nonzero };
+                    roundedTopClip.Children.Add(roundedClip); roundedTopClip.Children.Add(topClip);
+                }
+                topClip.Rect = new Rect(0, 0, width, r);
+                geometry = roundedTopClip;
             }
-            geometry.Freeze(); ((Grid)Content).Clip = geometry;
+            if (!ReferenceEquals(((Grid)Content).Clip, geometry)) ((Grid)Content).Clip = geometry;
         }
         backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible);
     }
     private void AlignSurfaceCorners(OverlayChrome.PixelRect rectangle, double scale)
     {
         double effective = Math.Clamp(radius, 0, Math.Max(0, Math.Min(rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top)) / (2 * scale));
-        Surface.CornerRadius = SquareTopCorners ? new CornerRadius(0, 0, effective, effective) : new CornerRadius(effective);
+        var corners = SquareTopCorners ? new CornerRadius(0, 0, effective, effective) : new CornerRadius(effective);
+        if (Surface.CornerRadius != corners) Surface.CornerRadius = corners;
     }
     protected void Place(double width, double height, bool animate = false)
     {

@@ -124,8 +124,8 @@ internal sealed class BackdropHost : IDisposable
         {
             // Keep Mica itself native; clip its HWND to the same custom outline
             // as WPF instead of intersecting it with a second, fixed DWM radius.
-            int corners = 1; // DWMWCP_DONOTROUND: our HRGN owns the rounding.
-            DwmSetWindowAttribute(Handle, 33, ref corners, 4);
+            // Corner policy is configured once in the constructor. Reapplying
+            // it for each intermediate size needlessly invalidates DWM state.
             composition?.Resize(width, height);
             OverlayChrome.Clip(Handle, width, height, clippedRadius, top);
             lastGeometry = geometry;
