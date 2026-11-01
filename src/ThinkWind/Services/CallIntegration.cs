@@ -22,6 +22,8 @@ internal sealed record CallSnapshot(nint Window, int ProcessId, string App, stri
 internal static class CallIntegration
 {
     private static readonly SemaphoreSlim gate = new(1, 1);
+    [DllImport("oleacc.dll")] private static extern int AccessibleObjectFromWindow(nint window, uint objectId, ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out Accessibility.IAccessible accessible);
+    [DllImport("oleacc.dll")] private static extern int AccessibleChildren(Accessibility.IAccessible parent, int start, int count, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] object[] children, out int obtained);
     internal static bool IsCandidate(Desktop.RunningWindow window) => AppName(window) is not null;
     private static string? AppName(Desktop.RunningWindow window)
     {
@@ -117,7 +119,7 @@ internal static class CallIntegration
         foreach (var pair in matches.Where(pair => pair.Value.Count == 1))
         {
             string name = pair.Value[0].Name;
-            commands.Add(new(pair.Key, name, MutedState(pair.Key, name, pair.Value[0].Element, app)));
+            commands.Add(new(pair.Key, name, MutedState(pair.Key, name, pair.Value[0].Element, app, (nint)root.Current.NativeWindowHandle)));
         }
         if (execute is null || !commands.Any(c => c.Action == CallAction.Leave) || !commands.Any(c => c.Action == CallAction.Microphone)) return false;
         var selected = commands.FirstOrDefault(c => c.Action == execute.Action && c.AccessibleName == execute.AccessibleName);
@@ -156,7 +158,7 @@ internal static class CallIntegration
             if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark) result.Append(char.ToLowerInvariant(c));
         return result.ToString().Trim();
     }
-    private static bool? MutedState(CallAction action, string name, AutomationElement element, string app)
+    private static bool? MutedState(CallAction action, string name, AutomationElement element, string app, nint window)
     {
         if (action == CallAction.Leave) return null;
         // Discord can retain the label "Mute" even when aria-pressed is on.
@@ -166,14 +168,7 @@ internal static class CallIntegration
             var state = ((TogglePattern)toggle).Current.ToggleState;
             if (state != ToggleState.Indeterminate) return state == ToggleState.On;
         }
-        if (app == "Discord" && element.TryGetCurrentPattern(LegacyIAccessiblePattern.Pattern, out var legacy))
-        {
-            var state = ((LegacyIAccessiblePattern)legacy).Current;
-            if ((state.State & (8u | 16u)) != 0) return true; // PRESSED / CHECKED
-            string actionName = Fold(state.DefaultAction ?? "");
-            if (actionName is "uncheck" or "desmarcar") return true;
-            if (actionName is "check" or "marcar") return false;
-        }
+        if (app == "Discord" && ReadAccessibleMute(window, name) is bool accessibleState) return accessibleState;
         string value = Fold(name).Split('(')[0].Trim();
         if (value is "unmute" or "undeafen" or "ativar som" or "reativar som" or "ativar audio" or "desensurdecer"
             or "ativar microfone" or "ativar o microfone" or "turn on microphone" or "unmute microphone"
@@ -182,6 +177,40 @@ internal static class CallIntegration
             or "desativar microfone" or "desativar o microfone" or "turn off microphone" or "mute microphone"
             or "mute my audio" or "desativar meu audio" or "ativar mudo") return false;
         return null;
+    }
+    private static bool? ReadAccessibleMute(nint window, string name)
+    {
+        var iid = new Guid("618736E0-3C3D-11CF-810C-00AA00389B71");
+        var clock = Stopwatch.StartNew(); int visited = 0;
+        bool? Visit(Accessibility.IAccessible accessible, int child, int depth)
+        {
+            if (depth > 18 || visited++ > 700 || clock.ElapsedMilliseconds > 200) return null;
+            try
+            {
+                if (accessible.get_accName(child) == name)
+                {
+                    int state = Convert.ToInt32(accessible.get_accState(child));
+                    if ((state & (8 | 16)) != 0) return true;
+                    string command = Fold(accessible.get_accDefaultAction(child) ?? "");
+                    if (command is "uncheck" or "desmarcar") return true;
+                    if (command is "check" or "marcar") return false;
+                }
+                if (child != 0) return null;
+                int count = Math.Clamp(accessible.accChildCount, 0, 128);
+                if (count == 0) return null;
+                var children = new object[count];
+                if (AccessibleChildren(accessible, 0, count, children, out int obtained) < 0) return null;
+                foreach (var item in children.Take(Math.Clamp(obtained, 0, count)))
+                {
+                    bool? result = item is Accessibility.IAccessible next ? Visit(next, 0, depth + 1) : item is int id && id > 0 ? Visit(accessible, id, depth + 1) : null;
+                    if (result.HasValue) return result;
+                }
+            }
+            catch (Exception e) when (Unavailable(e) || e is ArgumentException or NotImplementedException) { }
+            return null;
+        }
+        try { return AccessibleObjectFromWindow(window, 0xFFFFFFFC, ref iid, out var root) >= 0 ? Visit(root, 0, 0) : null; }
+        catch (Exception e) when (Unavailable(e)) { return null; }
     }
     private static bool Unavailable(Exception e) => e is ElementNotAvailableException or ElementNotEnabledException or InvalidOperationException or COMException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or NotSupportedException or TimeoutException or System.Security.SecurityException;
 }

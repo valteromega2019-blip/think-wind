@@ -44,7 +44,7 @@ internal sealed partial class WindowPreview
             call.ConfigureCompact(true);
             call.Width = 300; call.Margin = new Thickness(0);
             var compactCall = new Viewbox { Width = 320, Height = 160, Margin = new Thickness(10, 0, 0, 12), VerticalAlignment = VerticalAlignment.Bottom,
-                Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = System.Windows.Media.StretchDirection.DownOnly, Child = call };
+                Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = call };
             browserLayout.Children.Add(compactCall); call.Present(meeting, windows);
         }
         else if (Store.Value.CallPreviewsEnabled && tabs.FirstOrDefault(tab => tab.IsMeet) is { } meet)
