@@ -29,12 +29,15 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
     private bool placed;
     internal static int ActiveCount { get; private set; }
     internal bool Available => thumbnail != 0;
+    internal double AspectRatio { get; private set; } = 16d / 9;
     internal WindowThumbnail(nint owner, nint source)
     {
         // DWM thumbnails need a redirected destination. NOREDIRECTIONBITMAP is
         // appropriate for our Composition backdrop, but not for this HWND.
         CreateHandle(new Forms.CreateParams { Caption = "", Parent = owner, Style = unchecked((int)0x80000000), ExStyle = 0x08000088, X = -10000, Y = -10000, Width = 1, Height = 1 });
         if (DwmRegisterThumbnail(Handle, source, out thumbnail) < 0) { thumbnail = 0; DestroyHandle(); return; }
+        if (DwmQueryThumbnailSourceSize(thumbnail, out var sourceSize) >= 0 && sourceSize.Width > 0 && sourceSize.Height > 0)
+            AspectRatio = sourceSize.Width / (double)sourceSize.Height;
         ActiveCount++;
     }
     internal bool Place(Point topLeft, Size size)

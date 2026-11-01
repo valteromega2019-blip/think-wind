@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -16,9 +15,10 @@ internal sealed partial class WindowPreview : FloatingWindow
     protected override bool AttachedTop => false;
     private readonly StackPanel body = new();
     private readonly Viewbox viewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
-    private readonly UniformGrid grid = new();
+    private readonly StackPanel grid = new() { Orientation = Orientation.Horizontal };
     private readonly List<(Border Area, WindowThumbnail Host)> thumbnails = new();
     private readonly List<Border> previewAreas = new();
+    private readonly List<StackPanel> previewCards = new();
     private readonly Func<OverlayChrome.PixelRect> anchor;
     private readonly DispatcherTimer refresh = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly ShellIcons icons = new();
@@ -124,15 +124,16 @@ internal sealed partial class WindowPreview : FloatingWindow
     }
     private void Render()
     {
-        Release(); grid.Children.Clear(); previewAreas.Clear();
+        Release(); grid.Children.Clear(); previewAreas.Clear(); previewCards.Clear();
         while (body.Children.Count > 1) body.Children.RemoveAt(1);
         if (windows.Count == 0) { Hide(); return; }
         perPage = Math.Clamp((int)((Display.Width - 36) / 240), 1, 4);
         int pages = Math.Max(1, (windows.Count + perPage - 1) / perPage); page = Math.Clamp(page, 0, pages - 1);
-        var shown = windows.Skip(page * perPage).Take(perPage).ToArray(); grid.Columns = shown.Length; grid.Rows = 1;
+        var shown = windows.Skip(page * perPage).Take(perPage).ToArray();
         foreach (var window in shown)
         {
-            var card = new StackPanel { Margin = new Thickness(4) }; var heading = new DockPanel();
+            var card = new StackPanel { Margin = new Thickness(4), VerticalAlignment = VerticalAlignment.Bottom }; var heading = new DockPanel();
+            previewCards.Add(card);
             var controls = new StackPanel { Orientation = Orientation.Horizontal };
             DockPanel.SetDock(controls, Dock.Right); heading.Children.Add(controls);
             var minimize = PreviewControl("Minimizar esta janela", "\uE921", async () =>
@@ -152,6 +153,7 @@ internal sealed partial class WindowPreview : FloatingWindow
             previewAreas.Add(area);
             var open = ActionButton(window.Title, async () => { Hide(); if (!await Desktop.ActivateFromDock(window.Handle, false) && ElevatedWindowAction.NeedsAdminFallback(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: false, owner: Owner ?? this); }); open.ToolTip = null; open.Content = area; open.SetResourceReference(StyleProperty, "Think.IconButton"); open.Padding = new Thickness(0); card.Children.Add(open); grid.Children.Add(card);
             var host = new WindowThumbnail(new WindowInteropHelper(this).Handle, window.Handle);
+            area.Tag = host.AspectRatio;
             if (host.Available) thumbnails.Add((area, host)); else { host.Dispose(); area.Child = new TextBlock { Text = "Prévia indisponível. Clique para abrir.", TextWrapping = TextWrapping.Wrap, FontSize = 11, VerticalAlignment = VerticalAlignment.Center }; }
         }
         if (pages > 1)
@@ -207,13 +209,31 @@ internal sealed partial class WindowPreview : FloatingWindow
             PlaceAbove(mediaWidth, viewport.DesiredSize.Height, mediaBounds, false);
             return;
         }
-        double width = Math.Min(Display.Width - 16, Math.Max(1, grid.Columns) * 280 + 20);
-        var bounds = anchor(); body.Width = width - 20; viewport.Width = body.Width;
-        // IconButton centres its ContentPresenter. An empty Border otherwise
-        // measures to zero width, so DWM never receives a destination rectangle.
-        foreach (var area in previewAreas) area.Width = Math.Max(1, body.Width / Math.Max(1, grid.Columns) - 8);
+        var bounds = anchor();
+        double slotWidth = Math.Max(48, (Display.Width - 36) / Math.Max(1, previewAreas.Count) - 8);
+        double contentWidth = 0;
+        for (int index = 0; index < previewAreas.Count; index++)
+        {
+            var area = previewAreas[index];
+            double aspect = area.Tag is double ratio && ratio > 0 && double.IsFinite(ratio) ? ratio : 16d / 9;
+            double maximum = Math.Min(260, slotWidth);
+            double imageWidth = Math.Clamp(120 * aspect, Math.Min(128, maximum), maximum);
+            // Fit the card to the actual image, rather than placing a narrow
+            // thumbnail in a fixed wide cell with unused side/background space.
+            area.Width = previewCards[index].Width = imageWidth;
+            area.Height = imageWidth / aspect;
+            contentWidth += imageWidth + 8;
+        }
+        double width = Math.Min(Display.Width - 16, Math.Max(48, contentWidth) + 20);
+        body.Width = width - 20;
         viewport.MaxHeight = Math.Max(48, Math.Min(400, (bounds.Top - Display.Work.Top) / Display.Scale - 36));
-        viewport.Measure(new Size(body.Width, viewport.MaxHeight));
-        PlaceAbove(width, viewport.DesiredSize.Height + 20, bounds, false);
+        FontSizing.PrepareForMeasure(body);
+        body.Measure(new Size(body.Width, double.PositiveInfinity));
+        double scale = Math.Min(1, viewport.MaxHeight / Math.Max(1, body.DesiredSize.Height));
+        viewport.Width = body.Width * scale;
+        viewport.Measure(new Size(viewport.Width, viewport.MaxHeight));
+        // When a tall source needs scaling, the backdrop must shrink with the
+        // image too; keep its 10-DIP outer padding identical on every side.
+        PlaceAbove(viewport.Width + 20, viewport.DesiredSize.Height + 20, bounds, false);
     }
 }

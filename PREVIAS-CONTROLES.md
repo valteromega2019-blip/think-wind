@@ -10,6 +10,12 @@ Somente o título/dados superiores reservam espaço lateral para evitar colisõe
 o restante do cartão preserva a largura anterior. As prévias compactas do
 navegador voltam à altura anterior, sem a reserva da faixa externa.
 
+Nas miniaturas normais, o fundo acompanha a proporção informada pelo DWM para
+cada janela, em vez de reservar uma célula de largura fixa. Laterais e base
+usam o mesmo afastamento. Se faltar altura, conteúdo e largura do fundo são
+reduzidos juntos, preservando o espaçamento externo e a proporção da imagem.
+Várias janelas continuam em fileira, alinhadas pela base, com paginação.
+
 - Spotify e outros players: ações restritas às janelas associadas ao ícone.
 - Discord, Tretalk e demais chamadas: alvo da chamada identificada.
 - Meet e música no navegador: controles junto ao cartão integrado. Fechar
