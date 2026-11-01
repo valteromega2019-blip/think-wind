@@ -7,6 +7,8 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using System.Windows.Interop;
+using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
@@ -41,6 +43,7 @@ internal sealed partial class TutorialWindow : Window
     private readonly TextBlock hint = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 12) };
     private readonly StackPanel actions = new() { Orientation = Orientation.Horizontal };
     private readonly Border card;
+    private BackdropHost? backdrop;
     private Progress progress = new();
     private TargetAdorner? highlight;
     private AdornerLayer? highlightLayer;
@@ -66,11 +69,29 @@ internal sealed partial class TutorialWindow : Window
         SetResourceReference(ForegroundProperty, "Think.Text");
         module.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent");
         Content = card;
+        SourceInitialized += (_, _) =>
+        {
+            backdrop = new BackdropHost(this);
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook((nint hwnd, int message, nint wParam, nint lParam, ref bool handled) =>
+            { if (message == 0x0047) SyncBackdrop(); return 0; });
+            SyncBackdrop();
+        };
+        IsVisibleChanged += (_, _) => SyncBackdrop();
+        SizeChanged += (_, _) => SyncBackdrop();
+        Closed += (_, _) => backdrop?.Dispose();
         follow.Tick += (_, _) => FollowTarget();
         advance.Tick += (_, _) => AdvanceStep();
         TutorialGuide.Performed += Performed;
         Closed += (_, _) => { follow.Stop(); advance.Stop(); ClearHighlight(); TutorialGuide.Active = false; TutorialGuide.KeepDockOpen = TutorialGuide.KeepIslandOpen = TutorialGuide.CollapseDockOnDesktop = false; TutorialGuide.Performed -= Performed; };
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape) { Pause(); e.Handled = true; } };
+    }
+    private void SyncBackdrop()
+    {
+        if (backdrop is null) return;
+        backdrop.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
+        if (OverlayChrome.GetWindowRect(new WindowInteropHelper(this).Handle, out var rectangle))
+            backdrop.Synchronize(rectangle, 20 * (PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1), false, IsVisible);
+        if (!backdrop.MaterialAvailable) card.SetResourceReference(Border.BackgroundProperty, "Think.Background");
     }
     internal void OfferFirstRun()
     {
@@ -120,6 +141,7 @@ internal sealed partial class TutorialWindow : Window
     }
     private void StartVisible()
     {
+        if (!blocked()) SystemToolsMenu.ShowDesktop();
         finishing = false; TutorialGuide.Active = true; Render();
         if (!blocked()) Show();
         follow.Start(); FollowTarget();
@@ -137,6 +159,7 @@ internal sealed partial class TutorialWindow : Window
     }
     private void Render()
     {
+        FontSizing.Apply(this, store.Value.FontScale);
         success = false; finishing = false; lastGuideBounds = null; ClearHighlight(); actions.Children.Clear();
         TutorialGuide.KeepDockOpen = progress.Step >= 0 && progress.Step <= 2;
         TutorialGuide.KeepIslandOpen = progress.Step >= 4 && progress.Step <= 6;
@@ -146,7 +169,7 @@ internal sealed partial class TutorialWindow : Window
             module.Text = "Bem-vindo ao Orby Launcher"; title.Text = "Vamos conhecer seu desktop?";
             description.Text = "Três módulos rápidos. Siga os destaques e use os controles de verdade: o guia reconhece suas ações e avança automaticamente.";
             hint.Text = "Você pode pular etapas ou sair a qualquer momento. O guia não altera suas configurações.";
-            AddAction("Começar", () => { progress.Step = 0; SaveProgress(); Render(); });
+            AddAction("Começar", () => { if (!blocked()) SystemToolsMenu.ShowDesktop(); progress.Step = 0; SaveProgress(); Render(); });
             AddAction("Agora não", Pause);
         }
         else if (progress.Step >= Steps.Length)

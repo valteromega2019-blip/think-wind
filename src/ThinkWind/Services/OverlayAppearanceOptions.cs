@@ -51,7 +51,7 @@ public sealed record OverlayPalette(Color Background, Color Block, Color Graph, 
         Color background = Parse(settings.BackgroundColor), text = Parse(settings.TextColor), accent = Parse(settings.AccentColor);
         Color block, border, muted;
         if (settings.SyncWithAppTheme) {
-            background = ThemeService.BaseColor; text = Read("Think.Text", text); accent = Read("Think.Accent", accent);
+            background = island?.UseCustomBarColor == true ? Parse(island.BarBackgroundColor) : ThemeService.BaseColor; text = Read("Think.Text", text); accent = Read("Think.Accent", accent);
             block = Mix(background, text, .06); border = Read("Think.Hover", Mix(background, text, .25));
             muted = Read("Think.Muted", Mix(background, text, .75));
             if (island is not null)

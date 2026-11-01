@@ -150,6 +150,10 @@ internal static class Program
             var installed = Store("tutorial-installation"); Require(!installed.IsNewProfile && installed.Value.TutorialPending);
             Require(installed.TutorialStatePath != PathFor("tutorial-installation"));
         });
+        Run("Aparência: contraste em 125 fundos e escolha manual", AppearanceChecks.Contrast);
+        Run("Aparência: persistência e normalização da tipografia", () => AppearanceChecks.Persistence(PathFor("typography")));
+        Run("Aparência: dois temas, cores, fontes e escalas 100–250%", AppearanceChecks.ResourcesAndLayout);
+        Run("Aparência: Acrylic nativo dos menus e liberação em ambos os temas", AppearanceChecks.NativeMenus);
         Console.WriteLine($"RESULTADO: {passed} aprovados; {failed} falhos; {skipped} ignorados.");
         Console.WriteLine("Arquivos temporários isolados: " + Root);
         BackdropComposition.Shutdown();

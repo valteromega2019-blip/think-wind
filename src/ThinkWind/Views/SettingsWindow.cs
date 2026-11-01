@@ -81,6 +81,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     }
     private void StoreChanged(object? sender, EventArgs e)
     {
+        refreshTypography?.Invoke();
         if (weatherVisibilityCheck is not null && weatherVisibilityCheck.IsChecked != store.Value.ShowWeatherInHeader)
         {
             bool previous = building; building = true;
@@ -118,18 +119,24 @@ internal sealed partial class SettingsWindow : FloatingWindow
     {
         building = true; content.Children.Clear(); ClearSettingsTabs();
         var general = Section("Aparência", "Grafite, ciano e superfícies limpas — identidade Think.");
-        Slider(general, "Tamanho das fontes", .8, 2.5, store.Value.FontScale, value => Change(p => p.FontScale = value), "P0", .05);
+
         Select(general, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
         Slider(general, "Opacidade dos blocos e controles", .1, .9, store.Value.InnerSurfaceOpacity, v => Change(p => p.InnerSurfaceOpacity = v), "P0", .05);
         AddColorSetting(general, "Cor de destaque", store.Value.AccentColor, value => Change(p => p.AccentColor = value));
         Check(general, "Usar uma cor própria no fundo das barras", store.Value.UseCustomBarColor, value => Change(p => p.UseCustomBarColor = value));
         AddColorSetting(general, "Cor do fundo · barra de aplicativos e central de controle", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));
-        Note(general, "Desative a cor própria para voltar ao fundo do tema. A opacidade e o Acrylic continuam nos controles de cada barra; a cor própria tem prioridade sobre acompanhar a cor do aplicativo.");
+        Note(general, "Desative a cor própria para voltar ao fundo do tema. A opacidade e o Acrylic são ajustados abaixo para cada barra; a cor própria tem prioridade sobre acompanhar a cor do aplicativo.");
+        general.Children.Add(new TextBlock { Text = "Barra de aplicativos", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 8) });
+        Select(general, "Material e desfoque", store.Value.DockMaterial, Materials(), v => Change(p => p.DockMaterial = v));
+        Slider(general, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.DockOpacity ?? store.Value.TintOpacity, v => Change(p => p.DockOpacity = v), "P0");
+        general.Children.Add(new TextBlock { Text = "Central de controle", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 8) });
+        Select(general, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));
+        Slider(general, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.IslandOpacity ?? store.Value.TintOpacity, v => Change(p => p.IslandOpacity = v), "P0");
         Slider(general, "Duração das animações", 0, 600, store.Value.AnimationMilliseconds, v => Change(p => p.AnimationMilliseconds = v), "0 'ms'");
 
+        AddTypography(general);
         var dock = Section("Barra de aplicativos", "Ícones originais, sem fundos individuais. Ajustes independentes da central de controle.");
-        Select(dock, "Material e desfoque", store.Value.DockMaterial, Materials(), v => Change(p => p.DockMaterial = v));
-        Slider(dock, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.DockOpacity ?? store.Value.TintOpacity, v => Change(p => p.DockOpacity = v), "P0");
+
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");
         Slider(dock, "Tamanho dos ícones", 20, 48, store.Value.IconSize, v => Change(p => p.IconSize = v));
         Check(dock, "Ampliação dos ícones estilo Dock", store.Value.DockMagnification, v => Change(p => p.DockMagnification = v));
@@ -150,8 +157,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Note(dock, "Recolhida, a barra é uma cápsula central arredondada de 96 × 6 DIP, a 4 pixels da borda inferior. Os ajustes de tamanho e posição acima afetam o estado expandido.");
 
         var island = Section("Central de controle", "Barra de status no topo e painel expansível com controles, mídia e widgets.");
-        Select(island, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));
-        Slider(island, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.IslandOpacity ?? store.Value.TintOpacity, v => Change(p => p.IslandOpacity = v), "P0");
+
         Slider(island, "Escala dos acessos rápidos", .8, 1.4, store.Value.IslandScale, v => Change(p => p.IslandScale = v), "P0");
         Slider(island, "Largura expandida", 400, 900, store.Value.IslandExpandedWidth, v => Change(p => p.IslandExpandedWidth = v));
         Select(island, "Lado da expansão com apps maximizados ou em tela dividida", store.Value.IslandPanelSide, new[] { new Choice("Right", "Direita"), new Choice("Left", "Esquerda") }, v => Change(p => p.IslandPanelSide = v));

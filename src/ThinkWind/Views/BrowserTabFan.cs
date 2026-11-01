@@ -134,7 +134,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         // Match the dock's material tint rather than reducing it to 48% again.
         // The existing native Acrylic remains behind each rounded card.
         double opacity = Math.Clamp(preferences.DockOpacity ?? preferences.TintOpacity, .05, 1);
-        if (ThemeService.Light) opacity = Math.Max(opacity, .82);
         tint.A = (byte)Math.Round(255 * opacity);
         foreach (var surface in surfaces)
         {

@@ -73,7 +73,7 @@ internal sealed class HardwareOverlayWindow : Window
         surface.CornerRadius = new CornerRadius(options.SyncWithAppTheme ? Math.Clamp(store.Value.IslandRadius, 0, 24) : options.CornerRadius);
         rows.Children.Clear();
         TextBlock Text(string value, double size = 13, bool muted = false) => new() {
-            Text = value, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = size,
+            Text = value, FontFamily = new FontFamily(store.Value.FontFamily + ", Segoe UI Variable, Segoe UI"), FontSize = size,
             FontWeight = muted ? FontWeights.Medium : FontWeights.SemiBold,
             Foreground = B(muted ? palette.Muted : palette.Text), TextWrapping = TextWrapping.Wrap, MaxWidth = 420 };
         Border Block(UIElement content) => new() { Background = B(palette.Block), CornerRadius = surface.CornerRadius,

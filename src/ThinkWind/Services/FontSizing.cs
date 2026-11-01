@@ -20,7 +20,11 @@ internal static class FontSizing
     {
         // Newly created cards and template text also receive the current scale.
         EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.LoadedEvent,
-            new RoutedEventHandler((sender, _) => ApplyElement((DependencyObject)sender)));
+            new RoutedEventHandler((sender, _) =>
+            {
+                ApplyElement((DependencyObject)sender);
+                if (Window.GetWindow((DependencyObject)sender) is OrbyLauncher.Views.FloatingWindow window) window.RefreshTextContrastSoon();
+            }));
     }
     internal static void Apply(Window window, double scale)
     {
@@ -54,6 +58,8 @@ internal static class FontSizing
         // follow the window; scale only explicit numeric sizes once.
         if (family.Source.Contains("Icons", StringComparison.OrdinalIgnoreCase)
             || family.Source.Contains("MDL2", StringComparison.OrdinalIgnoreCase)) return;
+        if (element is FrameworkElement target)
+            target.SetResourceReference(element is TextBlock ? TextBlock.FontFamilyProperty : Control.FontFamilyProperty, "Think.FontFamily");
         var metrics = originals.GetValue(element, _ => new Metrics());
         if (double.IsNaN(metrics.Font) && element.ReadLocalValue(font) is double size) metrics.Font = size;
         if (!double.IsNaN(metrics.Font)) element.SetCurrentValue(font, metrics.Font * scale);

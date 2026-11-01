@@ -9,6 +9,8 @@ namespace OrbyLauncher.Services;
 
 internal static class ThemeService
 {
+    internal static event Action? Changed;
+    static ThemeService() { OrbyLauncher.Views.PopupBackdrop.Initialize(); }
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern nint SendMessageTimeout(nint window, uint message, nuint parameter, string setting, uint flags, uint timeout, out nuint result);
     private static readonly System.Threading.SemaphoreSlim themeChanges = new(1, 1);
@@ -55,7 +57,7 @@ internal static class ThemeService
         // a timeout doesn't undo preferences successfully saved by Windows.
         SendMessageTimeout((nint)0xFFFF, 0x001A, 0, "ImmersiveColorSet", 2, 100, out _);
     }
-    private static (string Theme, string Accent, bool Light, bool Contrast, double InnerOpacity)? current;
+    private static string? current;
     internal static bool Light { get; private set; }
     internal static bool IsLight(Preferences p)
     {
@@ -70,18 +72,25 @@ internal static class ThemeService
     internal static Color BaseColor => Light ? Color.FromRgb(242, 245, 249) : Color.FromRgb(17, 19, 24);
     internal static void Apply(Preferences p, bool refreshSystem = false)
     {
-        var light = p.Theme == "Auto" && current?.Theme == "Auto" && !refreshSystem ? Light : IsLight(p);
-        var next = (p.Theme, p.AccentColor, light, SystemParameters.HighContrast, p.InnerSurfaceOpacity);
-        if (current.HasValue && current.Value.Equals(next)) return;
+        var light = IsLight(p);
+        var next = string.Join('|', p.Theme, p.AccentColor, light, SystemParameters.HighContrast, p.InnerSurfaceOpacity,
+            p.FontFamily, p.FontColor, p.AutomaticTextContrast, p.UseCustomBarColor, p.BarBackgroundColor, p.DockOpacity, p.IslandOpacity);
+        if (current == next && !refreshSystem) return;
         current = next; Light = light;
         var resources = Application.Current.Resources;
         Set("Think.Background", light ? "#F2F5F9" : "#111318");
-        Layer("Think.Surface", light ? "#E5EBF2" : "#1A1E25", p.InnerSurfaceOpacity * .7);
-        Layer("Think.GlassCard", light ? "#000000" : "#FFFFFF", p.InnerSurfaceOpacity * .12);
-        Layer("Think.Control", light ? "#E0E6ED" : "#222832", p.InnerSurfaceOpacity);
-        Set("Think.Popup", light ? "#E5EBF2" : "#1A1E25");
-        Set("Think.Text", light ? "#101820" : "#F4F6FA");
-        Set("Think.Muted", light ? "#344154" : "#AAB3C1");
+        // Neutral shading reduces colour casts over saturated wallpaper in both themes.
+        Layer("Think.Surface", "#111318", p.InnerSurfaceOpacity * .7);
+        Layer("Think.GlassCard", "#111318", p.InnerSurfaceOpacity * .7);
+        Layer("Think.Control", "#111318", p.InnerSurfaceOpacity);
+        var background = p.UseCustomBarColor ? (Color)ColorConverter.ConvertFromString(p.BarBackgroundColor) : BaseColor;
+        Layer("Think.Popup", background.ToString(), p.IslandOpacity ?? p.TintOpacity);
+        var requested = (Color)ColorConverter.ConvertFromString(p.FontColor);
+        var inkText = Typography.Ink(requested, background, p.AutomaticTextContrast);
+        Set("Think.Text", inkText.ToString());
+        Set("Think.Muted", inkText.ToString());
+        Set("Think.ArtworkText", Typography.Ink(requested, Color.FromRgb(17, 19, 24), p.AutomaticTextContrast).ToString());
+        resources["Think.FontFamily"] = new FontFamily(p.FontFamily + ", Segoe UI Variable, Segoe UI");
         Layer("Think.Hover", light ? "#CCD8E4" : "#303B48", Math.Min(.95, p.InnerSurfaceOpacity + .12));
         var accent = (Color)ColorConverter.ConvertFromString(p.AccentColor);
         // Preserve the chosen hue, but lift/darken the control ink for readability.
@@ -97,6 +106,7 @@ internal static class ThemeService
             resources["Think.Background"] = SystemColors.WindowBrush;
             resources["Think.Text"] = SystemColors.WindowTextBrush;
             resources["Think.Muted"] = SystemColors.WindowTextBrush;
+            resources["Think.ArtworkText"] = SystemColors.WindowTextBrush;
             resources["Think.Surface"] = SystemColors.ControlBrush;
             resources["Think.GlassCard"] = SystemColors.ControlBrush;
             resources["Think.Control"] = SystemColors.ControlBrush;
@@ -106,6 +116,7 @@ internal static class ThemeService
             resources["Think.AccentSurface"] = SystemColors.ControlBrush;
             resources["Think.Hover"] = SystemColors.HighlightBrush;
         }
+        Changed?.Invoke();
         void Set(string key, string color)
         { var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); brush.Freeze(); resources[key] = brush; }
         void Layer(string key, string value, double opacity)

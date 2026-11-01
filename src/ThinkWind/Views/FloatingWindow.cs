@@ -38,9 +38,20 @@ internal abstract class FloatingWindow : Window
     private readonly Stopwatch elapsed = new();
     private OverlayChrome.PixelRect start, target;
     private bool placed, positioning;
+    private bool contrastPending;
     private BackdropHost? backdrop;
     internal nint BackdropHandle => backdrop?.Handle ?? 0;
     internal bool HasNativeMaterial => backdrop?.MaterialAvailable == true;
+    internal void RefreshTextContrastSoon()
+    {
+        if (contrastPending) return;
+        contrastPending = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+        {
+            contrastPending = false;
+            if (IsVisible) Typography.ApplyContrast(Surface, MaterialTint, Store.Value);
+        }));
+    }
     internal double AnimationMilliseconds => Store.Value.AnimationMilliseconds;
     protected bool IsPositionAnimating => animation.IsRunning;
     private double radius;
@@ -66,7 +77,7 @@ internal abstract class FloatingWindow : Window
         adorners.AppendChild(presenter);
         Template = new ControlTemplate(typeof(Window)) { VisualTree = adorners };
         SetResourceReference(ForegroundProperty, "Think.Text");
-        FontFamily = new FontFamily("Segoe UI Variable Text");
+        SetResourceReference(FontFamilyProperty, "Think.FontFamily");
         Surface = new Border { BorderThickness = new Thickness(0), Padding = new Thickness(10), SnapsToDevicePixels = true };
         var frame = new Grid(); frame.Children.Add(Surface);
         centerGuide.SetResourceReference(Border.BackgroundProperty, "Think.Accent");
@@ -130,13 +141,16 @@ internal abstract class FloatingWindow : Window
         radius = CollapsedDock ? 3 : FullWidthTop ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
         var material = MaterialOverride ?? (UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial);
         var alpha = (UsesIslandAppearance ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
-        // Dark text needs a stable light surface over both bright and dark
-        // wallpaper; preserve Acrylic while preventing washed-out labels.
-        if (MaterialLight) alpha = Math.Max(alpha, .82);
+        // Both themes use the same backdrop and user opacity, without a light-only opaque veil.
         backdrop?.SetMaterial(SystemParameters.HighContrast ? "Solid" : material, MaterialLight);
         var color = MaterialTint;
+        var foreground = Typography.Ink((Color)ColorConverter.ConvertFromString(p.FontColor), color, p.AutomaticTextContrast);
+        var textBrush = new SolidColorBrush(foreground); textBrush.Freeze();
+        Resources["Think.Text"] = SystemParameters.HighContrast ? SystemColors.WindowTextBrush : textBrush;
+        Resources["Think.Muted"] = Resources["Think.Text"];
         color.A = (byte)Math.Round(255 * (backdrop?.MaterialAvailable == true ? alpha : 1));
         Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(color);
+        Typography.ApplyContrast(Surface, MaterialTint, p);
         Surface.BorderThickness = new Thickness(CollapsedDock ? .75 : 0);
         Surface.BorderBrush = SystemParameters.HighContrast ? SystemColors.WindowTextBrush
             : new SolidColorBrush(MaterialLight ? Color.FromArgb(110, 28, 40, 54) : Color.FromArgb(185, 215, 228, 242));

@@ -67,6 +67,9 @@ public sealed class Preferences
     public List<string> ActiveMonitors { get; set; } = new();
     public string Theme { get; set; } = "Auto";
     public double FontScale { get; set; } = 1;
+    public string FontFamily { get; set; } = Typography.DefaultFamily;
+    public string FontColor { get; set; } = Typography.DefaultColor;
+    public bool AutomaticTextContrast { get; set; } = true;
     public string AccentColor { get; set; } = "#60CDFF";
     public bool UseCustomBarColor { get; set; }
     public string BarBackgroundColor { get; set; } = "#111318";
@@ -242,6 +245,8 @@ public sealed class SettingsStore
         p.AnimationMilliseconds = Limit(p.AnimationMilliseconds, 0, 600, 220);
         p.Theme = p.Theme is "Auto" or "Dark" or "Light" ? p.Theme : "Auto";
         p.FontScale = Limit(p.FontScale, .8, 2.5, 1);
+        p.FontFamily = Typography.NormalizeFamily(p.FontFamily);
+        if (!OverlayAppearanceOptions.IsValidColor(p.FontColor)) p.FontColor = Typography.DefaultColor;
         p.DockMaterial = Material(p.DockMaterial); p.IslandMaterial = Material(p.IslandMaterial);
         try { if (System.Windows.Media.ColorConverter.ConvertFromString(p.AccentColor) is not System.Windows.Media.Color c || c.A != 255) p.AccentColor = "#60CDFF"; }
         catch (Exception e) when (e is FormatException or NotSupportedException or ArgumentException) { p.AccentColor = "#60CDFF"; }

@@ -66,7 +66,7 @@ internal sealed class MediaCard : Grid, IDisposable
         progress.PreviewKeyDown += (_, e) => { if (e.Key is Key.Left or Key.Right or Key.Home or Key.End or Key.PageUp or Key.PageDown) seeking = true; };
         progress.PreviewKeyUp += async (_, _) => { if (seeking) { seeking = false; await Seek(); } };
         progress.LostKeyboardFocus += (_, _) => { seeking = false; UpdateProgress(); };
-        service.Changed += Render; timer.Tick += (_, _) => UpdateProgress(); Render();
+        service.Changed += Render; ThemeService.Changed += AppearanceChanged; timer.Tick += (_, _) => UpdateProgress(); Render();
     }
     private Button Transport(string label, string glyph, MediaCommand command)
     {
@@ -107,11 +107,9 @@ internal sealed class MediaCard : Grid, IDisposable
         backgroundCover.Visibility = backgroundShade.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         // These resources are local to this player. No change to the global
         // theme/accent, and no image decoding or blur loop during playback.
-        if (visible && !Resources.Contains("Think.Text"))
+        if (visible && (!Resources.Contains("Think.Text") || !ReferenceEquals(Resources["Think.Text"], Application.Current.Resources["Think.ArtworkText"])))
         {
-            var text = new SolidColorBrush(Color.FromRgb(249, 250, 252)); text.Freeze();
-            var muted = new SolidColorBrush(Color.FromRgb(219, 226, 236)); muted.Freeze();
-            Resources["Think.Text"] = text; Resources["Think.Muted"] = muted;
+            Resources["Think.Text"] = Resources["Think.Muted"] = Application.Current.Resources["Think.ArtworkText"];
         }
         else if (!visible) { Resources.Remove("Think.Text"); Resources.Remove("Think.Muted"); }
         player.SetResourceReference(TextBlock.ForegroundProperty, visible ? "Think.Muted" : "Think.Accent");
@@ -132,5 +130,6 @@ internal sealed class MediaCard : Grid, IDisposable
     }
     private static string Format(TimeSpan value) => value.TotalHours >= 1 ? value.ToString(@"h\:mm\:ss") : value.ToString(@"m\:ss");
     internal async void SetActive(bool active) { if (active) timer.Start(); else { timer.Stop(); seeking = false; } await service.SetActiveAsync(active); }
-    public void Dispose() { timer.Stop(); service.Changed -= Render; service.Dispose(); }
+    private void AppearanceChanged() => UpdateArtworkBackground(service.State?.Artwork);
+    public void Dispose() { timer.Stop(); ThemeService.Changed -= AppearanceChanged; service.Changed -= Render; service.Dispose(); }
 }

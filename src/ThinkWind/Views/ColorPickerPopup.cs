@@ -50,6 +50,7 @@ internal static class ColorPickerPopup
         var frame = new Border { Child = body, Padding = new Thickness(16), CornerRadius = new CornerRadius(18), BorderThickness = new Thickness(1) };
         frame.SetResourceReference(Border.BackgroundProperty, "Think.Popup"); frame.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
         popup.Child = frame;
+        PopupBackdrop.Attach(popup);
         frame.PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { popup.IsOpen = false; e.Handled = true; anchor.Focus(); } };
         Window? owner = Window.GetWindow(anchor);
         EventHandler close = (_, _) => popup.IsOpen = false;

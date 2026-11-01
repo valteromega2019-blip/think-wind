@@ -8,7 +8,7 @@ namespace OrbyLauncher.Views;
 
 internal sealed partial class SettingsWindow
 {
-    private void AddColorSetting(Panel parent, string label, string value, Action<string> changed)
+    private TextBox AddColorSetting(Panel parent, string label, string value, Action<string> changed)
     {
         var title = new TextBlock { Text = label, Margin = new Thickness(0, 10, 0, 6), TextWrapping = TextWrapping.Wrap };
         title.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); parent.Children.Add(title);
@@ -27,8 +27,9 @@ internal sealed partial class SettingsWindow
         choose.Click += (_, _) => ColorPickerPopup.Open(choose, OverlayAppearanceOptions.IsValidColor(hex.Text) ? hex.Text : value, selected => hex.Text = selected);
         hex.TextChanged += (_, _) =>
         {
-            if (building || !OverlayAppearanceOptions.IsValidColor(hex.Text)) return;
-            swatch.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex.Text)); changed(hex.Text.ToUpperInvariant());
+            if (!OverlayAppearanceOptions.IsValidColor(hex.Text)) return;
+            swatch.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex.Text));
+            if (!building) changed(hex.Text.ToUpperInvariant());
         };
         var frame = new Border { Child = row, CornerRadius = new CornerRadius(14), Padding = new Thickness(4), Margin = new Thickness(0, 0, 0, 10) };
         frame.SetResourceReference(Border.BackgroundProperty, "Think.Control"); parent.Children.Add(frame);
@@ -42,5 +43,6 @@ internal sealed partial class SettingsWindow
             pick.Click += (_, _) => hex.Text = preset; presets.Children.Add(pick);
         }
         parent.Children.Add(presets);
+        return hex;
     }
 }

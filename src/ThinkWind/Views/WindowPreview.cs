@@ -110,7 +110,6 @@ internal sealed partial class WindowPreview : FloatingWindow
     {
         var p = Store.Value;
         double opacity = p.DockOpacity ?? p.TintOpacity;
-        if (MaterialLight) opacity = Math.Max(opacity, .82);
         spotify?.ConfigurePreviewSurface(p.DockRadius, opacity);
     }
     private void Render()

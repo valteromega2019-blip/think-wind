@@ -21,6 +21,7 @@ internal static class OverlayChecks
         _ = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var store = new SettingsStore(path);
         store.Value.Theme = light ? "Light" : "Dark";
+        store.Value.DockOpacity = store.Value.IslandOpacity = .3;
         ThemeService.Apply(store.Value);
         var window = new Surface(store, top);
         try
@@ -49,6 +50,7 @@ internal static class OverlayChecks
             Require(pixel[3] == 0, "Pixels externos devem possuir alfa zero, não cinza opaco.");
             bitmap.CopyPixels(new Int32Rect(width / 2, height / 2, 1, 1), pixel, 4, 0);
             Require(pixel[3] is > 0 and < 255, "Tonalidade central deve preservar alfa parcial.");
+            Require(Math.Abs(pixel[3] - 76) <= 1, "Tema não pode impor opacidade mínima acima da escolhida.");
             Require(Math.Abs(root.ActualWidth - window.ActualWidth) < 2, "Conteúdo deve acompanhar o HWND durante redimensionamento.");
             window.Expand();
             for (int i = 0; i < 8; i++)

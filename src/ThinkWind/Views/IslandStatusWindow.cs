@@ -70,7 +70,7 @@ internal sealed class IslandStatusWindow : FloatingWindow
         pendingTint = null;
         var old = (Surface.Background as SolidColorBrush)?.Color;
         sampled = color;
-        base.RefreshAppearance(); ApplyTextContrast();
+        base.RefreshAppearance();
         if (old.HasValue && Surface.Background is SolidColorBrush brush && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0)
             brush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(old.Value, brush.Color, TimeSpan.FromMilliseconds(Math.Min(180, Store.Value.AnimationMilliseconds)))
             { FillBehavior = FillBehavior.Stop }, HandoffBehavior.SnapshotAndReplace);
@@ -80,16 +80,9 @@ internal sealed class IslandStatusWindow : FloatingWindow
         static double Linear(byte value) { double channel = value / 255d; return channel <= .04045 ? channel / 12.92 : Math.Pow((channel + .055) / 1.055, 2.4); }
         return .2126 * Linear(color.R) + .7152 * Linear(color.G) + .0722 * Linear(color.B) > .179;
     }
-    private void ApplyTextContrast()
-    {
-        if (!MatchApp || !sampled.HasValue)
-        { Resources.Remove("Think.Text"); Resources.Remove("Think.Muted"); return; }
-        var ink = new SolidColorBrush(IsLight(sampled.Value) ? Color.FromRgb(20, 24, 30) : Color.FromRgb(248, 249, 252));
-        ink.Freeze(); Resources["Think.Text"] = ink; Resources["Think.Muted"] = ink;
-    }
     public override void RefreshAppearance()
     {
         if (!MatchApp) sampled = null;
-        base.RefreshAppearance(); ApplyTextContrast();
+        base.RefreshAppearance();
     }
 }

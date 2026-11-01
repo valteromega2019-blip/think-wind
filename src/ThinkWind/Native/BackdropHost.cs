@@ -42,9 +42,14 @@ internal sealed class BackdropHost : IDisposable
     [DllImport("user32.dll")] private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
     [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(nint window, int attribute, ref int value, int size);
     [DllImport("dwmapi.dll")] private static extern int DwmExtendFrameIntoClientArea(nint window, ref Margins margins);
-    internal BackdropHost(Window window)
+    internal BackdropHost(Window window) : this(new WindowInteropHelper(window).Handle, window.ShowInTaskbar,
+        new WindowInteropHelper(window).Owner, window.Title)
     {
-        var helper = new WindowInteropHelper(window); foreground = helper.Handle;
+        new WindowInteropHelper(window).Owner = Handle;
+    }
+    internal BackdropHost(nint content, bool showInTaskbar, nint owner, string title)
+    {
+        foreground = content;
         if (atom == 0)
         {
             var type = new WindowClass { Size = (uint)Marshal.SizeOf<WindowClass>(), Procedure = Procedure, Instance = GetModuleHandle(null), ClassName = ClassName };
@@ -52,11 +57,10 @@ internal sealed class BackdropHost : IDisposable
             if (atom == 0) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         }
         // No GDI redirection bitmap: Composition is the only painted surface.
-        uint extended = window.ShowInTaskbar ? 0x08240008u : 0x08200088u;
-        Handle = CreateWindowEx(extended, ClassName, "Orby Launcher — Material · " + window.Title, 0x80000000, -10000, -10000, 1, 1, helper.Owner, 0, GetModuleHandle(null), 0);
+        uint extended = showInTaskbar ? 0x08240008u : 0x08200088u;
+        Handle = CreateWindowEx(extended, ClassName, "Orby Launcher — Material · " + title, 0x80000000, -10000, -10000, 1, 1, owner, 0, GetModuleHandle(null), 0);
         if (Handle == 0) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         // Ownership guarantees that the alpha content stays above its own material.
-        helper.Owner = Handle;
         var margins = new Margins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
         DwmExtendFrameIntoClientArea(Handle, ref margins);
         int none = unchecked((int)0xFFFFFFFE), square = 1;

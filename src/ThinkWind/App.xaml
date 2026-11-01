@@ -8,13 +8,21 @@
   <SolidColorBrush x:Key="Think.Control" Color="#222832"/>
   <SolidColorBrush x:Key="Think.Popup" Color="#1A1E25"/>
   <SolidColorBrush x:Key="Think.Text" Color="#F4F6FA"/>
-  <SolidColorBrush x:Key="Think.Muted" Color="#AAB3C1"/>
+  <SolidColorBrush x:Key="Think.Muted" Color="#F4F6FA"/>
   <SolidColorBrush x:Key="Think.Hover" Color="#303B48"/>
   <SolidColorBrush x:Key="Think.Accent" Color="#60CDFF"/>
   <SolidColorBrush x:Key="Think.AccentInk" Color="#60CDFF"/>
   <SolidColorBrush x:Key="Think.AccentSurface" Color="#2660CDFF"/>
-  <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="FontFamily" Value="Segoe UI Variable Text"/></Style>
-  <Style TargetType="ToolTip">
+  <FontFamily x:Key="Think.FontFamily">Segoe UI Variable, Segoe UI</FontFamily>
+  <Style TargetType="TextBox">
+   <Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
+   <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Background" Value="{DynamicResource Think.Control}"/>
+   <Setter Property="CaretBrush" Value="{DynamicResource Think.Text}"/><Setter Property="SelectionBrush" Value="{DynamicResource Think.AccentSurface}"/>
+   <Setter Property="Padding" Value="8"/><Setter Property="BorderThickness" Value="0"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox"><Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}"><ScrollViewer x:Name="PART_ContentHost"/></Border></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/></Style>
+  <Style TargetType="ToolTip"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
    <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/>
    <Setter Property="Background" Value="{DynamicResource Think.Popup}"/>
    <Setter Property="BorderThickness" Value="0"/>
@@ -22,13 +30,13 @@
    <Setter Property="HasDropShadow" Value="False"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToolTip"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="8"><ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/></Border></ControlTemplate></Setter.Value></Setter>
   </Style>
-  <Style TargetType="ContextMenu">
+  <Style TargetType="ContextMenu"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
    <Setter Property="Background" Value="{DynamicResource Think.Popup}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="6"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ContextMenu"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="12"><ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/></ScrollViewer></Border></ControlTemplate></Setter.Value></Setter>
   </Style>
-  <Style TargetType="MenuItem"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,6"/></Style>
-  <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Margin" Value="4,10"/></Style>
-  <Style TargetType="ComboBoxItem">
+  <Style TargetType="MenuItem"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,6"/></Style>
+  <Style TargetType="CheckBox"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Margin" Value="4,10"/></Style>
+  <Style TargetType="ComboBoxItem"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
    <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,8"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem">
     <Border x:Name="ItemSurface" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="6"><ContentPresenter/></Border>
@@ -38,7 +46,7 @@
     </ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
-  <Style TargetType="ComboBox">
+  <Style TargetType="ComboBox"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
    <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Background" Value="{DynamicResource Think.Control}"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
     <Grid>
@@ -63,7 +71,7 @@
     </ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
-  <Style TargetType="Button">
+  <Style TargetType="Button"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
    <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Background" Value="{DynamicResource Think.Control}"/>
    <Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="14,10"/><Setter Property="Margin" Value="4"/><Setter Property="Cursor" Value="Hand"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">

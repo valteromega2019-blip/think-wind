@@ -97,7 +97,7 @@ internal static class LayoutChecks
             var high = ((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Control"]).Color.A;
             Require(SystemParameters.HighContrast || (low > 0 && high < 255 && high > low));
             Require(((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Text"]).Color.A == 255);
-            Require(((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Popup"]).Color.A == 255);
+            Require(SystemParameters.HighContrast || ((System.Windows.Media.SolidColorBrush)Application.Current.Resources["Think.Popup"]).Color.A < 255);
         }
     }
     internal static void GamePolicy()
