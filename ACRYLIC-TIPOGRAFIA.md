@@ -83,3 +83,18 @@ branch não foi publicada.
 
 Referências: [HostBackdropBrush](https://learn.microsoft.com/en-us/uwp/api/windows.ui.composition.compositor.createhostbackdropbrush)
 e [recursos dinâmicos WPF](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/systems/xaml-resources-how-to-use-system).
+
+## Organização posterior de Aparência
+
+A página foi separada em Tema e cores, Superfícies e transparência, Tipografia
+e Animações. Os ajustes das duas barras e dos blocos internos têm identificação
+própria, com explicações curtas. Fonte, escala, cor, contraste e prévia ficaram
+agrupados dentro de Tipografia. O template da lista de fontes e dos demais
+seletores reutiliza `Think.SettingsScrollViewer`, incluindo o acabamento e a
+barra de rolagem usados nas configurações, com a altura máxima do seletor.
+
+Arquivos desta revisão: `App.xaml`, `Views/SettingsWindow.cs`,
+`SettingsWindow.Appearance.cs` e `SettingsWindow.Typography.cs`.
+Esta revisão recebeu apenas leitura de código e diff; não foram executados
+novos testes, type check ou compilação. Os resultados anteriores acima não
+representam validação destas alterações posteriores.

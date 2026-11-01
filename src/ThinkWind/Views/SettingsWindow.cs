@@ -118,23 +118,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     private void Build()
     {
         building = true; content.Children.Clear(); ClearSettingsTabs();
-        var general = Section("Aparência", "Grafite, ciano e superfícies limpas — identidade Think.");
-
-        Select(general, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
-        Slider(general, "Opacidade dos blocos e controles", .1, .9, store.Value.InnerSurfaceOpacity, v => Change(p => p.InnerSurfaceOpacity = v), "P0", .05);
-        AddColorSetting(general, "Cor de destaque", store.Value.AccentColor, value => Change(p => p.AccentColor = value));
-        Check(general, "Usar uma cor própria no fundo das barras", store.Value.UseCustomBarColor, value => Change(p => p.UseCustomBarColor = value));
-        AddColorSetting(general, "Cor do fundo · barra de aplicativos e central de controle", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));
-        Note(general, "Desative a cor própria para voltar ao fundo do tema. A opacidade e o Acrylic são ajustados abaixo para cada barra; a cor própria tem prioridade sobre acompanhar a cor do aplicativo.");
-        general.Children.Add(new TextBlock { Text = "Barra de aplicativos", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 8) });
-        Select(general, "Material e desfoque", store.Value.DockMaterial, Materials(), v => Change(p => p.DockMaterial = v));
-        Slider(general, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.DockOpacity ?? store.Value.TintOpacity, v => Change(p => p.DockOpacity = v), "P0");
-        general.Children.Add(new TextBlock { Text = "Central de controle", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 8) });
-        Select(general, "Material e desfoque", store.Value.IslandMaterial, Materials(), v => Change(p => p.IslandMaterial = v));
-        Slider(general, "Intensidade da tonalidade / opacidade", .05, 1, store.Value.IslandOpacity ?? store.Value.TintOpacity, v => Change(p => p.IslandOpacity = v), "P0");
-        Slider(general, "Duração das animações", 0, 600, store.Value.AnimationMilliseconds, v => Change(p => p.AnimationMilliseconds = v), "0 'ms'");
-
-        AddTypography(general);
+        BuildAppearance();
         var dock = Section("Barra de aplicativos", "Ícones originais, sem fundos individuais. Ajustes independentes da central de controle.");
 
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");

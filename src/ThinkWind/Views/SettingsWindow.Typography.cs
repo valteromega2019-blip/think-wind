@@ -13,9 +13,8 @@ internal sealed partial class SettingsWindow
     private Action? refreshTypography;
     private void AddTypography(Panel parent)
     {
-        parent.Children.Add(new TextBlock { Text = "Tipografia", FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 8) });
-        Slider(parent, "Tamanho das fontes", .8, 2.5, store.Value.FontScale, v => Change(p => p.FontScale = v), "P0", .05);
-        Note(parent, "Pesquise uma fonte instalada neste computador. A alteração afeta somente o Orby.");
+        AppearanceLabel(parent, "Fonte e tamanho");
+        parent.Children.Add(new TextBlock { Text = "Pesquisar fonte instalada", Margin = new Thickness(0, 6, 0, 6), TextWrapping = TextWrapping.Wrap });
         var search = new TextBox { MinHeight = 36, Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 6) };
         System.Windows.Automation.AutomationProperties.SetName(search, "Pesquisar fontes instaladas");
         var fonts = new ComboBox { ItemsSource = Typography.Installed, SelectedItem = store.Value.FontFamily, MinHeight = 36, MaxDropDownHeight = 240 };
@@ -28,6 +27,8 @@ internal sealed partial class SettingsWindow
         };
         fonts.SelectionChanged += (_, _) => { if (fonts.SelectedItem is string family) Change(p => p.FontFamily = family); };
         parent.Children.Add(search); parent.Children.Add(fonts);
+        Slider(parent, "Tamanho dos textos", .8, 2.5, store.Value.FontScale, v => Change(p => p.FontScale = v), "P0", .05);
+        AppearanceLabel(parent, "Cor e legibilidade");
         var hex = AddColorSetting(parent, "Cor da fonte · HEX", store.Value.FontColor, value => Change(p => p.FontColor = value));
         var rgb = new TextBox { Padding = new Thickness(8), MinHeight = 36, Margin = new Thickness(0, 0, 0, 8), Text = Rgb(store.Value.FontColor) };
         System.Windows.Automation.AutomationProperties.SetName(rgb, "Cor da fonte RGB: vermelho, verde, azul");
@@ -39,7 +40,7 @@ internal sealed partial class SettingsWindow
                 && byte.TryParse(values[2].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out byte b))
                 Change(p => p.FontColor = $"#{r:X2}{g:X2}{b:X2}");
         };
-        parent.Children.Add(new TextBlock { Text = "RGB · vermelho, verde, azul", Margin = new Thickness(0, 4, 0, 4) }); parent.Children.Add(rgb);
+        parent.Children.Add(new TextBlock { Text = "Ou use RGB · vermelho, verde, azul (0–255)", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4) }); parent.Children.Add(rgb);
         refreshTypography = () =>
         {
             bool previous = building; building = true;
@@ -52,6 +53,8 @@ internal sealed partial class SettingsWindow
         };
         rgb.LostKeyboardFocus += (_, _) => refreshTypography?.Invoke();
         Check(parent, "Contraste automático do texto", store.Value.AutomaticTextContrast, v => Change(p => p.AutomaticTextContrast = v));
+        Note(parent, "Com o contraste automático, a cor pode ser ajustada para manter a leitura sobre o fundo escolhido.");
+        AppearanceLabel(parent, "Prévia em tempo real");
         var preview = new TextBlock { Text = "Prévia · Aa Bb 0123456789\nSua interface, do seu jeito.", FontSize = 18, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12) };
         var sample = new Border { CornerRadius = new CornerRadius(14), Child = preview, Margin = new Thickness(0, 8, 0, 8) };
         sample.SetResourceReference(Border.BackgroundProperty, "Think.Control"); parent.Children.Add(sample);
