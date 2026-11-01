@@ -74,7 +74,7 @@ internal sealed partial class IslandWindow
                 statusWindow.MouseLeave += (_, _) => ScheduleCollapse();
             }
             statusRow.Width = Math.Max(1, Display.Bounds.Width / Display.Scale - 24); statusRow.Height = 24;
-            statusWindow.Attach(statusRow); Surface.Child = root;
+            statusWindow.Attach(statusRow); Surface.Child = stableLayout;
             Surface.Visibility = edgeReduced || preparingFullReveal ? Visibility.Hidden : Visibility.Visible;
             if (IsVisible) { if (!statusWindow.IsVisible) statusWindow.Show(); statusWindow.Position(); statusWindow.RefreshAppTint(); }
             else statusWindow.Hide();
@@ -82,7 +82,7 @@ internal sealed partial class IslandWindow
         else
         {
             statusWindow?.Attach(null); statusWindow?.Hide();
-            Surface.Child = root; Surface.Visibility = preparingFullReveal ? Visibility.Hidden : Visibility.Visible;
+            Surface.Child = stableLayout; Surface.Visibility = preparingFullReveal ? Visibility.Hidden : Visibility.Visible;
         }
         RefreshApplicationInset();
     }

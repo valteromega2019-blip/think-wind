@@ -21,6 +21,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly DockPanel root = new();
     private readonly StackPanel header = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly IslandModuleBoard modules = new();
+    private readonly IslandLayoutHost stableLayout = new();
     private readonly StackPanel hoverPanel = new();
     private readonly Grid hoverModules = new();
     private readonly Border mediaSlot = new(), outputSlot = new(), microphoneSlot = new(), hoverMediaSlot = new(), hoverOutputSlot = new(), hoverMicrophoneSlot = new();
@@ -66,6 +67,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     public IslandWindow(SettingsStore store, Action settings) : base(store)
     {
         PreserveKeyboardTarget();
+        stableLayout.Child = root;
         InitializeHeaderMagnification();
         Title = "Orby Launcher — Central de controle"; openSettings = settings;
         weather = new WeatherWidget(store, compact: true);
@@ -96,7 +98,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         DockPanel.SetDock(hoverViewport, Dock.Top); root.Children.Add(hoverViewport);
         moduleViewport.Child = modules;
         fullPanel.Children.Add(new AdornerDecoratorHost(moduleViewport));
-        root.Children.Add(fullPanel); Surface.Child = root;
+        root.Children.Add(fullPanel); Surface.Child = stableLayout;
         InitializeSecondArea();
         BuildBodies();
         Loaded += (_, _) => { RefreshSettings(); UpdateClock(); timer.Start(); };
