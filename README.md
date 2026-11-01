@@ -2,6 +2,12 @@
 
 Desenvolvido pela **Think**. Novo nome e identidade do Think Wind, com atualização compatível das instalações anteriores.
 
+## 0.21 Beta (0.21.0-beta)
+
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.21.0-beta/OrbyLauncher-Setup-0.21.0-beta.exe) · [Novidades e limites](RELEASE-0.21-BETA.md) · [Site](https://thinkdeveloper-br.github.io/orby-launcher/)
+
+Tutorial interativo, controles de chamadas, prévias do navegador em leque vertical e correções de transparência. Botões de minimizar e fechar restaurados nas prévias. Preparação com 50 checks, build e lint aprovados; a correção final foi recompilada sem repetir os testes.
+
 ## 0.20 Beta — revisão 1 (0.20.1-beta)
 
 [Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.20.1-beta/OrbyLauncher-Setup-0.20.1-beta.exe) · [Notas e migração](RELEASE-0.20.1-BETA.md)

@@ -1,7 +1,7 @@
 # Página pública Orby Launcher
 
 Fonte da página publicada em https://thinkdeveloper-br.github.io/orby-launcher/ .
-Versão atual: 0.20 Beta · revisão 1. Download e notas apontam para a release v0.20.1-beta do repositório do aplicativo.
+Versão atual: 0.21 Beta. Download e notas apontam para a release v0.21.0-beta do repositório do aplicativo.
 
 ## Nova apresentação com Motion
 

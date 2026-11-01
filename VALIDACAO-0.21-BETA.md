@@ -2,6 +2,19 @@
 
 Data: 01/11/2026. Escopo explicitamente solicitado: testes, build, lint e criação do instalador para publicação. Esta autorização vale para esta entrega.
 
+## Recompilação final para publicação
+
+Após a bateria abaixo, os botões de minimizar e fechar foram restaurados no leque do navegador. O usuário autorizou recompilar, gerar instalador e publicar essa correção simples. Não foram repetidos testes ou lint nesta recompilação.
+
+- Código da correção: `cfccd4a813114058b8ff1a4eeddcc29cb04950fb`.
+- Publish final: `artifacts/publish-v0.21.0-beta-final`, Release win-x64 self-contained, avisos tratados como erros, analisadores desativados; zero erros e zero avisos.
+- InformationalVersion: `0.21.0-beta+cfccd4a`.
+- Instalador final: `artifacts/installer/OrbyLauncher-Setup-0.21.0-beta.exe`, 66.329.599 bytes.
+- SHA-256 final: `5c34cfe3e77c0e9a89ede92ed9ff507b2b45b31dfbd1ffcf569079191df5d17e`.
+- Release prevista: `https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.21.0-beta`.
+
+Os resultados de 50 verificações a seguir se referem à preparação anterior à última correção, não a uma nova execução sobre ela.
+
 ## Resultado final
 
 - 50 verificações aprovadas; zero falhas; zero ignoradas.
@@ -44,7 +57,7 @@ dotnet format style checks/ThinkWind.Checks/ThinkWind.Checks.csproj --no-restore
 
 O publish usou restore isolado em `artifacts/obj-v0.21.0-beta`, `PublishSingleFile=false`, `DebugType=None` e `SourceRevisionId=61b3eea91fadc984fdffd046ebba94cb1484ed0f`. O log completo dos checks está em `artifacts/checks-v0.21.0-beta.log`.
 
-## Artefatos
+## Artefatos da primeira preparação (substituídos pela recompilação acima)
 
 - Código da entrega: commit `61b3eea91fadc984fdffd046ebba94cb1484ed0f`, branch `feature/tutorial-interativo`.
 - Instalador: `artifacts/installer/OrbyLauncher-Setup-0.21.0-beta.exe`.
@@ -59,4 +72,4 @@ O publish usou restore isolado em `artifacts/obj-v0.21.0-beta`, `PublishSingleFi
 
 Não foram feitos testes reais de encerrar, silenciar ou sair de chamadas no Discord, Tretalk, Meet, Teams ou Zoom. Não foram reproduzidos integralmente o tutorial por mouse, cache de abas minimizadas, DPI misto, instalação/desinstalação, consumo prolongado ou latência em jogos nesta entrega. As verificações de geometria e estado sintético não comprovam compatibilidade universal dos provedores de acessibilidade.
 
-A publicação no GitHub e na landing page não foi realizada nesta etapa; o instalador e as notas estão preparados para isso.
+A primeira etapa terminou com os artefatos preparados. A publicação foi autorizada posteriormente pelo usuário; a recompilação correspondente está registrada no início deste relatório.
