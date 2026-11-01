@@ -2,11 +2,13 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace OrbyLauncher.Services;
-internal sealed record BrightnessState(string Monitor, uint Minimum, uint Maximum, uint Value);
+internal sealed record BrightnessState(string Monitor, uint Minimum, uint Maximum, uint Value, string Backend = "DDC", string Id = "", byte[]? Levels = null);
 internal static class BrightnessService
 {
+    private static readonly SemaphoreSlim operations = new(1, 1);
     [StructLayout(LayoutKind.Sequential)] private struct Point { internal int X, Y; }
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct PhysicalMonitor
     { internal nint Handle; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] internal string Description; }
@@ -17,8 +19,19 @@ internal static class BrightnessService
     [DllImport("dxva2.dll")] private static extern bool GetMonitorCapabilities(nint monitor, out uint capabilities, out uint temperatures);
     [DllImport("dxva2.dll")] private static extern bool GetMonitorBrightness(nint monitor, out uint minimum, out uint value, out uint maximum);
     [DllImport("dxva2.dll")] private static extern bool SetMonitorBrightness(nint monitor, uint value);
-    internal static Task<BrightnessState?> ReadAsync(Rectangle bounds) => Task.Run(() => WithMonitor(bounds, null, null));
-    internal static Task<BrightnessState?> SetAsync(Rectangle bounds, BrightnessState target, double percent) => Task.Run(() => WithMonitor(bounds, target, percent));
+    internal static Task<BrightnessState?> ReadAsync(Rectangle bounds) => Run(bounds, null, null);
+    internal static Task<BrightnessState?> SetAsync(Rectangle bounds, BrightnessState target, double percent) => Run(bounds, target, percent);
+    private static async Task<BrightnessState?> Run(Rectangle bounds, BrightnessState? target, double? percent)
+    {
+        await operations.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await Task.Run(() => target?.Backend == "WMI" ? NotebookBrightness.Access(bounds, target, percent)
+                : target is null ? NotebookBrightness.Access(bounds, null, null) ?? WithMonitor(bounds, null, null)
+                : WithMonitor(bounds, target, percent)).ConfigureAwait(false);
+        }
+        finally { operations.Release(); }
+    }
     private static BrightnessState? WithMonitor(Rectangle bounds, BrightnessState? target, double? percent)
     {
         nint monitor = MonitorFromPoint(new Point { X = bounds.Left + bounds.Width / 2, Y = bounds.Top + bounds.Height / 2 }, 0);
