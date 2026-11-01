@@ -1,6 +1,7 @@
-using System;
-using System.Diagnostics;
+﻿using System;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using OrbyLauncher.Services;
@@ -10,63 +11,67 @@ internal sealed class GameOptimizerPanel : StackPanel
 {
     private readonly SettingsStore store;
     private readonly GameOptimizer optimizer;
-    private readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 12) };
-    private readonly StackPanel apps = new();
+    private readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 10), FontSize = 13 };
+    private readonly TextBlock description = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 12), FontSize = 12 };
+    private readonly Button optimize = new() { Content = "Otimizar", Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 8, 0, 8) };
+    private CancellationTokenSource? request;
+    private string selected;
+    private const string Model = "qwen2.5:1.5b";
     internal GameOptimizerPanel(SettingsStore settings)
     {
         store = settings; optimizer = ((App)Application.Current).Optimizer;
-        Margin = new Thickness(8);
+        Margin = new Thickness(10);
         Children.Add(new TextBlock { Text = "Otimizador de Jogos", FontSize = 22, FontWeight = FontWeights.SemiBold });
-        Children.Add(new LocalOptimizerAiPanel(store));
-        Note("Perfil local · sem envio de dados para IA externa nesta etapa.");
-        var enabled = new CheckBox { Content = "Aplicar perfil ao reconhecer um jogo", IsChecked = store.Value.OptimizerEnabled, Margin = new Thickness(0, 8, 0, 10) };
-        enabled.Checked += (_, _) => store.Update(p => p.OptimizerEnabled = true);
-        enabled.Unchecked += (_, _) => store.Update(p => p.OptimizerEnabled = false); Children.Add(enabled);
-        var plans = new ComboBox { DisplayMemberPath = "Name", SelectedValuePath = "Id", ItemsSource = new[] { new Plan("Keep", "Manter plano atual"), new Plan("Balanced", "Equilibrado"), new Plan("Performance", "Alto desempenho · maior consumo e calor") }, SelectedValue = store.Value.OptimizerPowerPlan, Margin = new Thickness(0, 0, 0, 8) };
-        plans.SelectionChanged += (_, _) => { if (plans.SelectedValue is string value) { optimizer.Restore(); store.Update(p => p.OptimizerPowerPlan = value); } }; Children.Add(plans);
-        Children.Add(status);
-        Button("Restaurar perfil agora e desativar", () => { store.Update(p => p.OptimizerEnabled = false); enabled.IsChecked = false; optimizer.Restore(); });
-        Note("O plano anterior é restaurado ao sair do jogo ou encerrar o launcher. Se você trocar o plano pelo Windows durante o jogo, sua escolha será preservada. Planos ausentes não são criados. Nenhuma configuração de overlay, sensores ou barras é redefinida.");
-        Note("Aplicativos dispensáveis · seleção manual");
-        Button("Listar janelas para encerrar normalmente", LoadApps); Children.Add(apps);
-        Note("Fechar aplicativos pode liberar recursos. O encerramento respeita avisos de documentos não salvos. Aplicativos não são reabertos automaticamente e seu estado anterior não é garantido. Nenhum processo é terminado à força.");
-        Note("Memória: sem esvaziar standby ou working sets. O gerenciamento permanece com o Windows; não há promessa de ganho de FPS nem limpeza artificial de RAM. A redução de tarefas do launcher usa o Modo Jogo existente.");
-        Loaded += (_, _) => { optimizer.Changed += Refresh; Refresh(); };
-        Unloaded += (_, _) => optimizer.Changed -= Refresh;
-    }
-    private sealed record Plan(string Id, string Name);
-    private void Note(string text) { var label = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 6, 0, 8) }; label.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); Children.Add(label); }
-    private void Button(string text, Action action) { var button = new Button { Content = text, Margin = new Thickness(0, 4, 0, 4), Padding = new Thickness(10, 7, 10, 7) }; button.Click += (_, _) => action(); Children.Add(button); }
-    private void Refresh() => status.Text = optimizer.Status;
-    private async void LoadApps()
-    {
-        apps.Children.Clear();
-        System.Collections.Generic.List<OrbyLauncher.Native.Desktop.RunningWindow> windows;
-        try { windows = await System.Threading.Tasks.Task.Run(OrbyLauncher.Native.Desktop.Windows); }
-        catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { status.Text = "Não foi possível listar janelas: " + e.Message; return; }
-        if (!IsVisible) return;
-        foreach (var window in windows.Where(window => window.Executable is not null).Take(30))
+        selected = store.Value.OptimizerPowerPlan is "Performance" or "Economy" ? store.Value.OptimizerPowerPlan : "Balanced";
+        var modes = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
+        foreach (var mode in new[] { ("Balanced", "Equilibrado"), ("Performance", "Desempenho"), ("Economy", "Economia") })
         {
-            string name = System.IO.Path.GetFileNameWithoutExtension(window.Executable!);
-            if (new[] { "explorer", "SystemSettings", "ApplicationFrameHost", "OrbyLauncher", "ThinkMonitor", "ThinkExplode", "steam", "steamwebhelper", "Discord", "WhatsApp.Root" }.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
-            var button = new Button { Content = "Fechar: " + window.Title, ToolTip = window.Executable, Margin = new Thickness(0, 3, 0, 3) };
-            button.Click += (_, _) =>
-            {
-                if (MessageBox.Show(Window.GetWindow(this), "Solicitar fechamento de “" + window.Title + "”?", "Otimizador", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-                try
-                {
-                    using var process = FindProcess(window.Handle);
-                    if (process is not null && process.MainWindowHandle == window.Handle) { process.CloseMainWindow(); button.IsEnabled = false; }
-                }
-                catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException) { status.Text = "O Windows não confirmou o fechamento: " + e.Message; }
-            };
-            apps.Children.Add(button);
+            var button = new RadioButton { Content = mode.Item2, GroupName = "OptimizerMode", IsChecked = mode.Item1 == selected, Margin = new Thickness(0, 4, 18, 4) };
+            button.Checked += (_, _) => { selected = mode.Item1; Describe(); };
+            modes.Children.Add(button);
         }
+        Children.Add(modes); Children.Add(description); Children.Add(optimize); Children.Add(status);
+        var stop = new Button { Content = "Voltar ao normal", Margin = new Thickness(0, 4, 0, 4) };
+        stop.Click += (_, _) => { request?.Cancel(); store.Update(p => p.OptimizerEnabled = false); optimizer.Restore(); status.Text = optimizer.Status; }; Children.Add(stop);
+        optimize.Click += async (_, _) =>
+        {
+            if (request is not null) return;
+            var app = (App)Application.Current;
+            if (optimizer.GameForeground) { status.Text = "Prepare a otimização fora do jogo para a IA não disputar recursos com ele."; return; }
+            using var cancellation = new CancellationTokenSource(); request = cancellation; optimize.IsEnabled = false;
+            try
+            {
+                optimizer.Restore(); store.Update(p => { p.OptimizerPowerPlan = selected; p.OptimizerEnabled = true; });
+                status.Text = "Perfil preparado para o próximo jogo. Preparando análise local…";
+                await LocalOptimizerAi.StartRuntime(cancellation.Token);
+                var models = await LocalOptimizerAi.Models(cancellation.Token);
+                if (!models.Contains(Model, StringComparer.Ordinal))
+                {
+                    if (MessageBox.Show(Window.GetWindow(this), "Preparar a IA local agora? O modelo predefinido ocupa aproximadamente 1 GB e será baixado uma única vez pelo Ollama.", "Preparar otimizador", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                    { status.Text = "Perfil preparado. A análise com IA ficou pendente do download do modelo."; return; }
+                    await LocalOptimizerAi.DownloadModel(Model, new Progress<string>(text => { if (!cancellation.IsCancellationRequested) status.Text = "Preparando IA · " + text; }), cancellation.Token);
+                }
+                var sample = app.Telemetry.Latest;
+                if (sample is null || DateTime.Now - sample.Time > TimeSpan.FromSeconds(30)) { status.Text = "Perfil preparado. Aguarde sensores recentes e clique em Otimizar novamente para analisar."; return; }
+                status.Text = "Analisando seu computador localmente…";
+                status.Text = "Perfil preparado para os jogos. Sugestões da IA:\n\n" + await LocalOptimizerAi.Suggest(Model, sample, store.Value, cancellation.Token);
+            }
+            catch (OperationCanceledException) { status.Text = "Análise cancelada. O perfil de energia permanece como configurado; Voltar ao normal o desativa."; }
+            catch (Exception e) when (e is HttpRequestException or InvalidOperationException or System.IO.IOException or System.Text.Json.JsonException or System.ComponentModel.Win32Exception or System.Collections.Generic.KeyNotFoundException)
+            { status.Text = "Perfil preparado, mas a IA não ficou disponível: " + e.Message; }
+            finally { request = null; optimize.IsEnabled = true; }
+        };
+        Loaded += (_, _) => optimizer.Changed += GameChanged;
+        Unloaded += (_, _) => { optimizer.Changed -= GameChanged; request?.Cancel(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) request?.Cancel(); };
+        Describe(); status.Text = optimizer.Status;
     }
-    private static Process? FindProcess(nint handle)
+    private void GameChanged() { if (optimizer.GameForeground) request?.Cancel(); if (request is null) status.Text = optimizer.Status; }
+    private void Describe() => description.Text = (selected switch
     {
-        foreach (var process in Process.GetProcesses())
-        { try { if (process.MainWindowHandle == handle) return process; } catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException) { } process.Dispose(); }
-        return null;
-    }
+        "Performance" => "Prioriza desempenho com maior consumo e calor. O plano anterior retorna ao sair do jogo.",
+        "Economy" => "Prioriza economia de energia e pode reduzir o desempenho. O plano anterior retorna ao sair do jogo.",
+        _ => "Equilibra consumo e desempenho. O plano anterior retorna ao sair do jogo."
+    }) + " As configurações do launcher são preservadas. Aplicativos não são fechados automaticamente; a IA apenas sugere.";
 }
+

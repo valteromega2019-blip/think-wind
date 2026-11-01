@@ -38,7 +38,8 @@ internal sealed class GameOptimizer
             {
                 if (recovery is not null) throw new InvalidOperationException("Restaure a sessão anterior primeiro.");
                 Guid original = ReadPlan();
-                Guid selected = preferences.OptimizerPowerPlan == "Balanced" ? new("381b4222-f694-41f0-9685-ff5bb260df2e") : new("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
+                Guid selected = preferences.OptimizerPowerPlan == "Balanced" ? new("381b4222-f694-41f0-9685-ff5bb260df2e")
+                    : preferences.OptimizerPowerPlan == "Economy" ? new("a1841308-3541-4fab-bc81-f71556f20b4a") : new("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
                 if (original != selected)
                 {
                     var saved = new Recovery(original, selected); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
