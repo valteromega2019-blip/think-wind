@@ -19,6 +19,7 @@ internal static class BrowserTabs
     private static int observing;
     private static string observed = "";
     private static DateTime observedAt;
+    private static DateTime callObservedAt;
     [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
     [DllImport("user32.dll")] private static extern bool IsIconic(nint window);
@@ -33,13 +34,15 @@ internal static class BrowserTabs
         try
         {
             string key = active.Handle + "|" + active.Title;
-            bool meetingHint = active.Title.Contains("Meet", StringComparison.OrdinalIgnoreCase);
-            if (key == observed && DateTime.UtcNow - observedAt < (meetingHint ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(2))) return;
-            observed = key; observedAt = DateTime.UtcNow;
-            await ReadAsync(new[] { active }, CancellationToken.None);
-            // A title is only a scheduling hint. Only real origin + controls
-            // can establish the context before the user switches to another tab.
-            if (meetingHint) await CallIntegration.FindAsync(new[] { active }, CancellationToken.None);
+            bool changed = key != observed;
+            bool readTabs = changed || DateTime.UtcNow - observedAt >= TimeSpan.FromMinutes(2);
+            bool inspectCall = changed || DateTime.UtcNow - callObservedAt >= TimeSpan.FromSeconds(10);
+            if (!readTabs && !inspectCall) return;
+            observed = key;
+            if (readTabs) { observedAt = DateTime.UtcNow; await ReadAsync(new[] { active }, CancellationToken.None); }
+            // Custom meeting names need not contain "Meet". Probe the native
+            // URL + controls at a bounded cadence using the existing dock tick.
+            if (inspectCall) { callObservedAt = DateTime.UtcNow; await CallIntegration.FindAsync(new[] { active }, CancellationToken.None); }
         }
         catch (OperationCanceledException) { }
         finally { Interlocked.Exchange(ref observing, 0); }

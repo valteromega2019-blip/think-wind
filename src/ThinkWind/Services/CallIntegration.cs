@@ -200,13 +200,9 @@ internal static class CallIntegration
             if (info.ControlType == ControlType.Document)
             {
                 documents.Add(element);
-                if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var documentValue))
-                {
-                    string address = ((ValuePattern)documentValue).Current.Value;
-                    if (MeetRoomAddress(address)) verified.Add((element, RoomKey(address)));
-                    else if (string.IsNullOrWhiteSpace(address)) documentWithoutAddress = element;
-                }
-                else documentWithoutAddress = element;
+                var address = DocumentAddress(element, (nint)window.Current.NativeWindowHandle);
+                if (address is not null && MeetRoomAddress(address.AbsoluteUri)) verified.Add((element, RoomKey(address.AbsoluteUri)));
+                else if (address is null) documentWithoutAddress = element;
                 continue; // Never accept a web page's own text fields as browser origin.
             }
             if (info.ControlType == ControlType.Edit && element.TryGetCurrentPattern(ValuePattern.Pattern, out var value)
@@ -227,17 +223,60 @@ internal static class CallIntegration
         return null;
     }
     private static string RoomKey(string address) => new Uri(address.Contains("://") ? address : "https://" + address).GetLeftPart(UriPartial.Path).TrimEnd('/');
+    private static Uri? DocumentAddress(AutomationElement document, nint window)
+    {
+        // Chromium providers differ: a document may expose its URL through
+        // ValuePattern or the legacy accessibility value. A title isn't a URL.
+        if (document.TryGetCurrentPattern(ValuePattern.Pattern, out var value)
+            && PageAddress(((ValuePattern)value).Current.Value) is Uri modern) return modern;
+        return AccessibleDocumentAddress(window, document.Current.BoundingRectangle);
+    }
+    private static Uri? AccessibleDocumentAddress(nint window, System.Windows.Rect bounds)
+    {
+        if (window == 0 || bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0) return null;
+        var iid = new Guid("618736E0-3C3D-11CF-810C-00AA00389B71");
+        var clock = Stopwatch.StartNew(); int visited = 0;
+        var addresses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Visit(Accessibility.IAccessible accessible, int child, int depth)
+        {
+            if (depth > 18 || visited++ > 500 || clock.ElapsedMilliseconds > 150) return;
+            try
+            {
+                if (accessible.get_accRole(child) is int role && role == 15) // ROLE_SYSTEM_DOCUMENT
+                {
+                    accessible.accLocation(out int x, out int y, out int width, out int height, child);
+                    if (Math.Abs(bounds.X - x) <= 2 && Math.Abs(bounds.Y - y) <= 2
+                        && Math.Abs(bounds.Width - width) <= 2 && Math.Abs(bounds.Height - height) <= 2
+                        && PageAddress(accessible.get_accValue(child)) is Uri address) addresses.Add(address.AbsoluteUri);
+                }
+                if (child != 0) return;
+                int count = Math.Clamp(accessible.accChildCount, 0, 128);
+                var children = new object[count];
+                if (count == 0 || AccessibleChildren(accessible, 0, count, children, out int obtained) < 0) return;
+                foreach (var item in children.Take(Math.Clamp(obtained, 0, count)))
+                    if (item is Accessibility.IAccessible next) Visit(next, 0, depth + 1);
+                    else if (item is int id && id > 0) Visit(accessible, id, depth + 1);
+            }
+            catch (Exception error) when (Unavailable(error) || error is ArgumentException or NotImplementedException) { }
+        }
+        try { if (AccessibleObjectFromWindow(window, 0xFFFFFFFC, ref iid, out var root) >= 0) Visit(root, 0, 0); }
+        catch (Exception error) when (Unavailable(error)) { }
+        return addresses.Count == 1 ? new Uri(addresses.First()) : null;
+    }
+    private static Uri? PageAddress(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        value = value.Trim();
+        if (value.StartsWith("meet.google.com/", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("meet.google.com", StringComparison.OrdinalIgnoreCase)) value = "https://" + value;
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" ? uri : null;
+    }
     private static bool MeetRoomAddress(string address)
     {
-        if (!Uri.TryCreate(address.Contains("://") ? address : "https://" + address, UriKind.Absolute, out var uri)
-            || uri.Scheme != "https" || !uri.Host.Equals("meet.google.com", StringComparison.OrdinalIgnoreCase)) return false;
-        var path = uri.AbsolutePath.Trim('/').Split('/');
-        // A homepage (/ or /meet/) is not a room. A room URL is still only
-        // a candidate: microphone + leave controls must prove the call below.
-        if (path.Length == 2 && path[0].Equals("lookup", StringComparison.OrdinalIgnoreCase)) return !string.IsNullOrWhiteSpace(path[1]);
-        if (path.Length != 1) return false;
-        string code = path[0].Replace("-", "", StringComparison.Ordinal);
-        return code.Length == 10 && code.All(char.IsAsciiLetter);
+        var uri = PageAddress(address);
+        // Paths and room-code formats can change. The exact HTTPS origin is
+        // necessary, but only live microphone + leave controls prove a call.
+        return uri is not null && uri.Scheme == "https" && uri.Host.Equals("meet.google.com", StringComparison.OrdinalIgnoreCase);
     }
     private static bool ExposedCallControl(AutomationElement element, string app)
     {

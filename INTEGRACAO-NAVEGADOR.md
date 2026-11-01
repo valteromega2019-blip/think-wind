@@ -107,3 +107,32 @@ O clique pode restaurar a janela e selecionar a aba, conforme escolha do usuári
 Não há extensão, leitura de vídeo/áudio, atalho global ou mudança automática de
 aba ao passar o mouse. Os comandos continuam sujeitos às permissões e à
 acessibilidade do navegador. Compilação, testes e type check não executados.
+
+## Regressão na descoberta do Meet
+
+A validação de URL anterior ficou restritiva: exigia um formato fixo de código
+e tratava qualquer valor não vazio do documento como endereço. Alguns providers
+expõem títulos nesse campo ou disponibilizam a URL pela acessibilidade MSAA.
+Isso podia impedir a descoberta e a associação da aba de uma chamada legítima.
+
+A identificação agora lê URLs reais por ValuePattern ou, como fallback, pelo
+valor de um documento MSAA com os mesmos limites visuais. Um título não é
+interpretado como URL. O endereço nativo continua disponível como fallback para
+um documento único sem endereço próprio; uma URL explicitamente de outro site
+continua impedindo esse fallback.
+
+O caminho não fica preso ao padrão de código: a origem precisa ser exatamente
+HTTPS `meet.google.com`, e a participação continua exigindo controles reais de
+microfone e sair, com área de apresentação. Assim, `/meet/` ou a página inicial
+não bastam para confirmar uma reunião, mas também não impedem por si só uma
+chamada se o provider expuser os controles reais nessa rota.
+
+A observação deixou de exigir a palavra Meet no nome da janela. Ela usa o
+refresh existente do Dock, com verificação de chamada espaçada em dez segundos
+no navegador em primeiro plano, além das mudanças de foco/título. Não cria um
+novo temporizador e não inspeciona janelas de jogo como navegadores. A seleção
+da aba após clique e a revalidação dos comandos foram preservadas.
+
+Revisão por leitura de código e diff; compilação, testes e type check não
+executados nesta correção. A identificação na chamada real ainda precisa ser
+conferida na versão compilada.
