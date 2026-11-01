@@ -35,7 +35,7 @@ internal static class SelectionCircleStyle
         on.Setters.Add(new Setter(Border.BackgroundProperty, new DynamicResourceExtension("Think.Accent"), "Indicator"));
         on.Setters.Add(new Setter(Border.BorderBrushProperty, new DynamicResourceExtension("Think.Accent"), "Indicator"));
         if (glyph is null) on.Setters.Add(new Setter(TextBlock.TextProperty, "ON", "State"));
-        on.Setters.Add(new Setter(TextBlock.ForegroundProperty, new DynamicResourceExtension(glyph is null ? "Think.Background" : "Think.AccentInk"), "State")); template.Triggers.Add(on);
+        on.Setters.Add(new Setter(TextBlock.ForegroundProperty, new DynamicResourceExtension(glyph is null ? "Think.Background" : "Think.OnAccent"), "State")); template.Triggers.Add(on);
         var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
         hover.Setters.Add(new Setter(Border.BorderBrushProperty, new DynamicResourceExtension("Think.Accent"), "Indicator")); template.Triggers.Add(hover);
         var focus = new Trigger { Property = UIElement.IsKeyboardFocusWithinProperty, Value = true };

@@ -100,6 +100,7 @@ internal static class ThemeService
         var ink = Color.FromRgb((byte)(accent.R + (target - accent.R) * mix), (byte)(accent.G + (target - accent.G) * mix), (byte)(accent.B + (target - accent.B) * mix));
         Set("Think.Accent", ink.ToString());
         Set("Think.AccentInk", ink.ToString());
+        Set("Think.OnAccent", Typography.Ink(Colors.White, ink, true).ToString());
         Set("Think.AccentSurface", Color.FromArgb(light ? (byte)28 : (byte)38, accent.R, accent.G, accent.B).ToString());
         if (SystemParameters.HighContrast)
         {
@@ -113,6 +114,7 @@ internal static class ThemeService
             resources["Think.Popup"] = SystemColors.ControlBrush;
             resources["Think.Accent"] = SystemColors.HighlightBrush;
             resources["Think.AccentInk"] = SystemColors.HighlightBrush;
+            resources["Think.OnAccent"] = SystemColors.HighlightTextBrush;
             resources["Think.AccentSurface"] = SystemColors.ControlBrush;
             resources["Think.Hover"] = SystemColors.HighlightBrush;
         }
