@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
 
@@ -22,6 +24,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
         internal readonly TransformGroup Transform = new();
         internal readonly ScaleTransform Scale = new(1, 1);
         internal double Growth, Velocity;
+        private Brush? highlight;
         internal Item(Button button, TextBlock glyph)
         {
             Button = button; Glyph = glyph; Original = glyph.RenderTransform; Origin = glyph.RenderTransformOrigin;
@@ -30,8 +33,23 @@ internal sealed class HeaderIconMagnifier : IDisposable
         }
         internal void Restore()
         {
+            Highlight(null);
             if (!ReferenceEquals(Glyph.RenderTransform, Transform)) return;
             Glyph.RenderTransform = Original; Glyph.RenderTransformOrigin = Origin;
+        }
+        internal void Highlight(Brush? brush)
+        {
+            if (ReferenceEquals(highlight, brush)) return;
+            highlight = brush;
+            // Animate the effective value, keeping the original style/binding
+            // intact underneath so leaving restores the current theme ink.
+            ObjectAnimationUsingKeyFrames? animation = null;
+            if (brush is not null)
+            {
+                animation = new ObjectAnimationUsingKeyFrames { Duration = TimeSpan.Zero, FillBehavior = FillBehavior.HoldEnd };
+                animation.KeyFrames.Add(new DiscreteObjectKeyFrame(brush, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            }
+            Glyph.BeginAnimation(TextBlock.ForegroundProperty, animation);
         }
     }
     private readonly Panel row;
@@ -46,6 +64,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
         row = panel; permitted = canAnimate; clock.Tick += Frame;
         row.MouseMove += PointerChanged; row.MouseEnter += PointerChanged; row.MouseLeave += PointerChanged;
         row.Loaded += Loaded; row.Unloaded += Unloaded; row.IsVisibleChanged += VisibilityChanged;
+        ThemeService.Changed += RefreshHighlight;
     }
     private static IEnumerable<(Button Button, TextBlock Glyph)> Targets(Panel panel)
     {
@@ -66,19 +85,27 @@ internal sealed class HeaderIconMagnifier : IDisposable
         Reset(); foreach (var item in items) item.Restore(); items.Clear();
         foreach (var target in targets) items.Add(new Item(target.Button, target.Glyph));
     }
-    private void PointerChanged(object sender, MouseEventArgs args) { RefreshTargets(); Wake(); }
-    private void Loaded(object sender, RoutedEventArgs args) { RefreshTargets(); Wake(); }
+    private void RefreshHighlight()
+    {
+        foreach (var item in items)
+            item.Highlight(row.IsVisible && item.Button.IsMouseOver && item.Button.IsEnabled && item.Glyph.IsVisible
+                ? item.Glyph.TryFindResource("Think.Accent") as Brush : null);
+    }
+    private void PointerChanged(object sender, MouseEventArgs args) { RefreshTargets(); RefreshHighlight(); Wake(); }
+    private void Loaded(object sender, RoutedEventArgs args) { RefreshTargets(); RefreshHighlight(); Wake(); }
     private void Unloaded(object sender, RoutedEventArgs args) => Reset();
     private void VisibilityChanged(object sender, DependencyPropertyChangedEventArgs args) { if (!row.IsVisible) Reset(); else Wake(); }
     private void Wake()
     {
-        if (disposed || !row.IsVisible || !SystemParameters.ClientAreaAnimation) { Reset(); return; }
+        if (disposed || !row.IsVisible) { Reset(); return; }
+        if (!SystemParameters.ClientAreaAnimation) { Reset(clearHighlight: false); return; }
         if (clock.IsRunning) return;
         previous = 0; elapsed.Restart(); clock.Start();
     }
     private void Frame(object? sender, EventArgs args)
     {
-        if (!row.IsVisible || !SystemParameters.ClientAreaAnimation) { Reset(); return; }
+        if (!row.IsVisible) { Reset(); return; }
+        if (!SystemParameters.ClientAreaAnimation) { Reset(clearHighlight: false); return; }
         double now = elapsed.Elapsed.TotalSeconds, dt = Math.Clamp(now - previous, 0, .1); previous = now;
         bool active = row.IsMouseOver && permitted();
         Point pointer = Mouse.GetPosition(row);
@@ -106,10 +133,14 @@ internal sealed class HeaderIconMagnifier : IDisposable
         }
         if (settled) clock.Stop();
     }
-    private void Reset()
+    private void Reset(bool clearHighlight = true)
     {
         clock.Stop();
-        foreach (var item in items) { item.Growth = item.Velocity = 0; item.Scale.ScaleX = item.Scale.ScaleY = 1; }
+        foreach (var item in items)
+        {
+            item.Growth = item.Velocity = 0; item.Scale.ScaleX = item.Scale.ScaleY = 1;
+            if (clearHighlight) item.Highlight(null);
+        }
     }
     public void Dispose()
     {
@@ -117,6 +148,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
         foreach (var item in items) item.Restore(); items.Clear();
         row.MouseMove -= PointerChanged; row.MouseEnter -= PointerChanged; row.MouseLeave -= PointerChanged;
         row.Loaded -= Loaded; row.Unloaded -= Unloaded; row.IsVisibleChanged -= VisibilityChanged;
+        ThemeService.Changed -= RefreshHighlight;
         clock.Tick -= Frame;
     }
 }

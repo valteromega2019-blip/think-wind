@@ -13,6 +13,12 @@ cabe no espaço dos botões existentes, inclusive na barra de status de 28 DIP.
 Relógio e textos de clima não são ampliados como símbolos. Os comandos originais
 dos botões permanecem intactos.
 
+O símbolo diretamente sob o mouse também usa a cor de destaque. Ao sair, ele
+retorna à cor atual do tema, preservando estilos e bindings de origem. A cor
+acompanha mudanças de destaque em tempo real e funciona mesmo quando as
+animações do Windows estão desativadas. Os vizinhos apenas ampliam, sem receber
+o estado de hover do botão selecionado.
+
 Não há preferências novas nem dependência das configurações do Dock inferior.
 O efeito respeita a desativação de animações do Windows, pausa em edição/arrasto
 e interações incompatíveis, e é interrompido ao ocultar a interface. Não cria
