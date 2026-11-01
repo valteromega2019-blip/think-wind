@@ -137,7 +137,16 @@ internal sealed class HardwareMonitorPanel : UserControl
     }
     private void Render(bool updateLayout = true)
     {
-        if (optimizing && body.Children.Contains(optimizerPanel)) return;
+        if (optimizing && body.Children.Contains(optimizerPanel))
+        {
+            if (updateLayout)
+            {
+                FontSizing.PrepareForMeasure(this);
+                boardLayoutDirty = true;
+                LayoutChanged?.Invoke();
+            }
+            return;
+        }
         body.Children.Clear();
         if (optimizing) body.Children.Add(optimizerPanel);
         else if (components) RenderComponents(); else RenderSummary();

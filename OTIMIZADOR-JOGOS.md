@@ -35,3 +35,11 @@ Antes de cada solicitação, reconsulta serviços/proteções e compara PID, in�
 Arquivos: Services/OptimizerProcessCloser.cs, Services/OptimizerAnalysis.cs e Views/GameOptimizerPanel.cs. Revisão por leitura/diff; sem compilação, testes ou type check e sem fechar aplicativos reais nesta tarefa.
 
 API de proteção: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-isprocesscritical
+
+## Ajuste de apresentação do Otimizador
+
+O relatório e os aplicativos deixaram de ser empilhados em uma lista extensa. Resumo, Processos e Aplicativos usam a mesma área estável de resultados. Aplicativos têm quatro itens por página, seleção preservada entre páginas e contador no botão de fechamento. Textos longos e fontes maiores ficam em áreas com rolagem interna limitada, sem expandir o painel indefinidamente. Os botões usam OutlineButton e o bloco usa CardBorder/recursos Think do monitor original.
+
+A guarda que preserva o painel durante leituras de sensores agora permite invalidar sua medida quando uma atualização explícita de layout ou personalização ocorre. As leituras periódicas continuam sem reconstruir o painel. Nenhuma alteração nos filtros de proteção ou no mecanismo de fechamento.
+
+Revisão por leitura e diff; sem execução, compilação, testes ou type check nesta solicitação. A apresentação ainda precisa de conferência em execução nas escalas configuradas pelo usuário.
