@@ -115,7 +115,8 @@ internal abstract class FloatingWindow : Window
         animation.Tick += (_, _) =>
         {
             var progress = Math.Clamp(elapsed.Elapsed.TotalMilliseconds / Math.Max(1, animationDuration), 0, 1);
-            var eased = progress * progress * (3 - 2 * progress);
+            // Smoother endpoint acceleration, without changing the duration.
+            var eased = progress * progress * progress * (progress * (progress * 6 - 15) + 10);
             Move(new OverlayChrome.PixelRect
             {
                 Left = Blend(start.Left, target.Left, eased), Top = Blend(start.Top, target.Top, eased),
@@ -269,7 +270,13 @@ internal abstract class FloatingWindow : Window
     private void Move(OverlayChrome.PixelRect rectangle)
     {
         positioning = true;
-        try { OverlayChrome.Move(new WindowInteropHelper(this).Handle, rectangle); UpdateClip(); }
+        try
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            if (!OverlayChrome.GetWindowRect(handle, out var current) || current.Left != rectangle.Left || current.Top != rectangle.Top || current.Right != rectangle.Right || current.Bottom != rectangle.Bottom)
+                OverlayChrome.Move(handle, rectangle);
+            UpdateClip();
+        }
         finally { positioning = false; }
     }
     internal OverlayChrome.PixelRect Bounds

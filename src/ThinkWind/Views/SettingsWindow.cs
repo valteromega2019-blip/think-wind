@@ -56,7 +56,10 @@ internal sealed partial class SettingsWindow : FloatingWindow
         heading.Children.Add(new TextBlock { Text = "Personalizar", FontSize = 21, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 4) });
         heading.Children.Add(new TextBlock { Text = "Ajuste ao seu estilo. A prévia muda na hora e suas escolhas são salvas automaticamente.", FontSize = 11, TextWrapping = TextWrapping.Wrap, Opacity = .8 });
         heading.Children.Add(CreateSettingsSearch());
-        DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
+        var headingScroll = new ScrollViewer { Content = heading, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        headingScroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
+        SizeChanged += (_, _) => headingScroll.MaxHeight = Math.Max(100, ActualHeight * .34);
+        DockPanel.SetDock(headingScroll, Dock.Top); root.Children.Add(headingScroll);
         var scroll = settingsScroll;
         scroll.Content = content;
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
@@ -67,6 +70,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         store.Changed += StoreChanged; store.PersistenceChanged += PersistenceChanged;
         Closed += (_, _) => { weatherSettings.Dispose(); store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };
         Build();
+        EnableManualResize();
     }
     internal void ShowWeatherSection()
     {
@@ -80,6 +84,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     private void StoreChanged(object? sender, EventArgs e)
     {
         refreshTypography?.Invoke();
+        SyncContrastControls();
         if (weatherVisibilityCheck is not null && weatherVisibilityCheck.IsChecked != store.Value.ShowWeatherInHeader)
         {
             bool previous = building; building = true;
@@ -97,6 +102,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     }
     public override void Position()
     {
+        if (manualResize) { UpdateClip(); return; }
         var screen = Display; int gap = (int)Math.Round(12 * screen.Scale);
         var handle = new WindowInteropHelper(this).Handle; if (handle == 0) return;
         OverlayChrome.Move(handle, new OverlayChrome.PixelRect
@@ -117,6 +123,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     private void Build()
     {
         building = true; content.Children.Clear(); ClearSettingsTabs();
+        contrastControls.Clear();
         BuildAppearance();
         BuildKeyboardSettings();
         BuildIntegratedOverlay();
@@ -347,7 +354,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         var heading = new DockPanel { Margin = new Thickness(0, 10, 0, 6) };
         var readout = new TextBlock { Text = value.ToString(format, System.Globalization.CultureInfo.CurrentCulture), HorizontalAlignment = HorizontalAlignment.Right };
         readout.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
-        DockPanel.SetDock(readout, Dock.Right); heading.Children.Add(readout); heading.Children.Add(new TextBlock { Text = label }); parent.Children.Add(heading);
+        DockPanel.SetDock(readout, Dock.Right); heading.Children.Add(readout); heading.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap }); parent.Children.Add(heading);
         var slider = new System.Windows.Controls.Slider { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), SmallChange = smallChange ?? (format == "P0" ? .01 : 1), LargeChange = (max - min) / 10, Margin = new Thickness(0, 4, 0, 8) };
         System.Windows.Automation.AutomationProperties.SetName(slider, label);
         slider.ValueChanged += (_, _) => { readout.Text = slider.Value.ToString(format, System.Globalization.CultureInfo.CurrentCulture); changed(slider.Value); };
@@ -355,7 +362,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     }
     private static void Select(Panel parent, string label, string selected, Choice[] choices, Action<string> changed)
     {
-        parent.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 10, 0, 6) });
+        parent.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 6) });
         var combo = new ComboBox { ItemsSource = choices, SelectedItem = choices.FirstOrDefault(c => c.Id == selected), Margin = new Thickness(0, 0, 0, 10) };
         System.Windows.Automation.AutomationProperties.SetName(combo, label);
         combo.SelectionChanged += (_, _) => { if (combo.SelectedItem is Choice choice) changed(choice.Id); }; parent.Children.Add(combo);

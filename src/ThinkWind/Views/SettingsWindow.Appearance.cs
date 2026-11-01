@@ -11,11 +11,13 @@ internal sealed partial class SettingsWindow
         var colors = Section("Aparência", "Tema e cores. O destaque colore botões e indicadores; o fundo define a tonalidade das duas barras.");
         Select(colors, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
         AddColorSetting(colors, "Cor de destaque", store.Value.AccentColor, value => Change(p => p.AccentColor = value));
+        AddContrastControl(colors);
         Check(colors, "Personalizar a cor de fundo das duas barras", store.Value.UseCustomBarColor, value => Change(p => p.UseCustomBarColor = value));
         AddColorSetting(colors, "Cor de fundo", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));
         Note(colors, "Para usar esta cor, ative a opção acima. Desativada, o fundo acompanha o tema ou o aplicativo, conforme suas configurações.");
 
         var surfaces = Section("Transparência", "Materiais e opacidade. Ajuste cada barra separadamente; o teclado acompanha a barra superior.");
+        AddContrastControl(surfaces);
         AppearanceLabel(surfaces, "Barra de aplicativos · inferior");
         Select(surfaces, "Efeito do fundo", store.Value.DockMaterial, Materials(), value => Change(p => p.DockMaterial = value));
         Slider(surfaces, "Opacidade da barra inferior", .05, 1, store.Value.DockOpacity ?? store.Value.TintOpacity, value => Change(p => p.DockOpacity = value), "P0");

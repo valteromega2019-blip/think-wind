@@ -12,12 +12,12 @@ internal sealed partial class SettingsWindow
     {
         var title = new TextBlock { Text = label, Margin = new Thickness(0, 10, 0, 6), TextWrapping = TextWrapping.Wrap };
         title.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); parent.Children.Add(title);
-        var row = new DockPanel();
-        var hex = new TextBox { Text = value, Width = 104, MaxLength = 7, BorderThickness = new Thickness(0), Background = Brushes.Transparent,
+        var row = new Grid(); row.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); row.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var hex = new TextBox { Text = value, MinWidth = 104, MaxLength = 7, BorderThickness = new Thickness(0), Background = Brushes.Transparent,
             Padding = new Thickness(8), VerticalContentAlignment = VerticalAlignment.Center };
         hex.SetResourceReference(Control.ForegroundProperty, "Think.Text");
         System.Windows.Automation.AutomationProperties.SetName(hex, label + " em hexadecimal");
-        DockPanel.SetDock(hex, Dock.Right); row.Children.Add(hex);
+        Grid.SetRow(hex, 1); row.Children.Add(hex);
         var swatch = new Border { Width = 24, Height = 24, CornerRadius = new CornerRadius(12), Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(value)) };
         var caption = new TextBlock { Text = "Escolher cor", VerticalAlignment = VerticalAlignment.Center };
         caption.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");

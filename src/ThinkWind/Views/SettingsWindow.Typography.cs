@@ -52,7 +52,7 @@ internal sealed partial class SettingsWindow
             finally { building = previous; }
         };
         rgb.LostKeyboardFocus += (_, _) => refreshTypography?.Invoke();
-        Check(parent, "Contraste automático do texto", store.Value.AutomaticTextContrast, v => Change(p => p.AutomaticTextContrast = v));
+        AddContrastControl(parent);
         Note(parent, "Com o contraste automático, a cor pode ser ajustada para manter a leitura sobre o fundo escolhido.");
         AppearanceLabel(parent, "Prévia em tempo real");
         var preview = new TextBlock { Text = "Prévia · Aa Bb 0123456789\nSua interface, do seu jeito.", FontSize = 18, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12) };
