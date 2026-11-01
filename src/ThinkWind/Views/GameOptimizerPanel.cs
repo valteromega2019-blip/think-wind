@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Windows;
 using System.Threading;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Controls;
 using OrbyLauncher.Services;
 
@@ -43,20 +45,53 @@ internal sealed class GameOptimizerPanel : StackPanel
         var report = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 13 };
         Children.Add(analyze);
         Children.Add(new ScrollViewer { Content = report, MaxHeight = 320, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        var choices = new StackPanel();
+        var close = new Button { Content = "Fechar selecionados…", IsEnabled = false, Margin = new Thickness(0, 8, 0, 8) };
+        Children.Add(new ScrollViewer { Content = choices, MaxHeight = 160, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        Children.Add(close);
+        var approvals = new List<(CheckBox Check, OptimizerCloseCandidate Process)>();
+        bool closing = false;
+        close.Click += async (_, _) =>
+        {
+            if (closing || analysis is not null) return;
+            var selectedProcesses = approvals.Where(item => item.Check.IsChecked == true).Select(item => item.Process).ToArray();
+            if (selectedProcesses.Length == 0) { status.Text = "Selecione os aplicativos que deseja fechar."; return; }
+            if (MessageBox.Show(Window.GetWindow(this), "Solicitar o fechamento de:\n" + string.Join("\n", selectedProcesses.Select(item => item.Name + " (PID " + item.Id + ")"))
+                + "\n\nSalve seu trabalho. Fechar uma janela pode encerrar outras janelas do mesmo aplicativo. Nada será encerrado à força.",
+                "Aprovar fechamento", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            closing = true; close.IsEnabled = false; analyze.IsEnabled = false; choices.IsEnabled = false;
+            var outcomes = new List<string>();
+            try
+            {
+                foreach (var process in selectedProcesses) outcomes.Add(await OptimizerProcessCloser.RequestClose(process));
+                status.Text = string.Join("\n", outcomes);
+            }
+            finally { approvals.Clear(); choices.Children.Clear(); choices.IsEnabled = true; closing = false; analyze.IsEnabled = true; }
+        };
         analyze.Click += async (_, _) =>
         {
-            if (analysis is not null) return;
+            if (analysis is not null || closing) return;
+            approvals.Clear(); choices.Children.Clear(); close.IsEnabled = false;
             using var cancellation = new CancellationTokenSource();
             analysis = cancellation; analyze.IsEnabled = false;
             report.Text = "Observando processos por alguns instantes…";
             var preferences = store.Value;
             try
             {
-                string result = await OptimizerAnalysis.Analyze(((App)Application.Current).Telemetry.Latest,
+                var result = await OptimizerAnalysis.Analyze(((App)Application.Current).Telemetry.Latest,
                     preferences.GameModeEnabled, preferences.OptimizerEnabled,
                     preferences.OptimizerPowerPlan == "Performance" ? "Desempenho" : preferences.OptimizerPowerPlan == "Economy" ? "Economia" : preferences.OptimizerPowerPlan == "Keep" ? "Manter plano atual" : "Equilibrado",
                     preferences.HardwareOverlayEnabled, cancellation.Token);
-                if (!cancellation.IsCancellationRequested) report.Text = result;
+                if (!cancellation.IsCancellationRequested)
+                {
+                    report.Text = result.Text;
+                    foreach (var process in result.Candidates)
+                    {
+                        var check = new CheckBox { Content = process.Name + " · PID " + process.Id, Margin = new Thickness(0, 5, 0, 5) };
+                        choices.Children.Add(check); approvals.Add((check, process));
+                    }
+                    close.IsEnabled = approvals.Count > 0;
+                }
             }
             catch (OperationCanceledException) { report.Text = "Análise cancelada."; }
             catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)

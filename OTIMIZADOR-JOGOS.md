@@ -23,3 +23,15 @@ Sair da área cancela a coleta; a entrada em jogo também solicita cancelamento.
 Arquivos: Services/OptimizerAnalysis.cs, Services/GameOptimizer.cs e Views/GameOptimizerPanel.cs. Revisão por leitura; não executados testes, type check ou compilação nesta solicitação.
 
 Referência: https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.totalprocessortime?view=net-10.0
+
+## Fechamento aprovado
+
+Após a análise, aplicativos elegíveis aparecem em caixas de seleção inicialmente desmarcadas. Fechar selecionados apresenta nomes/PIDs e pede confirmação explícita, com orientação para salvar documentos. Não há autorização persistente nem fechamento automático no início de jogos.
+
+Somente processos com janela principal, na sessão do launcher, fora do primeiro plano e da pasta do Windows, não associados a serviços Win32_Service, não marcados críticos por IsProcessCritical e com leitura de identidade disponível podem entrar na lista de ações. Exclui também Orby/Think, alguns launchers, comunicadores, nomes comuns de segurança/anticheat e caminhos steamapps/WindowsApps. Se a consulta de serviços falhar, não oferece candidatos. A lista de maior consumo é informativa e pode mostrar processos excluídos das ações.
+
+Antes de cada solicitação, reconsulta serviços/proteções e compara PID, início do processo e executável, para rejeitar resultados antigos. Usa CloseMainWindow em tarefa de fundo, sem Kill, TerminateProcess, encerramento de árvore ou elevação. Solicitação aceita não significa processo encerrado: o aplicativo pode mostrar um diálogo de salvamento, ocultar na bandeja ou recusar. O resultado informa isso. Algumas dependências essenciais de terceiros não são identificáveis por estes filtros; a seleção exige revisão do usuário.
+
+Arquivos: Services/OptimizerProcessCloser.cs, Services/OptimizerAnalysis.cs e Views/GameOptimizerPanel.cs. Revisão por leitura/diff; sem compilação, testes ou type check e sem fechar aplicativos reais nesta tarefa.
+
+API de proteção: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-isprocesscritical
