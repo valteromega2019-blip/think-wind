@@ -15,7 +15,6 @@ internal sealed class VirtualKeyboardWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
     protected override bool UsesIslandAppearance => true;
-    protected override string? MaterialOverride => "Acrylic";
     private readonly Grid keys = new();
     private readonly TextBlock message = new() { Text = "Clique em um campo de texto e use as teclas abaixo.", FontSize = 11, TextWrapping = TextWrapping.Wrap };
     private readonly HashSet<string> modifiers = new();
@@ -23,6 +22,7 @@ internal sealed class VirtualKeyboardWindow : FloatingWindow
     private readonly List<(Button Button, char Plain, char Upper)> letterButtons = new();
     private string accent = "";
     private bool caps, symbols;
+    private (string Layout, bool NumberPad, double Scale) keyboardLayout;
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongW")] private static extern int SetWindowLong(nint window, int index, int value);
     internal VirtualKeyboardWindow(SettingsStore store) : base(store)
@@ -44,14 +44,31 @@ internal sealed class VirtualKeyboardWindow : FloatingWindow
         {
             nint handle = new WindowInteropHelper(this).Handle;
             SetWindowLong(handle, -20, GetWindowLong(handle, -20) | 0x08000000 | 0x80);
-            HwndSource.FromHwnd(handle).AddHook((nint hwnd, int msg, nint wp, nint lp, ref bool handled) => { if (msg == 0x21) { handled = true; return 3; } return 0; });
+            HwndSource.FromHwnd(handle).AddHook((nint hwnd, int msg, nint wp, nint lp, ref bool handled) =>
+            {
+                if (msg == 0x21) { handled = true; return 3; }
+                // Keep the separate native backdrop aligned even on a move
+                // without resize (including dragging this nonactivating window).
+                if (msg == 0x47) UpdateClip();
+                return 0;
+            });
         };
         IsVisibleChanged += (_, _) => { if (!IsVisible) { modifiers.Clear(); accent = ""; RefreshLetters(); RefreshModifierColors(); } };
         store.Changed += PreferencesChanged;
         Closed += (_, _) => store.Changed -= PreferencesChanged;
-        Build();
+        Build(); keyboardLayout = LayoutPreferences();
     }
-    private void PreferencesChanged(object? sender, EventArgs e) { Build(); RefreshSettings(); }
+    private (string Layout, bool NumberPad, double Scale) LayoutPreferences() => (Store.Value.KeyboardLayout, Store.Value.KeyboardNumberPad, Store.Value.KeyboardScale);
+    private void PreferencesChanged(object? sender, EventArgs e)
+    {
+        var next = LayoutPreferences();
+        if (next != keyboardLayout)
+        {
+            if (next.Layout != keyboardLayout.Layout || next.NumberPad != keyboardLayout.NumberPad) Build();
+            keyboardLayout = next; RefreshSettings();
+        }
+        else RefreshAppearance();
+    }
     private static Button Tool(string label, Action action)
     {
         var button = new Button { Content = label, Focusable = false, IsTabStop = false, Margin = new Thickness(3), Padding = new Thickness(9, 5, 9, 5) };
@@ -163,5 +180,6 @@ internal sealed class VirtualKeyboardWindow : FloatingWindow
         int left = Display.Work.Left + (int)Math.Round((Display.Width - Width) * Display.Scale / 2);
         int top = Display.Work.Bottom - (int)Math.Round((Height + 18) * Display.Scale);
         OverlayChrome.Move(handle, new OverlayChrome.PixelRect { Left = left, Top = top, Right = left + (int)Math.Round(Width * Display.Scale), Bottom = top + (int)Math.Round(Height * Display.Scale) });
+        UpdateClip();
     }
 }

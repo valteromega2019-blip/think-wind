@@ -165,7 +165,7 @@ internal abstract class FloatingWindow : Window
         centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;
         UpdateClip();
     }
-    private void UpdateClip()
+    protected void UpdateClip()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd == 0 || !OverlayChrome.GetWindowRect(hwnd, out var rectangle)) return;
