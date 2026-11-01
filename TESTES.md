@@ -1,3 +1,7 @@
+## 0.21 Beta — entrega atual
+
+50 verificações aprovadas, zero falhas e zero ignoradas. Build e publish Release com avisos tratados como erros, lint Roslyn, verificação de estilo e instalador concluídos a pedido explícito do usuário. [Resultados, comandos e limitações](VALIDACAO-0.21-BETA.md).
+
 ## 0.18 Alfa — revisão 3
 
 47 verificações aprovadas, zero falhas e zero ignoradas nesta entrega. Publish Release com avisos tratados como erros e instalador concluídos. [Escopo e limites](VALIDACAO-0.18.3-ALFA.md).
