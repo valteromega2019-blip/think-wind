@@ -17,7 +17,7 @@ internal sealed class GameOptimizer
     internal bool GameForeground { get; private set; }
     internal string Status { get; private set; } = "Pronto · perfil automático desativado.";
     internal event Action? Changed;
-    private static Guid ReadPlan()
+    internal static Guid ReadPlan()
     {
         uint result = PowerGetActiveScheme(0, out nint pointer);
         if (result != 0) throw new InvalidOperationException("O Windows não informou o plano de energia: " + result);
