@@ -41,6 +41,8 @@ internal sealed class BackdropHost : IDisposable
     [DllImport("user32.dll")] private static extern bool DestroyWindow(nint window);
     [DllImport("user32.dll")] private static extern bool ShowWindow(nint window, int command);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongW")] private static extern int SetWindowLong(nint window, int index, int value);
     [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(nint window, int attribute, ref int value, int size);
     [DllImport("dwmapi.dll")] private static extern int DwmExtendFrameIntoClientArea(nint window, ref Margins margins);
     internal BackdropHost(Window window) : this(new WindowInteropHelper(window).Handle, window.ShowInTaskbar,
@@ -73,6 +75,17 @@ internal sealed class BackdropHost : IDisposable
         if (Handle == 0 || (currentMaterial == material && currentLight == light)) return;
         if (currentMaterial != material) { currentMaterial = material; synchronized = false; }
         currentLight = light;
+        // NOREDIRECTIONBITMAP is required by our Acrylic composition target,
+        // but Mica is painted by DWM itself. Leaving the composition-only style
+        // on that HWND can expose its black backing outside the rounded fill.
+        int extended = GetWindowLong(Handle, -20);
+        int nextExtended = material == "Mica" ? extended & ~0x00200000 : extended | 0x00200000;
+        if (extended != nextExtended)
+        {
+            SetWindowLong(Handle, -20, nextExtended);
+            SetWindowPos(Handle, 0, 0, 0, 0, 0, 0x0037); // FRAMECHANGED, no move/size/z-order/activation.
+            synchronized = false;
+        }
         int dark = light ? 0 : 1, type = material == "Mica" ? 2 : material == "Acrylic" ? 3 : 1;
         DwmSetWindowAttribute(Handle, 20, ref dark, 4);
         if (material == "Acrylic")
