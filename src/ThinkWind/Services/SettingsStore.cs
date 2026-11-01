@@ -278,10 +278,12 @@ public sealed class SettingsStore
             p.HiddenModules.AddRange(p.HiddenWidgets ?? new());
             p.UnifiedWidgetLayout = true;
         }
-        p.ModuleOrder = LayoutCatalog.Complete(p.ModuleOrder, LayoutCatalog.Modules);
+        // Replace the old shortcuts-only notification card in place. The
+        // independent notification quick control is intentionally unchanged.
+        p.ModuleOrder = LayoutCatalog.Complete((p.ModuleOrder ?? new()).Select(id => id == "notifications" ? "calculator" : id), LayoutCatalog.Modules);
         p.HiddenQuickControls = (p.HiddenQuickControls ?? new()).Where(quickIds.Contains).Distinct().ToList();
         p.DisabledQuickControls = (p.DisabledQuickControls ?? new()).Where(id => id == "weather" || (id != "settings" && quickIds.Contains(id))).Distinct().ToList();
-        p.HiddenModules = (p.HiddenModules ?? new()).Where(LayoutCatalog.Modules.Contains).Distinct().ToList();
+        p.HiddenModules = (p.HiddenModules ?? new()).Select(id => id == "notifications" ? "calculator" : id).Where(LayoutCatalog.Modules.Contains).Distinct().ToList();
         p.WidgetOrder = LayoutCatalog.Complete(p.WidgetOrder, new[] { "weather", "notes", "favorites" });
         p.HiddenWidgets = (p.HiddenWidgets ?? new()).Where(id => id is "weather" or "notes" or "favorites").Distinct().ToList();
         p.WidgetNote = (p.WidgetNote ?? "")[..Math.Min(4000, (p.WidgetNote ?? "").Length)];

@@ -186,10 +186,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         var calendarPanel = new StackPanel();
         calendarPanel.Children.Add(calendarDate);
         calendarPanel.Children.Add(calendar); bodies["calendar"] = calendarPanel;
-        var notifications = new WrapPanel();
-        var alerts = ActionButton("Abrir notificações", () => Desktop.Chord(0x5B, 0x4E)); alerts.Content = Glyph("\uE7F4", 20); alerts.Width = 36; alerts.Height = 36; alerts.Padding = new Thickness(4); notifications.Children.Add(alerts);
-        var alertSettings = ActionButton("Configurar notificações", () => SystemActions.Run("ms-settings:notifications")); alertSettings.Content = Glyph("\uE713", 16); alertSettings.Width = 36; alertSettings.Height = 36; alertSettings.Padding = new Thickness(4); notifications.Children.Add(alertSettings);
-        bodies["notifications"] = notifications;
+        bodies["calculator"] = new CalculatorWidget();
         bodies["weather"] = weather;
         bodies["notes"] = widgetArea.Notes;
         bodies["favorites"] = widgetArea.Favorites;
