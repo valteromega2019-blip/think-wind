@@ -43,3 +43,11 @@ O relatório e os aplicativos deixaram de ser empilhados em uma lista extensa. R
 A guarda que preserva o painel durante leituras de sensores agora permite invalidar sua medida quando uma atualização explícita de layout ou personalização ocorre. As leituras periódicas continuam sem reconstruir o painel. Nenhuma alteração nos filtros de proteção ou no mecanismo de fechamento.
 
 Revisão por leitura e diff; sem execução, compilação, testes ou type check nesta solicitação. A apresentação ainda precisa de conferência em execução nas escalas configuradas pelo usuário.
+
+## Seleção e clareza das ações
+
+O Otimizador reutiliza SelectionCircleStyle nos modos (seleção exclusiva) e nos aplicativos (aprovação individual inicialmente desmarcada). Botões e abas recebem glifos Segoe Fluent usados pelo launcher. Cores permanecem nos recursos Think, sem cores fixas novas.
+
+Processos agora informa explicitamente que consumo não equivale a permissão de fechamento, incluindo orientação para a aba Aplicativos. Cada aplicativo elegível mostra Fechamento permitido após aprovação; a área lembra que o usuário deve confirmar que não está usando o programa. O contador de selecionados e a confirmação existente foram preservados. Nenhuma alteração nos filtros ou encerramento efetivo.
+
+Revisão por leitura e diff. Não executados compilação, testes ou type check nesta solicitação; ícones e apresentação ainda precisam de conferência em execução.

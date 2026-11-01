@@ -4,6 +4,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Controls;
+using System.Windows.Media;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
@@ -24,8 +25,14 @@ internal sealed class GameOptimizerPanel : StackPanel
         var modes = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
         foreach (var mode in new[] { ("Balanced", "Equilibrado"), ("Performance", "Desempenho"), ("Economy", "Economia") })
         {
-            var button = new RadioButton { Content = mode.Item2, GroupName = "OptimizerMode", IsChecked = mode.Item1 == selected, Margin = new Thickness(0, 4, 18, 4) };
-            button.Checked += (_, _) => { selected = mode.Item1; Describe(); };
+            var button = new CheckBox { Content = mode.Item2, Tag = mode.Item1, IsChecked = mode.Item1 == selected, Margin = new Thickness(0, 4, 12, 4), Style = SelectionCircleStyle.Create(mode.Item1 == "Performance" ? "\uE945" : mode.Item1 == "Economy" ? "\uE8BE" : "\uE9D9") };
+            button.Checked += (_, _) =>
+            {
+                selected = mode.Item1;
+                foreach (CheckBox other in modes.Children) if (other != button) other.IsChecked = false;
+                Describe();
+            };
+            button.Unchecked += (_, _) => { if ((string)button.Tag == selected) button.IsChecked = true; };
             modes.Children.Add(button);
         }
         var optimize = new Button { Content = "Otimizar", Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 8, 0, 8) };
@@ -54,6 +61,9 @@ internal sealed class GameOptimizerPanel : StackPanel
         var tabs = new WrapPanel { Margin = new Thickness(0, 4, 0, 6) };
         var reportScroll = new ScrollViewer { Content = report, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         var apps = new DockPanel { LastChildFill = true, Visibility = Visibility.Collapsed };
+        var approvalHint = new TextBlock { Text = "Selecione somente o que você não está usando. O fechamento exige sua aprovação.", TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(0, 0, 0, 6) };
+        approvalHint.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
+        DockPanel.SetDock(approvalHint, Dock.Top); apps.Children.Add(approvalHint);
         var appFooter = new StackPanel();
         var pager = new WrapPanel();
         var previous = new Button { Content = "‹" }; var next = new Button { Content = "›" };
@@ -72,7 +82,7 @@ internal sealed class GameOptimizerPanel : StackPanel
             for (int i = 0; i < approvals.Count; i++) approvals[i].Check.Visibility = i / 4 == page ? Visibility.Visible : Visibility.Collapsed;
             pageLabel.Text = approvals.Count == 0 ? "Nenhum aplicativo elegível" : $"{page + 1} / {total}";
             previous.IsEnabled = page > 0; next.IsEnabled = page < total - 1;
-            close.Content = "Fechar selecionados (" + approvals.Count(item => item.Check.IsChecked == true) + ")…";
+            close.Content = IconLabel("\uE711", "Fechar selecionados (" + approvals.Count(item => item.Check.IsChecked == true) + ")…");
         }
         void ShowTab(string tab)
         {
@@ -82,16 +92,17 @@ internal sealed class GameOptimizerPanel : StackPanel
             int processStart = fullReport.IndexOf("MAIOR CONSUMO OBSERVADO", StringComparison.Ordinal);
             int reviewStart = fullReport.IndexOf("APLICATIVOS PARA REVISAR", StringComparison.Ordinal);
             report.Text = processStart < 0 ? fullReport : tab == "Processos"
-                ? fullReport.Substring(processStart, (reviewStart > processStart ? reviewStart : fullReport.Length) - processStart).Trim()
-                    + "\n\nConsumo é uma amostra curta; RAM pode incluir páginas compartilhadas."
+                ? "CONSUMO · SOMENTE INFORMAÇÃO\nNão significa que estes processos podem ser fechados. Use Aplicativos para ver as opções permitidas.\n\n"
+                    + fullReport.Substring(processStart, (reviewStart > processStart ? reviewStart : fullReport.Length) - processStart).Trim()
+                    + "\n\nConsumo é uma amostra curta; RAM pode incluir páginas compartilhadas. Processos críticos e serviços não entram na seleção de fechamento."
                 : fullReport[..processStart].Trim();
             foreach (Button button in tabs.Children)
-                button.SetResourceReference(Control.BackgroundProperty, (string)button.Content == tab ? "Think.AccentSurface" : "Think.Hover");
+                button.SetResourceReference(Control.BackgroundProperty, (string)button.Tag == tab ? "Think.AccentSurface" : "Think.Hover");
             reportScroll.ScrollToTop(); UpdatePage();
         }
         foreach (string name in new[] { "Resumo", "Processos", "Aplicativos" })
         {
-            var tab = new Button { Content = name, Margin = new Thickness(0, 0, 4, 0) };
+            var tab = new Button { Content = IconLabel(name == "Resumo" ? "\uE9D9" : name == "Processos" ? "\uE9D5" : "\uE71D", name), Tag = name, Margin = new Thickness(0, 0, 4, 0) };
             tab.Click += (_, _) => ShowTab(name); tabs.Children.Add(tab);
         }
         previous.Click += (_, _) => { page--; UpdatePage(); }; next.Click += (_, _) => { page++; UpdatePage(); };
@@ -103,6 +114,9 @@ internal sealed class GameOptimizerPanel : StackPanel
         description.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         status.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");
         pageLabel.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
+        optimize.Content = IconLabel("\uE945", "Otimizar");
+        stop.Content = IconLabel("\uE777", "Restaurar");
+        analyze.Content = IconLabel("\uE721", "Analisar");
         ShowTab("Resumo");
         bool closing = false;
         close.Click += async (_, _) =>
@@ -141,7 +155,12 @@ internal sealed class GameOptimizerPanel : StackPanel
                     fullReport = result.Text;
                     foreach (var process in result.Candidates)
                     {
-                        var check = new CheckBox { Content = new TextBlock { Text = process.Name, TextWrapping = TextWrapping.Wrap }, ToolTip = "PID " + process.Id, Margin = new Thickness(0, 7, 0, 7) }; check.SetResourceReference(Control.ForegroundProperty, "Think.Text"); check.Checked += (_, _) => UpdatePage(); check.Unchecked += (_, _) => UpdatePage();
+                        var label = new StackPanel();
+                        label.Children.Add(new TextBlock { Text = process.Name, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, FontSize = 11 });
+                        var hint = new TextBlock { Text = "Fechamento permitido após aprovação", TextWrapping = TextWrapping.Wrap, FontSize = 10 };
+                        hint.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); label.Children.Add(hint);
+                        var check = new CheckBox { Content = label, Style = SelectionCircleStyle.Create("\uE73E"), ToolTip = "PID " + process.Id + " · fechamento normal, sem forçar", Margin = new Thickness(0, 3, 0, 3) };
+                        check.SetResourceReference(Control.ForegroundProperty, "Think.Text"); check.Checked += (_, _) => UpdatePage(); check.Unchecked += (_, _) => UpdatePage();
                         choices.Children.Add(check); approvals.Add((check, process));
                     }
                     close.IsEnabled = approvals.Count > 0; page = 0; ShowTab(currentTab);
@@ -156,6 +175,13 @@ internal sealed class GameOptimizerPanel : StackPanel
         Unloaded += (_, _) => { optimizer.Changed -= GameChanged; analysis?.Cancel(); };
         IsVisibleChanged += (_, _) => { if (!IsVisible) analysis?.Cancel(); };
         Describe();
+    }
+    private static UIElement IconLabel(string glyph, string text)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        row.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 13, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
+        row.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
+        return row;
     }
     private string ModeName() => selected == "Performance" ? "Desempenho" : selected == "Economy" ? "Economia" : "Equilibrado";
     private void GameChanged()
