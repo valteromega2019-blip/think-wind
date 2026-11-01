@@ -26,24 +26,27 @@ internal sealed class WindowPreview : FloatingWindow
     private int page, perPage = 4;
     private MediaCard? spotify;
     private bool spotifyMode;
-    internal bool IsInteracting => spotifyMode && spotify?.IsInteracting == true;
+    private CallPreviewCard? call;
+    private bool callMode;
+    internal bool IsInteracting => (spotifyMode && spotify?.IsInteracting == true) || (callMode && call?.IsInteracting == true);
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         anchor = getAnchor; Title = "Orby Launcher — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;
         refresh.Tick += (_, _) => { if (windows.Any(window => !WindowThumbnail.IsWindow(window.Handle))) { windows.RemoveAll(window => !WindowThumbnail.IsWindow(window.Handle)); Render(); } };
         LayoutUpdated += (_, _) => PlaceThumbnails();
-        IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); Release(); spotify?.SetActive(false); } };
-        Closed += (_, _) => { Release(); spotify?.Dispose(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); Release(); spotify?.SetActive(false); call?.Stop(); } };
+        Closed += (_, _) => { Release(); spotify?.Dispose(); call?.Dispose(); };
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape) Hide(); };
     }
     internal void Present(IEnumerable<Desktop.RunningWindow> source)
     {
-        spotifyMode = false; spotify?.SetActive(false); viewport.Child = body;
+        callMode = false; call?.Stop(); spotifyMode = false; spotify?.SetActive(false); viewport.Child = body;
         windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
         if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Start();
     }
     internal void PresentSpotify()
     {
+        callMode = false; call?.Stop();
         refresh.Stop(); Release(); spotifyMode = true;
         if (spotify is null)
         {
@@ -52,7 +55,24 @@ internal sealed class WindowPreview : FloatingWindow
         }
         viewport.Child = spotify; Show(); Position(); spotify.SetActive(true);
     }
+    internal void PresentCall(CallSnapshot snapshot, IEnumerable<Desktop.RunningWindow> source)
+    {
+        refresh.Stop(); Release(); spotifyMode = false; spotify?.SetActive(false); callMode = true;
+        windows = source.ToList();
+        if (call is null)
+        {
+            call = new CallPreviewCard();
+            call.LayoutChanged += () => { if (IsVisible && callMode) Position(); };
+            call.CallEnded += () => { if (IsVisible && callMode) Present(windows.ToArray()); };
+        }
+        viewport.Child = call; call.Present(snapshot, windows); Show(); Position();
+    }
     private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); }
+    public override void RefreshAppearance()
+    {
+        base.RefreshAppearance();
+        if (IsVisible && callMode && !Store.Value.CallPreviewsEnabled) Present(windows.ToArray());
+    }
     private void Render()
     {
         Release(); grid.Children.Clear(); previewAreas.Clear();
@@ -117,6 +137,14 @@ internal sealed class WindowPreview : FloatingWindow
     }
     public override void Position()
     {
+        if (callMode && call is not null)
+        {
+            double callWidth = Math.Max(1, Math.Min(360, Display.Width - 16));
+            var callBounds = anchor(); viewport.Width = callWidth - 20; call.Width = viewport.Width;
+            viewport.MaxHeight = Math.Max(48, Math.Min(420, (callBounds.Top - Display.Work.Top) / Display.Scale - 36));
+            viewport.Measure(new Size(viewport.Width, viewport.MaxHeight));
+            PlaceAbove(callWidth, viewport.DesiredSize.Height + 20, callBounds, false); return;
+        }
         if (spotifyMode && spotify is not null)
         {
             double mediaWidth = Math.Max(1, Math.Min(360, Display.Width - 16));

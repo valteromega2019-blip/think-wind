@@ -21,6 +21,7 @@ public sealed class Preferences
     public bool StartHotkeyEnabled { get; set; }
     public bool WindowsKeyOpensLauncher { get; set; } = true;
     public bool WindowPreviewsEnabled { get; set; } = true;
+    public bool CallPreviewsEnabled { get; set; } = true;
     public double WindowPreviewDelayMilliseconds { get; set; } = 400;
     public string GameModeInclude { get; set; } = "";
     public string GameModeExclude { get; set; } = "msedge;chrome;firefox;Code;steam;steamwebhelper";
@@ -176,6 +177,7 @@ public sealed class SettingsStore
             p.DockCollapseSeconds = defaults.DockCollapseSeconds; p.DockSearchMode = defaults.DockSearchMode;
             p.DockVisibleOnDesktop = defaults.DockVisibleOnDesktop;
             p.WindowPreviewsEnabled = defaults.WindowPreviewsEnabled; p.WindowPreviewDelayMilliseconds = defaults.WindowPreviewDelayMilliseconds;
+            p.CallPreviewsEnabled = defaults.CallPreviewsEnabled;
             p.DockMagnification = defaults.DockMagnification; p.DockMagnificationAmount = defaults.DockMagnificationAmount;
             p.DockMagnificationSpeed = defaults.DockMagnificationSpeed; p.DockMagnificationNeighbors = defaults.DockMagnificationNeighbors;
         });

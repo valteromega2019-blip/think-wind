@@ -600,7 +600,7 @@ internal sealed partial class DockWindow : FloatingWindow
         ToggleStart();
         if (launcher?.IsVisible == true) launcher.FocusSearch();
     }
-    public override void RefreshAppearance() { base.RefreshAppearance(); magnifier.Configure(Store.Value, magnificationReserve); launcher?.RefreshAppearance(); }
+    public override void RefreshAppearance() { base.RefreshAppearance(); magnifier.Configure(Store.Value, magnificationReserve); launcher?.RefreshAppearance(); preview?.RefreshAppearance(); }
     private void MoveOne(string source, int direction)
     {
         int index = visibleOrder.IndexOf(source), targetIndex = index + direction;

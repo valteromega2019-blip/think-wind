@@ -2,7 +2,9 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
+using System.Threading;
 using OrbyLauncher.Native;
+using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
 internal sealed partial class DockWindow
@@ -11,11 +13,12 @@ internal sealed partial class DockWindow
     private Item? previewItem;
     private FrameworkElement? previewAnchor;
     private bool previewIconHovered;
+    private CancellationTokenSource? callProbe;
     private readonly DispatcherTimer previewOpen = new();
     private readonly DispatcherTimer previewClose = new() { Interval = TimeSpan.FromMilliseconds(350) };
     private void InitializePreviews()
     {
-        previewOpen.Tick += (_, _) =>
+        previewOpen.Tick += async (_, _) =>
         {
             previewOpen.Stop();
             if (!IsVisible || MenuOpen || fileDragging || Store.IsEditing || LayoutDrag.Active || !Store.Value.WindowPreviewsEnabled || previewItem is null) return;
@@ -25,8 +28,22 @@ internal sealed partial class DockWindow
                 preview.MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; previewClose.Stop(); };
                 preview.MouseLeave += (_, _) => { lastHover = DateTime.UtcNow; previewClose.Start(); };
             }
-            if (IsSpotify(previewItem)) preview.PresentSpotify();
-            else preview.Present(previewItem.Windows);
+            var requested = previewItem;
+            if (IsSpotify(requested)) preview.PresentSpotify();
+            else
+            {
+                preview.Present(requested.Windows);
+                if (!Store.Value.CallPreviewsEnabled || !requested.Windows.Any(CallIntegration.IsCandidate)) return;
+                callProbe?.Cancel(); callProbe?.Dispose(); callProbe = new CancellationTokenSource(); var token = callProbe.Token;
+                try
+                {
+                    var call = await CallIntegration.FindAsync(requested.Windows, token);
+                    if (!token.IsCancellationRequested && call is not null && ReferenceEquals(previewItem, requested)
+                        && IsVisible && !MenuOpen && Store.Value.CallPreviewsEnabled && preview.IsVisible)
+                        preview.PresentCall(call, requested.Windows);
+                }
+                catch (OperationCanceledException) { }
+            }
         };
         previewClose.Tick += (_, _) =>
         {
@@ -61,5 +78,5 @@ internal sealed partial class DockWindow
             Top = Math.Min(TargetBounds.Top, (int)Math.Floor(first.Y)), Bottom = (int)Math.Ceiling(last.Y)
         };
     }
-    private void StopPreviews() { previewIconHovered = false; previewOpen.Stop(); previewClose.Stop(); previewItem = null; previewAnchor = null; preview?.Hide(); }
+    private void StopPreviews() { callProbe?.Cancel(); callProbe?.Dispose(); callProbe = null; previewIconHovered = false; previewOpen.Stop(); previewClose.Stop(); previewItem = null; previewAnchor = null; preview?.Hide(); }
 }

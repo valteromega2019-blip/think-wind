@@ -134,6 +134,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Slider(dock, "Tamanho dos ícones", 20, 48, store.Value.IconSize, v => Change(p => p.IconSize = v));
         Check(dock, "Ampliação dos ícones estilo Dock", store.Value.DockMagnification, v => Change(p => p.DockMagnification = v));
         Check(dock, "Miniaturas de janelas ao passar o mouse", store.Value.WindowPreviewsEnabled, v => Change(p => p.WindowPreviewsEnabled = v));
+        Check(dock, "Controles de chamadas nas miniaturas (quando disponíveis)", store.Value.CallPreviewsEnabled, v => Change(p => p.CallPreviewsEnabled = v));
         Slider(dock, "Espera para abrir miniaturas", 150, 1500, store.Value.WindowPreviewDelayMilliseconds, v => Change(p => p.WindowPreviewDelayMilliseconds = v), "0 'ms'", 50);
         Slider(dock, "Intensidade da ampliação", .4, .6, store.Value.DockMagnificationAmount, v => Change(p => p.DockMagnificationAmount = v), "P0", .01);
         Slider(dock, "Velocidade da mola", .5, 2, store.Value.DockMagnificationSpeed, v => Change(p => p.DockMagnificationSpeed = v), "0.0 '×'", .1);
