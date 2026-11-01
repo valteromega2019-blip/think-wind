@@ -82,11 +82,17 @@ internal sealed partial class WindowPreview : FloatingWindow
             call.LayoutChanged += () => { if (IsVisible && callMode) Position(); };
             call.CallEnded += () => { if (IsVisible && callMode) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs); else Present(windows.ToArray()); } };
         }
-        if (call.Parent is Panel parent) parent.Children.Remove(call);
+        DetachCallCard();
+        call.ConfigureCompact(false);
         call.Margin = new Thickness(0);
         viewport.Child = call; call.Present(snapshot, windows); Show(); Position();
     }
     private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); browserFan?.Dispose(); }
+    private void DetachCallCard()
+    {
+        if (call?.Parent is Panel parent) parent.Children.Remove(call);
+        else if (call?.Parent is Viewbox box) box.Child = null;
+    }
     public override void RefreshAppearance()
     {
         base.RefreshAppearance();

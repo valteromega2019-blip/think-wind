@@ -10,7 +10,9 @@
 
 ## Limitação de imagens por aba
 
-DWM disponibiliza imagens por HWND, não por aba interna do navegador. Sem extensão, apenas a aba ativa à frente do leque usa a imagem ao vivo da janela; as demais mostram título e opção de abertura. A integração opcional em `extensions/orby-tabs` fornece a última captura de abas visitadas. Veja `EXTENSAO-NAVEGADOR.md` para instalação, autorização e limitações.
+DWM disponibiliza imagens por HWND, não por aba interna do navegador. Apenas a aba ativa à frente do leque usa a imagem ao vivo da janela; as demais mostram título e opção de abertura. A funcionalidade que exigia instalar extensão foi removida por solicitação do usuário, incluindo o conector, o cache de imagens e as opções de registro.
+
+O cartão de comandos do Meet usa uma área de 320 × 160 DIP, proporcional à miniatura ao lado, com redução uniforme em escalas maiores para preservar o conteúdo. Os comandos da chamada ficam visíveis; as opções de áudio do Windows ficam no menu de três pontos. O cartão individual do Discord mantém a apresentação completa.
 
 Não são trocadas abas automaticamente para capturar imagens. O clique do usuário seleciona a aba e ativa a janela. Não são armazenadas capturas ou histórico das abas em disco.
 

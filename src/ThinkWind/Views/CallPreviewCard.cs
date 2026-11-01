@@ -16,6 +16,12 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     private readonly TextBlock heading = new() { FontSize = 17, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock status = new() { FontSize = 11, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, MinHeight = 18, Margin = new Thickness(0, 8, 0, 4) };
     private readonly WrapPanel controls = new();
+    private readonly WrapPanel footer = new();
+    private readonly TextBlock systemNote = new() { Text = "Áudio do Windows · dispositivos padrão", FontSize = 11, Margin = new Thickness(4, 12, 0, 4), TextWrapping = TextWrapping.Wrap };
+    private readonly Button openCall = new() { Content = "Abrir chamada", FontSize = 11, Padding = new Thickness(10, 7, 10, 7), HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly Button moreAudio = new() { Content = "⋯", ToolTip = "Áudio do Windows", Width = 28, Height = 28, Padding = new Thickness(0), Visibility = Visibility.Collapsed };
+    private ContextMenu? audioMenu;
+    private bool compact;
     private readonly Button globalMute = new() { FontSize = 11, Padding = new Thickness(10, 7, 10, 7), HorizontalAlignment = HorizontalAlignment.Left };
     private readonly Button outputMute = new() { FontSize = 11, Padding = new Thickness(10, 7, 10, 7), HorizontalAlignment = HorizontalAlignment.Left };
     private readonly AudioService audio = new();
@@ -28,7 +34,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     private int missingReads;
     private string controlsSignature = "";
     private (AudioState Mic, AudioState Output)? restore;
-    internal bool IsInteracting => busy || IsMouseCaptureWithin;
+    internal bool IsInteracting => busy || IsMouseCaptureWithin || audioMenu?.IsOpen == true;
     internal event Action? LayoutChanged;
     internal event Action? CallEnded;
     internal CallPreviewCard()
@@ -36,15 +42,23 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
         status.SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = status });
         heading.SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = heading });
         Children.Add(heading); Children.Add(controls);
-        var open = new Button { Content = "Abrir chamada", FontSize = 11, Padding = new Thickness(10, 7, 10, 7), HorizontalAlignment = HorizontalAlignment.Left };
-        open.Click += async (_, _) =>
+        openCall.Click += async (_, _) =>
         {
             if (snapshot is not { } current) return;
             if (!await Desktop.ActivateFromDock(current.Window, false)) status.Text = "Abra a chamada pelo aplicativo. O Windows não permitiu ativar a janela.";
         };
-        Children.Add(open);
-        var note = new TextBlock { Text = "Áudio do Windows · dispositivos padrão", FontSize = 11, Margin = new Thickness(4, 12, 0, 4), TextWrapping = TextWrapping.Wrap };
-        note.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); Children.Add(note);
+        footer.Children.Add(openCall); footer.Children.Add(moreAudio); Children.Add(footer);
+        moreAudio.SetResourceReference(StyleProperty, "Think.IconButton");
+        moreAudio.Click += (_, _) =>
+        {
+            audioMenu = new ContextMenu { PlacementTarget = moreAudio };
+            var output = new MenuItem { Header = outputMute.Content, IsEnabled = outputMute.IsEnabled };
+            output.Click += (_, _) => outputMute.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var all = new MenuItem { Header = globalMute.Content };
+            all.Click += (_, _) => ToggleGlobalMute();
+            audioMenu.Items.Add(output); audioMenu.Items.Add(all); audioMenu.IsOpen = true;
+        };
+        systemNote.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); Children.Add(systemNote);
         Children.Add(outputMute); Children.Add(globalMute); Children.Add(status);
         outputMute.Click += (_, _) =>
         {
@@ -78,7 +92,16 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
         Stop(); callAvailable = true; missingReads = 0; snapshot = call; windows = source.Where(w => w.Handle == call.Window).ToList();
         lifetime = new CancellationTokenSource(); Render(); refresh.Start();
     }
-    internal void Stop() { refresh.Stop(); lifetime?.Cancel(); lifetime?.Dispose(); lifetime = null; }
+    internal void ConfigureCompact(bool enabled)
+    {
+        compact = enabled;
+        heading.FontSize = enabled ? 13 : 17;
+        openCall.Padding = enabled ? new Thickness(8, 4, 8, 4) : new Thickness(10, 7, 10, 7);
+        systemNote.Visibility = outputMute.Visibility = globalMute.Visibility = status.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
+        moreAudio.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = status });
+    }
+    internal void Stop() { refresh.Stop(); if (audioMenu is not null) audioMenu.IsOpen = false; lifetime?.Cancel(); lifetime?.Dispose(); lifetime = null; }
     private void MissingCall()
     {
         missingReads++;
@@ -97,7 +120,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
         if (snapshot is null) return;
         heading.Text = snapshot.App + " · Em chamada";
         controls.IsEnabled = callAvailable;
-        string nextSignature = snapshot.App + string.Join("|", snapshot.Commands.Select(command => $"{command.Action}:{command.AccessibleName}:{command.Muted}"));
+        string nextSignature = compact + snapshot.App + string.Join("|", snapshot.Commands.Select(command => $"{command.Action}:{command.AccessibleName}:{command.Muted}"));
         if (controlsSignature != nextSignature)
         {
             controlsSignature = nextSignature;
@@ -106,7 +129,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
             {
                 string glyph = command.Action switch { CallAction.Microphone => "\uE720", CallAction.Headphones => "\uE7F6", _ => "\uE717" };
                 var symbol = new Grid { Width = 30, Height = 30, HorizontalAlignment = HorizontalAlignment.Center };
-                symbol.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+                symbol.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = compact ? 18 : 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
                 if (command.Muted == true)
                     symbol.Children.Add(new System.Windows.Shapes.Line { X1 = 4, Y1 = 26, X2 = 26, Y2 = 4, Stroke = new SolidColorBrush(Color.FromRgb(248, 92, 106)), StrokeThickness = 2.5, IsHitTestVisible = false });
                 string label = command.Action switch
@@ -119,7 +142,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
                     {
                         symbol,
                         new TextBlock { Text = label, MaxWidth = 82, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0) }
-                    } }, ToolTip = command.AccessibleName, MinWidth = 86, MinHeight = 84, Padding = new Thickness(10), Margin = new Thickness(3, 10, 3, 0) };
+                    } }, ToolTip = command.AccessibleName, MinWidth = compact ? 76 : 86, MinHeight = compact ? 62 : 84, Padding = new Thickness(compact ? 6 : 10), Margin = new Thickness(3, compact ? 5 : 10, 3, 0) };
                 System.Windows.Automation.AutomationProperties.SetName(button, command.AccessibleName);
                 if (command.Muted == true || command.Action == CallAction.Leave) button.Foreground = new SolidColorBrush(Color.FromRgb(248, 92, 106));
                 else if (command.Muted == false) button.SetResourceReference(Control.ForegroundProperty, "Think.Accent");

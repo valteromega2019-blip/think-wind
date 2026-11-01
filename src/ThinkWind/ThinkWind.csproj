@@ -19,7 +19,6 @@
     <Copyright>© 2026 Think. Créditos do projeto: valteromega2019-blip.</Copyright>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Orby.BrowserHost/Orby.BrowserHost.csproj" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="MSBuildProjectExtensionsPath" />
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" />
     <Resource Include="Assets/OrbyLauncher.ico" />
@@ -27,22 +26,5 @@
     <Content Include="../../COPYRIGHT.md" Link="COPYRIGHT.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../SECURITY.md" Link="SECURITY.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../licenses/*" Link="licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="../../extensions/orby-tabs/*" Link="BrowserExtension/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
-  <Target Name="CopyBrowserHost" AfterTargets="Build">
-    <MSBuild Projects="../Orby.BrowserHost/Orby.BrowserHost.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)" RemoveProperties="MSBuildProjectExtensionsPath">
-      <Output TaskParameter="TargetOutputs" ItemName="BrowserHostAssembly" />
-    </MSBuild>
-    <ItemGroup>
-      <BrowserHostFiles Include="@(BrowserHostAssembly->'%(RootDir)%(Directory)OrbyBrowserHost.*')" />
-    </ItemGroup>
-    <Copy SourceFiles="@(BrowserHostFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName).runtimeconfig.json" DestinationFiles="$(TargetDir)OrbyBrowserHost.runtimeconfig.json" />
-  </Target>
-  <Target Name="PublishBrowserHost" AfterTargets="Publish">
-    <ItemGroup><PublishedBrowserHost Include="$(TargetDir)OrbyBrowserHost.*" /></ItemGroup>
-    <Copy SourceFiles="@(PublishedBrowserHost)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
-    <!-- Share the launcher's runtime (including self-contained installations). -->
-    <Copy SourceFiles="$(PublishDir)OrbyLauncher.runtimeconfig.json" DestinationFiles="$(PublishDir)OrbyBrowserHost.runtimeconfig.json" />
-  </Target>
 </Project>

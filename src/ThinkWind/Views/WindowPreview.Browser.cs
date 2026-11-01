@@ -24,6 +24,7 @@ internal sealed partial class WindowPreview
         refresh.Stop(); browserLifetime?.Cancel(); browserLifetime?.Dispose(); browserLifetime = new CancellationTokenSource();
         Release(); spotifyMode = false; spotify?.SetActive(false); call?.Stop();
         viewport.Child = null;
+        DetachCallCard();
         browserMode = true; callMode = meeting is not null;
         windows = source.ToList(); browserTabs = tabs.ToArray(); browserSignature = TabsSignature(tabs);
         Surface.Padding = new Thickness(10); browserLayout.Children.Clear();
@@ -40,8 +41,11 @@ internal sealed partial class WindowPreview
                 call.LayoutChanged += () => { if (IsVisible && callMode) Position(); };
                 call.CallEnded += () => { if (IsVisible && callMode) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs); else Present(windows.ToArray()); } };
             }
-            call.Width = 320; call.Margin = new Thickness(10, 0, 0, 0);
-            browserLayout.Children.Add(call); call.Present(meeting, windows);
+            call.ConfigureCompact(true);
+            call.Width = 300; call.Margin = new Thickness(0);
+            var compactCall = new Viewbox { Width = 320, Height = 160, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
+                Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = System.Windows.Media.StretchDirection.DownOnly, Child = call };
+            browserLayout.Children.Add(compactCall); call.Present(meeting, windows);
         }
         else if (Store.Value.CallPreviewsEnabled && tabs.FirstOrDefault(tab => tab.IsMeet) is { } meet)
         {
@@ -60,7 +64,7 @@ internal sealed partial class WindowPreview
         viewport.Child = browserLayout; Show(); Position(); refresh.Interval = TimeSpan.FromSeconds(2); refresh.Start();
     }
     private void DismissBrowser() => Hide();
-    private static string TabsSignature(IReadOnlyList<BrowserTab> tabs) => string.Join("|", tabs.Select(tab => $"{tab.Window}:{string.Join(",", tab.RuntimeId)}:{tab.Selected}:{tab.Title}:{tab.CapturedAt}"));
+    private static string TabsSignature(IReadOnlyList<BrowserTab> tabs) => string.Join("|", tabs.Select(tab => $"{tab.Window}:{string.Join(",", tab.RuntimeId)}:{tab.Selected}:{tab.Title}"));
     private async Task RefreshBrowserAsync()
     {
         if (browserReading || browserLifetime is null || IsInteracting) return;

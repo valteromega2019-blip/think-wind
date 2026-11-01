@@ -33,6 +33,8 @@ A consulta é iniciada por hover e renovada a cada dois segundos apenas enquanto
 
 Configuração: Personalizar → Aplicativos → Controles de chamadas nas miniaturas. Depende também da opção de miniaturas estar ativa.
 
+Na prévia lateral do Meet, os comandos usam o mesmo espaço de uma miniatura (320 × 160 DIP). As opções adicionais de áudio do Windows ficam no menu de três pontos, que mantém a interação ativa enquanto aberto. A integração depende apenas da acessibilidade nativa; a extensão de navegador e seu conector foram removidos.
+
 ## Referências e limites
 
 - [Discord OAuth2](https://github.com/discord/discord-api-docs/blob/main/developers/topics/oauth2.mdx): os escopos RPC de voz exigem aprovação. Não foi implementado login, coleta de tokens ou uso de endpoints privados.
