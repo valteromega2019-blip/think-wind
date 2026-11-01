@@ -29,10 +29,29 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         {
             var row = new StackPanel { Width = 300 };
             var heading = new DockPanel { Margin = new Thickness(10, 8, 10, 6) };
+            var windowControls = new StackPanel { Orientation = Orientation.Horizontal };
+            DockPanel.SetDock(windowControls, Dock.Right); heading.Children.Add(windowControls);
+            windowControls.Children.Add(WindowControl("Minimizar esta janela do navegador", "\uE921", async () =>
+            {
+                if (!Desktop.IsVisibleAndRestored(tab.Window)) return;
+                bool minimized = await Desktop.ActivateFromDock(tab.Window, true);
+                if (!minimized && ElevatedWindowAction.NeedsAdminFallback(tab.Window))
+                    minimized = await ElevatedWindowAction.Request(tab.Window, close: false, minimize: true, owner: Window.GetWindow(this));
+                if (minimized) DismissRequested?.Invoke();
+                else MessageBox.Show("O Windows não permitiu minimizar esta janela.", "Orby Launcher");
+            }));
+            windowControls.Children.Add(WindowControl("Fechar esta janela do navegador (todas as abas desta janela)", "\uE711", async () =>
+            {
+                bool closed = WindowThumbnail.CloseWindow(tab.Window);
+                if (!closed && ElevatedWindowAction.NeedsAdminFallback(tab.Window))
+                    closed = await ElevatedWindowAction.Request(tab.Window, close: true, owner: Window.GetWindow(this));
+                if (closed) DismissRequested?.Invoke();
+                else MessageBox.Show("O Windows não permitiu solicitar o fechamento desta janela.", "Orby Launcher");
+            }));
             var marker = new TextBlock { Text = tab.Selected ? "●" : "○", Margin = new Thickness(0, 0, 7, 0), FontSize = 12 };
             marker.SetResourceReference(TextBlock.ForegroundProperty, tab.Selected ? "Think.Accent" : "Think.Muted"); heading.Children.Add(marker);
             heading.Children.Add(new TextBlock { Text = tab.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis }); row.Children.Add(heading);
-            var area = new Border { Height = 116, Margin = new Thickness(10, 0, 10, 8) };
+            var area = new Border { Height = 112, Margin = new Thickness(10, 0, 10, 8) };
             bool live = tab.Selected && index == tabs.Count - 1;
             // Rear tabs are identified by their exposed title; avoid placeholder
             // text bleeding across the card immediately in front of them.
@@ -73,6 +92,22 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             index++;
         }
         ConfigureAppearance(preferences);
+    }
+    private static Button WindowControl(string name, string glyph, Func<System.Threading.Tasks.Task> action)
+    {
+        var button = new Button { Width = 22, Height = 22, Padding = new Thickness(2), Margin = new Thickness(2, 0, 0, 0), ToolTip = name,
+            Content = new TextBlock { Text = glyph, FontSize = 11, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets") } };
+        button.SetResourceReference(StyleProperty, "Think.IconButton");
+        System.Windows.Automation.AutomationProperties.SetName(button, name);
+        button.Click += async (_, e) =>
+        {
+            // These controls are inside the tab's opening button. Do not bubble
+            // the click and accidentally restore the window just minimized.
+            e.Handled = true; button.IsEnabled = false;
+            try { await action(); }
+            finally { button.IsEnabled = true; }
+        };
+        return button;
     }
     private static Viewport3D TiltVertically(Button button, double degrees)
     {
