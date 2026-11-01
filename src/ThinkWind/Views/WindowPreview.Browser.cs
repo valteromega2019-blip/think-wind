@@ -43,7 +43,7 @@ internal sealed partial class WindowPreview
             }
             call.ConfigureCompact(true);
             call.Width = 300; call.Margin = new Thickness(0);
-            var compactCall = new Viewbox { Width = 320, Height = 194, Margin = new Thickness(10, 0, 0, 12), VerticalAlignment = VerticalAlignment.Bottom,
+            var compactCall = new Viewbox { Width = 320, Height = 160, Margin = new Thickness(10, 0, 0, 12), VerticalAlignment = VerticalAlignment.Bottom,
                 Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = WithWindowActions(call, windows, meeting.Window) };
             browserLayout.Children.Add(compactCall); call.Present(meeting, windows);
         }

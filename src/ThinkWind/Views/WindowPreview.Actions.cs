@@ -21,19 +21,19 @@ internal sealed partial class WindowPreview
         else if (content.Parent is Viewbox box) box.Child = null;
         var candidates = source.Where(w => WindowThumbnail.IsWindow(w.Handle)).DistinctBy(w => w.Handle).ToArray();
         var targets = preferred != 0 ? candidates.Where(w => w.Handle == preferred).ToArray() : candidates;
-        var layout = new DockPanel();
-        var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(4, 2, 4, 2) };
-        DockPanel.SetDock(controls, Dock.Top); layout.Children.Add(controls);
+        var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
         Add("Minimizar janela do aplicativo", "\uE921", false);
         Add("Fechar janela do aplicativo", "\uE711", true);
-        layout.Children.Add(content);
-        return layout;
+        if (content is MediaCard media) media.SetWindowActions(controls);
+        else if (content is CallPreviewCard callCard) callCard.SetWindowActions(controls);
+        return content;
 
         void Add(string label, string glyph, bool close)
         {
             Button button = null!; // Assigned before a click can invoke the window chooser.
             button = PreviewControl(label, glyph, () => ChooseWindow(close));
             button.SetResourceReference(StyleProperty, "Think.IconButton");
+            button.Margin = new Thickness(0);
             button.IsEnabled = targets.Length > 0;
             if (targets.Length == 0) button.ToolTip = "O aplicativo não disponibiliza uma janela para esta ação.";
             controls.Children.Add(button);

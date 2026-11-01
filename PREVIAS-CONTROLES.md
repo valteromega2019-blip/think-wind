@@ -4,6 +4,12 @@ As prévias de música e chamadas agora incluem minimizar e fechar a janela do
 aplicativo, com os mesmos ícones e recursos de tema das miniaturas existentes.
 Os controles de reprodução, microfone e saída da chamada continuam separados.
 
+Os botões ficam dentro do próprio cartão, no topo direito. A capa continua
+preenchendo o player e não existe um painel/faixa adicional para essas ações.
+Somente o título/dados superiores reservam espaço lateral para evitar colisões;
+o restante do cartão preserva a largura anterior. As prévias compactas do
+navegador voltam à altura anterior, sem a reserva da faixa externa.
+
 - Spotify e outros players: ações restritas às janelas associadas ao ícone.
 - Discord, Tretalk e demais chamadas: alvo da chamada identificada.
 - Meet e música no navegador: controles junto ao cartão integrado. Fechar

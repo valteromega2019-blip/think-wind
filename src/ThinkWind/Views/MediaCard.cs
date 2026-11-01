@@ -13,6 +13,8 @@ internal sealed class MediaCard : Grid, IDisposable
 {
     private readonly MediaService service;
     private readonly StackPanel body = new() { Margin = new Thickness(12) };
+    private readonly Grid metadataRow = new();
+    private FrameworkElement? windowActions;
     private readonly ImageBrush artworkBackground = new() { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };
     private readonly Border backgroundCover, backgroundShade;
     private readonly Image artwork = new() { Width = 64, Height = 64, Stretch = Stretch.UniformToFill };
@@ -30,6 +32,15 @@ internal sealed class MediaCard : Grid, IDisposable
     internal bool IsInteracting => seeking || dragging || busy || IsMouseCaptureWithin;
     internal event Action? AvailabilityChanged;
     internal event Action? LayoutChanged;
+    internal void SetWindowActions(FrameworkElement actions)
+    {
+        if (windowActions is not null) Children.Remove(windowActions);
+        windowActions = actions;
+        actions.Margin = new Thickness(0, 6, 6, 0);
+        Panel.SetZIndex(actions, 10);
+        metadataRow.Margin = new Thickness(0, 0, 54, 0);
+        Children.Add(actions);
+    }
     internal void ConfigurePreviewSurface(double radius, double opacity)
     {
         var corners = new CornerRadius(Math.Max(0, radius));
@@ -46,7 +57,7 @@ internal sealed class MediaCard : Grid, IDisposable
             Background = new LinearGradientBrush(Color.FromArgb(155, 8, 12, 18), Color.FromArgb(220, 8, 12, 18), 90) };
         RenderOptions.SetBitmapScalingMode(backgroundCover, BitmapScalingMode.HighQuality);
         Children.Add(backgroundCover); Children.Add(backgroundShade); Children.Add(body);
-        var row = new Grid(); row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); row.ColumnDefinitions.Add(new ColumnDefinition());
+        var row = metadataRow; row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); row.ColumnDefinitions.Add(new ColumnDefinition());
         cover = new Border { Width = 44, Height = 44, CornerRadius = new CornerRadius(12), ClipToBounds = true, Child = artwork, Margin = new Thickness(0, 0, 8, 0) };
         artwork.Width = artwork.Height = 44;
         artwork.Clip = new RectangleGeometry(new Rect(0, 0, 44, 44), 12, 12);

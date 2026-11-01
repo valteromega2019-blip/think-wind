@@ -14,6 +14,8 @@ namespace OrbyLauncher.Views;
 internal sealed class CallPreviewCard : StackPanel, IDisposable
 {
     private readonly TextBlock heading = new() { FontSize = 17, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly Grid headingRow = new();
+    private FrameworkElement? windowActions;
     private readonly TextBlock status = new() { FontSize = 11, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, MinHeight = 18, Margin = new Thickness(0, 8, 0, 4) };
     private readonly WrapPanel controls = new();
     private readonly WrapPanel footer = new();
@@ -37,12 +39,21 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     internal bool IsInteracting => busy || IsMouseCaptureWithin || audioMenu?.IsOpen == true;
     internal event Action? LayoutChanged;
     internal event Action? CallEnded;
+    internal void SetWindowActions(FrameworkElement actions)
+    {
+        if (windowActions is not null) headingRow.Children.Remove(windowActions);
+        windowActions = actions;
+        heading.Margin = new Thickness(0, 0, 56, 0);
+        heading.VerticalAlignment = VerticalAlignment.Center;
+        headingRow.MinHeight = 26;
+        headingRow.Children.Add(actions);
+    }
     internal CallPreviewCard()
     {
         status.SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = status });
         heading.SetBinding(ToolTipProperty, new System.Windows.Data.Binding(nameof(TextBlock.Text)) { Source = heading });
         controls.HorizontalAlignment = HorizontalAlignment.Center;
-        Children.Add(heading); Children.Add(controls);
+        headingRow.Children.Add(heading); Children.Add(headingRow); Children.Add(controls);
         openCall.Click += async (_, _) =>
         {
             if (snapshot is not { } current) return;
