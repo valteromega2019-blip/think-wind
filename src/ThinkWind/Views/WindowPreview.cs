@@ -97,6 +97,7 @@ internal sealed partial class WindowPreview : FloatingWindow
     {
         base.RefreshAppearance();
         ConfigurePlayerSurface();
+        browserFan?.ConfigureAppearance(Store.Value);
         if (IsVisible && browserMode && !Store.Value.CallPreviewsEnabled && browserLayout.Children.Count > 1) PresentBrowser(windows.ToArray(), browserTabs);
         if (IsVisible && callMode && !Store.Value.CallPreviewsEnabled) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs); else Present(windows.ToArray()); }
     }

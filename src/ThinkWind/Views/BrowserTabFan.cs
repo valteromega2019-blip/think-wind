@@ -14,12 +14,15 @@ namespace OrbyLauncher.Views;
 internal sealed class BrowserTabFan : Canvas, IDisposable
 {
     private readonly List<(Border Area, WindowThumbnail Host)> images = new();
+    private readonly List<Border> surfaces = new();
     internal event Action? DismissRequested;
     internal BrowserTabFan() { Width = 320; }
-    internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner)
+    internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner, Preferences preferences)
     {
-        Dispose(); Children.Clear();
-        Height = 160 + Math.Max(0, tabs.Count - 1) * 42;
+        Dispose(); Children.Clear(); surfaces.Clear();
+        int count = Math.Min(4, tabs.Count);
+        // Reserve room for the rotated corners instead of clipping them.
+        Height = 184 + Math.Max(0, count - 1) * 46;
         int index = 0;
         foreach (var tab in tabs.Take(4))
         {
@@ -30,10 +33,16 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             heading.Children.Add(new TextBlock { Text = tab.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis }); row.Children.Add(heading);
             var area = new Border { Height = 116, Margin = new Thickness(10, 0, 10, 8) };
             bool live = tab.Selected && index == tabs.Count - 1;
-            if (!live) area.Child = new TextBlock { Text = "Clique para abrir esta aba", FontSize = 12, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+            // Rear tabs are identified by their exposed title; avoid placeholder
+            // text bleeding across the card immediately in front of them.
             row.Children.Add(area);
-            var button = new Button { Width = 300, Height = 160, Padding = new Thickness(0), Margin = new Thickness(0), Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = tab.Title };
-            button.SetResourceReference(Control.BackgroundProperty, "Think.Surface");
+            var surface = new Border { Child = row, BorderThickness = new Thickness(1) };
+            surfaces.Add(surface);
+            var button = new Button { Width = 300, Height = 160, Padding = new Thickness(0), Margin = new Thickness(0), Content = surface, HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = tab.Title,
+                Background = Brushes.Transparent, RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform((index - count + 1) * 1.35) };
+            button.SetResourceReference(StyleProperty, "Think.IconButton");
+            button.MouseEnter += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
+            button.MouseLeave += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
             System.Windows.Automation.AutomationProperties.SetName(button, "Abrir aba: " + tab.Title);
             button.Click += async (_, _) =>
             {
@@ -48,7 +57,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                 catch (OperationCanceledException) { }
                 finally { button.IsEnabled = true; }
             };
-            SetLeft(button, index % 2 == 0 ? 0 : 10); SetTop(button, index * 42); SetZIndex(button, index);
+            SetLeft(button, 10); SetTop(button, 12 + index * 46); SetZIndex(button, index);
             Children.Add(button);
             if (live)
             {
@@ -59,6 +68,20 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             if (SystemParameters.ClientAreaAnimation)
                 button.BeginAnimation(OpacityProperty, new DoubleAnimation(.5, 1, TimeSpan.FromMilliseconds(160 + index * 35)));
             index++;
+        }
+        ConfigureAppearance(preferences);
+    }
+    internal void ConfigureAppearance(Preferences preferences)
+    {
+        var tint = preferences.UseCustomBarColor ? (Color)ColorConverter.ConvertFromString(preferences.BarBackgroundColor) : ThemeService.BaseColor;
+        // Each rounded surface transmits the preview's existing native Acrylic;
+        // no second opaque fill or simulated blur is placed over it.
+        tint.A = (byte)Math.Round(255 * Math.Clamp((preferences.DockOpacity ?? preferences.TintOpacity) * .48, .025, .65));
+        foreach (var surface in surfaces)
+        {
+            surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(tint);
+            surface.CornerRadius = new CornerRadius(Math.Clamp(preferences.DockRadius, 0, 24));
+            surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
         }
     }
     internal void PlaceImages()

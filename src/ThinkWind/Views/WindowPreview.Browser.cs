@@ -31,7 +31,7 @@ internal sealed partial class WindowPreview
         browserFan ??= new BrowserTabFan();
         browserFan.DismissRequested -= DismissBrowser; browserFan.DismissRequested += DismissBrowser;
         var shown = tabs.Count > 0 ? tabs : windows.Take(1).Select(window => new BrowserTab(window.Handle, 0, window.Title, Array.Empty<int>(), true)).ToArray();
-        browserFan.Present(shown, new WindowInteropHelper(this).EnsureHandle());
+        browserFan.Present(shown, new WindowInteropHelper(this).EnsureHandle(), Store.Value);
         browserLayout.Children.Add(browserFan);
         if (meeting is not null)
         {
@@ -43,7 +43,7 @@ internal sealed partial class WindowPreview
             }
             call.ConfigureCompact(true);
             call.Width = 300; call.Margin = new Thickness(0);
-            var compactCall = new Viewbox { Width = 320, Height = 160, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
+            var compactCall = new Viewbox { Width = 320, Height = 160, Margin = new Thickness(10, 0, 0, 12), VerticalAlignment = VerticalAlignment.Bottom,
                 Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = System.Windows.Media.StretchDirection.DownOnly, Child = call };
             browserLayout.Children.Add(compactCall); call.Present(meeting, windows);
         }
