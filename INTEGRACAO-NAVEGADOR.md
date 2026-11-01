@@ -73,3 +73,37 @@ A execução em abas que o navegador torna inacessíveis depende da solução es
 pelo usuário: ativação da aba após clique explícito ou uma integração opcional no
 navegador. Não foi adicionada extensão nem ativação automática de abas neste ajuste.
 Esta revisão recebeu somente leitura de código e diff, sem testes, type check ou build.
+
+## Continuidade sem extensão — opção escolhida pelo usuário
+
+Após confirmar uma reunião, o Orby guarda em memória sua sala, HWND, processo
+e identidade de acessibilidade da aba, sem guardar elementos UIA ou páginas.
+A observação já existente das abas também pode registrar essa confirmação
+enquanto a reunião está visível, com intervalo reduzido apenas nas janelas cujo
+título sugere Meet. O título agenda uma verificação; não confirma uma chamada.
+Não foi criado um temporizador adicional.
+
+Se a mesma aba ficar inacessível ao trocar de aba ou minimizar, a prévia pode
+continuar mostrando **Verificar chamada**. Nesse estado o microfone/câmera são
+mostrados sem afirmar ligado ou desligado: os dados anteriores não são tratados
+como leituras atuais. Isso representa um contexto confirmado anteriormente,
+não uma afirmação de que a reunião continua ativa.
+
+Ao clicar num comando desse contexto, a aba é ativada por sua identidade exata
+(sem fallback por título). A origem, o processo, a mesma sala e os controles são
+verificados novamente. O comando usa o rótulo/estado recém-lido; não repete um
+nome antigo de "ligar" quando agora o controle oferece "desligar". Se a aba sumiu,
+mudou de sala ou os controles da chamada não existem mais, a ação não é enviada.
+O botão Verificar chamada também faz a confirmação após abrir a aba.
+
+Se a aba da reunião está selecionada e uma leitura não encontra chamada, seu
+contexto é removido. Fechar a aba/janela ou solicitar sair da chamada também
+invalida a referência quando detectado. O cache é limitado a 16 janelas, mantido
+somente em memória. A alternância Reunião/Música continua disponível.
+
+Limite: o contexto precisa ter sido confirmado ao menos uma vez; uma reunião
+que nunca expôs seus controles ao Orby não é descoberta pelo código da sala.
+O clique pode restaurar a janela e selecionar a aba, conforme escolha do usuário.
+Não há extensão, leitura de vídeo/áudio, atalho global ou mudança automática de
+aba ao passar o mouse. Os comandos continuam sujeitos às permissões e à
+acessibilidade do navegador. Compilação, testes e type check não executados.

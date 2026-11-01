@@ -33,9 +33,13 @@ internal static class BrowserTabs
         try
         {
             string key = active.Handle + "|" + active.Title;
-            if (key == observed && DateTime.UtcNow - observedAt < TimeSpan.FromMinutes(2)) return;
+            bool meetingHint = active.Title.Contains("Meet", StringComparison.OrdinalIgnoreCase);
+            if (key == observed && DateTime.UtcNow - observedAt < (meetingHint ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(2))) return;
             observed = key; observedAt = DateTime.UtcNow;
             await ReadAsync(new[] { active }, CancellationToken.None);
+            // A title is only a scheduling hint. Only real origin + controls
+            // can establish the context before the user switches to another tab.
+            if (meetingHint) await CallIntegration.FindAsync(new[] { active }, CancellationToken.None);
         }
         catch (OperationCanceledException) { }
         finally { Interlocked.Exchange(ref observing, 0); }
@@ -101,7 +105,25 @@ internal static class BrowserTabs
         }
         finally { gate.Release(); }
     }
-    internal static async Task<bool> SelectAsync(BrowserTab tab, CancellationToken cancellation)
+    internal static async Task<BrowserTab?> ConfirmedSelectedAsync(Desktop.RunningWindow window, CancellationToken cancellation)
+    {
+        var tabs = await ReadAsync(new[] { window }, cancellation);
+        var selected = tabs.Where(tab => tab.Window == window.Handle && tab.Selected && !tab.Cached).ToArray();
+        return selected.Length == 1 ? selected[0] : null;
+    }
+    internal static async Task<BrowserTab?> FindKnownAsync(Desktop.RunningWindow window, BrowserTab previous, CancellationToken cancellation)
+    {
+        var observedTabs = await ReadAsync(new[] { window }, cancellation);
+        await gate.WaitAsync(cancellation);
+        try
+        {
+            if (!cache.TryGetValue(window.Handle, out var saved) || saved.Process != (uint)previous.ProcessId) return null;
+            var found = saved.Tabs.FirstOrDefault(tab => tab.RuntimeId.SequenceEqual(previous.RuntimeId));
+            return found is null ? null : found with { Cached = observedTabs.All(tab => tab.Cached) };
+        }
+        finally { gate.Release(); }
+    }
+    internal static async Task<bool> SelectAsync(BrowserTab tab, CancellationToken cancellation, bool strict = false)
     {
         GetWindowThreadProcessId(tab.Window, out uint process);
         if (process != tab.ProcessId || !Desktop.WindowExists(tab.Window)) return false;
@@ -118,7 +140,7 @@ internal static class BrowserTabs
                 if (root.Current.ProcessId != tab.ProcessId) return false;
                 var elements = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem)).Cast<AutomationElement>().Where(IsBrowserTab).ToArray();
                 var selected = elements.FirstOrDefault(element => element.GetRuntimeId().SequenceEqual(tab.RuntimeId));
-                if (selected is null)
+                if (selected is null && !strict)
                 {
                     var named = elements.Where(element => element.Current.Name == tab.Title).ToArray();
                     if (named.Length == 1) selected = named[0];

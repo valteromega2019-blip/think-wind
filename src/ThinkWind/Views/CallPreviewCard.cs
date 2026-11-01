@@ -37,7 +37,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     private int missingReads;
     private string controlsSignature = "";
     private (AudioState Mic, AudioState Output)? restore;
-    internal bool IsInteracting => busy || IsMouseCaptureWithin || audioMenu?.IsOpen == true;
+    internal bool IsInteracting => busy || commandPending || IsMouseCaptureWithin || audioMenu?.IsOpen == true;
     internal bool IsUserInteracting => commandPending || IsMouseCaptureWithin || audioMenu?.IsOpen == true;
     internal event Action? LayoutChanged;
     internal event Action? CallEnded;
@@ -59,8 +59,25 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
         headingRow.Children.Add(heading); Children.Add(headingRow); Children.Add(controls);
         openCall.Click += async (_, _) =>
         {
-            if (snapshot is not { } current) return;
-            if (!await Desktop.ActivateFromDock(current.Window, false)) status.Text = "Abra a chamada pelo aplicativo. O Windows não permitiu ativar a janela.";
+            if (busy || lifetime is null || snapshot is not { } current) return;
+            busy = commandPending = true; var token = lifetime.Token;
+            try
+            {
+                bool opened = current.Tab is not null ? await BrowserTabs.SelectAsync(current.Tab, token, strict: true)
+                    : await Desktop.ActivateFromDock(current.Window, false);
+                if (!opened) { status.Text = "Abra a chamada pelo aplicativo. O Windows não permitiu ativar a janela ou a aba não está mais disponível."; return; }
+                if (current.NeedsValidation)
+                {
+                    await System.Threading.Tasks.Task.Delay(180, token);
+                    var updated = await CallIntegration.FindAsync(windows, token);
+                    if (token.IsCancellationRequested) return;
+                    if (updated is null || updated.NeedsValidation || updated.RoomAddress != current.RoomAddress)
+                    { callAvailable = false; controls.IsEnabled = false; Stop(); CallEnded?.Invoke(); return; }
+                    snapshot = updated; Render();
+                }
+            }
+            catch (OperationCanceledException) { }
+            finally { busy = commandPending = false; }
         };
         footer.Children.Add(openCall); footer.Children.Add(moreAudio); Children.Add(footer);
         moreAudio.SetResourceReference(StyleProperty, "Think.IconButton");
@@ -133,9 +150,10 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
     private void Render()
     {
         if (snapshot is null) return;
-        heading.Text = snapshot.App + " · Em chamada";
+        heading.Text = snapshot.App + (snapshot.NeedsValidation ? " · Verificar chamada" : " · Em chamada");
+        openCall.Content = snapshot.NeedsValidation ? "Verificar chamada" : "Abrir chamada";
         controls.IsEnabled = callAvailable;
-        string nextSignature = compact + snapshot.App + string.Join("|", snapshot.Commands.Select(command => $"{command.Action}:{command.AccessibleName}:{command.Muted}"));
+        string nextSignature = compact + snapshot.App + snapshot.NeedsValidation + string.Join("|", snapshot.Commands.Select(command => $"{command.Action}:{command.AccessibleName}:{command.Muted}"));
         if (controlsSignature != nextSignature)
         {
             controlsSignature = nextSignature;
@@ -159,7 +177,7 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
                     {
                         symbol,
                         new TextBlock { Text = label, MaxWidth = 82, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0) }
-                    } }, ToolTip = command.AccessibleName, MinWidth = compact ? 76 : 86, MinHeight = compact ? 62 : 84, Padding = new Thickness(compact ? 6 : 10), Margin = new Thickness(3, compact ? 5 : 10, 3, 0) };
+                    } }, ToolTip = snapshot.NeedsValidation ? "Ativar a aba e verificar a chamada antes de executar: " + command.AccessibleName : command.AccessibleName, MinWidth = compact ? 76 : 86, MinHeight = compact ? 62 : 84, Padding = new Thickness(compact ? 6 : 10), Margin = new Thickness(3, compact ? 5 : 10, 3, 0) };
                 if (snapshot.Commands.Count >= 4) button.Width = compact ? 138 : 154;
                 System.Windows.Automation.AutomationProperties.SetName(button, command.AccessibleName);
                 if (command.Muted == true || command.Action == CallAction.Leave) button.Foreground = new SolidColorBrush(Color.FromRgb(248, 92, 106));

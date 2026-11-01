@@ -15,13 +15,15 @@ namespace OrbyLauncher.Services;
 
 internal enum CallAction { Microphone, Headphones, Leave, Camera }
 internal sealed record CallCommand(CallAction Action, string AccessibleName, bool? Muted = null);
-internal sealed record CallSnapshot(nint Window, int ProcessId, string App, string Title, IReadOnlyList<CallCommand> Commands);
+internal sealed record CallSnapshot(nint Window, int ProcessId, string App, string Title, IReadOnlyList<CallCommand> Commands,
+    string? RoomAddress = null, bool BrowserSelected = false, BrowserTab? Tab = null, bool NeedsValidation = false);
 
 // Inspect only candidate windows on hover. All cross-process accessibility calls
 // run off the dispatcher; actions rediscover controls rather than caching UIA nodes.
 internal static class CallIntegration
 {
     private static readonly SemaphoreSlim gate = new(1, 1);
+    private static readonly Dictionary<nint, CallSnapshot> meetContexts = new();
     [DllImport("oleacc.dll")] private static extern int AccessibleObjectFromWindow(nint window, uint objectId, ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out Accessibility.IAccessible accessible);
     [DllImport("oleacc.dll")] private static extern int AccessibleChildren(Accessibility.IAccessible parent, int start, int count, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] object[] children, out int obtained);
     internal static bool IsCandidate(Desktop.RunningWindow window) => AppName(window) is not null;
@@ -43,21 +45,47 @@ internal static class CallIntegration
         await gate.WaitAsync(cancellation);
         try
         {
-            return await Task.Run(() =>
+            foreach (var handle in meetContexts.Keys.Where(handle => !Desktop.WindowExists(handle)).ToArray()) meetContexts.Remove(handle);
+            foreach (var window in windows.Where(IsCandidate).Take(4))
             {
-                foreach (var window in windows.Where(IsCandidate).Take(4))
+                cancellation.ThrowIfCancellationRequested();
+                var snapshot = await Task.Run(() => Inspect(window, cancellation, null), cancellation);
+                if (snapshot is not null)
                 {
-                    cancellation.ThrowIfCancellationRequested();
-                    var snapshot = Inspect(window, cancellation, null);
-                    if (snapshot is not null) return snapshot;
+                    if (snapshot.App == "Google Meet" && meetContexts.TryGetValue(window.Handle, out var previous))
+                    {
+                        if (previous.RoomAddress != snapshot.RoomAddress) meetContexts.Remove(window.Handle);
+                        else snapshot = snapshot with { Tab = previous.Tab };
+                    }
+                    if (snapshot.App == "Google Meet" && snapshot.BrowserSelected)
+                    {
+                        var tab = await BrowserTabs.ConfirmedSelectedAsync(window, cancellation);
+                        if (tab is not null && tab.ProcessId == snapshot.ProcessId)
+                        {
+                            snapshot = snapshot with { Tab = tab };
+                            if (meetContexts.Count >= 16 && !meetContexts.ContainsKey(window.Handle)) meetContexts.Remove(meetContexts.Keys.First());
+                            meetContexts[window.Handle] = snapshot;
+                        }
+                    }
+                    return snapshot;
                 }
-                return null;
-            }, cancellation);
+                if (AppName(window) == "Google Meet" && meetContexts.TryGetValue(window.Handle, out var remembered) && remembered.Tab is not null)
+                {
+                    var tab = await BrowserTabs.FindKnownAsync(window, remembered.Tab, cancellation);
+                    if (tab is not null && tab.ProcessId == remembered.ProcessId && (tab.Cached || !tab.Selected))
+                        return remembered with { Tab = tab, NeedsValidation = true,
+                            Commands = remembered.Commands.Select(command => command with { Muted = null }).ToArray() };
+                    meetContexts.Remove(window.Handle);
+                }
+            }
+            return null;
         }
         finally { gate.Release(); }
     }
     internal static async Task<bool> ExecuteAsync(CallSnapshot snapshot, CallCommand command, CancellationToken cancellation)
     {
+        if (snapshot.NeedsValidation && (snapshot.Tab is null || !await BrowserTabs.SelectAsync(snapshot.Tab, cancellation, strict: true))) return false;
+        if (snapshot.NeedsValidation) await Task.Delay(180, cancellation);
         await gate.WaitAsync(cancellation);
         try
         {
@@ -66,7 +94,19 @@ internal static class CallIntegration
                 if (!WindowThumbnail.IsWindow(snapshot.Window)) return false;
                 var root = AutomationElement.FromHandle(snapshot.Window);
                 if (root.Current.ProcessId != snapshot.ProcessId) return false;
-                return InspectControls(root, snapshot.App, cancellation, command, out _) == true;
+                var selected = command;
+                if (snapshot.App == "Google Meet")
+                {
+                    InspectControls(root, snapshot.App, cancellation, null, out var current, out var room, out _);
+                    if (!string.Equals(snapshot.RoomAddress, room, StringComparison.OrdinalIgnoreCase)
+                        || !current.Any(item => item.Action == CallAction.Leave) || !current.Any(item => item.Action == CallAction.Microphone))
+                    { meetContexts.Remove(snapshot.Window); return false; }
+                    selected = current.FirstOrDefault(item => item.Action == command.Action)!;
+                    if (selected is null) return false;
+                }
+                bool sent = InspectControls(root, snapshot.App, cancellation, selected, out _, out _, out _);
+                if (sent && command.Action == CallAction.Leave) meetContexts.Remove(snapshot.Window);
+                return sent;
             }, cancellation);
         }
         catch (Exception e) when (Unavailable(e)) { return false; }
@@ -78,20 +118,22 @@ internal static class CallIntegration
         {
             var root = AutomationElement.FromHandle(window.Handle);
             string app = AppName(window)!;
-            InspectControls(root, app, cancellation, command, out var commands);
+            InspectControls(root, app, cancellation, command, out var commands, out var room, out var selected);
             // The leave control is the evidence of a call; a mic button alone
             // can belong to a settings or pre-join screen.
             return commands.Any(c => c.Action == CallAction.Leave) && commands.Any(c => c.Action == CallAction.Microphone)
-                ? new(window.Handle, root.Current.ProcessId, app, window.Title, commands) : null;
+                ? new(window.Handle, root.Current.ProcessId, app, window.Title, commands, room, selected) : null;
         }
         catch (Exception e) when (Unavailable(e)) { return null; }
     }
-    private static bool InspectControls(AutomationElement root, string app, CancellationToken cancellation, CallCommand? execute, out List<CallCommand> commands)
+    private static bool InspectControls(AutomationElement root, string app, CancellationToken cancellation, CallCommand? execute, out List<CallCommand> commands,
+        out string? roomAddress, out bool browserSelected)
     {
         commands = new();
+        roomAddress = null; browserSelected = false;
         if (app == "Google Meet")
         {
-            var document = MeetDocument(root, cancellation);
+            var document = MeetDocument(root, cancellation, out roomAddress, out browserSelected);
             if (document is null) return false;
             root = document;
         }
@@ -143,12 +185,13 @@ internal static class CallIntegration
         if (target.TryGetCurrentPattern(TogglePattern.Pattern, out var toggle)) { ((TogglePattern)toggle).Toggle(); return true; }
         return false;
     }
-    private static AutomationElement? MeetDocument(AutomationElement window, CancellationToken cancellation)
+    private static AutomationElement? MeetDocument(AutomationElement window, CancellationToken cancellation, out string? roomAddress, out bool selected)
     {
+        roomAddress = null; selected = false;
         var pending = new Stack<AutomationElement>(); pending.Push(window);
-        var documents = new List<AutomationElement>(); var verified = new List<AutomationElement>();
+        var documents = new List<AutomationElement>(); var verified = new List<(AutomationElement Element, string Address)>();
         AutomationElement? documentWithoutAddress = null;
-        bool addressBar = false; int nodes = 0; var clock = Stopwatch.StartNew();
+        string? addressBar = null; int nodes = 0; var clock = Stopwatch.StartNew();
         var walker = TreeWalker.ControlViewWalker;
         while (pending.Count > 0 && nodes++ < 350 && clock.ElapsedMilliseconds < 400)
         {
@@ -160,22 +203,30 @@ internal static class CallIntegration
                 if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var documentValue))
                 {
                     string address = ((ValuePattern)documentValue).Current.Value;
-                    if (MeetRoomAddress(address)) verified.Add(element);
+                    if (MeetRoomAddress(address)) verified.Add((element, RoomKey(address)));
                     else if (string.IsNullOrWhiteSpace(address)) documentWithoutAddress = element;
                 }
                 else documentWithoutAddress = element;
                 continue; // Never accept a web page's own text fields as browser origin.
             }
             if (info.ControlType == ControlType.Edit && element.TryGetCurrentPattern(ValuePattern.Pattern, out var value)
-                && MeetRoomAddress(((ValuePattern)value).Current.Value)) addressBar = true;
+                && MeetRoomAddress(((ValuePattern)value).Current.Value)) addressBar = RoomKey(((ValuePattern)value).Current.Value);
             var children = new List<AutomationElement>();
             for (var child = walker.GetFirstChild(element); child is not null && children.Count < 100 && clock.ElapsedMilliseconds < 400; child = walker.GetNextSibling(child)) children.Add(child);
             for (int i = children.Count - 1; i >= 0; i--) pending.Push(children[i]);
         }
-        if (verified.Count == 1) return verified[0];
+        if (verified.Count == 1)
+        {
+            roomAddress = verified[0].Address;
+            selected = string.Equals(addressBar, roomAddress, StringComparison.OrdinalIgnoreCase) && !verified[0].Element.Current.IsOffscreen;
+            return verified[0].Element;
+        }
         // The native address bar is a fallback only for a unique exposed document.
-        return verified.Count == 0 && addressBar && documents.Count == 1 ? documentWithoutAddress : null;
+        if (verified.Count == 0 && addressBar is not null && documents.Count == 1 && documentWithoutAddress is not null)
+        { roomAddress = addressBar; selected = !documentWithoutAddress.Current.IsOffscreen; return documentWithoutAddress; }
+        return null;
     }
+    private static string RoomKey(string address) => new Uri(address.Contains("://") ? address : "https://" + address).GetLeftPart(UriPartial.Path).TrimEnd('/');
     private static bool MeetRoomAddress(string address)
     {
         if (!Uri.TryCreate(address.Contains("://") ? address : "https://" + address, UriKind.Absolute, out var uri)

@@ -28,7 +28,7 @@ internal sealed partial class WindowPreview
     {
         var currentWindows = source.ToList();
         string context = string.Join('|', currentWindows.Select(window => window.Handle).OrderBy(handle => handle));
-        if (!browserMode || browserContext != context || browserMeeting is null && meeting is not null) browserPreferMusic = false;
+        if (!browserMode || browserContext != context || meeting is not null && (browserMeeting is null || browserMeeting.RoomAddress != meeting.RoomAddress)) browserPreferMusic = false;
         browserContext = context; browserMeeting = meeting;
         refresh.Stop(); browserLifetime?.Cancel(); browserLifetime?.Dispose(); browserLifetime = new CancellationTokenSource();
         Release(); musicMode = false; musicCard?.SetActive(false); call?.Stop();
@@ -114,7 +114,7 @@ internal sealed partial class WindowPreview
         catch (OperationCanceledException) { }
         finally { browserReading = false; }
     }
-    private static string MeetingSignature(CallSnapshot? meeting) => meeting is null ? "" : $"{meeting.Window}:{meeting.ProcessId}:{meeting.App}";
+    private static string MeetingSignature(CallSnapshot? meeting) => meeting is null ? "" : $"{meeting.Window}:{meeting.ProcessId}:{meeting.App}:{meeting.RoomAddress}:{meeting.NeedsValidation}";
     private void PositionBrowser()
     {
         var bounds = anchor();
