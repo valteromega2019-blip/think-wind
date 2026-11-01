@@ -284,6 +284,7 @@ internal sealed partial class DockWindow : FloatingWindow
             return;
         }
         var active = Desktop.GetForegroundWindow();
+        RefreshUnreadMetadata();
         var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}:{w.Executable}")) + active
             + string.Join("|", pins.Select(pin => $"{pin.Target}:{pinIdentities[pin.Target].Path}:{pinIdentities[pin.Target].AppId}"));
         if (next == signature) return;
