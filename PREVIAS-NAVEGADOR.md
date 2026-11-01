@@ -19,6 +19,8 @@ Não são trocadas abas automaticamente para capturar imagens. O clique do usuá
 
 Se o navegador não expuser abas por acessibilidade, permanece uma prévia da janela com opção de abertura. Idiomas, abas recolhidas em grupos e políticas de acessibilidade podem limitar a listagem.
 
+Ao minimizar, o launcher conserva em memória as últimas quatro abas identificadas por janela (até 16 janelas), verificando a identidade do processo e descartando janelas encerradas. O tooltip identifica a lista em cache. A atualização aproveita a consulta já existente do Dock quando muda o foco ou título do navegador, sem novo temporizador. Hover não restaura o navegador; somente um clique restaura e seleciona a aba, com recuperação por título único caso o identificador de acessibilidade tenha mudado. Se o navegador já estava minimizado antes de qualquer identificação e não expõe sua árvore, a lista ainda não pode ser reconstruída sem abri-lo uma vez.
+
 As consultas ocorrem ao abrir e a cada dois segundos com a prévia visível; são serializadas fora do Dispatcher e recebem cancelamento ao fechar. Recursos DWM são liberados ao trocar ou fechar a prévia. Provedores UIA individuais podem demorar a responder e não oferecem cancelamento forçado.
 
 Revisado por leitura e diff, sem compilação, testes ou type check nesta alteração. O funcionamento ainda precisa de conferência em execução. A confirmação anterior do usuário valida a integração inicial do Discord, não as alterações deste documento.

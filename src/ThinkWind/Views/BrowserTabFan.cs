@@ -40,6 +40,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             surfaces.Add(surface);
             var button = new Button { Width = 300, Height = 160, Padding = new Thickness(0), Margin = new Thickness(0), Content = surface, HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = tab.Title,
                 Background = Brushes.Transparent, RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform((index - count + 1) * 1.35) };
+            if (tab.Cached) button.ToolTip = tab.Title + " · Última lista identificada; clique para restaurar e selecionar.";
             button.SetResourceReference(StyleProperty, "Think.IconButton");
             button.MouseEnter += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
             button.MouseLeave += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");

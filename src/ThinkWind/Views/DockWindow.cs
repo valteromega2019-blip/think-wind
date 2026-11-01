@@ -258,6 +258,7 @@ internal sealed partial class DockWindow : FloatingWindow
         finally { readingWindows = false; }
         if (!pins.SequenceEqual(Store.Value.Shortcuts) || !startPins.SequenceEqual(Store.Value.StartPins)) { signature = ""; nextAppRefresh = DateTime.MinValue; return; }
         if (!IsVisible || LayoutDrag.Active || fileDragging || MenuOpen) return;
+        BrowserTabs.Observe(windows);
         var screen = Display;
         int dockHeight = (int)Math.Ceiling((ExpandedHeight + Store.Value.DockBottomOffset) * screen.Scale);
         int dockWidth = (int)Math.Ceiling(Math.Max(96, TotalWidth) * screen.Scale);
