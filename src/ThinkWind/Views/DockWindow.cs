@@ -70,6 +70,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private sealed record Item(string Key, string Name, string? Target, string? Glyph, List<Desktop.RunningWindow> Windows, Shortcut? Pin, Action? Action);
     public DockWindow(SettingsStore store) : base(store)
     {
+        InitializeAttention();
         TutorialGuide.Mark(Surface, "dock");
         Title = "Orby Launcher — Barra de aplicativos";
         items.VerticalAlignment = VerticalAlignment.Bottom;
@@ -343,6 +344,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private void RenderPage()
     {
         if (MenuOpen) return;
+        attentionDots.Clear();
         fittedWidth = Display.Width;
         bool primaryControls = HasPrimaryControls;
         double searchWidth = primaryControls ? Store.Value.DockSearchMode == "Bar" ? Math.Min(144, Math.Max(48, fittedWidth * .22)) : 36 : 0;
@@ -476,6 +478,7 @@ internal sealed partial class DockWindow : FloatingWindow
         button.PreviewKeyDown += (_, _) => foregroundBeforeClick = 0;
         button.Style = (Style)FindResource("Think.IconButton");
         button.Content = panel; button.Width = size + 2 * fit.Padding; button.Padding = new Thickness(fit.Padding, 4, fit.Padding, 4);
+        AddAttentionDot(panel, button, item);
         button.Margin = new Thickness(fit.Gap / 2, 0, fit.Gap / 2, 0);
         var menu = new ContextMenu();
         if (item.Action is null && item.Target is string adminTarget && SystemActions.CanRunAsAdministrator(adminTarget))
