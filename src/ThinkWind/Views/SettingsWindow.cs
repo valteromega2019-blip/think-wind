@@ -119,6 +119,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     {
         building = true; content.Children.Clear(); ClearSettingsTabs();
         BuildAppearance();
+        BuildKeyboardSettings();
         var dock = Section("Barra de aplicativos", "Ícones originais, sem fundos individuais. Ajustes independentes da central de controle.");
 
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");

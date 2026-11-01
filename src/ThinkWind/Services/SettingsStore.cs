@@ -10,6 +10,10 @@ public sealed record Shortcut(string Name, string Target);
 public sealed record TrayActivity(int Count, DateTime LastUsedUtc, DateTime FirstSeenUtc);
 public sealed class Preferences
 {
+    public bool KeyboardUseNative { get; set; }
+    public bool KeyboardNumberPad { get; set; } = true;
+    public double KeyboardScale { get; set; } = 1;
+    public string KeyboardLayout { get; set; } = "PT-BR";
     public bool TutorialPending { get; set; }
     public double DockScale { get; set; } = 1;
     public double TintOpacity { get; set; } = .72;
@@ -207,6 +211,8 @@ public sealed class SettingsStore
     private static double Limit(double value, double min, double max, double fallback) => double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
     private void Normalize()
     {
+        Value.KeyboardLayout = Value.KeyboardLayout == "US" ? "US" : "PT-BR";
+        Value.KeyboardScale = Limit(Value.KeyboardScale, .7, 1.3, 1);
         Value.OverlayAutomatic = true;
         Value.OverlayAppearance = (Value.OverlayAppearance ?? new()).Normalize();
         Value.OverlayVisibleMetrics = (Value.OverlayVisibleMetrics ?? OverlayMetrics.Defaults().ToList())

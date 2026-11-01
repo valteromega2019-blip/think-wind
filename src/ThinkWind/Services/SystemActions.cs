@@ -46,6 +46,8 @@ internal static class SystemActions
     }
     internal static bool Launch(string target, bool administrator = false)
     {
+        if (!administrator && target == "orby:keyboard" && Application.Current is App app)
+        { app.ToggleVirtualKeyboard(); return true; }
         try
         {
             target = Environment.ExpandEnvironmentVariables(target.Trim());

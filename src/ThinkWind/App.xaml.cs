@@ -19,6 +19,7 @@ public partial class App : Application
     private readonly List<(DockWindow Dock, IslandWindow? Island)> extraMonitors = new();
     private string monitorSignature = "";
     private SettingsWindow? settings;
+    private VirtualKeyboardWindow? virtualKeyboard;
     private TutorialWindow? tutorial;
     internal void RepeatTutorial()
     {
@@ -151,6 +152,8 @@ public partial class App : Application
         windowsTaskbar.Apply(store.Value.HideWindowsTaskbar);
         gameMode = new GameModeService(Dispatcher, ChangeGameMode, initialGame);
         gameMode.ForegroundChanged += RefreshForegroundLayouts;
+        VirtualKeyboardInput.RememberTarget();
+        gameMode.ForegroundChanged += VirtualKeyboardInput.RememberTarget;
         if (initialGame) { gameHidden.Add(dock); gameHidden.Add(island); dock.SuspendForGame(true); gameTransitions++; }
         gameMode.Configure(store.Value); ConfigureStartHotkey();
         ConfigureMonitors();
@@ -189,6 +192,15 @@ public partial class App : Application
         OpenSettings();
         settings?.ShowWeatherSection();
     }
+    internal void ToggleVirtualKeyboard(bool forceCustom = false)
+    {
+        if (IsExiting || gameMode?.Active == true) return;
+        if (!forceCustom && store.Value.KeyboardUseNative) { SystemActions.Run("osk.exe"); return; }
+        virtualKeyboard ??= new VirtualKeyboardWindow(store);
+        if (virtualKeyboard.IsVisible) { virtualKeyboard.Hide(); return; }
+        VirtualKeyboardInput.RememberTarget(); VirtualKeyboardInput.RestoreTarget();
+        virtualKeyboard.Show(); virtualKeyboard.Position();
+    }
     internal void OpenWidgetSettings()
     {
         OpenSettings(); settings?.ShowWidgetsSection();
@@ -224,6 +236,7 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        virtualKeyboard?.Retire();
         tutorial?.Close();
         startupPriority?.Dispose(); startupPriority = null;
         windowsTaskbar?.Dispose();
