@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace OrbyLauncher.Services;
-internal sealed record ReleaseUpdate(string Tag, ReleaseVersion Version, string Notes, Uri Download, long Size, string Sha256);
+internal sealed record ReleaseUpdate(string Tag, ReleaseVersion Version, string Notes, Uri Download, long Size, string Sha256, Uri? SignatureDownload = null, string? SignatureSha256 = null);
 internal sealed record UpdateProgress(long Bytes, long Total, double BytesPerSecond);
 internal sealed class GithubUpdates : IDisposable
 {
@@ -52,7 +52,18 @@ internal sealed class GithubUpdates : IDisposable
                 var url = new Uri(asset.GetProperty("browser_download_url").GetString()!);
                 if (!TrustedDownload(url)) continue;
                 long size = asset.GetProperty("size").GetInt64(); if (size <= 0 || size > 1024L * 1024 * 1024) continue;
-                best = new(tag, version, release.GetProperty("body").GetString() ?? "Sem notas publicadas.", url, size, digest[7..]);
+                Uri? signatureUrl = null; string? signatureHash = null;
+                var signatures = release.GetProperty("assets").EnumerateArray().Where(a => a.GetProperty("name").GetString() == asset.GetProperty("name").GetString() + ".sig").ToArray();
+                if (signatures.Length == 1)
+                {
+                    var signature = signatures[0];
+                    var candidateUrl = new Uri(signature.GetProperty("browser_download_url").GetString()!);
+                    string candidateHash = signature.TryGetProperty("digest", out var signatureDigest) ? signatureDigest.GetString() ?? "" : "";
+                    if (!TrustedDownload(candidateUrl) || !Regex.IsMatch(candidateHash, "^sha256:[a-fA-F0-9]{64}$") || signature.GetProperty("size").GetInt64() != 384)
+                        throw new InvalidDataException("Metadados da assinatura de atualização inválidos.");
+                    signatureUrl = candidateUrl; signatureHash = candidateHash[7..];
+                }
+                best = new(tag, version, release.GetProperty("body").GetString() ?? "Sem notas publicadas.", url, size, digest[7..], signatureUrl, signatureHash);
             }
             if (json.RootElement.GetArrayLength() < 100) return best;
         }
@@ -89,9 +100,32 @@ internal sealed class GithubUpdates : IDisposable
                 progress?.Report(new(total, update.Size, total / Math.Max(.001, watch.Elapsed.TotalSeconds)));
             }
             await VerifyHashAsync(partial, update.Sha256, token).ConfigureAwait(false);
+            if (update.SignatureDownload is { } signatureUrl)
+            {
+                using var signatureResponse = await http.GetAsync(signatureUrl, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+                signatureResponse.EnsureSuccessStatusCode();
+                var finalSignatureUrl = signatureResponse.RequestMessage?.RequestUri;
+                if (finalSignatureUrl is null || finalSignatureUrl.Scheme != "https" || (finalSignatureUrl.Host != "github.com" && finalSignatureUrl.Host != "release-assets.githubusercontent.com" && finalSignatureUrl.Host != "objects.githubusercontent.com"))
+                    throw new InvalidDataException("Origem da assinatura não autorizada.");
+                await using var signatureStream = await signatureResponse.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                byte[] proof = new byte[385]; int count = 0;
+                while (count < proof.Length)
+                {
+                    int read = await signatureStream.ReadAsync(proof.AsMemory(count), token).ConfigureAwait(false);
+                    if (read == 0) break; count += read;
+                }
+                if (count != 384) throw new InvalidDataException("Tamanho da assinatura inválido.");
+                byte[] signatureBytes = proof[..384];
+                if (!string.Equals(Convert.ToHexString(SHA256.HashData(signatureBytes)), update.SignatureSha256, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Integridade da assinatura divergente.");
+                using var rsa = RSA.Create(); rsa.FromXmlString(PublisherPublicKey());
+                if (!rsa.VerifyData(Encoding.ASCII.GetBytes("OrbyLauncher.Update.SHA256.v1:" + update.Tag + ":" + update.Sha256.ToLowerInvariant()), signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
+                    throw new InvalidDataException("Pacote sem assinatura válida do publicador Orby.");
+                await File.WriteAllBytesAsync(path + ".sig", signatureBytes, token).ConfigureAwait(false);
+            }
             File.Move(partial, path); return path;
         }
-        catch { if (File.Exists(partial)) File.Delete(partial); throw; }
+        catch { if (File.Exists(partial)) File.Delete(partial); if (File.Exists(path + ".sig")) File.Delete(path + ".sig"); throw; }
     }
     internal static async Task VerifyHashAsync(string path, string expected, CancellationToken token)
     {
@@ -100,23 +134,30 @@ internal sealed class GithubUpdates : IDisposable
         if (!CryptographicOperations.FixedTimeEquals(hash, Convert.FromHexString(expected))) throw new InvalidDataException("SHA-256 divergente. Instalação bloqueada.");
     }
     internal static string Quote(string value) => "'" + value.Replace("'", "''") + "'";
-    internal static ProcessStartInfo Helper(string path, string hash, bool install, string? readyFile = null)
+    private static string PublisherPublicKey()
+    {
+        using var stream = typeof(GithubUpdates).Assembly.GetManifestResourceStream("OrbyLauncher.UpdatePublicKey.xml") ?? throw new InvalidDataException("Chave de atualização indisponível.");
+        using var reader = new StreamReader(stream); return reader.ReadToEnd();
+    }
+    internal static ProcessStartInfo Helper(string path, string hash, bool install, string? readyFile = null, string? releaseTag = null)
     {
         string script = Path.Combine(AppContext.BaseDirectory, "UpdateInstaller.ps1");
         if (!File.Exists(script)) throw new IOException("O auxiliar de atualização não foi encontrado. Reinstale a versão oficial manualmente.");
         string command = $"& {Quote(script)} -Installer {Quote(path)} -ExpectedHash {Quote(hash)} -Launcher {Quote(Environment.ProcessPath!)} -WaitPid {(install ? Environment.ProcessId : 0)}";
+        command += " -PublisherKey " + Quote(PublisherPublicKey());
+        if (releaseTag is not null) command += " -ReleaseTag " + Quote(releaseTag);
         if (readyFile is not null) command += " -ReadyFile " + Quote(readyFile);
         return new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe"), "-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(command)))
         { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden, RedirectStandardOutput = !install, RedirectStandardError = !install };
     }
-    internal static async Task<Process> PrepareInstallAsync(string path, string hash, CancellationToken token)
+    internal static async Task<Process> PrepareInstallAsync(string path, string hash, CancellationToken token, string? releaseTag = null)
     {
         string ready = Path.Combine(Path.GetDirectoryName(path)!, "ready-" + Guid.NewGuid().ToString("N") + ".txt");
         Process? process = null;
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token); deadline.CancelAfter(TimeSpan.FromSeconds(90));
         try
         {
-            process = Process.Start(Helper(path, hash, true, ready)) ?? throw new IOException("Não foi possível iniciar o auxiliar de instalação.");
+            process = Process.Start(Helper(path, hash, true, ready, releaseTag)) ?? throw new IOException("Não foi possível iniciar o auxiliar de instalação.");
             while (true)
             {
                 deadline.Token.ThrowIfCancellationRequested();
@@ -133,9 +174,9 @@ internal sealed class GithubUpdates : IDisposable
         }
         finally { try { File.Delete(ready); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } }
     }
-    internal static async Task AuthenticateAsync(string path, string hash, CancellationToken token)
+    internal static async Task AuthenticateAsync(string path, string hash, CancellationToken token, string? releaseTag = null)
     {
-        using var process = Process.Start(Helper(path, hash, false)) ?? throw new IOException("Não foi possível validar a assinatura.");
+        using var process = Process.Start(Helper(path, hash, false, releaseTag: releaseTag)) ?? throw new IOException("Não foi possível validar a assinatura.");
         var output = process.StandardOutput.ReadToEndAsync(token); var error = process.StandardError.ReadToEndAsync(token);
         try { await process.WaitForExitAsync(token).ConfigureAwait(false); }
         catch { try { process.Kill(); } catch (InvalidOperationException) { } throw; }

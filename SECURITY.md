@@ -22,3 +22,6 @@ Bandeja, áudio, Bluetooth e redimensionamento dependem do aplicativo, dispositi
 ## Relatos
 
 Consulte a guia Security do repositório para verificar os canais privados disponíveis. Não publique credenciais, chaves, dados pessoais, dumps ou logs sensíveis em issues públicas. Se não houver canal privado disponível, envie apenas uma descrição não sensível para solicitar um meio de contato apropriado.
+## Atualizador Beta com chave de publicador
+
+O código do atualizador também permite pacotes Beta sem Authenticode quando possuem assinatura RSA-3072/SHA-256 oficial, vinculada à tag e ao hash e validada com a chave pública embutida. A assinatura separada `.exe.sig` não altera a confiança do Windows/SmartScreen e não é um certificado de assinatura de código. Uma assinatura Authenticode inválida não é aceita por esse caminho alternativo. Releases sem prova oficial continuam bloqueadas. A primeira instalação do cliente com esta política precisa ser manual em versões que exigiam somente Authenticode.

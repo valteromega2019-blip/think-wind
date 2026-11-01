@@ -24,6 +24,7 @@
     <Content Include="UpdateInstaller.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Resource Include="Assets/OrbyLauncher.ico" />
     <Resource Include="Assets/OrbyLauncher.png" />
+    <EmbeddedResource Include="Assets/UpdatePublicKey.xml" LogicalName="OrbyLauncher.UpdatePublicKey.xml" />
     <Content Include="../../COPYRIGHT.md" Link="COPYRIGHT.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../SECURITY.md" Link="SECURITY.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../licenses/*" Link="licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

@@ -2,7 +2,9 @@ param([Parameter(Mandatory=$true)][string]$Installer,
       [Parameter(Mandatory=$true)][string]$ExpectedHash,
       [Parameter(Mandatory=$true)][string]$Launcher,
       [int]$WaitPid = 0,
-      [string]$ReadyFile = '')
+      [string]$ReadyFile = '',
+      [string]$PublisherKey = '',
+      [string]$ReleaseTag = '')
 $ErrorActionPreference = 'Stop'
 $record = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'OrbyLauncher\Updates\installation-result.json'
 $lock = $null
@@ -13,8 +15,23 @@ try {
     if ((Get-FileHash -LiteralPath $Installer -Algorithm SHA256).Hash -ne $ExpectedHash) { throw 'SHA-256 divergente. Instalacao bloqueada.' }
     $current = Get-AuthenticodeSignature -LiteralPath $Launcher
     $candidate = Get-AuthenticodeSignature -LiteralPath $Installer
-    if ($current.Status -ne 'Valid' -or $null -eq $current.SignerCertificate) { throw 'Esta versao nao possui assinatura digital confiavel. Atualizacao integrada bloqueada ate a assinatura oficial do aplicativo.' }
-    if ($candidate.Status -ne 'Valid' -or $null -eq $candidate.SignerCertificate -or $candidate.SignerCertificate.Thumbprint -ne $current.SignerCertificate.Thumbprint) { throw 'Assinatura invalida ou publicador diferente. Instalacao bloqueada.' }
+    if ($current.Status -eq 'Valid' -and $null -ne $current.SignerCertificate) {
+        if ($candidate.Status -ne 'Valid' -or $null -eq $candidate.SignerCertificate -or $candidate.SignerCertificate.Thumbprint -ne $current.SignerCertificate.Thumbprint) { throw 'Assinatura invalida ou publicador diferente. Instalacao bloqueada.' }
+    } elseif ($current.Status -eq 'NotSigned' -and $candidate.Status -eq 'NotSigned') {
+        # Beta artifacts use a detached publisher signature. SHA-256 alone is
+        # insufficient. Never accept an invalid/revoked Authenticode signature.
+        if ([string]::IsNullOrWhiteSpace($PublisherKey) -or $ReleaseTag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$') { throw 'Identidade da publicacao ausente.' }
+        $signatureFile = $Installer + '.sig'
+        if (!(Test-Path -LiteralPath $signatureFile) -or (Get-Item -LiteralPath $signatureFile).Length -ne 384) { throw 'Assinatura oficial do pacote ausente. Instale manualmente a versao oficial.' }
+        $rsa = New-Object Security.Cryptography.RSACryptoServiceProvider
+        $rsa.PersistKeyInCsp = $false
+        try {
+            $rsa.FromXmlString($PublisherKey)
+            if ($rsa.KeySize -ne 3072) { throw 'Chave de atualizacao invalida.' }
+            $payload = [Text.Encoding]::ASCII.GetBytes('OrbyLauncher.Update.SHA256.v1:' + $ReleaseTag + ':' + $ExpectedHash.ToLowerInvariant())
+            if (!$rsa.VerifyData($payload, 'SHA256', [IO.File]::ReadAllBytes($signatureFile))) { throw 'Assinatura do publicador Orby invalida. Instalacao bloqueada.' }
+        } finally { $rsa.Dispose() }
+    } else { throw 'Assinatura Authenticode invalida ou estado nao permitido. Instalacao bloqueada.' }
     if ($WaitPid -eq 0) { Write-Output 'Assinatura e integridade verificadas.'; exit 0 }
     if ([string]::IsNullOrWhiteSpace($ReadyFile)) { throw 'Confirmacao de prontidao ausente. Instalacao cancelada.' }
     # Publish readiness only after all prerequisites have passed. The UI stays

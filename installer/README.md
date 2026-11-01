@@ -10,3 +10,13 @@ Nenhum desses comandos executa a suíte de testes. Não adicionar chamadas de te
 O assistente permanece por usuário; somente o instalador oficial do driver solicita UAC. Sensores já configurados são atualizados pelo próprio fluxo de autorização do coletor, sem apontar tarefas elevadas para pastas graváveis pelo usuário.
 
 A partir da 0.20.1 Beta, o pacote usa OrbyLauncher.exe, pasta OrbyLauncher e novo AppId. É uma instalação independente, sem importar ou remover os dados da instalação anterior automaticamente.
+
+## Assinatura dos pacotes de atualização Beta
+
+Após gerar o instalador, execute `powershell -NoProfile -File tools/Sign-Update.ps1 -Installer artifacts/installer/OrbyLauncher-Setup-VERSAO.exe -Tag vVERSAO`. Substitua VERSAO pela mesma versão/tag do pacote. Publique o `.exe.sig` junto com o `.exe` e o SHA-256 na mesma release. A API do GitHub fornece também o digest e o tamanho da assinatura.
+
+O script usa a chave privada DPAPI de `%LOCALAPPDATA%\OrbyPublisher\update-signing-key.dpapi`, vinculada à conta Windows de publicação. Ela nunca deve ser enviada ao GitHub, incluída no instalador, logs ou arquivos do projeto. Não gere uma nova chave silenciosamente se perder esse arquivo: isso quebra a confiança dos clientes existentes. A chave pública RSA-3072 está em Assets/UpdatePublicKey.xml e é embutida no executável. A rotina de assinatura compara as duas chaves antes de assinar.
+
+A assinatura RSA/SHA-256 PKCS#1 vincula o domínio OrbyLauncher.Update.SHA256.v1, a tag e o hash exato do instalador. Não é Authenticode e não remove avisos SmartScreen/editor desconhecido. O cliente confere origem, hash da API e assinatura; o auxiliar repete hash e assinatura com o instalador bloqueado para escrita antes de anunciar prontidão. Assinaturas Authenticode inválidas continuam recusadas; o caminho alternativo só aceita ambos os binários no estado NotSigned.
+
+A versão antiga que exige somente Authenticode precisa receber o novo launcher manualmente uma vez. Adicionar um `.sig` a uma release não modifica o código já instalado. Versões futuras com o novo cliente poderão usar o fluxo integrado com pacotes assinados. Não foi gerado novo instalador nesta correção sem pedido de compilação.

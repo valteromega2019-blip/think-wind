@@ -84,19 +84,19 @@ internal sealed class UpdateController : IDisposable
             path = await api.DownloadAsync(update, authorized, new Progress<UpdateProgress>(p => { Progress = p; Changed?.Invoke(); }), cancellation.Token);
             Status = "Validando assinatura do publicador…"; Changed?.Invoke();
             using var validation = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token); validation.CancelAfter(TimeSpan.FromSeconds(90));
-            await GithubUpdates.AuthenticateAsync(path, update.Sha256, validation.Token);
+            await GithubUpdates.AuthenticateAsync(path, update.Sha256, validation.Token, update.Tag);
             cancellation.Token.ThrowIfCancellationRequested();
             saveSettings();
             if (blocked()) throw new InvalidOperationException("Instalação adiada: saia do jogo ou tela cheia e tente novamente.");
             Status = "Preparando o auxiliar de instalação…"; Changed?.Invoke();
-            helper = await GithubUpdates.PrepareInstallAsync(path, update.Sha256, cancellation.Token);
+            helper = await GithubUpdates.PrepareInstallAsync(path, update.Sha256, cancellation.Token, update.Tag);
             cancellation.Token.ThrowIfCancellationRequested();
             if (blocked()) throw new InvalidOperationException("Instalação adiada: saia do jogo ou tela cheia e tente novamente.");
             installing = true;
             Status = "Encerrando para instalar…"; InstallStarting?.Invoke();
         }
         catch (OperationCanceledException) { Status = "Operação cancelada ou tempo de espera excedido. Nenhuma instalação iniciada."; }
-        catch (Exception e) when (e is IOException or InvalidDataException or System.Net.Http.HttpRequestException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException)
+        catch (Exception e) when (e is IOException or InvalidDataException or System.Net.Http.HttpRequestException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException or System.Security.Cryptography.CryptographicException)
         { Status = e.Message; RecordInstallationFailure(e.Message); }
         finally
         {

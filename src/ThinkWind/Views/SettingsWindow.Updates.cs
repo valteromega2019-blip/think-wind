@@ -47,7 +47,7 @@ internal sealed partial class SettingsWindow
             cancel.IsEnabled = updates.Busy;
         }
         foreach (UIElement element in new UIElement[] { available, notes, message, progress, check, download, cancel }) page.Children.Add(element);
-        Note(page, "Segurança: SHA-256 da API oficial e assinatura Authenticode válida com o mesmo certificado do launcher. Versões sem assinatura são bloqueadas. Nenhum arquivo pessoal é enviado ao GitHub.");
+        Note(page, "Segurança: SHA-256 da API oficial e assinatura do publicador. Pacotes Beta sem Authenticode precisam da assinatura criptográfica oficial (.sig), validada pela chave incluída no launcher. Arquivos sem prova válida são bloqueados. Isso não remove avisos de editor desconhecido do Windows. Nenhum arquivo pessoal é enviado ao GitHub.");
         updates.Changed += Refresh; Closed += (_, _) => updates.Changed -= Refresh; Refresh();
     }
 }
