@@ -34,7 +34,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Title = "Orby Launcher · Personalização";
         SizeToContent = SizeToContent.Manual;
         var display = OverlayChrome.GetDisplay(store.Value.MonitorIndex, store.Value.MonitorDeviceName);
-        Width = Math.Min(440, display.Width - 24); Height = Math.Min(580, display.Height - 24);
+        Width = Math.Min(740, display.Width - 24); Height = Math.Min(660, display.Height - 24);
         MinWidth = Math.Min(380, Width); MinHeight = Math.Min(360, Height);
         WindowStartupLocation = WindowStartupLocation.Manual;
         Topmost = true;
@@ -54,15 +54,13 @@ internal sealed partial class SettingsWindow : FloatingWindow
         titleBar.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 1 && !close.IsMouseOver) DragMove(); };
         heading.Children.Add(titleBar);
         heading.Children.Add(new TextBlock { Text = "Personalizar", FontSize = 21, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 4) });
-        heading.Children.Add(new TextBlock { Text = "Alterações salvas automaticamente.", FontSize = 11, TextWrapping = TextWrapping.Wrap, Opacity = .8 });
+        heading.Children.Add(new TextBlock { Text = "Ajuste ao seu estilo. A prévia muda na hora e suas escolhas são salvas automaticamente.", FontSize = 11, TextWrapping = TextWrapping.Wrap, Opacity = .8 });
+        heading.Children.Add(CreateSettingsSearch());
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
-        var tabScroll = new ScrollViewer { Content = tabNavigation, MaxHeight = 124, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
-        tabScroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
-        DockPanel.SetDock(tabScroll, Dock.Top); root.Children.Add(tabScroll);
         var scroll = settingsScroll;
         scroll.Content = content;
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
-        root.Children.Add(new AdornerDecoratorHost(scroll));
+        root.Children.Add(CreateSettingsNavigation(new AdornerDecoratorHost(scroll)));
         Surface.Child = root;
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && store.IsEditing) { store.SetEditing(false); e.Handled = true; } };
         editing.Click += (_, _) => store.SetEditing(!store.IsEditing);
@@ -90,6 +88,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         }
         if (weatherVisibilityCheck is not null) weatherVisibilityCheck.IsEnabled = !store.Value.DisabledQuickControls.Contains("weather");
         weatherSettings.Configure();
+        adaptSettingsNavigation?.Invoke();
         RefreshWidgetEditor();
         RefreshAppearance();
         editing.Content = store.IsEditing ? "Concluir edição visual" : "Editar layout na tela";
@@ -120,6 +119,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         building = true; content.Children.Clear(); ClearSettingsTabs();
         BuildAppearance();
         BuildKeyboardSettings();
+        BuildIntegratedOverlay();
         var dock = Section("Barra de aplicativos", "Ícones originais, sem fundos individuais. Ajustes independentes da central de controle.");
 
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");
@@ -154,7 +154,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Note(island, "A reserva usa a área útil nativa do Windows e pode reorganizar ícones do desktop ao ativar ou desativar. Permanece estável entre os modos da central de controle.");
         var overlay = Section("Overlay e sensores", "Monitoramento opcional e sensores avançados. As permissões do coletor são independentes da interface.");
         Check(overlay, "Overlay de monitoramento do PC", store.Value.HardwareOverlayEnabled, v => Change(p => p.HardwareOverlayEnabled = v));
-        overlay.Children.Add(Button("Personalizar overlay · métricas, posição e aparência", () => ((App)Application.Current).OpenOverlaySettings()));
+        overlay.Children.Add(Button("Personalizar overlay · métricas, posição e aparência", () => SelectSettingsTab("Overlay")));
         overlay.Children.Add(Button("Autorizar / atualizar coletor de sensores (UAC uma vez)", async () =>
         {
             store.Update(p => { p.HardwareSensorsSetupAttempted = true; p.HardwareSensorsAutoSetup = true; });
