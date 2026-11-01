@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Media3D;
 using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
@@ -39,7 +40,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             var surface = new Border { Child = row, BorderThickness = new Thickness(1) };
             surfaces.Add(surface);
             var button = new Button { Width = 300, Height = 160, Padding = new Thickness(0), Margin = new Thickness(0), Content = surface, HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = tab.Title,
-                Background = Brushes.Transparent, RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform((index - count + 1) * 1.35) };
+                Background = Brushes.Transparent };
             if (tab.Cached) button.ToolTip = tab.Title + " · Última lista identificada; clique para restaurar e selecionar.";
             button.SetResourceReference(StyleProperty, "Think.IconButton");
             button.MouseEnter += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
@@ -58,8 +59,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                 catch (OperationCanceledException) { }
                 finally { button.IsEnabled = true; }
             };
-            SetLeft(button, 10); SetTop(button, 12 + index * 46); SetZIndex(button, index);
-            Children.Add(button);
+            FrameworkElement card = index == count - 1 ? button : TiltVertically(button, (count - index - 1) * 5);
+            SetLeft(card, 10); SetTop(card, 12 + index * 46); SetZIndex(card, index);
+            Children.Add(card);
             if (live)
             {
                 var host = new WindowThumbnail(owner, tab.Window);
@@ -71,6 +73,25 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             index++;
         }
         ConfigureAppearance(preferences);
+    }
+    private static Viewport3D TiltVertically(Button button, double degrees)
+    {
+        // Tilt around X (top/bottom depth), never around the screen's Z axis.
+        // Viewport2DVisual3D preserves real button hit-testing and accessibility.
+        var viewport = new Viewport3D { Width = 300, Height = 160, ClipToBounds = false,
+            Camera = new PerspectiveCamera(new Point3D(0, 0, 3), new Vector3D(0, 0, -1), new Vector3D(0, 1, 0), 36.86989765) };
+        var mesh = new MeshGeometry3D
+        {
+            Positions = new Point3DCollection { new(-1, -.533333, 0), new(1, -.533333, 0), new(1, .533333, 0), new(-1, .533333, 0) },
+            TextureCoordinates = new PointCollection { new(0, 1), new(1, 1), new(1, 0), new(0, 0) },
+            TriangleIndices = new Int32Collection { 0, 1, 2, 0, 2, 3 }
+        };
+        var material = new DiffuseMaterial(Brushes.White);
+        Viewport2DVisual3D.SetIsVisualHostMaterial(material, true);
+        viewport.Children.Add(new ModelVisual3D { Content = new AmbientLight(Colors.White) });
+        viewport.Children.Add(new Viewport2DVisual3D { Geometry = mesh, Material = material, Visual = button,
+            Transform = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), degrees)) });
+        return viewport;
     }
     internal void ConfigureAppearance(Preferences preferences)
     {

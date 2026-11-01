@@ -29,6 +29,7 @@ internal static class CallIntegration
     {
         string exe = Path.GetFileNameWithoutExtension(window.Executable ?? "").ToLowerInvariant();
         if (exe is "discord" or "discordcanary" or "discordptb") return "Discord";
+        if (exe == "tretalk") return "Tretalk";
         if (exe is "ms-teams" or "teams") return "Microsoft Teams";
         if (exe is "zoom" or "zoomworkplace") return "Zoom";
         // The active tab/title can change without replacing the HWND. Origin
@@ -142,6 +143,13 @@ internal static class CallIntegration
     private static CallAction? Classify(string name, string app)
     {
         string value = Fold(name);
+        if (app == "Tretalk")
+        {
+            if (value == "sair da voz") return CallAction.Leave;
+            if (value is "microfone ligado" or "microfone desligado" or "microfone silenciado") return CallAction.Microphone;
+            if (value is "som ligado" or "som desligado") return CallAction.Headphones;
+            return null;
+        }
         // Strip documented shortcut suffixes, retaining strict action labels.
         int suffix = value.IndexOf(" ("); if (suffix >= 0) value = value[..suffix];
         if (value is "disconnect" or "desconectar" or "leave call" or "leave meeting" or "sair da chamada" or "sair da reuniao" or "sair da ligacao" or "hang up" or "desligar") return CallAction.Leave;
@@ -161,6 +169,13 @@ internal static class CallIntegration
     private static bool? MutedState(CallAction action, string name, AutomationElement element, string app, nint window)
     {
         if (action == CallAction.Leave) return null;
+        if (app == "Tretalk")
+        {
+            string label = Fold(name);
+            if (label is "microfone desligado" or "microfone silenciado" or "som desligado") return true;
+            if (label is "microfone ligado" or "som ligado") return false;
+            return null;
+        }
         // Discord can retain the label "Mute" even when aria-pressed is on.
         // Prefer the actual toggle/pressed state exposed by accessibility.
         if (app == "Discord" && element.TryGetCurrentPattern(TogglePattern.Pattern, out var toggle))

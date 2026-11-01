@@ -7,6 +7,7 @@ Ao passar o mouse por um aplicativo elegível, a miniatura normal é apresentada
 ## Aplicativos candidatos
 
 - Discord, Discord PTB e Canary.
+- Tretalk desktop (`Tretalk.exe`): microfone ligado/desligado/silenciado, som ligado/desligado e Sair da voz, pelos controles reais de acessibilidade.
 - Google Meet em Chrome, Edge, Firefox ou Brave, com endereço `meet.google.com` verificável pela acessibilidade. O título anterior da janela não impede reconhecer uma mudança para a aba do Meet.
 - Microsoft Teams e Zoom, quando seus controles usam os nomes acessíveis reconhecidos.
 
@@ -42,3 +43,9 @@ Na prévia lateral do Meet, os comandos usam o mesmo espaço de uma miniatura (3
 - [Meet Media API](https://developers.google.com/workspace/meet/media-api/guides/overview): esta implementação não utiliza acesso ao conteúdo da reunião.
 
 Revisado por leitura de código e diff. Não foram executados testes, type check, compilação ou instalação. O funcionamento real no Discord, Meet, Teams e Zoom ainda requer validação solicitada pelo usuário; não foi iniciada ou encerrada nenhuma chamada durante o desenvolvimento.
+
+### Identificação do Tretalk
+
+Os rótulos foram identificados por leitura estática do pacote instalado `@tretalkdesktop/resources/app.asar`, no renderer `out/renderer/assets/index-DsBjVQj4.js`. O pacote usa `aria-label` com o estado atual, incluindo microfone bloqueado/silenciado, e o microfone pressionado significa ligado (não mudo). Por isso, o adaptador usa esses rótulos em vez de aplicar a convenção de toggle do Discord.
+
+A análise REA foi parcial, interrompida pelo prazo por arquivo; os rótulos específicos foram confirmados por leitura estática do arquivo no ASAR, sem executá-lo. SHA-256 do pacote observado: `70951f2fa2c79a375db1187664b165939299d4762c06d4659521b1494356fc3c`. A integração do Tretalk ainda não foi validada em uma chamada. Não altera o aplicativo instalado, não lê tokens nem usa APIs privadas ou atalhos globais.
