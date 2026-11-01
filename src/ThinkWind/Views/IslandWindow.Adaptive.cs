@@ -189,9 +189,21 @@ internal sealed partial class IslandWindow
         bool reduce = !fullscreenReveal && Store.Value.IslandReduceOverMaximized && maximizedOnDisplay
             && Stage == Services.IslandStage.Compact && !Store.IsEditing;
         if (reduce == edgeReduced) { SyncStatusSurface(); return false; }
+        bool returningToIsland = edgeReduced && !reduce && Stage == Services.IslandStage.Compact && IsVisible;
         edgeReduced = reduce;
         SyncStatusSurface();
         ApplyAppearance();
+        if (returningToIsland)
+        {
+            // The strip belongs to statusWindow; the hidden panel HWND still
+            // has a screen-wide rectangle. Do not morph that stale rectangle
+            // across the desktop when the maximized application is minimized.
+            // Seed a centered, nearly destination-sized island before revealing.
+            header.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double width = Math.Min(Display.Width - 16, Math.Max(220 * Store.Value.IslandScale, header.DesiredSize.Width + 32));
+            double height = Math.Max(28, header.DesiredSize.Height + 10);
+            Place(width * .94, Math.Max(24, height - 4), false);
+        }
         return true;
     }
 
