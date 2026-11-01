@@ -20,6 +20,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly Viewbox viewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     private readonly AudioEndpointControl? audio;
     private readonly AudioEndpointControl? microphone;
+    private readonly AppMixerControl? mixer;
+    private bool mixerSelected;
     private readonly TrayCard? tray;
     private readonly WifiControl? wifi;
     private readonly BluetoothControl? bluetooth;
@@ -28,7 +30,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
     internal int ActiveBluetoothWatchers => bluetooth?.ActiveWatchers ?? 0;
-    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true;
+    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true;
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
@@ -42,8 +44,24 @@ internal sealed class MiniIslandWindow : FloatingWindow
         if (kind == MiniIslandKind.Volume)
         {
             var service = new AudioService();
-            audio = new AudioEndpointControl(service, CoreAudio.Flow.Render); panel.Children.Add(audio);
-            microphone = new AudioEndpointControl(service, CoreAudio.Flow.Capture); panel.Children.Add(microphone);
+            var tabs = new WrapPanel { Margin = new Thickness(0, 4, 0, 6) };
+            var devicesPanel = new StackPanel();
+            audio = new AudioEndpointControl(service, CoreAudio.Flow.Render); devicesPanel.Children.Add(audio);
+            microphone = new AudioEndpointControl(service, CoreAudio.Flow.Capture); devicesPanel.Children.Add(microphone);
+            mixer = new AppMixerControl { Visibility = Visibility.Collapsed };
+            var devicesTab = ActionButton("Dispositivos", () => { }); var appsTab = ActionButton("Aplicativos", () => { });
+            void Select(bool apps)
+            {
+                mixerSelected = apps; devicesPanel.Visibility = apps ? Visibility.Collapsed : Visibility.Visible;
+                mixer.Visibility = apps ? Visibility.Visible : Visibility.Collapsed; mixer.SetActive(apps && IsVisible);
+                devicesTab.SetResourceReference(Control.BackgroundProperty, apps ? "Think.Control" : "Think.AccentSurface");
+                appsTab.SetResourceReference(Control.BackgroundProperty, apps ? "Think.AccentSurface" : "Think.Control");
+                Position();
+            }
+            devicesTab.Click += (_, _) => Select(false); appsTab.Click += (_, _) => Select(true);
+            devicesTab.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
+            tabs.Children.Add(devicesTab); tabs.Children.Add(appsTab); panel.Children.Add(tabs); panel.Children.Add(devicesPanel); panel.Children.Add(mixer);
+            mixer.LayoutChanged += Position;
             audio.LayoutChanged += Position;
             microphone.LayoutChanged += Position;
             panel.Children.Add(ActionButton("Configurações de som", () => SystemActions.Run("ms-settings:sound")));
@@ -70,8 +88,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
         Loaded += (_, _) => { RefreshContent(true); timer.Start(); };
         timer.Tick += (_, _) => { if (IsVisible) RefreshContent(false); };
-        IsVisibleChanged += (_, _) => { wifi?.SetActive(IsVisible); bluetooth?.SetActive(IsVisible); if (!IsVisible) { timer.Stop(); Dismissed?.Invoke(); } };
-        Closed += (_, _) => { timer.Stop(); wifi?.Dispose(); bluetooth?.Dispose(); };
+        IsVisibleChanged += (_, _) => { wifi?.SetActive(IsVisible); bluetooth?.SetActive(IsVisible); mixer?.SetActive(IsVisible && mixerSelected); if (!IsVisible) { timer.Stop(); Dismissed?.Invoke(); } };
+        Closed += (_, _) => { timer.Stop(); wifi?.Dispose(); bluetooth?.Dispose(); mixer?.Dispose(); };
     }
     internal void Present()
     {
@@ -92,13 +110,14 @@ internal sealed class MiniIslandWindow : FloatingWindow
     {
         bool refresh = force || DateTime.UtcNow >= nextRefresh;
         if (refresh) nextRefresh = DateTime.UtcNow.AddSeconds(5);
-        if (audio is not null) { audio.Poll(refresh); microphone?.Poll(refresh); }
+        if (audio is not null) { if (mixerSelected) mixer?.Poll(); else { audio.Poll(refresh); microphone?.Poll(refresh); } }
         else if (tray is not null) tray.Refresh();
         Position();
     }
     public override void Position()
     {
         double width = Math.Min(390, Display.Width - 16);
+        if (mixer is not null) mixer.MaximumListHeight = Math.Max(100, Math.Min(340, CompactLayout.PanelHeight(Display.Height) - 160));
         viewport.Width = Math.Max(1, width - Surface.Padding.Left - Surface.Padding.Right);
         viewport.MaxHeight = Math.Max(60, CompactLayout.PanelHeight(Display.Height) - 24);
         panel.Width = viewport.Width;
