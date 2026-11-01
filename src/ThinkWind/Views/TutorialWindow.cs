@@ -67,9 +67,9 @@ internal sealed partial class TutorialWindow : Window
         module.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent");
         Content = card;
         follow.Tick += (_, _) => FollowTarget();
-        advance.Tick += (_, _) => { advance.Stop(); progress.Step++; SaveProgress(); Render(); };
+        advance.Tick += (_, _) => AdvanceStep();
         TutorialGuide.Performed += Performed;
-        Closed += (_, _) => { follow.Stop(); advance.Stop(); ClearHighlight(); TutorialGuide.Active = false; TutorialGuide.KeepDockOpen = TutorialGuide.KeepIslandOpen = false; TutorialGuide.Performed -= Performed; };
+        Closed += (_, _) => { follow.Stop(); advance.Stop(); ClearHighlight(); TutorialGuide.Active = false; TutorialGuide.KeepDockOpen = TutorialGuide.KeepIslandOpen = TutorialGuide.CollapseDockOnDesktop = false; TutorialGuide.Performed -= Performed; };
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape) { Pause(); e.Handled = true; } };
     }
     internal void OfferFirstRun()
@@ -127,7 +127,7 @@ internal sealed partial class TutorialWindow : Window
     private void Pause()
     {
         follow.Stop(); advance.Stop(); ClearHighlight(); TutorialGuide.Active = false;
-        TutorialGuide.KeepDockOpen = TutorialGuide.KeepIslandOpen = false;
+        TutorialGuide.KeepDockOpen = TutorialGuide.KeepIslandOpen = TutorialGuide.CollapseDockOnDesktop = false;
         progress.Dismissed = true; SaveProgress(); Hide();
     }
     private void AddAction(string label, Action action)
@@ -140,6 +140,7 @@ internal sealed partial class TutorialWindow : Window
         success = false; finishing = false; lastGuideBounds = null; ClearHighlight(); actions.Children.Clear();
         TutorialGuide.KeepDockOpen = progress.Step >= 0 && progress.Step <= 2;
         TutorialGuide.KeepIslandOpen = progress.Step >= 4 && progress.Step <= 6;
+        TutorialGuide.CollapseDockOnDesktop = progress.Step >= 3 && progress.Step <= 6;
         if (progress.Step < 0)
         {
             module.Text = "Bem-vindo ao Orby Launcher"; title.Text = "Vamos conhecer seu desktop?";
@@ -162,7 +163,7 @@ internal sealed partial class TutorialWindow : Window
             title.Text = step.Title; description.Text = step.Text;
             hint.Text = "Siga o destaque animado. A próxima etapa começa após sua ação.";
             AddAction("Voltar", () => { advance.Stop(); progress.Step--; SaveProgress(); Render(); });
-            AddAction("Pular etapa", () => { advance.Stop(); progress.Step++; SaveProgress(); Render(); });
+            AddAction("Pular etapa", AdvanceStep);
             AddAction("Sair", Pause);
         }
         if (saveError is not null) hint.Text = saveError;
@@ -175,6 +176,13 @@ internal sealed partial class TutorialWindow : Window
         if (!TutorialGuide.Active || success || blocked() || progress.Step < 0 || progress.Step >= Steps.Length || Steps[progress.Step].Action != action) return;
         success = true; hint.Text = "Parabéns! Vamos para a próxima etapa…";
         ClearHighlight(); advance.Start();
+    }
+    private void AdvanceStep()
+    {
+        advance.Stop();
+        bool leavingSearch = progress.Step == 2;
+        progress.Step++; SaveProgress(); Render();
+        if (leavingSearch) ((App)Application.Current).CompleteTutorialSearch();
     }
     private void FollowTarget()
     {

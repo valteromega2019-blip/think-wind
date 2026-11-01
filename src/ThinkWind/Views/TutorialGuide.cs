@@ -16,6 +16,7 @@ internal static class TutorialGuide
     internal static bool Active { get; set; }
     internal static bool KeepDockOpen { get; set; }
     internal static bool KeepIslandOpen { get; set; }
+    internal static bool CollapseDockOnDesktop { get; set; }
     internal static void Mark(FrameworkElement element, string key) => element.SetValue(TargetProperty, key);
     internal static void Notify(string action) { if (Active) Performed?.Invoke(action); }
     internal static FrameworkElement? Find(string key)

@@ -9,6 +9,7 @@ namespace OrbyLauncher;
 
 public partial class App
 {
+    internal void CompleteTutorialSearch() => PrimaryDock?.CompleteTutorialSearch();
     private DockWindow? PrimaryDock => dock?.HasPrimaryControls == true ? dock
         : extraMonitors.Select(pair => pair.Dock).FirstOrDefault(bar => bar.HasPrimaryControls);
     private void RefreshForegroundLayouts()

@@ -195,7 +195,7 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private void UpdateVisibility()
     {
-        if (Store.Value.DockVisibleOnDesktop && !applicationOverDock)
+        if (Store.Value.DockVisibleOnDesktop && !applicationOverDock && !TutorialGuide.CollapseDockOnDesktop)
         {
             lastHover = DateTime.UtcNow;
             SetHidden(false, !Desktop.LeftButtonDown);
@@ -589,6 +589,15 @@ internal sealed partial class DockWindow : FloatingWindow
         clearingDockSearch = true;
         try { dockSearch.Clear(); }
         finally { clearingDockSearch = false; }
+    }
+    internal void CompleteTutorialSearch()
+    {
+        if (fileDragging || MenuOpen) return;
+        launcher?.Dismiss();
+        ClearDockSearch(); StopPreviews();
+        if (dockSearch.IsKeyboardFocusWithin) Keyboard.ClearFocus();
+        lastHover = DateTime.UtcNow;
+        SetHidden(true);
     }
     private void ShowPanel(LauncherPanelMode mode)
     { StopPreviews(); SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); if (mode == LauncherPanelMode.Start) TutorialGuide.Notify("start-open"); }

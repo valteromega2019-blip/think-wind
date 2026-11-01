@@ -14,6 +14,8 @@ O cartão acompanha os limites do painel completo quando menu, ilha, monitoramen
 
 O guia aparece automaticamente apenas para perfis novos. A configuração executada pelo instalador registra a pendência antes de salvar as preferências iniciais. Perfis existentes não são tratados como primeira instalação após uma atualização. Em Personalizar, a última aba é Tutorial, com Repetir tutorial e Continuar tutorial interrompido.
 
+Ao avançar da pesquisa para a central de controle, o guia fecha o painel de pesquisa, limpa o campo e recolhe a barra inferior com sua animação normal. A preferência de manter a barra visível no desktop não força a reabertura durante as etapas da central; aproximar o mouse da área de ativação continua funcionando. Nenhuma preferência permanente é alterada.
+
 O progresso fica em `tutorial.json`, ao lado de `settings.json`, com gravação temporária e substituição. As etapas não modificam volume, rede, temas, overlay ou permissões. O guia apenas explica esses recursos e observa as ações solicitadas.
 
 Não há hooks globais, captura ou movimentação automática do cursor. Os destaques não recebem cliques. A localização do alvo é consultada somente durante o guia, para acompanhar reconstruções dos controles e mudanças de monitor. No Modo Jogo, a janela, os destaques e os dois temporizadores do tutorial são suspensos. Encerrar ou pular o guia libera as proteções temporárias de recolhimento.
