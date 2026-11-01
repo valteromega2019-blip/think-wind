@@ -14,4 +14,5 @@ As preferências existentes são preservadas. O aplicativo não usa nem inicia O
 
 Distribuição x64 com runtime incluído e PawnIO oficial opcional. Instalador e executável Orby continuam sem assinatura digital; o atualizador integrado exige assinatura confiável e pode recusar a instalação automática desta distribuição. Use o instalador manual.
 
-Compilação e empacotamento serão registrados na entrega. Não foram solicitados testes, lint ou type check adicionais nesta publicação; não foram executados. Fluxos interativos, compatibilidade entre jogos e dispositivos e ausência de quadros da barra original ainda dependem de validação em uso real.
+Compilação Release x64 e geração do instalador concluídas com sucesso. O SHA-256 publicado do instalador corresponde ao digest informado pelo GitHub. Não foram solicitados testes, lint ou type check adicionais nesta publicação; não foram executados. Fluxos interativos, compatibilidade entre jogos e dispositivos e ausência de quadros da barra original ainda dependem de validação em uso real.
+
