@@ -100,12 +100,38 @@ internal sealed class GithubUpdates : IDisposable
         if (!CryptographicOperations.FixedTimeEquals(hash, Convert.FromHexString(expected))) throw new InvalidDataException("SHA-256 divergente. Instalação bloqueada.");
     }
     internal static string Quote(string value) => "'" + value.Replace("'", "''") + "'";
-    internal static ProcessStartInfo Helper(string path, string hash, bool install)
+    internal static ProcessStartInfo Helper(string path, string hash, bool install, string? readyFile = null)
     {
         string script = Path.Combine(AppContext.BaseDirectory, "UpdateInstaller.ps1");
+        if (!File.Exists(script)) throw new IOException("O auxiliar de atualização não foi encontrado. Reinstale a versão oficial manualmente.");
         string command = $"& {Quote(script)} -Installer {Quote(path)} -ExpectedHash {Quote(hash)} -Launcher {Quote(Environment.ProcessPath!)} -WaitPid {(install ? Environment.ProcessId : 0)}";
+        if (readyFile is not null) command += " -ReadyFile " + Quote(readyFile);
         return new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe"), "-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(command)))
         { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden, RedirectStandardOutput = !install, RedirectStandardError = !install };
+    }
+    internal static async Task<Process> PrepareInstallAsync(string path, string hash, CancellationToken token)
+    {
+        string ready = Path.Combine(Path.GetDirectoryName(path)!, "ready-" + Guid.NewGuid().ToString("N") + ".txt");
+        Process? process = null;
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token); deadline.CancelAfter(TimeSpan.FromSeconds(90));
+        try
+        {
+            process = Process.Start(Helper(path, hash, true, ready)) ?? throw new IOException("Não foi possível iniciar o auxiliar de instalação.");
+            while (true)
+            {
+                deadline.Token.ThrowIfCancellationRequested();
+                if (process.HasExited) throw new InvalidDataException("O auxiliar de atualização encerrou antes de confirmar a instalação. O launcher continuará aberto. Consulte o registro em OrbyLauncher\\Updates.");
+                if (File.Exists(ready) && File.ReadAllText(ready).Trim() == "ready") return process;
+                await Task.Delay(100, deadline.Token).ConfigureAwait(false);
+            }
+        }
+        catch
+        {
+            if (process is not null)
+            { try { if (!process.HasExited) process.Kill(); } catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { } process.Dispose(); }
+            throw;
+        }
+        finally { try { File.Delete(ready); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } }
     }
     internal static async Task AuthenticateAsync(string path, string hash, CancellationToken token)
     {

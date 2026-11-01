@@ -67,7 +67,7 @@ internal sealed class UpdateController : IDisposable
             Status = Available is null ? "Você está na versão mais recente compatível com seu canal." : "Atualização disponível: " + Available.Tag;
             nextCheck = DateTime.UtcNow.AddHours(6);
         }
-        catch (Exception e) when (e is System.Net.Http.HttpRequestException or IOException or JsonException or OperationCanceledException or InvalidOperationException or System.Collections.Generic.KeyNotFoundException or FormatException or ArgumentException)
+        catch (Exception e) when (e is System.Net.Http.HttpRequestException or IOException or InvalidDataException or JsonException or OperationCanceledException or InvalidOperationException or System.Collections.Generic.KeyNotFoundException or FormatException or ArgumentException)
         { Status = "Não foi possível verificar: " + e.Message; nextCheck = DateTime.UtcNow.AddMinutes(15); }
         finally { Busy = false; Changed?.Invoke(); }
     }
@@ -77,7 +77,7 @@ internal sealed class UpdateController : IDisposable
         if (!authorized || Busy || Available is null) return;
         Busy = true; Progress = null; var update = Available;
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); operation = cancellation;
-        string? path = null; bool installing = false;
+        string? path = null; bool installing = false; Process? helper = null;
         try
         {
             Status = "Baixando atualização autorizada…"; Changed?.Invoke();
@@ -88,19 +88,34 @@ internal sealed class UpdateController : IDisposable
             cancellation.Token.ThrowIfCancellationRequested();
             saveSettings();
             if (blocked()) throw new InvalidOperationException("Instalação adiada: saia do jogo ou tela cheia e tente novamente.");
-            using var helper = Process.Start(GithubUpdates.Helper(path, update.Sha256, true)) ?? throw new IOException("Não foi possível iniciar o auxiliar de instalação.");
+            Status = "Preparando o auxiliar de instalação…"; Changed?.Invoke();
+            helper = await GithubUpdates.PrepareInstallAsync(path, update.Sha256, cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            if (blocked()) throw new InvalidOperationException("Instalação adiada: saia do jogo ou tela cheia e tente novamente.");
             installing = true;
             Status = "Encerrando para instalar…"; InstallStarting?.Invoke();
         }
         catch (OperationCanceledException) { Status = "Operação cancelada ou tempo de espera excedido. Nenhuma instalação iniciada."; }
-        catch (Exception e) when (e is IOException or System.Net.Http.HttpRequestException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
-        { Status = e.Message; }
+        catch (Exception e) when (e is IOException or InvalidDataException or System.Net.Http.HttpRequestException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException)
+        { Status = e.Message; RecordInstallationFailure(e.Message); }
         finally
         {
+            if (!installing && helper is not null)
+                try { if (!helper.HasExited) helper.Kill(); } catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+            helper?.Dispose();
             if (!installing && path is not null)
                 try { File.Delete(path); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
             operation = null; Busy = false; Changed?.Invoke();
         }
+    }
+    private void RecordInstallationFailure(string message)
+    {
+        try
+        {
+            string directory = Path.GetDirectoryName(statePath)!; Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, "installation-result.json"), JsonSerializer.Serialize(new { ExitCode = -1, Error = message, Utc = DateTime.UtcNow }));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
     }
     public void Dispose() { timer.Stop(); lifetime.Cancel(); operation?.Cancel(); api.Dispose(); lifetime.Dispose(); }
 }

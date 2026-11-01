@@ -23,7 +23,7 @@ O aviso usa `Environment.TickCount64`, tempo de atividade do Windows, e nunca ap
 2. Limites de tamanho, conferência do tamanho transferido e SHA-256 do campo `digest` da API oficial.
 3. Authenticode validado pelo Windows (`Get-AuthenticodeSignature`); launcher e instalador devem ter assinatura válida e o mesmo certificado. Não se aceita qualquer certificado apenas porque é válido. O certificado não é baixado de um arquivo de configuração remoto nem é configurável pela interface.
 4. Após validar, salvar preferências e copiar settings.json/tutorial.json para uma pasta Backup em Updates. A operação é cancelada se o salvamento/backup falhar.
-5. Auxiliar PowerShell separado aguarda a saída do launcher, confere novamente hash/assinaturas e mantém o instalador aberto sem compartilhamento de escrita/exclusão até terminar sua execução.
+5. Auxiliar PowerShell separado confere novamente hash/assinaturas, confirma prontidão ao launcher e aguarda sua saída antes de executar o instalador. Mantém o arquivo aberto sem compartilhamento de escrita/exclusão até terminar sua execução. A interface não fecha se a prontidão não for confirmada.
 6. Instalador executa silenciosamente sem reinicialização automática. `/ORBYUPDATE=1` preserva escolhas de inicialização/barra do usuário, evitando a configuração padrão de uma primeira instalação. Não desinstala previamente nem apaga o perfil.
 7. Resultado e log do instalador ficam em Updates. O launcher é reaberto após sucesso ou falha, se estiver disponível; a seção Atualizações mostra o último resultado na próxima inicialização.
 
