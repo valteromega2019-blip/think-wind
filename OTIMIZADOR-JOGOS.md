@@ -51,3 +51,19 @@ O Otimizador reutiliza SelectionCircleStyle nos modos (seleção exclusiva) e no
 Processos agora informa explicitamente que consumo não equivale a permissão de fechamento, incluindo orientação para a aba Aplicativos. Cada aplicativo elegível mostra Fechamento permitido após aprovação; a área lembra que o usuário deve confirmar que não está usando o programa. O contador de selecionados e a confirmação existente foram preservados. Nenhuma alteração nos filtros ou encerramento efetivo.
 
 Revisão por leitura e diff. Não executados compilação, testes ou type check nesta solicitação; ícones e apresentação ainda precisam de conferência em execução.
+
+## Comparação com o otimizador do Think Monitor
+
+Código consultado, somente por leitura: C:\Users\valte\OneDrive\Documentos\ThinkExplode-recuperado\app\ThinkExplode\Optimizer.cs e MainWindow.xaml.cs (BtnOptimize_Click). O original agrupa processos por nome, sugere alguns aplicativos sem janela, usa CloseMainWindow para janelas, Kill para processos sugeridos sem janela e espera até quatro segundos para informar saída. Também chama EmptyWorkingSet em processos e NtSetSystemInformation para purgar standby.
+
+Causa da lista limitada no Orby: apenas candidatos acima de 2% de CPU ou 512 MB e obrigatoriamente com janela principal. Agora todos os aplicativos elegíveis presentes na amostra podem ser revisados, independentemente desses limites. Segundo plano conhecido: OneDrive, Google Drive, Dropbox e determinados componentes Adobe, com correspondência de nome e diretório esperado. Isso não implica classificação universal de processo dispensável.
+
+Adaptado no Orby: ações por PID/início/caminho aprovados, sem buscar e encerrar processos novos apenas pelo nome. Ações continuam inicialmente desmarcadas. Itens sem janela mostram Encerrar processo de segundo plano e avisos de sincronização/dependências; confirmação explicita encerramento direto e ausência de reabertura automática. Somente esses itens conhecidos sem janela podem usar Kill, sem árvore de processos. Aplicativos com janela preservam CloseMainWindow e diálogos de salvamento; não há escalada para Kill. Mudança de estado janela/segundo plano exige nova análise/aprovação. Serviços, críticos, Windows, drivers, ferramentas de desenvolvimento e launcher continuam excluídos.
+
+A saída do PID original é aguardada assincronamente por até quatro segundos e o resultado distingue encerrado, ainda aberto, bloqueado e falha. A lista é analisada novamente após o lote visível. Clicar Otimizar também encaminha os itens já selecionados à confirmação de fechamento, preservando a preparação do plano de energia.
+
+Não copiado: limpeza global de working sets/standby. Reduzir working sets não equivale a eliminar processos e pode exigir novas faltas de página quando os dados voltam a ser usados. Nenhum ganho de FPS ou memória recuperada é presumido.
+
+Revisão por leitura e diff. Sem execução de ações sobre programas reais, compilação, testes ou type check nesta solicitação.
+
+Documentação: https://learn.microsoft.com/en-us/windows/win32/memory/working-set e https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.kill?view=net-10.0

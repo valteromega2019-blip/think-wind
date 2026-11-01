@@ -90,8 +90,8 @@ internal static class OptimizerAnalysis
             foreach (var row in rows.OrderByDescending(r => r.Cpu).ThenByDescending(r => r.Memory).Take(6))
                 result.AppendLine($"• {row.Name}: CPU {row.Cpu:0.0}% · RAM {row.Memory / 1048576d:0} MB");
             result.AppendLine("\nAPLICATIVOS PARA REVISAR");
-            var closable = OptimizerProcessCloser.Candidates(rows.Where(r => r.Review && (r.Cpu >= 2 || r.Memory >= 512L * 1048576))
-                .OrderByDescending(r => r.Cpu).ThenByDescending(r => r.Memory).Take(20).Select(r => r.Id), token);
+            var closable = OptimizerProcessCloser.Candidates(rows.Where(r => r.Review)
+                .OrderByDescending(r => r.Cpu).ThenByDescending(r => r.Memory).Select(r => r.Id), token);
             if (closable.Length == 0) result.AppendLine("• Nenhum aplicativo elegível para fechamento nesta amostra. Processos protegidos ou sem verificação disponível ficam de fora.");
             foreach (string name in closable.Select(item => item.Name).Distinct(StringComparer.OrdinalIgnoreCase))
                 result.AppendLine("• " + name + ": se não estiver usando, selecione abaixo e aprove o fechamento. Pode ser necessário ao jogo; confirme antes.");

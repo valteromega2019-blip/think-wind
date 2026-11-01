@@ -61,7 +61,7 @@ internal sealed class GameOptimizerPanel : StackPanel
         var tabs = new WrapPanel { Margin = new Thickness(0, 4, 0, 6) };
         var reportScroll = new ScrollViewer { Content = report, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         var apps = new DockPanel { LastChildFill = true, Visibility = Visibility.Collapsed };
-        var approvalHint = new TextBlock { Text = "Selecione somente o que você não está usando. O fechamento exige sua aprovação.", TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(0, 0, 0, 6) };
+        var approvalHint = new TextBlock { Text = "Selecione o que está sem uso. Aplicativos com janela recebem fechamento normal; os itens marcados Segundo plano serão encerrados após sua aprovação.", TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(0, 0, 0, 6) };
         approvalHint.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         DockPanel.SetDock(approvalHint, Dock.Top); apps.Children.Add(approvalHint);
         var appFooter = new StackPanel();
@@ -124,17 +124,29 @@ internal sealed class GameOptimizerPanel : StackPanel
             if (closing || analysis is not null) return;
             var selectedProcesses = approvals.Where(item => item.Check.IsChecked == true).Select(item => item.Process).ToArray();
             if (selectedProcesses.Length == 0) { status.Text = "Selecione os aplicativos que deseja fechar."; return; }
-            if (MessageBox.Show(Window.GetWindow(this), "Solicitar o fechamento de:\n" + string.Join("\n", selectedProcesses.Select(item => item.Name + " (PID " + item.Id + ")"))
-                + "\n\nSalve seu trabalho. Fechar uma janela pode encerrar outras janelas do mesmo aplicativo. Nada será encerrado à força.",
+            bool hasBackground = selectedProcesses.Any(item => item.BackgroundOnly);
+            if (MessageBox.Show(Window.GetWindow(this), "Ações aprovadas:\n" + string.Join("\n", selectedProcesses.Select(item => item.Name + " (PID " + item.Id + ") · " + (item.BackgroundOnly ? "Encerrar processo de segundo plano" : "Solicitar fechamento normal") + "\n" + item.Detail))
+                + "\n\nSalve seu trabalho. Fechar uma janela pode encerrar outras janelas do mesmo aplicativo."
+                + (hasBackground ? " Os processos de segundo plano selecionados serão encerrados diretamente; sincronizações ou tarefas em andamento serão interrompidas. Eles não serão reabertos automaticamente." : " Aplicativos com janela não serão forçados."),
                 "Aprovar fechamento", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
             closing = true; close.IsEnabled = false; analyze.IsEnabled = false; choices.IsEnabled = false;
             var outcomes = new List<string>();
             try
             {
-                foreach (var process in selectedProcesses) outcomes.Add(await OptimizerProcessCloser.RequestClose(process));
+                foreach (var process in selectedProcesses)
+                {
+                    status.Text = "Aguardando fechamento de " + process.Name + "…";
+                    outcomes.Add(await OptimizerProcessCloser.RequestClose(process));
+                }
                 status.Text = string.Join("\n", outcomes);
             }
             finally { approvals.Clear(); choices.Children.Clear(); UpdatePage(); choices.IsEnabled = true; closing = false; analyze.IsEnabled = true; }
+            if (IsVisible) analyze.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        };
+        optimize.Click += (_, _) =>
+        {
+            if (!closing && analysis is null && approvals.Any(item => item.Check.IsChecked == true))
+                close.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         };
         analyze.Click += async (_, _) =>
         {
@@ -157,9 +169,9 @@ internal sealed class GameOptimizerPanel : StackPanel
                     {
                         var label = new StackPanel();
                         label.Children.Add(new TextBlock { Text = process.Name, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, FontSize = 11 });
-                        var hint = new TextBlock { Text = "Fechamento permitido após aprovação", TextWrapping = TextWrapping.Wrap, FontSize = 10 };
+                        var hint = new TextBlock { Text = (process.BackgroundOnly ? "Segundo plano · encerrar processo\n" : "Fechamento normal\n") + process.Detail, TextWrapping = TextWrapping.Wrap, FontSize = 10 };
                         hint.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); label.Children.Add(hint);
-                        var check = new CheckBox { Content = label, Style = SelectionCircleStyle.Create("\uE73E"), ToolTip = "PID " + process.Id + " · fechamento normal, sem forçar", Margin = new Thickness(0, 3, 0, 3) };
+                        var check = new CheckBox { Content = label, Style = SelectionCircleStyle.Create(process.BackgroundOnly ? "\uE895" : "\uE73E"), ToolTip = "PID " + process.Id + (process.BackgroundOnly ? " · encerramento direto somente após confirmação" : " · fechamento normal, sem forçar"), Margin = new Thickness(0, 3, 0, 3) };
                         check.SetResourceReference(Control.ForegroundProperty, "Think.Text"); check.Checked += (_, _) => UpdatePage(); check.Unchecked += (_, _) => UpdatePage();
                         choices.Children.Add(check); approvals.Add((check, process));
                     }
