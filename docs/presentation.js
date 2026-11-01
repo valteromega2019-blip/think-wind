@@ -361,8 +361,9 @@
     }));
     cleanup.push(motion.inView('.player-news-visual', () => {
       const finishPlayer = assemble('.player-news-card', 34);
+      const finishCalls = assemble('.player-call-card', 22);
       const finishDock = assemble('.player-news-dock > span', 24);
-      return () => { finishPlayer(); finishDock(); };
+      return () => { finishPlayer(); finishCalls(); finishDock(); };
     }));
     if (replay) listen(replay, 'click', () => assemble('.magnet-slot', 50));
   }

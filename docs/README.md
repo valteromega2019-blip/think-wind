@@ -3,6 +3,8 @@
 Fonte da página publicada em https://thinkdeveloper-br.github.io/orby-launcher/ .
 Versão atual: 0.21 Beta. Download e notas apontam para a release v0.21.0-beta do repositório do aplicativo.
 
+O destaque do Spotify agora apresenta também as integrações de chamadas com Discord e Google Meet, com ilustrações dos estados ativo/mudo e comandos de saída. Os cartões entram com a sequência Motion existente e respeitam movimento reduzido. O texto informa as limitações de acessibilidade e que não exige extensão no navegador.
+
 ## Nova apresentação com Motion
 
 Recriação preparada na branch `feature/site-motion`. A hospedagem continua no GitHub Pages; publicação da nova identidade autorizada pelo usuário.
