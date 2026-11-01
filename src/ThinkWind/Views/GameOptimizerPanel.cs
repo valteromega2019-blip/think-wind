@@ -17,6 +17,7 @@ internal sealed class GameOptimizerPanel : StackPanel
         store = settings; optimizer = ((App)Application.Current).Optimizer;
         Margin = new Thickness(8);
         Children.Add(new TextBlock { Text = "Otimizador de Jogos", FontSize = 22, FontWeight = FontWeights.SemiBold });
+        Children.Add(new LocalOptimizerAiPanel(store));
         Note("Perfil local · sem envio de dados para IA externa nesta etapa.");
         var enabled = new CheckBox { Content = "Aplicar perfil ao reconhecer um jogo", IsChecked = store.Value.OptimizerEnabled, Margin = new Thickness(0, 8, 0, 10) };
         enabled.Checked += (_, _) => store.Update(p => p.OptimizerEnabled = true);

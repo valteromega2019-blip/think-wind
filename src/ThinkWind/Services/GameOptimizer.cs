@@ -13,6 +13,7 @@ internal sealed class GameOptimizer
     private readonly string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher", "optimizer-recovery.json");
     private Recovery? recovery;
     internal bool Active { get; private set; }
+    internal bool GameForeground { get; private set; }
     internal string Status { get; private set; } = "Pronto · perfil automático desativado.";
     internal event Action? Changed;
     private static Guid ReadPlan()
@@ -28,6 +29,7 @@ internal sealed class GameOptimizer
     }
     internal void Apply(bool game, Preferences preferences)
     {
+        if (GameForeground != game) { GameForeground = game; Changed?.Invoke(); }
         if (!game || !preferences.OptimizerEnabled) { if (Active || recovery is not null) Restore(); return; }
         if (Active) return;
         try
