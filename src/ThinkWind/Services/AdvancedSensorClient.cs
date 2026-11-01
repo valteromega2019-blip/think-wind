@@ -19,6 +19,9 @@ internal sealed class AdvancedSensorClient
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool QueryFullProcessImageName(nint process, uint flags, StringBuilder path, ref uint length);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
     private NamedPipeClientStream? pipe;
+    private Task? connecting;
+    private CancellationTokenSource? connectionStop;
+    private DateTime restartAfter;
     private DateTime retryAfter;
     private bool frameMode;
     internal string? LastError { get; private set; }
@@ -31,22 +34,44 @@ internal sealed class AdvancedSensorClient
         string stage = "iniciar a tarefa";
         try
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
-            timeout.CancelAfter(TimeSpan.FromSeconds(8));
             if (pipe is null)
             {
                 AdvancedSensorSetup.StartTask(frames);
+                restartAfter = DateTime.UtcNow.AddSeconds(15);
                 stage = "conectar ao coletor";
                 var next = new NamedPipeClientStream(".", AdvancedSensorSetup.PipeName + (frames ? ".frames" : ".sensors"), PipeDirection.In, PipeOptions.Asynchronous, TokenImpersonationLevel.Identification);
                 try
                 {
-                    await next.ConnectAsync(timeout.Token).ConfigureAwait(false);
-                    if (!Trusted(next)) throw new IOException("Identidade do coletor não confere.");
+                    connectionStop = CancellationTokenSource.CreateLinkedTokenSource(stop);
+                    connecting = next.ConnectAsync(connectionStop.Token);
+                    // Observe failures even if demand ends before the next read.
+                    _ = connecting.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                     frameMode = frames;
                     pipe = next;
                 }
                 catch { next.Dispose(); throw; }
             }
+            if (connecting is { } pending)
+            {
+                stage = "conectar ao coletor";
+                if (!pending.IsCompleted)
+                {
+                    LastError = "Coletor administrativo: aguardando conexão; busca automática em andamento.";
+                    if (DateTime.UtcNow >= restartAfter)
+                    {
+                        restartAfter = DateTime.UtcNow.AddSeconds(15);
+                        AdvancedSensorSetup.StartTask(frames);
+                    }
+                    return null;
+                }
+                await pending.ConfigureAwait(false);
+                if (!Trusted(pipe!)) throw new IOException("Identidade do coletor não confere.");
+                connecting = null; connectionStop?.Dispose(); connectionStop = null;
+            }
+            // Keep a watchdog only for a stalled transport, not for discovery.
+            // A transport failure reconnects automatically; discovery has no deadline.
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
+            timeout.CancelAfter(TimeSpan.FromSeconds(8));
             byte[] lengthBytes = new byte[4];
             stage = "receber as leituras";
             var stream = pipe ?? throw new IOException("Coletor desconectado.");
@@ -60,7 +85,7 @@ internal sealed class AdvancedSensorClient
             LastError = null; return sample;
         }
         catch (OperationCanceledException) when (!stop.IsCancellationRequested)
-        { LastError = "Coletor administrativo: tempo esgotado ao " + stage + "."; Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(15); return null; }
+        { LastError = "Coletor administrativo: aguardando leituras; reconectando automaticamente."; Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(2); return null; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or COMException or System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException)
         { LastError = "Coletor administrativo: falha ao " + stage + " (0x" + error.HResult.ToString("X8") + ")."; Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(15); return null; }
     }
@@ -84,7 +109,12 @@ internal sealed class AdvancedSensorClient
         }
         finally { CloseHandle(process); }
     }
-    internal void Disconnect() { Interlocked.Exchange(ref pipe, null)?.Dispose(); }
+    internal void Disconnect()
+    {
+        connectionStop?.Cancel();
+        Interlocked.Exchange(ref pipe, null)?.Dispose();
+        connectionStop?.Dispose(); connectionStop = null; connecting = null;
+    }
     // Called only by the telemetry loop, never concurrently with Read.
     internal void ResetAuthorization() { Disconnect(); retryAfter = DateTime.MinValue; LastError = null; }
 }
