@@ -62,7 +62,8 @@ internal sealed class HardwareMonitorPanel : UserControl
         var root = new StackPanel();
         var navigation = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 4, 6) };
         AddButton(navigation, "Resumo", () => { optimizing = false; components = false; Render(); });
-        AddButton(navigation, "Otimizador", () => { optimizing = true; Render(); });
+        var optimizerNavigation = AddButton(navigation, "Otimizador", () => { optimizing = true; Render(); TutorialGuide.Notify("optimizer-open"); });
+        TutorialGuide.Mark(optimizerNavigation, "optimizer");
         AddButton(navigation, "Componentes", () => { optimizing = false; components = true; Render(); });
         root.Children.Add(navigation);
         var gpuLabel = new TextBlock { Text = "GPU monitorada", FontSize = 12, Margin = new Thickness(4, 2, 4, 6) };
@@ -128,12 +129,12 @@ internal sealed class HardwareMonitorPanel : UserControl
         var card = new Border { Child = child, Margin = new Thickness(3), Padding = new Thickness(10) };
         card.SetResourceReference(StyleProperty, "CardBorder"); return card;
     }
-    private void AddButton(Panel panel, string label, Action action, bool selected = false)
+    private Button AddButton(Panel panel, string label, Action action, bool selected = false)
     {
         var button = new Button { Content = label, Margin = new Thickness(0, 0, 6, 0), Padding = new Thickness(8, 4, 8, 4), FontSize = 10 };
         button.SetResourceReference(StyleProperty, "OutlineButton");
         if (selected) { button.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface"); button.SetResourceReference(Control.BorderBrushProperty, "Think.Accent"); }
-        button.Click += (_, _) => action(); panel.Children.Add(button);
+        button.Click += (_, _) => action(); panel.Children.Add(button); return button;
     }
     private void Render(bool updateLayout = true)
     {

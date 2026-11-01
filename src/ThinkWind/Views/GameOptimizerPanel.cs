@@ -52,6 +52,7 @@ internal sealed class GameOptimizerPanel : StackPanel
         stop.Click += (_, _) => { store.Update(p => p.OptimizerEnabled = false); optimizer.Restore(); status.Text = optimizer.Status; };
         actions.Children.Add(stop);
         var analyze = new Button { Content = "Analisar", Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(0, 8, 0, 8) };
+        TutorialGuide.Mark(analyze, "optimizer-analyze");
         var report = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 11, Text = "Clique em Analisar para revisar consumo e configurações." };
         report.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");
         actions.Children.Add(analyze);
@@ -75,7 +76,7 @@ internal sealed class GameOptimizerPanel : StackPanel
         var content = new Grid { Height = 205 }; content.Children.Add(reportScroll); content.Children.Add(apps);
         var cardBody = new StackPanel(); cardBody.Children.Add(tabs); cardBody.Children.Add(content);
         var card = new Border { Child = cardBody }; card.SetResourceReference(StyleProperty, "CardBorder"); Children.Add(card);
-        int page = 0; string fullReport = report.Text; string currentTab = "Resumo";
+        int page = 0; string fullReport = report.Text;
         void UpdatePage()
         {
             int total = Math.Max(1, (approvals.Count + 3) / 4); page = Math.Clamp(page, 0, total - 1);
@@ -86,7 +87,7 @@ internal sealed class GameOptimizerPanel : StackPanel
         }
         void ShowTab(string tab)
         {
-            currentTab = tab; bool applicationTab = tab == "Aplicativos";
+            bool applicationTab = tab == "Aplicativos";
             apps.Visibility = applicationTab ? Visibility.Visible : Visibility.Collapsed;
             reportScroll.Visibility = applicationTab ? Visibility.Collapsed : Visibility.Visible;
             int processStart = fullReport.IndexOf("MAIOR CONSUMO OBSERVADO", StringComparison.Ordinal);
@@ -100,7 +101,7 @@ internal sealed class GameOptimizerPanel : StackPanel
                 button.SetResourceReference(Control.BackgroundProperty, (string)button.Tag == tab ? "Think.AccentSurface" : "Think.Hover");
             reportScroll.ScrollToTop(); UpdatePage();
         }
-        foreach (string name in new[] { "Resumo", "Processos", "Aplicativos" })
+        foreach (string name in new[] { "Aplicativos", "Resumo", "Processos" })
         {
             var tab = new Button { Content = IconLabel(name == "Resumo" ? "\uE9D9" : name == "Processos" ? "\uE9D5" : "\uE71D", name), Tag = name, Margin = new Thickness(0, 0, 4, 0) };
             tab.Click += (_, _) => ShowTab(name); tabs.Children.Add(tab);
@@ -117,7 +118,7 @@ internal sealed class GameOptimizerPanel : StackPanel
         optimize.Content = IconLabel("\uE945", "Otimizar");
         stop.Content = IconLabel("\uE777", "Restaurar");
         analyze.Content = IconLabel("\uE721", "Analisar");
-        ShowTab("Resumo");
+        ShowTab("Aplicativos");
         bool closing = false;
         close.Click += async (_, _) =>
         {
@@ -175,7 +176,8 @@ internal sealed class GameOptimizerPanel : StackPanel
                         check.SetResourceReference(Control.ForegroundProperty, "Think.Text"); check.Checked += (_, _) => UpdatePage(); check.Unchecked += (_, _) => UpdatePage();
                         choices.Children.Add(check); approvals.Add((check, process));
                     }
-                    close.IsEnabled = approvals.Count > 0; page = 0; ShowTab(currentTab);
+                    close.IsEnabled = approvals.Count > 0; page = 0; ShowTab("Aplicativos");
+                    TutorialGuide.Notify("optimizer-analyzed");
                 }
             }
             catch (OperationCanceledException) { fullReport = "Análise cancelada."; ShowTab("Resumo"); }
@@ -209,4 +211,5 @@ internal sealed class GameOptimizerPanel : StackPanel
         _ => "Equilíbrio entre consumo e desempenho."
     }) + " Restaura o plano anterior ao sair do jogo.";
 }
+
 

@@ -24,11 +24,14 @@ internal sealed partial class TutorialWindow : Window
         new("2 · Central de controle", "Descubra a expansão", "Leve o mouse até a central no topo da tela. Na ilha, a primeira expansão mostra mídia e áudio. No modo barra, a seta abre os controles abaixo. Os ícones dependem da sua personalização.", "island", "island-hover"),
         new("2 · Central de controle", "Veja o painel completo", "Clique na seta de expansão. Aqui ficam os controles e widgets, como calendário, clima, notas rápidas e favoritos. Rede e áudio têm painéis próprios.", "expand", "island-full"),
         new("3 · Monitoramento e personalização", "Conheça o desempenho", "Clique no ícone de monitoramento. Ele mostra as leituras disponíveis do computador. O overlay é opcional e aparece em jogos; sensores avançados podem exigir autorização.", "monitor", "monitor-open"),
+        new("3 · Monitoramento e personalização", "Prepare seus jogos", "Clique na aba Otimizador. Escolha Economia, Equilibrado ou Desempenho para preparar o perfil de energia. O plano anterior retorna ao sair do jogo.", "optimizer", "optimizer-open"),
+        new("3 · Monitoramento e personalização", "Revise os aplicativos", "Clique em Analisar. A primeira aba mostra aplicativos elegíveis para fechamento. Marque somente o que estiver sem uso e confirme a ação. Processos protegidos ficam fora da seleção; nada é fechado durante esta etapa do tutorial.", "optimizer-analyze", "optimizer-analyzed"),
         new("3 · Monitoramento e personalização", "Deixe com a sua cara", "Clique no pincel de personalização. As abas organizam cores, transparência, ícones, widgets e overlay. As alterações são salvas automaticamente.", "customize", "settings-open"),
         new("3 · Monitoramento e personalização", "Explore a aparência", "Selecione a aba Aparência. Você pode mudar tema, cores e transparência em tempo real. Ao final das configurações, em Tutorial, é possível repetir este guia.", "appearance", "appearance-open")
     };
     public sealed class Progress
     {
+        public int Schema { get; set; }
         public int Step { get; set; } = -1;
         public bool Finished { get; set; }
         public bool Dismissed { get; set; }
@@ -124,13 +127,19 @@ internal sealed partial class TutorialWindow : Window
         try
         {
             var value = File.Exists(store.TutorialStatePath) ? JsonSerializer.Deserialize<Progress>(File.ReadAllText(store.TutorialStatePath)) : null;
-            if (value is not null && value.Step >= -1 && value.Step <= Steps.Length) return value;
+            if (value is not null && value.Step >= -1 && value.Step <= Steps.Length)
+            {
+                if (value.Schema < 1 && value.Step >= 6) value.Step += 2;
+                value.Schema = 1;
+                return value;
+            }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { }
         return new Progress();
     }
     private void SaveProgress()
     {
+        progress.Schema = 1;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(store.TutorialStatePath)!);
@@ -162,8 +171,8 @@ internal sealed partial class TutorialWindow : Window
         FontSizing.Apply(this, store.Value.FontScale);
         success = false; finishing = false; lastGuideBounds = null; ClearHighlight(); actions.Children.Clear();
         TutorialGuide.KeepDockOpen = progress.Step >= 0 && progress.Step <= 2;
-        TutorialGuide.KeepIslandOpen = progress.Step >= 4 && progress.Step <= 6;
-        TutorialGuide.CollapseDockOnDesktop = progress.Step >= 3 && progress.Step <= 6;
+        TutorialGuide.KeepIslandOpen = progress.Step >= 4 && progress.Step <= 8;
+        TutorialGuide.CollapseDockOnDesktop = progress.Step >= 3 && progress.Step <= 8;
         if (progress.Step < 0)
         {
             module.Text = "Bem-vindo ao Orby Launcher"; title.Text = "Vamos conhecer seu desktop?";
