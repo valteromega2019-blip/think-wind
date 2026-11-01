@@ -31,7 +31,8 @@ internal sealed partial class WindowPreview
 
         void Add(string label, string glyph, bool close)
         {
-            var button = PreviewControl(label, glyph, () => ChooseWindow(close));
+            Button button = null!; // Assigned before a click can invoke the window chooser.
+            button = PreviewControl(label, glyph, () => ChooseWindow(close));
             button.SetResourceReference(StyleProperty, "Think.IconButton");
             button.IsEnabled = targets.Length > 0;
             if (targets.Length == 0) button.ToolTip = "O aplicativo não disponibiliza uma janela para esta ação.";
