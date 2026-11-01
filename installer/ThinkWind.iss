@@ -87,6 +87,8 @@ begin
   if CurStep = ssPostInstall then
   begin
     InstallPawnIO;
+    { Integrated updates preserve the user's startup/taskbar choices. }
+    if ExpandConstant('{param:ORBYUPDATE|0}') = '1' then Exit;
     if not Exec(ExpandConstant('{app}\OrbyLauncher.exe'), '--configure-installation',
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     begin

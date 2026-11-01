@@ -11,6 +11,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Contains("--updates")) return UpdateChecks.Run();
         if (args.Contains("--visual-background")) return VisualBackground.Run();
         if (args.Contains("--performance-comparison")) return PerformanceComparison.Run();
         Directory.CreateDirectory(Root);
