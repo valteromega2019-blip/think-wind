@@ -10,7 +10,7 @@ namespace OrbyLauncher.Views;
 internal sealed class LocalOptimizerAiPanel : StackPanel
 {
     private readonly ComboBox models = new() { MinHeight = 32, Margin = new Thickness(0, 4, 0, 8) };
-    private readonly TextBlock result = new() { Text = "A IA analisa somente quando você solicita. Requer Ollama local com um modelo já instalado. Não baixa modelos nem aplica ações.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 12), FontSize = 12 };
+    private readonly TextBlock result = new() { Text = "Prepare o mecanismo e o modelo aqui no Orby. A IA analisa somente quando você solicita; downloads exigem confirmação e nenhuma recomendação é executada automaticamente.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 12), FontSize = 12 };
     private readonly Button refresh = new() { Content = "Localizar modelos instalados" }, analyze = new() { Content = "Analisar com IA local", IsEnabled = false }, cancel = new() { Content = "Cancelar", IsEnabled = false };
     private CancellationTokenSource? request;
     private readonly SettingsStore settings;
@@ -54,6 +54,7 @@ internal sealed class LocalOptimizerAiPanel : StackPanel
         };
         var actions = new WrapPanel(); actions.Children.Add(refresh); actions.Children.Add(analyze); actions.Children.Add(cancel); Children.Add(actions);
         System.Windows.Automation.AutomationProperties.SetName(models, "Modelo de IA instalado localmente");
+        models.SelectionChanged += (_, _) => { if (request is null) analyze.IsEnabled = models.SelectedItem is string; };
         refresh.Click += async (_, _) =>
         {
             if (request is not null) return;
