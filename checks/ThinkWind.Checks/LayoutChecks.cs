@@ -36,15 +36,24 @@ internal static class LayoutChecks
     }
     internal static void IslandPacking()
     {
-        var board = new IslandModuleBoard();
-        var cards = new[] { "connections", "media", "audio", "metrics", "calendar", "background", "notifications" }
-            .Select(id => new Border { Tag = id, MinHeight = id == "calendar" ? 310 : id == "background" ? 260 : 80 }).ToArray();
-        board.SetCards(cards); board.Measure(new Size(780, double.PositiveInfinity)); board.Arrange(new Rect(new Point(), board.DesiredSize));
-        Rect Bounds(FrameworkElement item) => new(item.TranslatePoint(new Point(), board), item.RenderSize);
-        var calendar = Bounds(cards[4]); var tray = Bounds(cards[5]); var last = Bounds(cards[6]);
-        Require(Math.Abs(calendar.Bottom - tray.Bottom) < .01 && Math.Abs(last.Bottom - tray.Bottom) < .01);
-        for (int i = 0; i < cards.Length; i++) for (int j = i + 1; j < cards.Length; j++)
-        { var intersection = Rect.Intersect(Bounds(cards[i]), Bounds(cards[j])); Require(intersection.IsEmpty || intersection.Width == 0 || intersection.Height == 0); }
+        foreach (double width in new[] { 360d, 520, 780 })
+        {
+            var board = new IslandModuleBoard();
+            var cards = new[] { "connections", "media", "audio", "metrics", "calendar", "background", "notifications" }
+                .Select(id => new Border { Tag = id, MinHeight = id == "calendar" ? 310 : id == "background" ? 260 : 80 }).ToArray();
+            board.SetCards(cards); board.Measure(new Size(width, double.PositiveInfinity)); board.Arrange(new Rect(new Point(), board.DesiredSize));
+            Rect Bounds(FrameworkElement item) => new(item.TranslatePoint(new Point(), board), item.RenderSize);
+            foreach (var card in cards)
+            {
+                var bounds = Bounds(card);
+                Require(bounds.Left >= 0 && bounds.Right <= width + .01 && bounds.Height >= card.MinHeight);
+                Require(bounds.Bottom <= board.RenderSize.Height + .01);
+                foreach (var peer in cards.Where(peer => Math.Abs(Bounds(peer).Top - bounds.Top) < .01))
+                    Require(Math.Abs(Bounds(peer).Bottom - bounds.Bottom) < .01);
+            }
+            for (int i = 0; i < cards.Length; i++) for (int j = i + 1; j < cards.Length; j++)
+            { var intersection = Rect.Intersect(Bounds(cards[i]), Bounds(cards[j])); Require(intersection.IsEmpty || intersection.Width == 0 || intersection.Height == 0); }
+        }
     }
     internal static void WifiDispatcher()
     {

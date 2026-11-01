@@ -141,6 +141,15 @@ internal static class Program
             Require(p.OverlayPositionX == 0 && p.OverlayPositionY == 100);
         });
         Run("0.18: calendário não recorta células em fontes maiores", Release018Checks.CalendarCells);
+        Run("0.21: leque vertical, alinhamento e tonalidade Acrylic das abas", Release021Checks.BrowserFan);
+        Run("0.21: comandos Meet compactos e indicação de mudo em vermelho", Release021Checks.CompactCall);
+        Run("0.21: tutorial distingue perfil novo de atualização e preserva pendência", () =>
+        {
+            var initial = Store("tutorial-installation"); Require(initial.IsNewProfile && !initial.Value.TutorialPending);
+            initial.Value.TutorialPending = true; initial.Save();
+            var installed = Store("tutorial-installation"); Require(!installed.IsNewProfile && installed.Value.TutorialPending);
+            Require(installed.TutorialStatePath != PathFor("tutorial-installation"));
+        });
         Console.WriteLine($"RESULTADO: {passed} aprovados; {failed} falhos; {skipped} ignorados.");
         Console.WriteLine("Arquivos temporários isolados: " + Root);
         BackdropComposition.Shutdown();
