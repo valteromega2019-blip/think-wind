@@ -41,6 +41,9 @@ internal sealed class BackdropHost : IDisposable
     [DllImport("user32.dll")] private static extern bool DestroyWindow(nint window);
     [DllImport("user32.dll")] private static extern bool ShowWindow(nint window, int command);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
+    [DllImport("user32.dll")] private static extern nint BeginDeferWindowPos(int count);
+    [DllImport("user32.dll")] private static extern nint DeferWindowPos(nint batch, nint window, nint after, int x, int y, int width, int height, uint flags);
+    [DllImport("user32.dll")] private static extern bool EndDeferWindowPos(nint batch);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongW")] private static extern int SetWindowLong(nint window, int index, int value);
     [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(nint window, int attribute, ref int value, int size);
@@ -112,7 +115,7 @@ internal sealed class BackdropHost : IDisposable
             if (type == 1) DwmSetWindowAttribute(Handle, 38, ref type, 4);
         }
     }
-    internal void Synchronize(OverlayChrome.PixelRect rectangle, double radius, bool top, bool visible)
+    internal void Synchronize(OverlayChrome.PixelRect rectangle, double radius, bool top, bool visible, OverlayChrome.PixelRect? contentRectangle = null)
     {
         if (Handle == 0) return;
         int width = Math.Max(1, rectangle.Right - rectangle.Left), height = Math.Max(1, rectangle.Bottom - rectangle.Top);
@@ -131,7 +134,21 @@ internal sealed class BackdropHost : IDisposable
             lastGeometry = geometry;
         }
         bool show = visible && MaterialAvailable;
-        if (!synchronized || lastVisible != show || rectangle.Left != lastRectangle.Left || rectangle.Top != lastRectangle.Top || rectangle.Right != lastRectangle.Right || rectangle.Bottom != lastRectangle.Bottom)
+        bool moveMaterial = !synchronized || lastVisible != show || rectangle.Left != lastRectangle.Left || rectangle.Top != lastRectangle.Top || rectangle.Right != lastRectangle.Right || rectangle.Bottom != lastRectangle.Bottom;
+        if (contentRectangle is { } content)
+        {
+            // Commit both HWND rectangles together. Previously WPF resized first
+            // and the material followed in a separate native positioning pass.
+            nint batch = BeginDeferWindowPos(2);
+            if (batch != 0) batch = DeferWindowPos(batch, foreground, 0, content.Left, content.Top, Math.Max(1, content.Right - content.Left), Math.Max(1, content.Bottom - content.Top), 0x0014);
+            if (batch != 0) batch = DeferWindowPos(batch, Handle, foreground, rectangle.Left, rectangle.Top, width, height, 0x0010 | (show ? 0x0040u : 0x0080u));
+            if (batch == 0 || !EndDeferWindowPos(batch))
+            {
+                OverlayChrome.Move(foreground, content);
+                SetWindowPos(Handle, foreground, rectangle.Left, rectangle.Top, width, height, 0x0010 | (show ? 0x0040u : 0x0080u));
+            }
+        }
+        else if (moveMaterial)
             SetWindowPos(Handle, foreground, rectangle.Left, rectangle.Top, width, height, 0x0010 | (show ? 0x0040u : 0x0080u));
         lastRectangle = rectangle; lastVisible = show; synchronized = true;
     }

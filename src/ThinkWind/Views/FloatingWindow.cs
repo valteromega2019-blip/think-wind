@@ -173,11 +173,16 @@ internal abstract class FloatingWindow : Window
         centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;
         UpdateClip();
     }
-    protected void UpdateClip()
+    protected void UpdateClip() => UpdateClip(null);
+    private void UpdateClip(OverlayChrome.PixelRect? destination)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == 0 || !OverlayChrome.GetWindowRect(hwnd, out var rectangle)) return;
-        if (SuppressMaterial) { backdrop?.Hide(); return; }
+        if (hwnd == 0) return;
+        OverlayChrome.PixelRect rectangle;
+        if (destination is { } requested) rectangle = requested;
+        else if (!OverlayChrome.GetWindowRect(hwnd, out rectangle)) return;
+        if (SuppressMaterial) { if (destination.HasValue) OverlayChrome.Move(hwnd, rectangle); backdrop?.Hide(); return; }
+        if (backdrop is null && destination.HasValue) OverlayChrome.Move(hwnd, rectangle);
         var scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1;
         var next = (rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top, (int)Math.Round(radius * scale), SquareTopCorners, scale);
         if (next.Item1 < 1 || next.Item2 < 1) return;
@@ -192,8 +197,8 @@ internal abstract class FloatingWindow : Window
             rectangle.Top += (int)Math.Round(inset.Top * scale); rectangle.Bottom -= (int)Math.Round(inset.Bottom * scale);
             AlignSurfaceCorners(rectangle, scale);
             if (rectangle.Right > rectangle.Left && rectangle.Bottom > rectangle.Top)
-                backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible);
-            else backdrop?.Hide();
+                backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible, destination);
+            else { if (destination is { } content) OverlayChrome.Move(hwnd, content); backdrop?.Hide(); }
             return;
         }
         // The foreground is per-pixel alpha; only the material HWND uses an HRGN.
@@ -219,7 +224,7 @@ internal abstract class FloatingWindow : Window
             }
             if (!ReferenceEquals(((Grid)Content).Clip, geometry)) ((Grid)Content).Clip = geometry;
         }
-        backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible);
+        backdrop?.Synchronize(rectangle, next.Item3, SquareTopCorners, IsVisible, destination);
     }
     private void AlignSurfaceCorners(OverlayChrome.PixelRect rectangle, double scale)
     {
@@ -279,8 +284,8 @@ internal abstract class FloatingWindow : Window
         {
             var handle = new WindowInteropHelper(this).Handle;
             if (!OverlayChrome.GetWindowRect(handle, out var current) || current.Left != rectangle.Left || current.Top != rectangle.Top || current.Right != rectangle.Right || current.Bottom != rectangle.Bottom)
-                OverlayChrome.Move(handle, rectangle);
-            UpdateClip();
+                UpdateClip(rectangle);
+            else UpdateClip();
         }
         finally { positioning = false; }
     }
