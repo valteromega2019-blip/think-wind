@@ -1,11 +1,11 @@
-﻿# Otimizador de Jogos
+﻿# Otimizador de Jogos — perfis internos
 
-Na aba Otimizador, a interface oferece apenas Equilibrado, Desempenho, Economia, Otimizar e Voltar ao normal. Detalhes técnicos e seleção manual de processos foram removidos do painel. Equilibrado é a seleção inicial quando não existe preferência compatível.
+O Otimizador usa somente recursos locais do Windows. A integração com IA e Ollama foi removida, incluindo seus painéis e serviço. Não há consultas HTTP, downloads de modelos ou inferência neste recurso. O Ollama instalado no computador não foi desinstalado nem tem seus processos encerrados pelo launcher.
 
-Otimizar salva o modo e habilita o perfil para jogos reconhecidos pelo serviço existente. PowerGetActiveScheme/PowerSetActiveScheme aplicam o plano correspondente ao entrar no jogo e restauram o anterior ao sair. O registro optimizer-recovery.json permite recuperação após interrupção. Alterações externas no plano são respeitadas. Voltar ao normal desativa o perfil e solicita restauração.
+Interface: Equilibrado, Desempenho, Economia, Otimizar e Voltar ao normal. Otimizar habilita o perfil selecionado para jogos reconhecidos pelo serviço existente. Também permite aplicar uma nova escolha durante um jogo. Antes da troca, tenta restaurar o plano anterior; se houver restauração pendente, mantém o erro visível e não substitui o registro de recuperação.
 
-O launcher preserva suas configurações, não fecha aplicativos automaticamente, não limpa working sets, não aumenta prioridades e não injeta código em jogos. Planos indisponíveis geram mensagem; Desempenho pode aumentar calor e consumo. Não há promessa de ganho de FPS.
+Os modos correspondem aos planos Equilibrado, Alto desempenho e Economia de energia do Windows, usando PowerGetActiveScheme/PowerSetActiveScheme. O plano anterior é registrado antes da alteração em optimizer-recovery.json e restaurado ao sair do jogo ou encerrar o launcher. Uma alteração externa de plano é preservada. Voltar ao normal desabilita o perfil. Planos ausentes ou recusados pelo equipamento são informados, sem simular aplicação.
 
-Otimizar também solicita sugestões locais ao Ollama fora de jogos. As recomendações são texto e não executam comandos. Consulte IA-LOCAL-OTIMIZADOR.md.
+Economia pode reduzir desempenho; Alto desempenho pode aumentar consumo e calor. Não há garantia de ganho de FPS. Não fecha aplicativos, não esvazia memória, não eleva prioridades e não modifica os recursos configurados de barras, overlay ou sensores. O Modo Jogo existente continua responsável pela redução de trabalho do launcher durante jogos, conforme sua configuração.
 
-Esta simplificação recebeu revisão por leitura de código. Compilação, testes e type check não foram executados nesta alteração.
+Alteração revisada por leitura de código e diff. Compilação, testes e type check não executados nesta solicitação.

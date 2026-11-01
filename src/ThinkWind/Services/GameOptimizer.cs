@@ -12,6 +12,7 @@ internal sealed class GameOptimizer
     private sealed record Recovery(Guid Original, Guid Applied);
     private readonly string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher", "optimizer-recovery.json");
     private Recovery? recovery;
+    internal bool RestorationPending => recovery is not null;
     internal bool Active { get; private set; }
     internal bool GameForeground { get; private set; }
     internal string Status { get; private set; } = "Pronto · perfil automático desativado.";
