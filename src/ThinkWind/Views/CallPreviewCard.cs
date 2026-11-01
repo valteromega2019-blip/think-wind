@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Media;
 using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
@@ -80,14 +81,26 @@ internal sealed class CallPreviewCard : StackPanel, IDisposable
         controls.Children.Clear();
         foreach (var command in snapshot.Commands)
         {
-            string glyph = command.Action switch { CallAction.Microphone => "\uE720", CallAction.Headphones => "\uE7F6", _ => "\uE711" };
+            string glyph = command.Action switch { CallAction.Microphone => "\uE720", CallAction.Headphones => "\uE7F6", _ => "\uE717" };
+            var symbol = new Grid { Width = 30, Height = 30, HorizontalAlignment = HorizontalAlignment.Center };
+            symbol.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            if (command.Muted == true)
+                symbol.Children.Add(new System.Windows.Shapes.Line { X1 = 4, Y1 = 26, X2 = 26, Y2 = 4, Stroke = new SolidColorBrush(Color.FromRgb(248, 92, 106)), StrokeThickness = 2.5, IsHitTestVisible = false });
+            string label = command.Action switch
+            {
+                CallAction.Leave => "Sair da chamada",
+                CallAction.Microphone => command.Muted == true ? "Mic mudo" : command.Muted == false ? "Mic aberto" : "Microfone",
+                _ => command.Muted == true ? "Áudio mudo" : command.Muted == false ? "Áudio ativo" : "Áudio"
+            };
             var button = new Button { Content = new StackPanel { Children =
                 {
-                    new TextBlock { Text = glyph, FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons"), FontSize = 19, HorizontalAlignment = HorizontalAlignment.Center },
-                    new TextBlock { Text = command.AccessibleName.Split('(')[0].Trim(), MaxWidth = 82, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 11, Margin = new Thickness(0, 5, 0, 0) }
-                } }, ToolTip = command.AccessibleName, MinWidth = 76, Padding = new Thickness(10), Margin = new Thickness(3, 10, 3, 0) };
+                    symbol,
+                    new TextBlock { Text = label, MaxWidth = 82, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0) }
+                } }, ToolTip = command.AccessibleName, MinWidth = 86, MinHeight = 84, Padding = new Thickness(10), Margin = new Thickness(3, 10, 3, 0) };
             System.Windows.Automation.AutomationProperties.SetName(button, command.AccessibleName);
-            if (command.Action == CallAction.Leave) button.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
+            if (command.Muted == true || command.Action == CallAction.Leave) button.Foreground = new SolidColorBrush(Color.FromRgb(248, 92, 106));
+            else if (command.Muted == false) button.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
+            button.SetResourceReference(Control.BackgroundProperty, command.Muted == false ? "Think.AccentSurface" : "Think.Control");
             button.Click += async (_, _) =>
             {
                 if (busy || lifetime is null || snapshot is null) return;

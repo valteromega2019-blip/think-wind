@@ -7,7 +7,7 @@ Ao passar o mouse por um aplicativo elegível, a miniatura normal é apresentada
 ## Aplicativos candidatos
 
 - Discord, Discord PTB e Canary.
-- Google Meet em Chrome, Edge, Firefox ou Brave, com uma janela identificada como Meet e endereço `meet.google.com` verificável pela acessibilidade.
+- Google Meet em Chrome, Edge, Firefox ou Brave, com endereço `meet.google.com` verificável pela acessibilidade. O título anterior da janela não impede reconhecer uma mudança para a aba do Meet.
 - Microsoft Teams e Zoom, quando seus controles usam os nomes acessíveis reconhecidos.
 
 Os rótulos reconhecidos são em português e inglês. Isso representa suporte condicional, não uma declaração de compatibilidade validada com todas as versões. A detecção no Meet depende da aba ativa e da exposição da barra de endereços. Janelas minimizadas, versões diferentes, idiomas não reconhecidos, interfaces sem acessibilidade e restrições de integridade podem impedir a detecção. Nesses casos, permanece a prévia comum. Não há tentativa de contornar permissões nem ativação de depuração remota do navegador.

@@ -14,7 +14,7 @@ using OrbyLauncher.Native;
 namespace OrbyLauncher.Services;
 
 internal enum CallAction { Microphone, Headphones, Leave }
-internal sealed record CallCommand(CallAction Action, string AccessibleName);
+internal sealed record CallCommand(CallAction Action, string AccessibleName, bool? Muted = null);
 internal sealed record CallSnapshot(nint Window, int ProcessId, string App, string Title, IReadOnlyList<CallCommand> Commands);
 
 // Inspect only candidate windows on hover. All cross-process accessibility calls
@@ -29,9 +29,10 @@ internal static class CallIntegration
         if (exe is "discord" or "discordcanary" or "discordptb") return "Discord";
         if (exe is "ms-teams" or "teams") return "Microsoft Teams";
         if (exe is "zoom" or "zoomworkplace") return "Zoom";
-        // Browser integration deliberately requires an identifiable Meet window.
+        // The active tab/title can change without replacing the HWND. Origin
+        // verification in InspectControls decides whether this really is Meet.
         if (exe is "chrome" or "msedge" or "firefox" or "brave")
-            if (window.Title.Contains("Meet", StringComparison.OrdinalIgnoreCase)) return "Google Meet";
+            return "Google Meet";
         return null;
     }
     internal static async Task<CallSnapshot?> FindAsync(IEnumerable<Desktop.RunningWindow> windows, CancellationToken cancellation)
@@ -113,7 +114,11 @@ internal static class CallIntegration
             for (int index = children.Count - 1; index >= 0; index--) pending.Push(children[index]);
         }
         if (!meetOrigin) return false;
-        foreach (var pair in matches.Where(pair => pair.Value.Count == 1)) commands.Add(new(pair.Key, pair.Value[0].Name));
+        foreach (var pair in matches.Where(pair => pair.Value.Count == 1))
+        {
+            string name = pair.Value[0].Name;
+            commands.Add(new(pair.Key, name, MutedState(pair.Key, name)));
+        }
         if (execute is null || !commands.Any(c => c.Action == CallAction.Leave) || !commands.Any(c => c.Action == CallAction.Microphone)) return false;
         var selected = commands.FirstOrDefault(c => c.Action == execute.Action && c.AccessibleName == execute.AccessibleName);
         if (selected is null) return false;
@@ -150,6 +155,18 @@ internal static class CallIntegration
         foreach (char c in text.Normalize(NormalizationForm.FormD))
             if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark) result.Append(char.ToLowerInvariant(c));
         return result.ToString().Trim();
+    }
+    private static bool? MutedState(CallAction action, string name)
+    {
+        if (action == CallAction.Leave) return null;
+        string value = Fold(name).Split('(')[0].Trim();
+        if (value is "unmute" or "undeafen" or "ativar som" or "reativar som" or "ativar audio" or "desensurdecer"
+            or "ativar microfone" or "ativar o microfone" or "turn on microphone" or "unmute microphone"
+            or "unmute my audio" or "ativar meu audio" or "desativar mudo") return true;
+        if (value is "mute" or "deafen" or "silenciar" or "desativar audio" or "ensurdecer"
+            or "desativar microfone" or "desativar o microfone" or "turn off microphone" or "mute microphone"
+            or "mute my audio" or "desativar meu audio" or "ativar mudo") return false;
+        return null;
     }
     private static bool Unavailable(Exception e) => e is ElementNotAvailableException or ElementNotEnabledException or InvalidOperationException or COMException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or NotSupportedException or TimeoutException or System.Security.SecurityException;
 }

@@ -33,10 +33,18 @@ internal sealed partial class DockWindow
             else
             {
                 preview.Present(requested.Windows);
-                if (!Store.Value.CallPreviewsEnabled || !requested.Windows.Any(CallIntegration.IsCandidate)) return;
+                bool browser = requested.Windows.Any(BrowserTabs.IsBrowser);
+                if (!browser && (!Store.Value.CallPreviewsEnabled || !requested.Windows.Any(CallIntegration.IsCandidate))) return;
                 callProbe?.Cancel(); callProbe?.Dispose(); callProbe = new CancellationTokenSource(); var token = callProbe.Token;
                 try
                 {
+                    if (browser)
+                    {
+                        var tabs = await BrowserTabs.ReadAsync(requested.Windows, token);
+                        if (token.IsCancellationRequested || !ReferenceEquals(previewItem, requested) || !preview.IsVisible) return;
+                        preview.PresentBrowser(requested.Windows, tabs);
+                    }
+                    if (!Store.Value.CallPreviewsEnabled) return;
                     var call = await CallIntegration.FindAsync(requested.Windows, token);
                     if (!token.IsCancellationRequested && call is not null && ReferenceEquals(previewItem, requested)
                         && IsVisible && !MenuOpen && Store.Value.CallPreviewsEnabled && preview.IsVisible)

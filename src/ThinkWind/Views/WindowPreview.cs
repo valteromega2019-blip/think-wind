@@ -11,7 +11,7 @@ using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
-internal sealed class WindowPreview : FloatingWindow
+internal sealed partial class WindowPreview : FloatingWindow
 {
     protected override bool AttachedTop => false;
     private readonly StackPanel body = new();
@@ -32,21 +32,23 @@ internal sealed class WindowPreview : FloatingWindow
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         anchor = getAnchor; Title = "Orby Launcher — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;
-        refresh.Tick += (_, _) => { if (windows.Any(window => !WindowThumbnail.IsWindow(window.Handle))) { windows.RemoveAll(window => !WindowThumbnail.IsWindow(window.Handle)); Render(); } };
+        refresh.Tick += async (_, _) => { if (browserMode) { await RefreshBrowserAsync(); return; } if (windows.Any(window => !WindowThumbnail.IsWindow(window.Handle))) { windows.RemoveAll(window => !WindowThumbnail.IsWindow(window.Handle)); Render(); } };
         LayoutUpdated += (_, _) => PlaceThumbnails();
-        IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); Release(); spotify?.SetActive(false); call?.Stop(); } };
-        Closed += (_, _) => { Release(); spotify?.Dispose(); call?.Dispose(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); browserLifetime?.Cancel(); Release(); spotify?.SetActive(false); call?.Stop(); } };
+        Closed += (_, _) => { browserLifetime?.Cancel(); browserLifetime?.Dispose(); Release(); spotify?.Dispose(); call?.Dispose(); };
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape) Hide(); };
     }
     internal void Present(IEnumerable<Desktop.RunningWindow> source)
     {
+        browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(10);
         callMode = false; call?.Stop(); spotifyMode = false; spotify?.SetActive(false); viewport.Child = body;
         windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
-        if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Start();
+        if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Interval = TimeSpan.FromSeconds(1); refresh.Start();
     }
     internal void PresentSpotify()
     {
+        browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(0);
         callMode = false; call?.Stop();
         refresh.Stop(); Release(); spotifyMode = true;
@@ -60,6 +62,8 @@ internal sealed class WindowPreview : FloatingWindow
     }
     internal void PresentCall(CallSnapshot snapshot, IEnumerable<Desktop.RunningWindow> source)
     {
+        if (snapshot.App == "Google Meet") { PresentBrowser(source, browserTabs, snapshot); return; }
+        browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(10);
         refresh.Stop(); Release(); spotifyMode = false; spotify?.SetActive(false); callMode = true;
         windows = source.ToList();
@@ -67,16 +71,19 @@ internal sealed class WindowPreview : FloatingWindow
         {
             call = new CallPreviewCard();
             call.LayoutChanged += () => { if (IsVisible && callMode) Position(); };
-            call.CallEnded += () => { if (IsVisible && callMode) Present(windows.ToArray()); };
+            call.CallEnded += () => { if (IsVisible && callMode) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs); else Present(windows.ToArray()); } };
         }
+        if (call.Parent is Panel parent) parent.Children.Remove(call);
+        call.Margin = new Thickness(0);
         viewport.Child = call; call.Present(snapshot, windows); Show(); Position();
     }
-    private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); }
+    private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); browserFan?.Dispose(); }
     public override void RefreshAppearance()
     {
         base.RefreshAppearance();
         ConfigurePlayerSurface();
-        if (IsVisible && callMode && !Store.Value.CallPreviewsEnabled) Present(windows.ToArray());
+        if (IsVisible && browserMode && !Store.Value.CallPreviewsEnabled && browserLayout.Children.Count > 1) PresentBrowser(windows.ToArray(), browserTabs);
+        if (IsVisible && callMode && !Store.Value.CallPreviewsEnabled) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs); else Present(windows.ToArray()); }
     }
     public override void RefreshSettings()
     {
@@ -142,6 +149,7 @@ internal sealed class WindowPreview : FloatingWindow
     private void PlaceThumbnails()
     {
         if (!IsVisible) return;
+        if (browserMode) { browserFan?.PlaceImages(); return; }
         foreach (var item in thumbnails) if (item.Area.ActualWidth > 0 && item.Area.ActualHeight > 0)
         {
             var topLeft = item.Area.PointToScreen(new Point()); var bottomRight = item.Area.PointToScreen(new Point(item.Area.ActualWidth, item.Area.ActualHeight));
@@ -154,6 +162,7 @@ internal sealed class WindowPreview : FloatingWindow
     }
     public override void Position()
     {
+        if (browserMode) { PositionBrowser(); return; }
         if (callMode && call is not null)
         {
             double callWidth = Math.Max(1, Math.Min(360, Display.Width - 16));
