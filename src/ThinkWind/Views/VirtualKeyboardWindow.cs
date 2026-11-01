@@ -30,7 +30,7 @@ internal sealed partial class VirtualKeyboardWindow : FloatingWindow
     internal VirtualKeyboardWindow(SettingsStore store) : base(store)
     {
         Title = "Orby Launcher · Teclado"; Focusable = false;
-        keyMagnifier = new HeaderIconMagnifier(keys, () => !resizing && !Store.IsEditing, includeText: true, highlightKeys: true);
+        keyMagnifier = new HeaderIconMagnifier(keys, () => !resizing && !Store.IsEditing, includeText: true, highlightKeys: true, wholeKeys: true);
         Surface.Padding = new Thickness(14); Surface.CornerRadius = new CornerRadius(20);
         var panel = new DockPanel(); var heading = new DockPanel { Margin = new Thickness(2, 0, 2, 10) };
         var close = Tool("Fechar", () => Hide()); DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
@@ -141,7 +141,10 @@ internal sealed partial class VirtualKeyboardWindow : FloatingWindow
     {
         // The shared button template paints its own hover background. Keep
         // this template bound to the key background so the accent can shine.
-        var surface = new FrameworkElementFactory(typeof(Border));
+        var hitArea = new FrameworkElementFactory(typeof(Border));
+        hitArea.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
+        var surface = new FrameworkElementFactory(typeof(Border), "KeyFace");
+        surface.SetValue(UIElement.IsHitTestVisibleProperty, false);
         surface.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
         surface.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
         surface.SetValue(Border.CornerRadiusProperty, new CornerRadius(12));
@@ -150,7 +153,8 @@ internal sealed partial class VirtualKeyboardWindow : FloatingWindow
         content.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
         content.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
         surface.AppendChild(content);
-        var template = new ControlTemplate(typeof(Button)) { VisualTree = surface };
+        hitArea.AppendChild(surface);
+        var template = new ControlTemplate(typeof(Button)) { VisualTree = hitArea };
         var pressed = new Trigger { Property = System.Windows.Controls.Primitives.ButtonBase.IsPressedProperty, Value = true };
         pressed.Setters.Add(new Setter(UIElement.OpacityProperty, .85)); template.Triggers.Add(pressed);
         return template;

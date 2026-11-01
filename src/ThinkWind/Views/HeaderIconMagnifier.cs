@@ -11,32 +11,39 @@ using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
 
-// Magnify only the glyph inside its existing button. The button, backdrop and
-// window never resize, preserving click areas and the thin top status strip.
+// Header controls magnify their glyph; the keyboard can opt into whole-key
+// transforms with neighbor displacement, without resizing its window/layout.
 internal sealed class HeaderIconMagnifier : IDisposable
 {
     private sealed class Item
     {
         internal readonly Button Button;
         internal readonly TextBlock Glyph;
+        internal readonly FrameworkElement Visual;
+        internal readonly int OriginalZ;
         internal readonly Transform Original;
         internal readonly Point Origin;
         internal readonly TransformGroup Transform = new();
         internal readonly ScaleTransform Scale = new(1, 1);
+        internal readonly TranslateTransform Offset = new();
+        internal Point Center;
         internal double Growth, Velocity;
         private Brush? highlight;
         private Brush? highlightFill;
-        internal Item(Button button, TextBlock glyph)
+        internal Item(Button button, TextBlock glyph, bool wholeKey)
         {
-            Button = button; Glyph = glyph; Original = glyph.RenderTransform; Origin = glyph.RenderTransformOrigin;
-            Transform.Children.Add(Original); Transform.Children.Add(Scale);
-            glyph.RenderTransformOrigin = new Point(.5, .5); glyph.RenderTransform = Transform;
+            Button = button; Glyph = glyph; button.ApplyTemplate();
+            Visual = wholeKey ? button : glyph;
+            Original = Visual.RenderTransform; Origin = Visual.RenderTransformOrigin; OriginalZ = Panel.GetZIndex(button);
+            Transform.Children.Add(Original); Transform.Children.Add(Scale); Transform.Children.Add(Offset);
+            Visual.RenderTransformOrigin = new Point(.5, .5); Visual.RenderTransform = Transform;
         }
         internal void Restore()
         {
             Highlight(null);
-            if (!ReferenceEquals(Glyph.RenderTransform, Transform)) return;
-            Glyph.RenderTransform = Original; Glyph.RenderTransformOrigin = Origin;
+            Panel.SetZIndex(Button, OriginalZ);
+            if (!ReferenceEquals(Visual.RenderTransform, Transform)) return;
+            Visual.RenderTransform = Original; Visual.RenderTransformOrigin = Origin;
         }
         internal void Highlight(Brush? brush, Brush? fill = null)
         {
@@ -63,15 +70,16 @@ internal sealed class HeaderIconMagnifier : IDisposable
     }
     private readonly Panel row;
     private readonly Func<bool> permitted;
-    private readonly bool includeText, highlightKeys;
+    private readonly bool includeText, highlightKeys, wholeKeys;
+    private readonly List<Item[]> keyRows = new();
     private readonly FrameClock clock = new();
     private readonly Stopwatch elapsed = new();
     private readonly List<Item> items = new();
     private double previous;
     private bool disposed;
-    internal HeaderIconMagnifier(Panel panel, Func<bool> canAnimate, bool includeText = false, bool highlightKeys = false)
+    internal HeaderIconMagnifier(Panel panel, Func<bool> canAnimate, bool includeText = false, bool highlightKeys = false, bool wholeKeys = false)
     {
-        row = panel; permitted = canAnimate; this.includeText = includeText; this.highlightKeys = highlightKeys; clock.Tick += Frame;
+        row = panel; permitted = canAnimate; this.includeText = includeText; this.highlightKeys = highlightKeys; this.wholeKeys = wholeKeys; clock.Tick += Frame;
         row.MouseMove += PointerChanged; row.MouseEnter += PointerChanged; row.MouseLeave += PointerChanged;
         row.Loaded += Loaded; row.Unloaded += Unloaded; row.IsVisibleChanged += VisibilityChanged;
         ThemeService.Changed += RefreshHighlight;
@@ -93,7 +101,9 @@ internal sealed class HeaderIconMagnifier : IDisposable
         var targets = Targets(row, includeText).ToArray();
         if (targets.Length == items.Count && targets.Zip(items).All(pair => ReferenceEquals(pair.First.Glyph, pair.Second.Glyph))) return;
         Reset(); foreach (var item in items) item.Restore(); items.Clear();
-        foreach (var target in targets) items.Add(new Item(target.Button, target.Glyph));
+        foreach (var target in targets) items.Add(new Item(target.Button, target.Glyph, wholeKeys));
+        keyRows.Clear();
+        if (wholeKeys) keyRows.AddRange(items.GroupBy(item => Grid.GetRow(item.Button)).Select(group => group.OrderBy(item => Grid.GetColumn(item.Button)).ToArray()));
     }
     private void RefreshHighlight()
     {
@@ -129,13 +139,26 @@ internal sealed class HeaderIconMagnifier : IDisposable
         foreach (var item in items)
         {
             bool visible = item.Button.IsVisible && item.Button.IsEnabled && item.Glyph.IsVisible;
+            if (wholeKeys)
+            {
+                // Grid layout offsets exclude RenderTransform. Stable centers
+                // prevent magnification/displacement feeding back into itself.
+                Vector layout = VisualTreeHelper.GetOffset(item.Button);
+                item.Center = new Point(layout.X + item.Button.ActualWidth / 2, layout.Y + item.Button.ActualHeight / 2);
+            }
+            else if (visible) item.Center = item.Button.TranslatePoint(new Point(item.Button.ActualWidth / 2, item.Button.ActualHeight / 2), row);
             double target = 0;
             if (active && visible)
             {
-                Point center = item.Button.TranslatePoint(new Point(item.Button.ActualWidth / 2, item.Button.ActualHeight / 2), row);
+                Point center = item.Center;
                 double radius = Math.Clamp(item.Button.ActualWidth * 2.2, 40, 90);
                 double distance = (pointer - center).Length;
                 if (distance < radius) target = intensity * .5 * (1 + Math.Cos(Math.PI * distance / radius));
+                if (wholeKeys)
+                {
+                    if (Math.Abs(pointer.X - center.X) < item.Button.ActualWidth / 2 && Math.Abs(pointer.Y - center.Y) < item.Button.ActualHeight / 2) target = intensity;
+                    target *= Math.Min(1, 48 / Math.Max(1, item.Button.ActualWidth));
+                }
             }
             double displacement = item.Growth - target, velocity = item.Velocity;
             item.Growth = Math.Clamp(target + decay * (displacement * cosine + (velocity + damping * displacement) / frequency * sine), 0, intensity * 1.08);
@@ -144,7 +167,38 @@ internal sealed class HeaderIconMagnifier : IDisposable
             else { item.Growth = target; item.Velocity = 0; }
             item.Scale.ScaleX = item.Scale.ScaleY = 1 + item.Growth;
         }
+        if (wholeKeys) SpreadKeys();
         if (settled) clock.Stop();
+    }
+    private void SpreadKeys()
+    {
+        foreach (var keys in keyRows)
+        {
+            if (keys.Length == 0) continue;
+            int pivot = 0;
+            for (int i = 1; i < keys.Length; i++) if (keys[i].Growth > keys[pivot].Growth) pivot = i;
+            foreach (var key in keys) { key.Offset.X = key.Offset.Y = 0; Panel.SetZIndex(key.Button, key.OriginalZ + (int)(key.Growth * 100)); }
+            double Half(Item key) => key.Button.ActualWidth * key.Scale.ScaleX / 2;
+            // Let existing gaps absorb the expansion, propagating displacement
+            // along the row instead of stacking enlarged keys on their peers.
+            for (int i = pivot + 1; i < keys.Length; i++)
+                keys[i].Offset.X = Math.Max(0, keys[i - 1].Center.X + keys[i - 1].Offset.X + Half(keys[i - 1]) + 2 - (keys[i].Center.X - Half(keys[i])));
+            for (int i = pivot - 1; i >= 0; i--)
+                keys[i].Offset.X = Math.Min(0, keys[i + 1].Center.X + keys[i + 1].Offset.X - Half(keys[i + 1]) - 2 - (keys[i].Center.X + Half(keys[i])));
+            double left = keys[0].Center.X + keys[0].Offset.X - Half(keys[0]);
+            double right = keys[^1].Center.X + keys[^1].Offset.X + Half(keys[^1]);
+            const double overflow = 4; // Keep the keyboard's resize edges clear.
+            double available = row.ActualWidth + overflow * 2;
+            double compression = right - left > available ? available / (right - left) : 1;
+            double shift = Math.Max(0, -overflow - left);
+            shift = Math.Min(shift, row.ActualWidth + overflow - (left + (right - left) * compression));
+            foreach (var key in keys)
+            {
+                double center = key.Center.X + key.Offset.X;
+                key.Offset.X = left + (center - left) * compression + shift - key.Center.X;
+                key.Scale.ScaleX *= compression;
+            }
+        }
     }
     private void Reset(bool clearHighlight = true)
     {
@@ -152,6 +206,8 @@ internal sealed class HeaderIconMagnifier : IDisposable
         foreach (var item in items)
         {
             item.Growth = item.Velocity = 0; item.Scale.ScaleX = item.Scale.ScaleY = 1;
+            item.Offset.X = item.Offset.Y = 0;
+            if (wholeKeys) Panel.SetZIndex(item.Button, item.OriginalZ);
             if (clearHighlight) item.Highlight(null);
         }
     }
