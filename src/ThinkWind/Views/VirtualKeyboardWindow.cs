@@ -47,9 +47,6 @@ internal sealed class VirtualKeyboardWindow : FloatingWindow
             HwndSource.FromHwnd(handle).AddHook((nint hwnd, int msg, nint wp, nint lp, ref bool handled) =>
             {
                 if (msg == 0x21) { handled = true; return 3; }
-                // Keep the separate native backdrop aligned even on a move
-                // without resize (including dragging this nonactivating window).
-                if (msg == 0x47) UpdateClip();
                 return 0;
             });
         };

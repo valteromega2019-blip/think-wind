@@ -127,7 +127,10 @@ internal abstract class FloatingWindow : Window
     private static int Blend(int a, int b, double amount) => (int)Math.Round(a + (b - a) * amount);
     private nint WindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
-        if (message == 0x0005 && !positioning) UpdateClip();
+        // DragMove and native positioning can move the content without a size
+        // change. Keep the independent material HWND aligned on those moves.
+        // Our animated Move already synchronizes once after SetWindowPos.
+        if ((message == 0x0005 || message == 0x0047) && !positioning) UpdateClip();
         if (message is 0x007E or 0x02E0 or 0x001A)
         {
             if (!positioning) Dispatcher.BeginInvoke(new Action(() => { ApplyAppearance(); Position(); }));
