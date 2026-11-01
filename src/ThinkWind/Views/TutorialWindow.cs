@@ -11,7 +11,7 @@ using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
 
-internal sealed class TutorialWindow : Window
+internal sealed partial class TutorialWindow : Window
 {
     private sealed record Step(string Module, string Title, string Text, string Target, string Action);
     private static readonly Step[] Steps =
@@ -47,7 +47,7 @@ internal sealed class TutorialWindow : Window
     private FrameworkElement? highlighted;
     private bool success, finishing;
     private string? saveError;
-    private Point? lastAnchor;
+    private Rect? lastGuideBounds;
     internal TutorialWindow(SettingsStore settings, Func<bool> isBlocked)
     {
         store = settings; blocked = isBlocked;
@@ -137,7 +137,7 @@ internal sealed class TutorialWindow : Window
     }
     private void Render()
     {
-        success = false; finishing = false; lastAnchor = null; ClearHighlight(); actions.Children.Clear();
+        success = false; finishing = false; lastGuideBounds = null; ClearHighlight(); actions.Children.Clear();
         TutorialGuide.KeepDockOpen = progress.Step >= 0 && progress.Step <= 2;
         TutorialGuide.KeepIslandOpen = progress.Step >= 4 && progress.Step <= 6;
         if (progress.Step < 0)
@@ -190,22 +190,8 @@ internal sealed class TutorialWindow : Window
         }
         if (!success && !finishing && progress.Step >= 0)
             hint.Text = saveError ?? (target is null ? "Abra a área indicada na explicação. Se o controle estiver oculto na sua configuração, use Pular etapa." : "Siga o contorno pulsante e realize a ação indicada.");
-        var screen = System.Windows.Forms.Screen.PrimaryScreen ?? System.Windows.Forms.Screen.AllScreens[0];
-        var point = target?.PointToScreen(new Point(target.ActualWidth / 2, target.ActualHeight / 2)) ?? (success ? lastAnchor : null);
-        if (point.HasValue) lastAnchor = point;
-        if (point is Point p) screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)p.X, (int)p.Y));
-        var source = PresentationSource.FromVisual(this);
-        var fromPixels = source?.CompositionTarget?.TransformFromDevice ?? Matrix.Identity;
-        var workStart = fromPixels.Transform(new Point(screen.WorkingArea.Left, screen.WorkingArea.Top));
-        var workEnd = fromPixels.Transform(new Point(screen.WorkingArea.Right, screen.WorkingArea.Bottom));
-        Width = Math.Min(350, Math.Max(200, workEnd.X - workStart.X - 24));
-        MaxHeight = Math.Max(120, workEnd.Y - workStart.Y - 24);
-        double height = Math.Max(ActualHeight, 280);
-        var anchor = point.HasValue ? fromPixels.Transform(point.Value) : new Point((workStart.X + workEnd.X) / 2, (workStart.Y + workEnd.Y) / 2);
-        double x = point.HasValue ? anchor.X + 48 : anchor.X - Width / 2;
-        double y = point.HasValue ? anchor.Y < (workStart.Y + workEnd.Y) / 2 ? anchor.Y + 65 : anchor.Y - height - 65 : anchor.Y - height / 2;
-        Left = Math.Clamp(x, workStart.X + 12, Math.Max(workStart.X + 12, workEnd.X - Width - 12));
-        Top = Math.Clamp(y, workStart.Y + 12, Math.Max(workStart.Y + 12, workEnd.Y - height - 12));
+        PlaceBeside(target);
+        EnsureAbovePanels();
     }
     private void ClearHighlight()
     {

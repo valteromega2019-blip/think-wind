@@ -10,6 +10,8 @@ Três módulos e oito etapas reconhecem ações reais da interface:
 
 O contorno pulsante identifica o controle real. A confirmação permanece por 1,1 segundo antes do avanço. Há Voltar, Pular etapa e Sair. A animação respeita a preferência de movimento do Windows. Controles ocultos podem ser pulados, sem modificar as preferências do usuário.
 
+O cartão acompanha os limites do painel completo quando menu, ilha, monitoramento ou configurações abrem ou expandem. Prioriza o espaço à direita ou à esquerda, com distância de 16 DIP; acima/abaixo são alternativas. Em telas pequenas, escolhe a posição com menor sobreposição dentro da área útil. O texto novo é medido antes do posicionamento. A ordem nativa da janela é corrigida quando outra janela topmost cobre as instruções, sem ativar a janela do tutorial ou tomar o foco da pesquisa. A suspensão durante jogos permanece válida.
+
 O guia aparece automaticamente apenas para perfis novos. A configuração executada pelo instalador registra a pendência antes de salvar as preferências iniciais. Perfis existentes não são tratados como primeira instalação após uma atualização. Em Personalizar, a última aba é Tutorial, com Repetir tutorial e Continuar tutorial interrompido.
 
 O progresso fica em `tutorial.json`, ao lado de `settings.json`, com gravação temporária e substituição. As etapas não modificam volume, rede, temas, overlay ou permissões. O guia apenas explica esses recursos e observa as ações solicitadas.
