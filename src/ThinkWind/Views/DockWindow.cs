@@ -163,6 +163,7 @@ internal sealed partial class DockWindow : FloatingWindow
         items.Visibility = hidden ? Visibility.Hidden : Visibility.Visible;
         ApplyAppearance(); RefreshApps();
         launcher?.RefreshSettings();
+        preview?.RefreshSettings();
     }
     private bool MenuOpen => startTools?.IsVisible == true || activeContextMenu is not null || items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
     private bool PointerInsideDock

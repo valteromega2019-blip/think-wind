@@ -30,6 +30,14 @@ internal sealed class MediaCard : Grid, IDisposable
     internal bool IsInteracting => seeking || dragging || busy || IsMouseCaptureWithin;
     internal event Action? AvailabilityChanged;
     internal event Action? LayoutChanged;
+    internal void ConfigurePreviewSurface(double radius, double opacity)
+    {
+        var corners = new CornerRadius(Math.Max(0, radius));
+        backgroundCover.CornerRadius = backgroundShade.CornerRadius = corners;
+        // Only the artwork layers follow surface opacity. Text and controls
+        // retain their contrast and hit areas.
+        backgroundCover.Opacity = backgroundShade.Opacity = SystemParameters.HighContrast ? 1 : Math.Clamp(opacity, .05, 1);
+    }
     internal MediaCard(string? sourceFilter = null)
     {
         service = new MediaService(Dispatcher, sourceFilter);

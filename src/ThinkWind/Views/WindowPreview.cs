@@ -40,12 +40,14 @@ internal sealed class WindowPreview : FloatingWindow
     }
     internal void Present(IEnumerable<Desktop.RunningWindow> source)
     {
+        Surface.Padding = new Thickness(10);
         callMode = false; call?.Stop(); spotifyMode = false; spotify?.SetActive(false); viewport.Child = body;
         windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
         if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Start();
     }
     internal void PresentSpotify()
     {
+        Surface.Padding = new Thickness(0);
         callMode = false; call?.Stop();
         refresh.Stop(); Release(); spotifyMode = true;
         if (spotify is null)
@@ -53,10 +55,12 @@ internal sealed class WindowPreview : FloatingWindow
             spotify = new MediaCard("spotify");
             spotify.LayoutChanged += () => { if (IsVisible && spotifyMode) Position(); };
         }
+        ConfigurePlayerSurface();
         viewport.Child = spotify; Show(); Position(); spotify.SetActive(true);
     }
     internal void PresentCall(CallSnapshot snapshot, IEnumerable<Desktop.RunningWindow> source)
     {
+        Surface.Padding = new Thickness(10);
         refresh.Stop(); Release(); spotifyMode = false; spotify?.SetActive(false); callMode = true;
         windows = source.ToList();
         if (call is null)
@@ -71,7 +75,20 @@ internal sealed class WindowPreview : FloatingWindow
     public override void RefreshAppearance()
     {
         base.RefreshAppearance();
+        ConfigurePlayerSurface();
         if (IsVisible && callMode && !Store.Value.CallPreviewsEnabled) Present(windows.ToArray());
+    }
+    public override void RefreshSettings()
+    {
+        RefreshAppearance();
+        if (IsVisible) Position();
+    }
+    private void ConfigurePlayerSurface()
+    {
+        var p = Store.Value;
+        double opacity = p.DockOpacity ?? p.TintOpacity;
+        if (MaterialLight) opacity = Math.Max(opacity, .82);
+        spotify?.ConfigurePreviewSurface(p.DockRadius, opacity);
     }
     private void Render()
     {
@@ -149,11 +166,11 @@ internal sealed class WindowPreview : FloatingWindow
         {
             double mediaWidth = Math.Max(1, Math.Min(360, Display.Width - 16));
             var mediaBounds = anchor();
-            viewport.Width = mediaWidth - 20;
+            viewport.Width = mediaWidth;
             spotify.Width = viewport.Width;
             viewport.MaxHeight = Math.Max(48, Math.Min(420, (mediaBounds.Top - Display.Work.Top) / Display.Scale - 36));
             viewport.Measure(new Size(viewport.Width, viewport.MaxHeight));
-            PlaceAbove(mediaWidth, viewport.DesiredSize.Height + 20, mediaBounds, false);
+            PlaceAbove(mediaWidth, viewport.DesiredSize.Height, mediaBounds, false);
             return;
         }
         double width = Math.Min(Display.Width - 16, Math.Max(1, grid.Columns) * 280 + 20);
