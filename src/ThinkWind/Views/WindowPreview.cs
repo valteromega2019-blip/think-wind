@@ -37,7 +37,7 @@ internal sealed partial class WindowPreview : FloatingWindow
             return point.X >= bounds.Left && point.X < bounds.Right && point.Y >= bounds.Top && point.Y < bounds.Bottom;
         }
     }
-    internal bool IsInteracting => (spotifyMode && spotify?.IsInteracting == true) || (callMode && call?.IsInteracting == true);
+    internal bool IsInteracting => WindowActionInteracting || (spotifyMode && spotify?.IsInteracting == true) || (callMode && call?.IsInteracting == true);
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         anchor = getAnchor; Title = "Orby Launcher — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;
@@ -55,19 +55,19 @@ internal sealed partial class WindowPreview : FloatingWindow
         windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
         if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Interval = TimeSpan.FromSeconds(1); refresh.Start();
     }
-    internal void PresentSpotify()
+    internal void PresentSpotify(IEnumerable<Desktop.RunningWindow> source)
     {
         browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(0);
         callMode = false; call?.Stop();
-        refresh.Stop(); Release(); spotifyMode = true;
+        refresh.Stop(); Release(); spotifyMode = true; windows = source.ToList();
         if (spotify is null)
         {
             spotify = new MediaCard("spotify");
             spotify.LayoutChanged += () => { if (IsVisible && spotifyMode) Position(); };
         }
         ConfigurePlayerSurface();
-        viewport.Child = spotify; Show(); Position(); spotify.SetActive(true);
+        viewport.Child = WithWindowActions(spotify, windows); Show(); Position(); spotify.SetActive(true);
     }
     internal void PresentCall(CallSnapshot snapshot, IEnumerable<Desktop.RunningWindow> source)
     {
@@ -85,7 +85,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         DetachCallCard();
         call.ConfigureCompact(false);
         call.Margin = new Thickness(0);
-        viewport.Child = call; call.Present(snapshot, windows); Show(); Position();
+        viewport.Child = WithWindowActions(call, windows, snapshot.Window); call.Present(snapshot, windows); Show(); Position();
     }
     private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); browserFan?.Dispose(); }
     private void DetachCallCard()

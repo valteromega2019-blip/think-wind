@@ -31,7 +31,7 @@ internal sealed partial class DockWindow
             }
             var requested = previewItem;
             retainedPreviewAnchor = CurrentPreviewIconBounds();
-            if (IsSpotify(requested)) preview.PresentSpotify();
+            if (IsSpotify(requested)) preview.PresentSpotify(requested.Windows);
             else
             {
                 preview.Present(requested.Windows);
