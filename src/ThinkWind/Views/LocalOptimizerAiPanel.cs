@@ -14,11 +14,44 @@ internal sealed class LocalOptimizerAiPanel : StackPanel
     private readonly Button refresh = new() { Content = "Localizar modelos instalados" }, analyze = new() { Content = "Analisar com IA local", IsEnabled = false }, cancel = new() { Content = "Cancelar", IsEnabled = false };
     private CancellationTokenSource? request;
     private readonly SettingsStore settings;
+    private readonly Button start = new() { Content = "Iniciar mecanismo local" }, download = new() { Content = "Baixar modelo" };
+    private readonly TextBox modelName = new() { Text = "", MinHeight = 32, Margin = new Thickness(0, 4, 0, 6), ToolTip = "Nome exato de um modelo local do catálogo Ollama" };
     internal LocalOptimizerAiPanel(SettingsStore store)
     {
         settings = store;
         Children.Add(new TextBlock { Text = "Sugestões com IA local", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 6) });
         Children.Add(result); Children.Add(models);
+        Children.Add(new TextBlock { Text = "Preparar IA neste computador", FontWeight = FontWeights.SemiBold });
+        Children.Add(new TextBlock { Text = "Nome do modelo Ollama para baixar (download pode ocupar vários GB)", TextWrapping = TextWrapping.Wrap, FontSize = 11 });
+        Children.Add(modelName);
+        var preparation = new WrapPanel(); preparation.Children.Add(start); preparation.Children.Add(download); Children.Add(preparation);
+        System.Windows.Automation.AutomationProperties.SetName(modelName, "Nome do modelo local a baixar");
+        start.Click += async (_, _) =>
+        {
+            if (request is not null) return;
+            using var cancellation = new CancellationTokenSource(); request = cancellation; SetBusy(true);
+            try { await LocalOptimizerAi.StartRuntime(cancellation.Token); result.Text = "Mecanismo local pronto. Use Localizar modelos instalados ou baixe um modelo abaixo."; }
+            catch (Exception e) when (Expected(e) || e is System.ComponentModel.Win32Exception) { result.Text = "Não foi possível preparar o mecanismo: " + e.Message; }
+            finally { request = null; SetBusy(false); }
+        };
+        download.Click += async (_, _) =>
+        {
+            if (request is not null) return;
+            string name = modelName.Text.Trim();
+            if (name.Length == 0) { result.Text = "Informe o nome exato de um modelo local do catálogo Ollama."; return; }
+            if (((App)Application.Current).Optimizer.GameForeground) { result.Text = "Saia do jogo antes de baixar ou preparar a IA."; return; }
+            if (MessageBox.Show(Window.GetWindow(this), "Baixar “" + name + "” pelo Ollama? O download usa internet e pode ocupar vários GB. Os pesos ficarão no armazenamento gerenciado pelo Ollama.", "Preparar IA local", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            using var cancellation = new CancellationTokenSource(); request = cancellation; SetBusy(true); result.Text = "Preparando download autorizado…";
+            try
+            {
+                await LocalOptimizerAi.StartRuntime(cancellation.Token);
+                await LocalOptimizerAi.DownloadModel(name, new Progress<string>(value => { if (!cancellation.IsCancellationRequested) result.Text = "Download do modelo · " + value; }), cancellation.Token);
+                var installed = await LocalOptimizerAi.Models(cancellation.Token); models.ItemsSource = installed; models.SelectedItem = name;
+                result.Text = "Modelo baixado. Selecione-o na lista para solicitar a análise.";
+            }
+            catch (Exception e) when (Expected(e) || e is System.IO.IOException or System.ComponentModel.Win32Exception) { result.Text = "Preparação interrompida: " + e.Message; }
+            finally { request = null; SetBusy(false); }
+        };
         var actions = new WrapPanel(); actions.Children.Add(refresh); actions.Children.Add(analyze); actions.Children.Add(cancel); Children.Add(actions);
         System.Windows.Automation.AutomationProperties.SetName(models, "Modelo de IA instalado localmente");
         refresh.Click += async (_, _) =>
@@ -55,6 +88,6 @@ internal sealed class LocalOptimizerAiPanel : StackPanel
         Unloaded += (_, _) => { request?.Cancel(); ((App)Application.Current).Optimizer.Changed -= GameChanged; };
     }
     private void GameChanged() { if (((App)Application.Current).Optimizer.GameForeground) request?.Cancel(); }
-    private void SetBusy(bool busy) { refresh.IsEnabled = !busy; analyze.IsEnabled = !busy && models.SelectedItem is string; models.IsEnabled = !busy; cancel.IsEnabled = busy; }
+    private void SetBusy(bool busy) { refresh.IsEnabled = !busy; start.IsEnabled = download.IsEnabled = modelName.IsEnabled = !busy; analyze.IsEnabled = !busy && models.SelectedItem is string; models.IsEnabled = !busy; cancel.IsEnabled = busy; }
     private static bool Expected(Exception e) => e is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException or System.Collections.Generic.KeyNotFoundException;
 }
