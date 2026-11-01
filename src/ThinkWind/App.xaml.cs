@@ -20,6 +20,8 @@ public partial class App : Application
     private string monitorSignature = "";
     private SettingsWindow? settings;
     private VirtualKeyboardWindow? virtualKeyboard;
+    internal UpdateController Updates { get; private set; } = null!;
+    private UpdateNotice? updateNotice;
     private TutorialWindow? tutorial;
     internal void RepeatTutorial()
     {
@@ -110,6 +112,7 @@ public partial class App : Application
             { MessageBox.Show("Não foi possível configurar a inicialização automática: " + error.Message, "Orby Launcher"); }
         }
         ThemeService.Apply(store.Value);
+        InitializeUpdates();
         Telemetry = new HardwareTelemetry(Dispatcher);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         // Populate the shared cache before any monitoring panel is opened.
@@ -237,6 +240,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         virtualKeyboard?.Retire();
+        updateNotice?.Close(); Updates?.Dispose();
         tutorial?.Close();
         startupPriority?.Dispose(); startupPriority = null;
         windowsTaskbar?.Dispose();
@@ -310,6 +314,7 @@ public partial class App : Application
     }
     private void ChangeGameMode(bool active)
     {
+        if (active) { updateNotice?.Close(); updateNotice = null; }
         tutorial?.Suspend(active);
         if (IsExiting) return; gameTransitions++;
         ConfigureStartHotkey();

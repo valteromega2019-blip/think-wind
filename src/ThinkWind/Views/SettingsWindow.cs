@@ -265,6 +265,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         }
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { Note(system, "A opção de inicialização não está disponível para esta conta."); }
         Note(system, "A ocultação da barra original pode ser desativada nesta seção. O launcher não substitui os arquivos do Explorer.");
+        BuildUpdates();
         var about = Section("Sobre e segurança", "Orby Launcher · " + AppBrand.Version);
         Note(about, "Desenvolvedor: " + AppBrand.Developer);
         Note(about, AppBrand.Copyright);
