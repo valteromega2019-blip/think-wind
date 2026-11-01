@@ -11,7 +11,7 @@ using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
-internal sealed class VirtualKeyboardWindow : FloatingWindow
+internal sealed partial class VirtualKeyboardWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
     protected override bool UsesIslandAppearance => true;
@@ -54,6 +54,7 @@ internal sealed class VirtualKeyboardWindow : FloatingWindow
         store.Changed += PreferencesChanged;
         Closed += (_, _) => store.Changed -= PreferencesChanged;
         Build(); keyboardLayout = LayoutPreferences();
+        AddResizeEdges();
     }
     private (string Layout, bool NumberPad, double Scale) LayoutPreferences() => (Store.Value.KeyboardLayout, Store.Value.KeyboardNumberPad, Store.Value.KeyboardScale);
     private void PreferencesChanged(object? sender, EventArgs e)
@@ -170,8 +171,9 @@ internal sealed class VirtualKeyboardWindow : FloatingWindow
     public override void Position()
     {
         double scale = double.IsFinite(Store.Value.KeyboardScale) ? Math.Clamp(Store.Value.KeyboardScale, .7, 1.3) : 1;
-        double width = Math.Min(Display.Width - 24, (Store.Value.KeyboardNumberPad ? 1120 : 920) * scale);
-        double height = Math.Min(Display.Height - 32, 350 * scale);
+        if (resizing || savingResize) { UpdateClip(); return; }
+        double width = Math.Min(Display.Width - 24, Store.Value.KeyboardWidth ?? (Store.Value.KeyboardNumberPad ? 1120 : 920) * scale);
+        double height = Math.Min(Display.Height - 32, Store.Value.KeyboardHeight ?? 350 * scale);
         Width = Math.Max(280, width); Height = Math.Max(200, height);
         nint handle = new WindowInteropHelper(this).Handle; if (handle == 0) return;
         int left = Display.Work.Left + (int)Math.Round((Display.Width - Width) * Display.Scale / 2);

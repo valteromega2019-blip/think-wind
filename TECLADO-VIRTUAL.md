@@ -8,6 +8,7 @@ Implementação isolada na branch `feature/teclado-virtual`, a partir da base 0.
 - Em Personalizar → Teclado é possível escolher teclado próprio/nativo, layout PT-BR ou US, escala e painel numérico. Preferências são persistidas pelo SettingsStore existente.
 - A janela própria reutiliza FloatingWindow e o compositor Acrylic, recursos de fonte, cores, opacidade e arredondamento do launcher.
 - Posicionamento inicial centralizado na área útil inferior do monitor configurado, usando coordenadas nativas e DPI. Pode ser movida pelo título. Não reserva nem modifica a área de trabalho.
+- Bordas e quatro cantos permitem redimensionar com o mouse sem ativar a janela. O fundo acompanha o arrasto, respeitando DPI e limites da área útil. Largura e altura são salvas ao soltar; o controle de escala nas configurações restaura proporções padrão. Não há temporizador de redimensionamento nem gravações de preferências a cada movimento.
 - O ícone permanece opcional, respeitando as configurações existentes de visibilidade. A seção Teclado também oferece acesso direto.
 
 ## Entrada

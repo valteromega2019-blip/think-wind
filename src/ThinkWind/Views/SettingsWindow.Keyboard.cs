@@ -10,7 +10,8 @@ internal sealed partial class SettingsWindow
         var page = Section("Teclado", "Teclado personalizado com as cores, transparência e fonte do launcher. Ative o ícone Teclado virtual na seção Ícones para acessá-lo.");
         Check(page, "Usar o teclado original do Windows ao clicar no ícone", store.Value.KeyboardUseNative, value => Change(p => p.KeyboardUseNative = value));
         Check(page, "Exibir painel numérico", store.Value.KeyboardNumberPad, value => Change(p => p.KeyboardNumberPad = value));
-        Slider(page, "Tamanho do teclado", .7, 1.3, store.Value.KeyboardScale, value => Change(p => p.KeyboardScale = value), "P0");
+        Slider(page, "Tamanho do teclado", .7, 1.3, store.Value.KeyboardScale, value => Change(p => { p.KeyboardScale = value; p.KeyboardWidth = null; p.KeyboardHeight = null; }), "P0");
+        Note(page, "Arraste as bordas ou os cantos do teclado para ajustar largura e altura. As dimensões são salvas automaticamente; o controle de tamanho acima restaura as proporções padrão.");
         page.Children.Add(Button("Layout português (Brasil)", () => Change(p => p.KeyboardLayout = "PT-BR")));
         page.Children.Add(Button("Layout inglês (US)", () => Change(p => p.KeyboardLayout = "US")));
         page.Children.Add(Button("Abrir / fechar teclado personalizado", () =>

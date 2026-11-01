@@ -13,6 +13,8 @@ public sealed class Preferences
     public bool KeyboardUseNative { get; set; }
     public bool KeyboardNumberPad { get; set; } = true;
     public double KeyboardScale { get; set; } = 1;
+    public double? KeyboardWidth { get; set; }
+    public double? KeyboardHeight { get; set; }
     public string KeyboardLayout { get; set; } = "PT-BR";
     public bool TutorialPending { get; set; }
     public double DockScale { get; set; } = 1;
@@ -213,6 +215,8 @@ public sealed class SettingsStore
     {
         Value.KeyboardLayout = Value.KeyboardLayout == "US" ? "US" : "PT-BR";
         Value.KeyboardScale = Limit(Value.KeyboardScale, .7, 1.3, 1);
+        Value.KeyboardWidth = Value.KeyboardWidth is double keyboardWidth && double.IsFinite(keyboardWidth) ? Math.Clamp(keyboardWidth, 480, 2400) : null;
+        Value.KeyboardHeight = Value.KeyboardHeight is double keyboardHeight && double.IsFinite(keyboardHeight) ? Math.Clamp(keyboardHeight, 260, 1200) : null;
         Value.OverlayAutomatic = true;
         Value.OverlayAppearance = (Value.OverlayAppearance ?? new()).Normalize();
         Value.OverlayVisibleMetrics = (Value.OverlayVisibleMetrics ?? OverlayMetrics.Defaults().ToList())
