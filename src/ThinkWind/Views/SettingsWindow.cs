@@ -282,6 +282,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         layoutSignature = LayoutSignature();
         quickRows.Children.Clear(); moduleRows.Children.Clear();
         var weatherPrimary = Check(quickRows, "Clima na barra principal", store.Value.ShowWeatherInHeader && !store.Value.DisabledQuickControls.Contains("weather"), value => Change(p => p.ShowWeatherInHeader = value));
+        weatherPrimary.Style = SelectionCircleStyle.Create(SelectionGlyph("weather"));
         weatherPrimary.IsEnabled = !store.Value.DisabledQuickControls.Contains("weather");
         AddDisabledIconOption(quickRows, "weather", "Clima");
         foreach (var id in store.Value.QuickOrder.Where(id => id != "settings").ToArray())
@@ -320,6 +321,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         var grip = new TextBlock { Text = "⋮⋮", Width = 26, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.SizeAll };
         grip.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); row.Children.Add(grip);
         var visible = new CheckBox { Content = new TextBlock { Text = name, TextWrapping = TextWrapping.Wrap }, IsChecked = enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 4, 0, 4) };
+        visible.Style = SelectionCircleStyle.Create(SelectionGlyph(id, scope == "modules-settings"));
         System.Windows.Automation.AutomationProperties.SetName(visible, name);
         visible.Checked += (_, _) => { if (!building) toggle(true); };
         visible.Unchecked += (_, _) => { if (!building) toggle(false); };
