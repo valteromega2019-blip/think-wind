@@ -16,13 +16,14 @@ internal sealed class HardwareSummaryCard : Border
     {
         id = metric; CornerRadius = new CornerRadius(20); Padding = new Thickness(compact ? 6 : 10); Margin = new Thickness(compact ? 0 : 3);
         SetResourceReference(BackgroundProperty, "Think.GlassCard");
-        var panel = new StackPanel(); var heading = new StackPanel { Orientation = Orientation.Horizontal };
-        var icon = new TextBlock { Text = metric switch { "cpu" => "\uE950", "gpu" => "\uE7F4", "ram" => "\uE964", _ => "\uEDA2" }, FontSize = 13, FontFamily = new FontFamily("Segoe Fluent Icons"), Margin = new Thickness(0, 0, 8, 0) };
-        icon.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); heading.Children.Add(icon);
-        var title = new TextBlock { Text = Label(metric), FontSize = 11 }; title.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); heading.Children.Add(title);
-        value.FontSize = compact ? 20 : 25; value.FontWeight = FontWeights.SemiBold; value.Margin = new Thickness(0, compact ? 4 : 8, 0, 2);
+        var panel = new StackPanel(); var heading = new DockPanel();
+        var icon = new TextBlock { Text = metric switch { "cpu" => "\uE950", "gpu" => "\uE7F4", "ram" => "\uE964", _ => "\uEDA2" }, FontSize = compact ? 16 : 13, FontFamily = new FontFamily("Segoe Fluent Icons"), Margin = new Thickness(0, 0, 8, 0) };
+        icon.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); DockPanel.SetDock(icon, Dock.Left); heading.Children.Add(icon);
+        var title = new TextBlock { Text = Label(metric), FontSize = compact ? 14 : 11, TextWrapping = compact ? TextWrapping.Wrap : TextWrapping.NoWrap }; title.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); heading.Children.Add(title);
+        value.FontSize = compact ? 30 : 25; value.FontWeight = FontWeights.SemiBold; value.Margin = new Thickness(0, compact ? 6 : 8, 0, 2);
+        value.TextWrapping = compact ? TextWrapping.Wrap : TextWrapping.NoWrap;
         value.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");
-        detail.FontSize = 10; detail.TextWrapping = TextWrapping.NoWrap; detail.TextTrimming = TextTrimming.CharacterEllipsis;
+        detail.FontSize = compact ? 12 : 10; detail.TextWrapping = TextWrapping.NoWrap; detail.TextTrimming = TextTrimming.CharacterEllipsis;
         detail.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         progress.Margin = new Thickness(0, compact ? 4 : 8, 0, 0);
         progress.SetResourceReference(Control.ForegroundProperty, "Think.Accent"); progress.SetResourceReference(Control.BackgroundProperty, "Think.Hover");

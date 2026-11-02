@@ -273,18 +273,6 @@ internal sealed partial class SettingsWindow : FloatingWindow
         }
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { Note(system, "A opção de inicialização não está disponível para esta conta."); }
         Note(system, "A ocultação da barra original pode ser desativada nesta seção. O launcher não substitui os arquivos do Explorer.");
-        var compactMonitoring = Section("Monitoramento compacto", "Escolha até 3 blocos da área completa. Os dados usam a mesma coleta de sensores.");
-        foreach (string metric in new[] { "cpu", "gpu", "ram", "disk" })
-        {
-            string id = metric;
-            Check(compactMonitoring, HardwareSummaryCard.Label(id), store.Value.CompactMonitoringMetrics.Contains(id), selected =>
-            {
-                if (building) return;
-                if (selected && !store.Value.CompactMonitoringMetrics.Contains(id) && store.Value.CompactMonitoringMetrics.Count >= 3)
-                { MessageBox.Show("Selecione no máximo 3 blocos. Desmarque um antes de adicionar outro.", "Monitoramento compacto"); Build(); return; }
-                Change(p => { if (selected) { if (!p.CompactMonitoringMetrics.Contains(id)) p.CompactMonitoringMetrics.Add(id); } else p.CompactMonitoringMetrics.Remove(id); });
-            });
-        }
         BuildUpdates();
         var about = Section("Sobre e segurança", "Orby Launcher · " + AppBrand.Version);
         Note(about, "Desenvolvedor: " + AppBrand.Developer);
@@ -342,11 +330,19 @@ internal sealed partial class SettingsWindow : FloatingWindow
         var grip = new TextBlock { Text = "⋮⋮", Width = 26, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.SizeAll };
         grip.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); row.Children.Add(grip);
         var visible = new CheckBox { Content = new TextBlock { Text = name, TextWrapping = TextWrapping.Wrap }, IsChecked = enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 4, 0, 4) };
-        visible.Style = SelectionCircleStyle.Create(SelectionGlyph(id, scope == "modules-settings"));
+        visible.Style = SelectionCircleStyle.Create(SelectionGlyph(id, scope is "modules-settings" or "widgets-settings"));
         System.Windows.Automation.AutomationProperties.SetName(visible, name);
         visible.Checked += (_, _) => { if (!building) toggle(true); };
         visible.Unchecked += (_, _) => { if (!building) toggle(false); };
         row.Children.Add(visible); parent.Children.Add(row);
+        if (id == "metrics" && (scope is "modules-settings" or "widgets-settings"))
+        {
+            var options = CompactMonitoringOptions();
+            options.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+            visible.Checked += (_, _) => options.Visibility = Visibility.Visible;
+            visible.Unchecked += (_, _) => options.Visibility = Visibility.Collapsed;
+            parent.Children.Add(options);
+        }
         LayoutDrag.Attach(row, scope, id, () => true, (from, to, after) => { reorder(from, to, after); Dispatcher.BeginInvoke(new Action(RebuildLayoutRows)); }, true, grip);
     }
     private StackPanel Section(string title, string description)

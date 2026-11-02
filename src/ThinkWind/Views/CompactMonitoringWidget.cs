@@ -12,7 +12,7 @@ internal sealed class CompactMonitoringWidget : StackPanel
     private readonly HardwareTelemetry telemetry;
     private readonly SettingsStore store;
     private readonly List<HardwareSummaryCard> cards = new();
-    private readonly TextBlock battery = new() { FontSize = 12, Margin = new Thickness(6, 4, 6, 0), Visibility = Visibility.Collapsed };
+    private readonly TextBlock battery = new() { FontSize = 14, Margin = new Thickness(6, 4, 6, 0), Visibility = Visibility.Collapsed };
     private string? signature;
     internal event Action? LayoutChanged;
     internal CompactMonitoringWidget(SettingsStore settings, HardwareTelemetry source)
@@ -32,7 +32,7 @@ internal sealed class CompactMonitoringWidget : StackPanel
             signature = next; Children.Clear(); cards.Clear();
             foreach (string id in store.Value.CompactMonitoringMetrics.Take(3))
             { var card = new HardwareSummaryCard(id, compact: true) { Margin = new Thickness(0, 2, 0, 2) }; cards.Add(card); Children.Add(card); }
-            if (cards.Count == 0) Children.Add(new TextBlock { Text = "Escolha até 3 blocos em Personalizar → Desempenho → Monitoramento compacto.", TextWrapping = TextWrapping.Wrap });
+            if (cards.Count == 0) Children.Add(new TextBlock { Text = "Escolha até 3 blocos em Personalizar → Widgets → Monitoramento.", TextWrapping = TextWrapping.Wrap });
             Children.Add(battery);
             LayoutChanged?.Invoke();
         }

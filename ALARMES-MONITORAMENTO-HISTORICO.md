@@ -25,13 +25,15 @@ Branch: `feature/alarmes-monitoramento`, criada a partir de `feature/relogio-pre
 
 Referências oficiais: [estado da barra](https://learn.microsoft.com/en-us/windows/win32/shell/abm-setstate), [isolamento de privilégios da interface](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-securityoverview), [funcionamento do UAC](https://learn.microsoft.com/en-us/windows/security/identity-protection/user-account-control/how-user-account-control-works).
 
-## Personalizar → Desempenho → Monitoramento compacto
+## Personalizar → Widgets → Monitoramento
 
 - Selecionar de zero a três blocos: CPU, GPU, RAM e armazenamento. Padrão: RAM.
 - `HardwareSummaryCard` é compartilhado com os blocos do resumo completo. Mantém temperatura/uso ou memória/armazenamento, ícones, cores e progresso do tema.
 - O widget adapta sua altura à quantidade escolhida. Não reconstrói os cartões a cada amostra; atualiza seus textos e barras.
 - Usa `HardwareTelemetry.Latest` e `Changed`, sem criar outro coletor, consultas ou timers. Registra consumo somente enquanto carregado/visível; desregistra ao descarregar e ocultar. A seleção fica em `CompactMonitoringMetrics` nas configurações.
 - Opções anteriores de RAM e bateria seguem disponíveis para os demais indicadores da central; a seleção deste widget é independente.
+- Personalização inserida logo abaixo do interruptor do módulo Monitoramento, nos editores Widgets e Editor de layout. Aparece apenas com o módulo habilitado; desativar preserva a seleção para quando reativar. A antiga página separada de Monitoramento compacto foi removida.
+- Valores do widget aumentados de 20 para 30 DIP, títulos de 11 para 14, detalhes de 10 para 12 e ícones de 13 para 16. Texto principal pode quebrar em vez de cortar em fontes maiores. A tipografia do painel completo permanece nos tamanhos anteriores; preferências globais de fonte/cor continuam aplicadas.
 
 ## Site → Atualizações
 
