@@ -10,7 +10,7 @@ using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
-internal enum MiniIslandKind { Volume, Network, Calendar, Tray, Bluetooth, Clock }
+internal enum MiniIslandKind { Volume, Network, Calendar, Tray, Bluetooth, Clock, Weather }
 internal sealed class MiniIslandWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
@@ -26,12 +26,13 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly WifiControl? wifi;
     private readonly BluetoothControl? bluetooth;
     private readonly ClockPanel? clockPanel;
+    private readonly WeatherWidget? weatherLocation;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private DateTime nextRefresh;
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
     internal int ActiveBluetoothWatchers => bluetooth?.ActiveWatchers ?? 0;
-    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true;
+    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true || weatherLocation?.IsInteracting == true;
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
@@ -42,6 +43,11 @@ internal sealed class MiniIslandWindow : FloatingWindow
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
         heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Clock => "Relógio", MiniIslandKind.Bluetooth => "Bluetooth", MiniIslandKind.Volume => "Áudio e microfone", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
         panel.Children.Add(heading);
+        if (kind == MiniIslandKind.Weather)
+        {
+            Title = "Orby Launcher — Cidade do clima";
+            if (heading.Children[heading.Children.Count - 1] is TextBlock label) label.Text = "Cidade do clima";
+        }
         if (kind == MiniIslandKind.Volume)
         {
             var service = new AudioService();
@@ -71,6 +77,11 @@ internal sealed class MiniIslandWindow : FloatingWindow
         {
             tray = new TrayCard(store); tray.LayoutChanged += Position; panel.Children.Add(tray);
         }
+        else if (kind == MiniIslandKind.Weather)
+        {
+            weatherLocation = new WeatherWidget(store, configureLocation: true) { Height = double.NaN, Margin = new Thickness(6) };
+            panel.Children.Add(weatherLocation);
+        }
         else if (kind == MiniIslandKind.Clock)
         {
             clockPanel = new ClockPanel(); clockPanel.LayoutChanged += Position; panel.Children.Add(clockPanel);
@@ -95,6 +106,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
         timer.Tick += (_, _) => { if (IsVisible) RefreshContent(false); };
         IsVisibleChanged += (_, _) => { wifi?.SetActive(IsVisible); bluetooth?.SetActive(IsVisible); mixer?.SetActive(IsVisible && mixerSelected); if (!IsVisible) { timer.Stop(); Dismissed?.Invoke(); } };
         IsVisibleChanged += (_, _) => clockPanel?.SetActive(IsVisible);
+        IsVisibleChanged += (_, _) => weatherLocation?.SetActive(IsVisible);
+        Closed += (_, _) => weatherLocation?.Dispose();
         Closed += (_, _) => clockPanel?.Dispose();
         Closed += (_, _) => { timer.Stop(); wifi?.Dispose(); bluetooth?.Dispose(); mixer?.Dispose(); };
     }
@@ -119,6 +132,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         if (refresh) nextRefresh = DateTime.UtcNow.AddSeconds(5);
         if (audio is not null) { if (mixerSelected) mixer?.Poll(); else { audio.Poll(refresh); microphone?.Poll(refresh); } }
         else if (tray is not null) tray.Refresh();
+        weatherLocation?.Configure();
         Position();
     }
     public override void Position()

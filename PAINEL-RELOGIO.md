@@ -19,3 +19,9 @@ Cronômetro exibe centésimos e atualiza a cada 100 ms somente enquanto a aba es
 As duas abas agora ocupam a mesma célula Grid, com a aba inativa Hidden em vez de Collapsed. Ambas participam da medição e reservam a maior dimensão, evitando encolhimento/expansão ao alternar. O texto de estado tem reserva mínima para mensagens. Não foram adicionados timers ou loops.
 
 Revisão por leitura e diff; não executados compilação, testes ou type check nesta correção.
+
+## Cidade do clima pela barra
+
+O clique no clima abre uma mini-ilha ancorada no próprio botão, tanto na ilha quanto no modo barra. Reutiliza WeatherWidget em modo configuração: busca Open-Meteo, lista de cidades e salvamento de nome/coordenadas nas preferências existentes. Não usa localização automática nem cria novo serviço de rede. Selecionar resultado atualiza a configuração consumida pelo clima da barra/widget. A edição nas configurações continua disponível.
+
+Busca é cancelada ao ocultar e recursos são descartados ao fechar a janela. A lista de cidades aberta conta como interação para impedir recolhimento. Revisão por leitura/diff; sem compilação, testes ou type check nesta solicitação.
