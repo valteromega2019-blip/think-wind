@@ -80,6 +80,17 @@ internal sealed partial class WindowPreview : FloatingWindow
         musicCard?.Dispose(); selectedMusic = selection;
         musicCard = new MediaCard(selection: selection);
         musicCard.ConfigureDockPreview();
+        musicCard.PreviewPlaybackStopped += () =>
+        {
+            // Avoid replacing the visual tree from inside a media render.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!IsVisible || musicCard?.IsInteracting == true) return;
+                if (browserMode && !callMode && browserMusic is not null)
+                    PresentBrowser(windows.ToArray(), browserTabs, browserMeeting, music: null);
+                else if (musicMode) Present(windows.ToArray());
+            }));
+        };
         musicCard.LayoutChanged += () => { if (IsVisible && (musicMode || browserMode)) Position(); };
     }
     internal void PresentCall(CallSnapshot snapshot, IEnumerable<Desktop.RunningWindow> source)

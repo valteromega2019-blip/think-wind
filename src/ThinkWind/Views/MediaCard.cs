@@ -49,6 +49,7 @@ internal sealed class MediaCard : Grid, IDisposable
     internal bool IsInteracting => seeking || dragging || busy || IsMouseCaptureWithin;
     internal event Action? AvailabilityChanged;
     internal event Action? LayoutChanged;
+    internal event Action? PreviewPlaybackStopped;
     internal void SetWindowActions(FrameworkElement actions)
     {
         if (windowActions is not null) Children.Remove(windowActions);
@@ -127,6 +128,7 @@ internal sealed class MediaCard : Grid, IDisposable
         toggle.Content = Icon(state?.Playing == true ? "\uE769" : "\uE768");
         title.ToolTip = title.Text; artist.ToolTip = artist.Text; player.ToolTip = player.Text;
         RenderButtons(); UpdateProgress();
+        if (dockPreview && state?.Playing != true) PreviewPlaybackStopped?.Invoke();
         if (wasAvailable != Available) AvailabilityChanged?.Invoke();
         if (wasAvailable != Available || metadataChanged) { InvalidateMeasure(); LayoutChanged?.Invoke(); }
     }

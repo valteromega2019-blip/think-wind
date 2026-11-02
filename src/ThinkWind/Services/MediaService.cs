@@ -55,7 +55,7 @@ internal sealed class MediaService : IDisposable
                 try
                 {
                     var playback = candidate.GetPlaybackInfo();
-                    if (playback.PlaybackStatus is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed or GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped
+                    if (playback.PlaybackStatus != GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing
                         || !MusicSessionPolicy.HasControls(playback.Controls)) continue;
                     var properties = await candidate.TryGetMediaPropertiesAsync(); cancellation.ThrowIfCancellationRequested();
                     if (MusicSessionPolicy.Matches(candidate.SourceAppUserModelId, properties.Title, identity, out bool dedicated)
