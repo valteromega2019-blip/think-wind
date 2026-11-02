@@ -63,7 +63,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         var row = new StackPanel { Orientation = Orientation.Horizontal };
         var icon = Glyph("\uE787", statusBar ? 14 : 16);
         icon.Margin = new Thickness(0, 0, 5, 0); row.Children.Add(icon); row.Children.Add(label);
-        var button = ActionButton("Abrir calendário", () => { if (!Store.IsEditing) ShowMini(MiniIslandKind.Calendar); });
+        var button = ActionButton("Abrir calendário", () => { });
+        button.Click += (_, _) => { if (!Store.IsEditing) ShowMini(MiniIslandKind.Calendar, statusBar ? button : null); };
         button.Content = row; button.Style = (Style)FindResource("Think.IconButton");
         button.Padding = new Thickness(5, 0, 5, 0);
         button.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
