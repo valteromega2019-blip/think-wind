@@ -19,6 +19,17 @@ internal sealed class HardwareOverlayWindow : Window
     private readonly SettingsStore store;
     private BackdropHost? backdrop;
     private (bool Light, bool HighContrast)? materialState;
+    private bool previewActive;
+    // UI-only fixture: never published to telemetry/history or the collector.
+    private static readonly HardwareSample PreviewSample = new(DateTime.Today.AddHours(14).AddMinutes(30),
+        new DeviceReading("CPU de exemplo", 62, 48, 4500, 65),
+        new DeviceReading("GPU de exemplo", 68, 92, 2400, 180, 6.4, 12),
+        16, 32, 420, 1000, "C:", "Prévia · dados simulados",
+        Extra: new System.Collections.Generic.Dictionary<string, double?> {
+            ["cpu_maxcore"] = 76, ["cpu_clockmax"] = 4800, ["gpu_hotspot"] = 79,
+            ["gpu_memclock"] = 9000, ["gpu_volt"] = 1.05, ["gpu_fan"] = 1450, ["vram_temp"] = 72 },
+        Frames: new FrameStats(0, "Jogo de exemplo", 144, 6.9, 112,
+            new double[] { 6.9, 6.8, 7.1, 6.7, 7.5, 6.9, 6.8, 8.2, 7.0, 6.9, 6.8, 7.2 }));
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongW")] private static extern int SetWindowLong(nint window, int index, int value);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
@@ -51,6 +62,7 @@ internal sealed class HardwareOverlayWindow : Window
     }
     internal void Apply(bool gameActive = false, bool preview = false)
     {
+        previewActive = preview;
         var p = store.Value;
         bool visible = (p.HardwareOverlayEnabled && gameActive) || preview;
         telemetry.CaptureFrames = visible && gameActive && p.OverlayVisibleMetrics.Any(key => key is "fps" or "frametime" or "low1" or "graph" or "game");
@@ -65,6 +77,7 @@ internal sealed class HardwareOverlayWindow : Window
     private void Update(HardwareSample sample) { if (IsVisible) Render(sample); }
     private void Render(HardwareSample? sample)
     {
+        if (previewActive) sample = PreviewSample;
         var options = store.Value.OverlayAppearance;
         var palette = OverlayPalette.Resolve(options, Application.Current.Resources, store.Value);
         Brush B(Color color) => OverlayPalette.Brush(color);
@@ -81,6 +94,7 @@ internal sealed class HardwareOverlayWindow : Window
             Foreground = B(muted ? palette.Muted : palette.Text), TextWrapping = TextWrapping.Wrap, MaxWidth = 420 };
         Border Block(UIElement content) => new() { Background = B(palette.Block), CornerRadius = surface.CornerRadius,
             Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 3), Child = content };
+        if (previewActive) rows.Children.Add(Text("Prévia · dados simulados", 11, true));
         var selected = store.Value.OverlayVisibleMetrics;
         string V(string key) => sample is null ? "—" : OverlayReadings.Value(sample, key);
         if (selected.Contains("fps") || selected.Contains("frametime"))
