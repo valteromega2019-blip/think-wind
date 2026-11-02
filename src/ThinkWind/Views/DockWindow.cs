@@ -433,6 +433,10 @@ internal sealed partial class DockWindow : FloatingWindow
         bool minimized = item.Windows.Count > 0 && item.Windows.All(w => w.Minimized);
         var size = fit.Icon;
         var panel = new Grid { Height = size + 14, VerticalAlignment = VerticalAlignment.Center };
+        panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(size) });
+        panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(6) });
+        panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4) });
+        panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4) });
         var catalogApp = item.Glyph is null ? catalog.Items.FirstOrDefault(app =>
             (!string.IsNullOrWhiteSpace(selected?.AppId) && string.Equals(app.AppId, selected?.AppId, StringComparison.OrdinalIgnoreCase))
             || (item.Target is not null && app.Target.Equals(item.Target, StringComparison.OrdinalIgnoreCase))) : null;
@@ -451,17 +455,17 @@ internal sealed partial class DockWindow : FloatingWindow
         var indicator = new Border
         {
             Height = focused is not null ? 4 : 3,
-            Width = focused is not null ? 26 : minimized ? 10 : 14,
-            CornerRadius = new CornerRadius(2), Margin = new Thickness(0, 0, 0, 4), VerticalAlignment = VerticalAlignment.Bottom,
+            Width = Math.Min(size, focused is not null ? 26 : minimized ? 10 : 14),
+            CornerRadius = new CornerRadius(2), VerticalAlignment = VerticalAlignment.Center,
             Opacity = item.Windows.Count == 0 ? 0 : 1,
             IsHitTestVisible = false
         };
-        indicator.RenderTransform = new TranslateTransform(0, 7);
+        Grid.SetRow(indicator, 2);
         if (focused is not null) indicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent");
         else indicator.Background = SystemParameters.HighContrast ? SystemColors.WindowTextBrush : Brushes.WhiteSmoke;
         panel.Children.Add(indicator);
-        var dropIndicator = new Border { Height = 2, Width = 20, CornerRadius = new CornerRadius(1), VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Hidden };
-        dropIndicator.RenderTransform = new TranslateTransform(0, 7);
+        var dropIndicator = new Border { Height = 2, Width = Math.Min(size, 20), CornerRadius = new CornerRadius(1), VerticalAlignment = VerticalAlignment.Center, Visibility = Visibility.Hidden };
+        Grid.SetRow(dropIndicator, 2);
         dropIndicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent"); panel.Children.Add(dropIndicator);
         nint foregroundBeforeClick = 0;
         var button = ActionButton(item.Name, () =>
