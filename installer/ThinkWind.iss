@@ -1,7 +1,7 @@
 ; Compile only after publishing the independent project; see README.
-#define MyAppVersion "0.27.1-beta"
+#define MyAppVersion "0.28.0-beta"
 #ifndef PublishDir
-#define PublishDir "..\artifacts\publish-v0.27.1-beta"
+#define PublishDir "..\artifacts\publish-v0.28.0-beta"
 #endif
 [Setup]
 AppId={{B7408A21-58E2-4E3A-A842-84EF85965350}
@@ -10,7 +10,7 @@ AppPublisher=Think
 VersionInfoCompany=Think
 VersionInfoDescription=Instalador do Orby Launcher
 AppVersion={#MyAppVersion}
-VersionInfoVersion=0.27.1.0
+VersionInfoVersion=0.28.0.0
 DefaultDirName={localappdata}\Programs\OrbyLauncher
 PrivilegesRequired=lowest
 DefaultGroupName=Orby Launcher
@@ -27,8 +27,12 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
 RestartApplications=no
+ShowLanguageDialog=yes
+LanguageDetectionMethod=uilanguage
+DisableWelcomePage=no
+#include "OrbyLanguages.iss"
 [Tasks]
-Name: "pawnio"; Description: "Instalar PawnIO oficial para sensores, se necessario (requer administrador)"; Flags: checkedonce
+Name: "pawnio"; Description: "{cm:PawnTask}"; Flags: checkedonce
 [Files]
 Source: "..\artifacts\dependencies\PawnIO_setup.exe"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -36,13 +40,18 @@ Source: "..\src\ThinkWind\Assets\OrbyLauncher.ico"; DestDir: "{app}"; Flags: ign
 [Icons]
 Name: "{group}\Orby Launcher"; Filename: "{app}\OrbyLauncher.exe"; IconFilename: "{app}\OrbyLauncher.ico"; AppUserModelID: "Think.OrbyLauncher"
 [Run]
-Filename: "{app}\OrbyLauncher.exe"; Description: "Abrir Orby Launcher"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\OrbyLauncher.exe"; Description: "{cm:LaunchProgram,Orby Launcher}"; Flags: nowait postinstall skipifsilent
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "OrbyLauncher"; Flags: uninsdeletevalue
 
 [Code]
 var
   DriverRestartRequired: Boolean;
+
+procedure InitializeWizard;
+begin
+  WizardForm.WelcomeLabel2.Caption := WizardForm.WelcomeLabel2.Caption + #13#10#13#10 + CustomMessage('LauncherLanguageNote');
+end;
 
 function PawnIOCompatible: Boolean;
 var
@@ -67,12 +76,12 @@ begin
   ExtractTemporaryFile('PawnIO_setup.exe');
   Installer := ExpandConstant('{tmp}\PawnIO_setup.exe');
   if CompareText(GetSHA256OfFile(Installer), '1F519A22E47187F70A1379A48CA604981C4FCF694F4E65B734AAA74A9FBA3032') <> 0 then
-    RaiseException('O pacote PawnIO nao corresponde ao instalador oficial esperado.');
+    RaiseException(CustomMessage('PawnHashFailure'));
   if not ShellExec('runas', Installer, '-install -silent', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) then
-    SuppressibleMsgBox('PawnIO nao foi instalado. Os sensores basicos continuam disponiveis. Para sensores avancados, instale o driver oficial e autorize o coletor em Personalizar.', mbInformation, MB_OK, IDOK)
+    SuppressibleMsgBox(CustomMessage('PawnInstallFailed'), mbInformation, MB_OK, IDOK)
   else if ExitCode = 3010 then DriverRestartRequired := True
   else if ExitCode <> 0 then
-    SuppressibleMsgBox('O instalador PawnIO retornou codigo ' + IntToStr(ExitCode) + '. Os sensores avancados podem ficar indisponiveis.', mbInformation, MB_OK, IDOK);
+    SuppressibleMsgBox(ExpandConstant('{cm:PawnExitCode,' + IntToStr(ExitCode) + '}'), mbInformation, MB_OK, IDOK);
 end;
 
 function NeedRestart: Boolean;
@@ -93,12 +102,12 @@ begin
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     begin
       Log('Unable to run automatic taskbar configuration.');
-      SuppressibleMsgBox('Nao foi possivel configurar as barras automaticamente. Abra Personalizar > Sistema no Orby Launcher e ative Usar somente a barra do Orby Launcher. No Windows, ative Ocultar automaticamente a barra de tarefas.', mbError, MB_OK, IDOK);
+      SuppressibleMsgBox(CustomMessage('TaskbarSetupFailed'), mbError, MB_OK, IDOK);
     end
     else if ResultCode <> 0 then
     begin
       Log(Format('Automatic taskbar configuration failed, code %d.', [ResultCode]));
-      SuppressibleMsgBox('A instalacao foi concluida, mas a configuracao automatica das barras falhou. Feche o Orby Launcher e tente novamente, ou configure as duas opcoes manualmente. Detalhes em %LOCALAPPDATA%\OrbyLauncher\installation-setup.log, quando disponivel.', mbError, MB_OK, IDOK);
+      SuppressibleMsgBox(ExpandConstant('{cm:TaskbarSetupExitFailed}'), mbError, MB_OK, IDOK);
     end;
   end;
 end;

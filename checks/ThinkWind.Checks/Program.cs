@@ -14,6 +14,10 @@ internal static class Program
         if (args.Contains("--updates")) return UpdateChecks.Run();
         if (args.Contains("--visual-background")) return VisualBackground.Run();
         if (args.Contains("--performance-comparison")) return PerformanceComparison.Run();
+        // Own a minimal WPF application, never the launcher's App (its startup
+        // callback can run while visual checks pump the dispatcher).
+        var application = new System.Windows.Application { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+        application.Resources["Think.IconButton"] = new System.Windows.Style(typeof(System.Windows.Controls.Button));
         Directory.CreateDirectory(Root);
         Run("Configuração ausente usa valores padrão", () =>
         {
@@ -155,6 +159,10 @@ internal static class Program
         Run("Aparência: persistência e normalização da tipografia", () => AppearanceChecks.Persistence(PathFor("typography")));
         Run("Aparência: dois temas, cores, fontes e escalas 100–250%", AppearanceChecks.ResourcesAndLayout);
         Run("Aparência: Acrylic nativo dos menus e liberação em ambos os temas", AppearanceChecks.NativeMenus);
+        Run("0.28: interruptor do template instancia e renderiza em dois temas", Release028Checks.SelectionTemplate);
+        Run("0.28: blocos e unidade selecionada persistem e respeitam limites", () => Release028Checks.MonitoringPreferences(PathFor("monitoring028")));
+        Run("0.28: alarmes, repetição, som e exclusão persistem", () => Release028Checks.AlarmsPersistence(PathFor("alarms028")));
+        Run("0.28: seletor de discos exibe unidades e salva escolha", () => Release028Checks.DiskPicker(PathFor("disk-picker028")));
         Console.WriteLine($"RESULTADO: {passed} aprovados; {failed} falhos; {skipped} ignorados.");
         Console.WriteLine("Arquivos temporários isolados: " + Root);
         BackdropComposition.Shutdown();

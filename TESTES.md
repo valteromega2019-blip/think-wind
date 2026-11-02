@@ -1,4 +1,21 @@
-## 0.21 Beta — entrega atual
+## 0.28.0 Beta — validação solicitada em 02/11/2026
+
+- Build Release: zero erros e zero avisos.
+- Suíte geral: 58 aprovados, zero falhas e zero ignorados.
+- Atualizador: 10 aprovados e zero falhas; inclui consulta real à API sem download/instalação.
+- Quatro regressões novas: criação/renderização do interruptor do template em dois temas, persistência/limites do monitoramento, alarmes persistentes e seletor de unidades.
+- O runner usa Application WPF isolada e estilo auxiliar para seus botões de ícone. Não instancia o App do launcher, evitando iniciar serviços reais ao processar mensagens de janela. Os testes não certificam a aparência completa da interface em todos os dispositivos.
+- Não foram feitas medições comparativas de latência/FPS em jogos, retorno do UAC com aplicativos administrativos ou suspensão prolongada nesta rodada. Instalador multilíngue não traduz a interface do launcher.
+
+Comandos desta rodada:
+
+```powershell
+dotnet build checks/ThinkWind.Checks/ThinkWind.Checks.csproj -c Release -p:RunAnalyzers=false -p:NuGetAudit=false -o artifacts/checks-v0.28.0-beta
+dotnet artifacts/checks-v0.28.0-beta/ThinkWind.Checks.dll
+dotnet artifacts/checks-v0.28.0-beta/ThinkWind.Checks.dll --updates
+```
+
+## Histórico — 0.21 Beta
 
 50 verificações aprovadas, zero falhas e zero ignoradas. Build e publish Release com avisos tratados como erros, lint Roslyn, verificação de estilo e instalador concluídos a pedido explícito do usuário. [Resultados, comandos e limitações](VALIDACAO-0.21-BETA.md).
 
