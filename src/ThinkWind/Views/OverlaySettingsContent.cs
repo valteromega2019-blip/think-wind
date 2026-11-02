@@ -20,6 +20,10 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
     internal OverlaySettingsContent(SettingsStore store)
     {
         settings = store;
+        appearance.HideInlinePreview();
+        Loaded += (_, _) => UpdateScreenPreview();
+        IsVisibleChanged += (_, _) => UpdateScreenPreview();
+        Unloaded += (_, _) => ((App)Application.Current).SetOverlayEditorPreview(this, false);
         MonitoringDesign.Install(Resources, store.Value);
         Resources[typeof(CheckBox)] = SelectionCircleStyle.Create();
         var content = new StackPanel();
@@ -52,14 +56,14 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
         appearance.IslandAppearance = store.Value;
         appearance.SetOptions(store.Value.OverlayAppearance);
         appearance.OptionsChanged += (_, _) => settings.Update(p => p.OverlayAppearance = appearance.GetOptions());
-        var appearanceSection = new Expander { Header = "Aparência e prévia", Content = appearance, IsExpanded = true, Margin = new Thickness(0, 8, 0, 8) };
+        var appearanceSection = new Expander { Header = "Aparência do overlay na tela", Content = appearance, IsExpanded = true, Margin = new Thickness(0, 8, 0, 8) };
         appearanceSection.SetResourceReference(Control.ForegroundProperty, "Think.Text");
         var enabled = new OverlayToggleButton(store) { Margin = new Thickness(0, 8, 0, 8), HorizontalAlignment = HorizontalAlignment.Left };
         var enabledRow = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
         DockPanel.SetDock(enabled, Dock.Left); enabledRow.Children.Add(enabled);
         var enabledLabel = new TextBlock { Text = "Exibir overlay nos jogos", FontSize = 14, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
         enabledLabel.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); enabledRow.Children.Add(enabledLabel); generalPage.Children.Add(enabledRow);
-        var automatic = new TextBlock { Text = "Depois de reconhecer um jogo, o overlay acompanha a sessão até ele fechar, inclusive após Alt+Tab. O interruptor geral de leituras no monitor de desempenho suspende sensores e FPS.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12), FontSize = 12 };
+        var automatic = new TextBlock { Text = "Durante a edição, o overlay aparece diretamente na tela e acompanha suas alterações. Ao fechar, volta ao funcionamento nos jogos. Se as leituras estiverem desligadas, ative-as no monitor de desempenho para visualizar. FPS exige um jogo reconhecido em execução.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12), FontSize = 12 };
         automatic.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); generalPage.Children.Add(automatic);
         var hotkey = new CheckBox { Content = "Ctrl + Shift + O liga/desliga o overlay", IsChecked = store.Value.OverlayHotkeyEnabled, Margin = new Thickness(0, 0, 0, 12) };
         hotkey.SetResourceReference(Control.ForegroundProperty, "Fg");
@@ -120,7 +124,12 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
         System.Windows.Automation.AutomationProperties.SetName(button, text);
         button.Click += (_, _) => action(); return button;
     }
-    public void Dispose() => settings.Changed -= RefreshTheme;
+    private void UpdateScreenPreview() => ((App)Application.Current).SetOverlayEditorPreview(this, IsLoaded && IsVisible);
+    public void Dispose()
+    {
+        settings.Changed -= RefreshTheme;
+        ((App)Application.Current).SetOverlayEditorPreview(this, false);
+    }
     private void RefreshTheme(object? sender, EventArgs e) { MonitoringDesign.Install(Resources, settings.Value); appearance.IslandAppearance = settings.Value; appearance.RefreshPreview(); SyncPositionControls(); }
     private void AddPositionSlider(Panel parent, Slider slider, TextBlock label, bool horizontal)
     {

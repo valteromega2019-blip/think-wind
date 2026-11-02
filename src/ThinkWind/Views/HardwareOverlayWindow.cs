@@ -49,11 +49,11 @@ internal sealed class HardwareOverlayWindow : Window
         telemetry.Changed += Update;
         Closed += (_, _) => { telemetry.Changed -= Update; telemetry.SetActive(this, false); backdrop?.Dispose(); backdrop = null; };
     }
-    internal void Apply(bool gameActive = false)
+    internal void Apply(bool gameActive = false, bool preview = false)
     {
         var p = store.Value;
-        bool visible = p.HardwareOverlayEnabled && gameActive;
-        telemetry.CaptureFrames = visible && p.OverlayVisibleMetrics.Any(key => key is "fps" or "frametime" or "low1" or "graph" or "game");
+        bool visible = (p.HardwareOverlayEnabled && gameActive) || preview;
+        telemetry.CaptureFrames = visible && gameActive && p.OverlayVisibleMetrics.Any(key => key is "fps" or "frametime" or "low1" or "graph" or "game");
         if (!visible) { Hide(); return; }
         surface.LayoutTransform = new ScaleTransform(p.OverlayScale, p.OverlayScale);
         Render(telemetry.Latest);
@@ -62,7 +62,7 @@ internal sealed class HardwareOverlayWindow : Window
         if (!IsVisible) Show();
         PositionOverlay();
     }
-    private void Update(HardwareSample sample) { if (IsVisible && store.Value.HardwareOverlayEnabled) Render(sample); }
+    private void Update(HardwareSample sample) { if (IsVisible) Render(sample); }
     private void Render(HardwareSample? sample)
     {
         var options = store.Value.OverlayAppearance;

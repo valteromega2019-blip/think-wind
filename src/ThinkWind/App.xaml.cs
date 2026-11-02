@@ -249,6 +249,12 @@ public partial class App : Application
         overlaySettings.Closed += (_, _) => { overlaySettings = null; store.SetCustomizing(settings?.IsVisible == true); };
         overlaySettings.Show(); overlaySettings.Position(); overlaySettings.Activate();
     }
+    private readonly HashSet<object> overlayEditors = new();
+    internal void SetOverlayEditorPreview(object editor, bool visible)
+    {
+        if (visible) overlayEditors.Add(editor); else overlayEditors.Remove(editor);
+        if (!IsExiting && Telemetry is not null) ApplyHardwareOverlay();
+    }
     private async void RunSensorWorker(bool captureFrames)
     {
         int result = 1;
@@ -338,7 +344,8 @@ public partial class App : Application
         Telemetry.SelectDisk(store.Value.MonitoringDiskId);
         if (!diagnosing) Telemetry.SetActive(startupSensorConsumer, !IsExiting && gameMode?.Active != true);
         Telemetry.FrameProcessId = gameMode?.OverlayProcessId ?? 0;
-        hardwareOverlay?.Apply(store.Value.HardwareMonitoringEnabled && gameMode?.OverlayGameActive == true);
+        hardwareOverlay?.Apply(store.Value.HardwareMonitoringEnabled && gameMode?.OverlayGameActive == true,
+            store.Value.HardwareMonitoringEnabled && overlayEditors.Count > 0);
         if (!store.Value.OverlayHotkeyEnabled) { overlayHotkey?.Dispose(); overlayHotkey = null; }
         else if (overlayHotkey is null)
         {

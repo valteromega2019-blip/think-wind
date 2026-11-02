@@ -165,6 +165,14 @@ public sealed class OverlayAppearancePanel : UserControl
 
     private void Reflow()
     {
+        if (_hideInlinePreview)
+        {
+            _previewSection.Visibility = Visibility.Collapsed;
+            _columns.ColumnDefinitions.Clear(); _columns.RowDefinitions.Clear();
+            _columns.ColumnDefinitions.Add(new ColumnDefinition());
+            _columns.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            return;
+        }
         bool narrow = ActualWidth < 480;
         if (_narrow == narrow) return;
         _narrow = narrow;
@@ -178,6 +186,8 @@ public sealed class OverlayAppearancePanel : UserControl
             _columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) }); _columns.ColumnDefinitions.Add(new ColumnDefinition()); Grid.SetColumn(_previewSection, 2); Grid.SetRow(_previewSection, 0); _previewSection.Margin = new Thickness(0);
         }
     }
+    private bool _hideInlinePreview;
+    internal void HideInlinePreview() { _hideInlinePreview = true; Reflow(); }
     private void Register(FrameworkElement element, string name) { element.Name = name; RegisterName(name, element); }
     private static TextBlock Text(string text, double size = 13, bool bold = false, string resource = "Fg", Thickness? margin = null) {
         var block = new TextBlock { Text = text, FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, TextWrapping = TextWrapping.Wrap, Margin = margin ?? new Thickness(0) };
