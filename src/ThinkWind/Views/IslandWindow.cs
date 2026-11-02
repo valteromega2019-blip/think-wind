@@ -52,6 +52,24 @@ internal sealed partial class IslandWindow : FloatingWindow
     private bool collapseEnabled;
     private double collapseSeconds = -1;
     private readonly TextBlock clock = new() { FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 10, 0) };
+    private readonly TextBlock headerDate = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock barDate = new() { VerticalAlignment = VerticalAlignment.Center };
+    private Button DateButton(bool statusBar)
+    {
+        var label = statusBar ? barDate : headerDate;
+        if (label.Parent is Panel oldParent) oldParent.Children.Remove(label);
+        label.FontSize = statusBar ? 12 : 14;
+        label.Text = DateTime.Now.ToString("dd/MM", CultureInfo.GetCultureInfo("pt-BR"));
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        var icon = Glyph("\uE787", statusBar ? 14 : 16);
+        icon.Margin = new Thickness(0, 0, 5, 0); row.Children.Add(icon); row.Children.Add(label);
+        var button = ActionButton("Abrir calendário", () => { if (!Store.IsEditing) ShowMini(MiniIslandKind.Calendar); });
+        button.Content = row; button.Style = (Style)FindResource("Think.IconButton");
+        button.Padding = new Thickness(5, 0, 5, 0);
+        button.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
+        button.ToolTip = DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", CultureInfo.GetCultureInfo("pt-BR"));
+        return button;
+    }
     private readonly TextBlock metrics = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4), FontSize = 16 };
     private readonly TextBlock calendarDate = new() { FontSize = 15, TextWrapping = TextWrapping.Wrap };
     private DateTime calendarToday = DateTime.Today;
@@ -292,6 +310,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 clockButton.Padding = new Thickness(0); clockButton.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
                 LayoutDrag.Attach(clockButton, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
                 header.Children.Add(clockButton);
+                header.Children.Add(DateButton(false));
                 if (Store.Value.ShowWeatherInHeader && WeatherEnabled) header.Children.Add(WeatherButton(false));
                 continue;
             }
@@ -371,6 +390,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private void UpdateClock()
     {
         clock.Text = DateTime.Now.ToString("HH:mm", CultureInfo.GetCultureInfo("pt-BR"));
+        headerDate.Text = barDate.Text = DateTime.Now.ToString("dd/MM", CultureInfo.GetCultureInfo("pt-BR"));
         clock.ToolTip = DateTime.Now.ToString("dddd, dd 'de' MMMM", CultureInfo.GetCultureInfo("pt-BR"));
         calendarDate.Text = DateTime.Now.ToString("ddd, dd MMM", CultureInfo.GetCultureInfo("pt-BR"));
         if (calendarToday != DateTime.Today)

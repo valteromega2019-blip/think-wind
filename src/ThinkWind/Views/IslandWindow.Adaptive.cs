@@ -103,6 +103,9 @@ internal sealed partial class IslandWindow
         statusClock.Visibility = IsQuickVisible("clock") ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(statusClock, Dock.Left);
         statusRow.Children.Add(statusClock);
+        var dateButton = DateButton(true);
+        dateButton.Visibility = statusClock.Visibility;
+        DockPanel.SetDock(dateButton, Dock.Left); statusRow.Children.Add(dateButton);
         var statusWeather = WeatherButton(true);
         statusWeather.Visibility = Store.Value.ShowWeatherInHeader ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(statusWeather, Dock.Left); statusRow.Children.Add(statusWeather);
