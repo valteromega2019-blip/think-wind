@@ -11,3 +11,11 @@ Arquivos: ClockPanel.cs, MiniIslandWindow.cs, IslandWindow.cs e IslandWindow.Ada
 Branch feature/relogio-presets, criada com as alterações visuais pendentes preservadas. Blocos usam Think.GlassCard, cantos de 20 DIP e tipografia/ícones Segoe Fluent dos componentes existentes. Abas e presets selecionados usam Think.AccentSurface/Accent; números de cronômetro/temporizador seguem o destaque. Botões de iniciar/pausar/continuar, zerar, cancelar e alarmes recebem ícones.
 
 Presets 5, 10, 15 e 30 minutos preenchem a duração e aguardam Iniciar; não substituem uma contagem ativa/pausada sem cancelamento. A entrada manual continua disponível. Nenhum timer adicional foi criado. Revisão por leitura/diff, sem compilação, testes ou type check nesta solicitação.
+
+## Correção de resposta e dimensão
+
+Cronômetro exibe centésimos e atualiza a cada 100 ms somente enquanto a aba está visível e contando. Iniciar, pausar e zerar atualizam imediatamente e ajustam o intervalo; ao ocultar retorna ao ritmo de um segundo se houver temporizador ativo, ou para o timer quando desnecessário. A contagem permanece baseada em Stopwatch, não em ticks.
+
+As duas abas agora ocupam a mesma célula Grid, com a aba inativa Hidden em vez de Collapsed. Ambas participam da medição e reservam a maior dimensão, evitando encolhimento/expansão ao alternar. O texto de estado tem reserva mínima para mensagens. Não foram adicionados timers ou loops.
+
+Revisão por leitura e diff; não executados compilação, testes ou type check nesta correção.
