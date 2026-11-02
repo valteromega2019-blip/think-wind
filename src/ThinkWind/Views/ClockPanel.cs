@@ -18,6 +18,7 @@ internal sealed class ClockPanel : StackPanel, IDisposable
     private TextBox? minutesInput;
     private bool completed;
     private bool watchSelected = true;
+    internal event Action? LayoutChanged;
     internal ClockPanel()
     {
         Margin = new Thickness(6);
@@ -30,9 +31,7 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         var clockContent = new StackPanel(); clockContent.Children.Add(clock); clockContent.Children.Add(date);
         Children.Add(Card(clockContent));
         var tabs = new WrapPanel { Margin = new Thickness(0, 12, 0, 8) };
-        // Hidden pages still participate in measurement, so switching tabs
-        // cannot shrink the native window or rescale its Viewbox mid-click.
-        var watchArea = new StackPanel(); var timerArea = new StackPanel { Visibility = Visibility.Hidden };
+        var watchArea = new StackPanel(); var timerArea = new StackPanel { Visibility = Visibility.Collapsed };
         var start = Button("Iniciar", () => { });
         start.Click += (_, _) => { if (stopwatch.IsRunning) stopwatch.Stop(); else stopwatch.Start(); start.Content = Label(stopwatch.IsRunning ? "\uE769" : "\uE768", stopwatch.IsRunning ? "Pausar" : "Continuar"); Refresh(); UpdateTimer(); };
         watchArea.Children.Add(elapsed);
@@ -95,9 +94,8 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         timerButtons.Children.Add(run);
         timerButtons.Children.Add(Button("Cancelar", () => { countdown.Reset(); duration = TimeSpan.Zero; run.Content = Label("\uE768", "Iniciar"); notice.Text = ""; Refresh(); UpdateTimer(); }));
         timerArea.Children.Add(timerButtons); timerArea.Children.Add(notice);
-        notice.MinHeight = 40;
-        var watchTab = Button("Cronômetro", () => { watchSelected = true; watchArea.Visibility = Visibility.Visible; timerArea.Visibility = Visibility.Hidden; Refresh(); UpdateTimer(); });
-        var timerTab = Button("Temporizador", () => { watchSelected = false; watchArea.Visibility = Visibility.Hidden; timerArea.Visibility = Visibility.Visible; Refresh(); UpdateTimer(); });
+        var watchTab = Button("Cronômetro", () => { watchSelected = true; watchArea.Visibility = Visibility.Visible; timerArea.Visibility = Visibility.Collapsed; Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
+        var timerTab = Button("Temporizador", () => { watchSelected = false; watchArea.Visibility = Visibility.Collapsed; timerArea.Visibility = Visibility.Visible; Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
         watchTab.Content = Label("\uE916", "Cronômetro"); timerTab.Content = Label("\uE91E", "Temporizador");
         void Highlight(bool timer)
         {
@@ -150,6 +148,7 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         elapsed.Text = Format(watchTime) + watchTime.ToString(@"\.ff");
         var pending = !completed && duration == TimeSpan.Zero && int.TryParse(minutesInput?.Text, out int value) && value is >= 1 and <= 1440 ? TimeSpan.FromMinutes(value) : TimeSpan.Zero;
         remaining.Text = Format(duration > countdown.Elapsed ? duration - countdown.Elapsed : pending);
+        notice.Visibility = string.IsNullOrWhiteSpace(notice.Text) ? Visibility.Collapsed : Visibility.Visible;
     }
     private static string Format(TimeSpan value) => ((int)value.TotalHours).ToString("00") + value.ToString(@"\:mm\:ss");
     private void UpdateTimer()

@@ -73,7 +73,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         }
         else if (kind == MiniIslandKind.Clock)
         {
-            clockPanel = new ClockPanel(); panel.Children.Add(clockPanel);
+            clockPanel = new ClockPanel(); clockPanel.LayoutChanged += Position; panel.Children.Add(clockPanel);
         }
         else if (kind == MiniIslandKind.Calendar)
         {
