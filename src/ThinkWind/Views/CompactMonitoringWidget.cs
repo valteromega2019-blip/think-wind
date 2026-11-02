@@ -31,7 +31,10 @@ internal sealed class CompactMonitoringWidget : StackPanel
         {
             signature = next; Children.Clear(); cards.Clear();
             foreach (string id in store.Value.CompactMonitoringMetrics.Take(3))
-            { var card = new HardwareSummaryCard(id, compact: true) { Margin = new Thickness(0, 2, 0, 2) }; cards.Add(card); Children.Add(card); }
+            {
+                var card = new HardwareSummaryCard(id, compact: true, store: store) { Margin = new Thickness(0, 2, 0, 2) };
+                card.LayoutChanged += () => LayoutChanged?.Invoke(); cards.Add(card); Children.Add(card);
+            }
             if (cards.Count == 0) Children.Add(new TextBlock { Text = "Escolha até 3 blocos em Personalizar → Widgets → Monitoramento.", TextWrapping = TextWrapping.Wrap });
             Children.Add(battery);
             LayoutChanged?.Invoke();

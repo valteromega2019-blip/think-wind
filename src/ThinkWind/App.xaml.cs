@@ -136,6 +136,7 @@ public partial class App : Application
         InitializeUpdates();
         Telemetry = new HardwareTelemetry(Dispatcher);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
+        Telemetry.SelectDisk(store.Value.MonitoringDiskId);
         // Populate the shared cache before any monitoring panel is opened.
         if (!diagnosing && !initialGame) Telemetry.SetActive(startupSensorConsumer, true);
         hardwareOverlay = new HardwareOverlayWindow(store, Telemetry);
@@ -332,6 +333,7 @@ public partial class App : Application
     {
         Optimizer.Apply(gameMode?.RecognizedGame == true, store.Value);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
+        Telemetry.SelectDisk(store.Value.MonitoringDiskId);
         if (!diagnosing) Telemetry.SetActive(startupSensorConsumer, !IsExiting && gameMode?.Active != true);
         hardwareOverlay?.Apply(gameMode?.RecognizedGame == true);
         if (!store.Value.OverlayHotkeyEnabled) { overlayHotkey?.Dispose(); overlayHotkey = null; }

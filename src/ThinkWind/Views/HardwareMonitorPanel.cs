@@ -30,6 +30,7 @@ internal sealed class HardwareMonitorPanel : UserControl
     private readonly TextBlock sensorNotice = new() { FontSize = 11, Height = 28, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(4, 0, 4, 8), Visibility = Visibility.Hidden };
     private bool syncingGpu;
     private string gpuChoiceSignature = "";
+    private string diskChoiceSignature = "";
     private bool components;
     private bool optimizing;
     private readonly GameOptimizerPanel optimizerPanel;
@@ -92,12 +93,14 @@ internal sealed class HardwareMonitorPanel : UserControl
     internal static string Number(double? value, string unit, string format = "0") => value is { } number && double.IsFinite(number) ? number.ToString(format) + unit : "—";
     private void Update(HardwareSample sample)
     {
+        string disks = string.Join("|", sample.Disks?.Select(d => d.Id) ?? Array.Empty<string>());
+        bool diskLayoutChanged = diskChoiceSignature != disks; diskChoiceSignature = disks;
         latest = sample;
         int errorAt = sample.Status.IndexOf("Coletor administrativo:", StringComparison.Ordinal);
         sensorNotice.Text = errorAt >= 0 ? sample.Status[errorAt..] : "";
         sensorNotice.ToolTip = sensorNotice.Text;
         sensorNotice.Visibility = errorAt >= 0 ? Visibility.Visible : Visibility.Hidden;
-        if (IsVisible) { UpdateGpuPicker(); Render(false); }
+        if (IsVisible) { UpdateGpuPicker(); Render(diskLayoutChanged); }
     }
     private void UpdateGpuPicker()
     {
@@ -163,7 +166,7 @@ internal sealed class HardwareMonitorPanel : UserControl
         var s = latest;
         var cards = new UniformGrid { Columns = WideLayout ? 4 : 2 };
         foreach (string id in new[] { "cpu", "gpu", "ram", "disk" })
-        { var card = new HardwareSummaryCard(id); card.Present(s); cards.Children.Add(card); }
+        { var card = new HardwareSummaryCard(id, store: store); card.Present(s); cards.Children.Add(card); }
         body.Children.Add(cards);
         var bottom = new Grid(); bottom.ColumnDefinitions.Add(new ColumnDefinition()); bottom.ColumnDefinitions.Add(new ColumnDefinition());
         var chart = Card(Chart()); bottom.Children.Add(chart);
@@ -233,7 +236,7 @@ internal sealed class HardwareMonitorPanel : UserControl
         Device("Processador",s?.Cpu.Name??"—",s?.Cpu.Temperature,s?.Cpu.Load,s?.Cpu.Clock,s?.Cpu.Power);
         Device("Placa de vídeo",s?.Gpu.Name??"—",s?.Gpu.Temperature,s?.Gpu.Load,s?.Gpu.Clock,s?.Gpu.Power);
         Device("Memória RAM",Number(s?.RamTotal," GB")+" instalados",null,s?.RamTotal>0?s.RamUsed/s.RamTotal*100:null,null,null,Number(s?.RamUsed," GB","0.0"));
-        Device("Disco "+(s?.Disk??"C:"),"Armazenamento do Windows",null,s?.DiskTotal>0?(1-s.DiskFree/s.DiskTotal)*100:null,null,null,Number(s?.DiskFree," GB livres","0.0"));
+        Device("Disco "+(s?.Disk??"C:"),"Unidade selecionada",null,s?.DiskTotal>0?(1-s.DiskFree/s.DiskTotal)*100:null,null,null,Number(s?.DiskFree," GB livres","0.0"));
         body.Children.Add(Card(panel));
     }
 }

@@ -40,6 +40,7 @@ public sealed class Preferences
     public bool HardwareOverlayEnabled { get; set; } = false;
     public bool AutoAuthorizeWindowActions { get; set; } = true;
     public string MonitoringGpuId { get; set; } = "";
+    public string MonitoringDiskId { get; set; } = "";
     public List<string> CompactMonitoringMetrics { get; set; } = new() { "ram" };
     public bool OverlayAutomatic { get; set; } = true;
     public bool OverlayHotkeyEnabled { get; set; } = true;
@@ -217,6 +218,8 @@ public sealed class SettingsStore
     private static double Limit(double value, double min, double max, double fallback) => double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
     private void Normalize()
     {
+        Value.MonitoringDiskId = (Value.MonitoringDiskId ?? "").Trim().TrimEnd('\\').ToUpperInvariant();
+        if (Value.MonitoringDiskId.Length != 2 || Value.MonitoringDiskId[0] is < 'A' or > 'Z' || Value.MonitoringDiskId[1] != ':') Value.MonitoringDiskId = "";
         Value.CompactMonitoringMetrics = (Value.CompactMonitoringMetrics ?? new() { "ram" })
             .Where(id => id is "cpu" or "gpu" or "ram" or "disk").Distinct().Take(3).ToList();
         Value.KeyboardLayout = Value.KeyboardLayout == "US" ? "US" : "PT-BR";

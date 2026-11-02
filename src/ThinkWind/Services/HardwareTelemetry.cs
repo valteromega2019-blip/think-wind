@@ -15,8 +15,9 @@ namespace OrbyLauncher.Services;
 
 internal sealed record DeviceReading(string Name, double? Temperature = null, double? Load = null, double? Clock = null, double? Power = null, double? MemoryUsed = null, double? MemoryTotal = null);
 internal sealed record GpuReading(string Id, DeviceReading Device, bool? Integrated, ulong DedicatedMemory, Dictionary<string, double?> Extra);
+internal sealed record DiskReading(string Id, double? Free, double? Total);
 internal sealed record HardwareSample(DateTime Time, DeviceReading Cpu, DeviceReading Gpu, double? RamUsed, double? RamTotal, double? DiskFree, double? DiskTotal, string Disk, string Status,
-    Dictionary<string, double?>? Extra = null, FrameStats? Frames = null, GpuReading[]? Gpus = null);
+    Dictionary<string, double?>? Extra = null, FrameStats? Frames = null, GpuReading[]? Gpus = null, DiskReading[]? Disks = null);
 
 // Independent collector: no IPC, files or processes from Think Monitor.
 // One background loop, activated only by a visible panel or opt-in overlay.
@@ -36,6 +37,9 @@ internal sealed class HardwareTelemetry : IDisposable
     private readonly bool localFrameAccess;
     private readonly bool publishOnDispatcher;
     private volatile string preferredGpu = "";
+    private volatile string preferredDisk = "";
+    private DiskReading[] diskSnapshot = Array.Empty<DiskReading>();
+    private long nextDiskRead;
     private IReadOnlyList<GpuAdapterInfo> adapterInfo = Array.Empty<GpuAdapterInfo>();
     internal volatile bool CaptureFrames;
     private long lastIdle, lastTotal;
@@ -49,6 +53,50 @@ internal sealed class HardwareTelemetry : IDisposable
     internal HardwareSample? Latest { get; private set; }
     internal System.Collections.Generic.Queue<HardwareSample> History { get; } = new();
     internal event Action<HardwareSample>? Changed;
+    internal void SelectDisk(string id)
+    {
+        if (preferredDisk == id) return;
+        preferredDisk = id;
+        if (Latest is { } sample) { Latest = SelectDiskSample(sample); Changed?.Invoke(Latest); }
+    }
+    private HardwareSample SelectDiskSample(HardwareSample sample)
+    {
+        if (sample.Disks is not { Length: > 0 } disks) return sample;
+        var disk = disks.FirstOrDefault(d => d.Id.Equals(preferredDisk, StringComparison.OrdinalIgnoreCase)) ?? disks[0];
+        return sample with { Disk = disk.Id, DiskFree = disk.Free, DiskTotal = disk.Total };
+    }
+    private HardwareSample WithDisks(HardwareSample sample)
+    {
+        // A new administrative collector already supplies this snapshot. Older
+        // collectors remain compatible: local volume capacity needs no elevation.
+        if (sample.Disks is { Length: > 0 }) return sample;
+        if (Environment.TickCount64 >= nextDiskRead)
+        {
+            nextDiskRead = Environment.TickCount64 + 5000;
+            var disks = new List<DiskReading> { new(sample.Disk, sample.DiskFree, sample.DiskTotal) };
+            try
+            {
+                foreach (var drive in DriveInfo.GetDrives().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (disks.Count >= 4 || stop.IsCancellationRequested) break;
+                    string id = drive.Name.TrimEnd('\\').ToUpperInvariant();
+                    if (id.Equals(sample.Disk, StringComparison.OrdinalIgnoreCase)) continue;
+                    try
+                    {
+                        // Ignore network shares and optical media: neither is a
+                        // local PC disk and probing them can stall on unavailable I/O.
+                        if (drive.DriveType is not (DriveType.Fixed or DriveType.Removable) || !drive.IsReady) continue;
+                        const double gb = 1024d * 1024 * 1024;
+                        disks.Add(new(id, drive.AvailableFreeSpace / gb, drive.TotalSize / gb));
+                    }
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
+                }
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
+            diskSnapshot = disks.ToArray();
+        }
+        return sample with { Disks = diskSnapshot };
+    }
     internal void SelectGpu(string id)
     {
         if (preferredGpu == id) return;
@@ -148,13 +196,13 @@ internal sealed class HardwareTelemetry : IDisposable
                     if (localFrameAccess && CaptureFrames)
                         sample = sample with { Frames = localFrames.GetForegroundStats(),
                             Status = sample.Status + (localFrames.Error is null ? "" : " FPS/ETW indisponível: " + localFrames.Error) };
-                    sample = SelectGpuSample(sample);
+                    sample = SelectDiskSample(SelectGpuSample(WithDisks(sample)));
                     void Publish()
                     {
                         if (!Needed) return;
                         // A manual selection may have changed while this
                         // background sample was waiting in the UI queue.
-                        var current = SelectGpuSample(sample);
+                        var current = SelectDiskSample(SelectGpuSample(sample));
                         Latest = current; History.Enqueue(current); while (History.Count > 450) History.Dequeue(); Changed?.Invoke(current);
                     }
                     // The isolated collector has no visible UI. Deliver directly

@@ -34,6 +34,10 @@ Referências oficiais: [estado da barra](https://learn.microsoft.com/en-us/windo
 - Opções anteriores de RAM e bateria seguem disponíveis para os demais indicadores da central; a seleção deste widget é independente.
 - Personalização inserida logo abaixo do interruptor do módulo Monitoramento, nos editores Widgets e Editor de layout. Aparece apenas com o módulo habilitado; desativar preserva a seleção para quando reativar. A antiga página separada de Monitoramento compacto foi removida.
 - Valores do widget aumentados de 20 para 30 DIP, títulos de 11 para 14, detalhes de 10 para 12 e ícones de 13 para 16. Texto principal pode quebrar em vez de cortar em fontes maiores. A tipografia do painel completo permanece nos tamanhos anteriores; preferências globais de fonte/cor continuam aplicadas.
+- Armazenamento recebe uma faixa de seleção acima do bloco, compartilhada entre o resumo completo e o widget compacto. Mostra até quatro unidades por letra (C:, D: etc.) quando houver mais de uma. Usa os botões e as cores do tema, sem rolagem; com uma unidade, a faixa permanece oculta.
+- A unidade selecionada é salva em `MonitoringDiskId` e sincroniza valores, progresso e demais informações de armazenamento do monitoramento. Se estiver indisponível, usa a unidade do sistema; a preferência é preservada para quando ela retornar.
+- Snapshot de até quatro unidades em `HardwareSample.Disks`, com reutilização da leitura existente da unidade do sistema e atualização das demais capacidades em segundo plano a cada cinco segundos, apenas enquanto o coletor estiver ativo. Sem consultas feitas pelos cartões, timers adicionais ou necessidade de privilégios. Unidades locais fixas/removíveis prontas são incluídas; rede e mídia óptica ficam fora da sondagem.
+- Coletor administrativo atualizado fornece o snapshot pela conexão existente; versões anteriores continuam compatíveis e a interface complementa os dados em seu loop de coleta. Não exige reinstalar ou reautorizar os sensores apenas para ler espaço em disco. Lista alterada invalida a medida dos painéis uma vez, evitando recálculo de tamanho a cada amostra.
 
 ## Site → Atualizações
 

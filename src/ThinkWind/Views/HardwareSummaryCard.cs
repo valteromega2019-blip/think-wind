@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -12,8 +14,14 @@ internal sealed class HardwareSummaryCard : Border
     private readonly string id;
     private readonly TextBlock value = new(), detail = new();
     private readonly ProgressBar progress = new() { Maximum = 100, Height = 3, BorderThickness = new Thickness(0) };
-    internal HardwareSummaryCard(string metric, bool compact = false)
+    private readonly System.Windows.Controls.Primitives.UniformGrid diskPicker = new() { Rows = 1, Margin = new Thickness(0, 0, 0, 8), Visibility = Visibility.Collapsed };
+    private readonly Dictionary<string, Button> diskButtons = new();
+    private readonly SettingsStore? settings;
+    private string? diskStructure, selectedDisk;
+    internal event Action? LayoutChanged;
+    internal HardwareSummaryCard(string metric, bool compact = false, SettingsStore? store = null)
     {
+        settings = store;
         id = metric; CornerRadius = new CornerRadius(20); Padding = new Thickness(compact ? 6 : 10); Margin = new Thickness(compact ? 0 : 3);
         SetResourceReference(BackgroundProperty, "Think.GlassCard");
         var panel = new StackPanel(); var heading = new DockPanel();
@@ -27,12 +35,14 @@ internal sealed class HardwareSummaryCard : Border
         detail.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         progress.Margin = new Thickness(0, compact ? 4 : 8, 0, 0);
         progress.SetResourceReference(Control.ForegroundProperty, "Think.Accent"); progress.SetResourceReference(Control.BackgroundProperty, "Think.Hover");
+        if (metric == "disk") panel.Children.Add(diskPicker);
         panel.Children.Add(heading); panel.Children.Add(value); panel.Children.Add(detail); panel.Children.Add(progress); Child = panel;
         Present(null);
     }
     internal static string Label(string id) => id switch { "cpu" => "Processador", "gpu" => "Placa de vídeo", "ram" => "Memória RAM", _ => "Armazenamento" };
     internal void Present(HardwareSample? s)
     {
+        if (id == "disk") PresentDiskPicker(s);
         string N(double? n, string unit, string format = "0") => HardwareMonitorPanel.Number(n, unit, format);
         double? percent;
         switch (id)
@@ -52,5 +62,34 @@ internal sealed class HardwareSummaryCard : Border
         }
         detail.ToolTip = detail.Text;
         progress.Value = Math.Clamp(percent ?? 0, 0, 100); progress.Opacity = percent.HasValue ? 1 : .25;
+    }
+    private void PresentDiskPicker(HardwareSample? sample)
+    {
+        var disks = sample?.Disks?.Take(4).ToArray() ?? Array.Empty<DiskReading>();
+        string signature = string.Join("|", disks.Select(d => d.Id));
+        if (diskStructure != signature)
+        {
+            diskStructure = signature; selectedDisk = null; diskPicker.Children.Clear(); diskButtons.Clear();
+            diskPicker.Columns = Math.Max(1, disks.Length);
+            diskPicker.Visibility = disks.Length > 1 && settings is not null ? Visibility.Visible : Visibility.Collapsed;
+            foreach (var disk in disks)
+            {
+                string root = disk.Id;
+                var button = new Button { Content = root, FontSize = 12, MinHeight = 28, Padding = new Thickness(4, 4, 4, 4), Margin = new Thickness(2), ToolTip = "Mostrar armazenamento de " + root };
+                System.Windows.Automation.AutomationProperties.SetName(button, "Armazenamento do disco " + root);
+                button.Click += (_, _) => settings?.Update(p => p.MonitoringDiskId = root);
+                diskButtons[root] = button; diskPicker.Children.Add(button);
+            }
+            LayoutChanged?.Invoke();
+        }
+        if (selectedDisk == sample?.Disk) return;
+        selectedDisk = sample?.Disk;
+        foreach (var entry in diskButtons)
+        {
+            bool selected = entry.Key.Equals(selectedDisk, StringComparison.OrdinalIgnoreCase);
+            entry.Value.SetResourceReference(Control.BackgroundProperty, selected ? "Think.AccentSurface" : "Think.Control");
+            entry.Value.SetResourceReference(Control.ForegroundProperty, selected ? "Think.Accent" : "Think.Text");
+            System.Windows.Automation.AutomationProperties.SetHelpText(entry.Value, selected ? "Disco selecionado" : "Selecionar este disco");
+        }
     }
 }
