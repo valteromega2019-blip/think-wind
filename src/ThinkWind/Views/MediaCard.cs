@@ -128,7 +128,7 @@ internal sealed class MediaCard : Grid, IDisposable
         toggle.Content = Icon(state?.Playing == true ? "\uE769" : "\uE768");
         title.ToolTip = title.Text; artist.ToolTip = artist.Text; player.ToolTip = player.Text;
         RenderButtons(); UpdateProgress();
-        if (dockPreview && state?.Playing != true) PreviewPlaybackStopped?.Invoke();
+        if (dockPreview && IsVisible && state?.Playing != true) PreviewPlaybackStopped?.Invoke();
         if (wasAvailable != Available) AvailabilityChanged?.Invoke();
         if (wasAvailable != Available || metadataChanged) { InvalidateMeasure(); LayoutChanged?.Invoke(); }
     }

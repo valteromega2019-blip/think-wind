@@ -33,6 +33,7 @@ internal sealed class MediaService : IDisposable
     private GlobalSystemMediaTransportControlsSession? session;
     private volatile bool active, disposed;
     private bool refreshing, refreshAgain;
+    private int refreshQueued, propertiesQueued;
     private Task? initializing;
     private GlobalSystemMediaTransportControlsSessionMediaProperties? metadata;
     private ImageSource? art;
@@ -72,7 +73,7 @@ internal sealed class MediaService : IDisposable
     {
         if (disposed || active == value) return;
         active = value;
-        if (!value) { DetachSession(); UnsubscribeManager(); return; }
+        if (!value) { DetachSession(); UnsubscribeManager(); State = null; Error = null; Changed?.Invoke(); return; }
         try
         {
             initializing ??= InitializeAsync(); await initializing;
@@ -87,7 +88,15 @@ internal sealed class MediaService : IDisposable
     private void QueueRefresh(bool properties = false)
     {
         if (disposed || !active || dispatcher.HasShutdownStarted) return;
-        dispatcher.BeginInvoke(new Action(() => { if (properties) metadataDirty = true; _ = RefreshAsync(); }));
+        if (properties) Interlocked.Exchange(ref propertiesQueued, 1);
+        if (Interlocked.Exchange(ref refreshQueued, 1) != 0) return;
+        dispatcher.BeginInvoke(new Action(() =>
+        {
+            Interlocked.Exchange(ref refreshQueued, 0);
+            if (disposed || !active) return;
+            if (Interlocked.Exchange(ref propertiesQueued, 0) != 0) metadataDirty = true;
+            _ = RefreshAsync();
+        }));
     }
     private void CurrentChanged(GlobalSystemMediaTransportControlsSessionManager sender, CurrentSessionChangedEventArgs args) => QueueRefresh(true);
     private void SessionsChanged(GlobalSystemMediaTransportControlsSessionManager sender, SessionsChangedEventArgs args) => QueueRefresh(true);
@@ -220,5 +229,5 @@ internal sealed class MediaService : IDisposable
     }
     private void UnsubscribeManager() { Watch(Array.Empty<GlobalSystemMediaTransportControlsSession>()); if (manager is not null) { manager.CurrentSessionChanged -= CurrentChanged; manager.SessionsChanged -= SessionsChanged; } }
     private static bool Unavailable(Exception e) => e is COMException or UnauthorizedAccessException or InvalidOperationException or NotSupportedException or ArgumentException;
-    public void Dispose() { disposed = true; active = false; UnsubscribeManager(); DetachSession(); }
+    public void Dispose() { disposed = true; active = false; UnsubscribeManager(); DetachSession(); State = null; manager = null; initializing = null; }
 }

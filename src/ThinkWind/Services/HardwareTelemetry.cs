@@ -40,6 +40,7 @@ internal sealed class HardwareTelemetry : IDisposable
     internal volatile bool CaptureFrames;
     private long lastIdle, lastTotal;
     private int authorizationChanged;
+    private int publishQueued;
     internal void RefreshAuthorizedSensors()
     {
         Interlocked.Exchange(ref authorizationChanged, 1);
@@ -161,8 +162,12 @@ internal sealed class HardwareTelemetry : IDisposable
                     // dispatcher load. Only the normal UI marshals its samples.
                     if (publishOnDispatcher)
                     {
-                        if (Needed && !dispatcher.HasShutdownStarted)
-                            _ = dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(Publish));
+                        if (Needed && !dispatcher.HasShutdownStarted && Interlocked.Exchange(ref publishQueued, 1) == 0)
+                            _ = dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                            {
+                                try { Publish(); }
+                                finally { Interlocked.Exchange(ref publishQueued, 0); }
+                            }));
                     }
                     else Publish();
                 }
@@ -176,7 +181,11 @@ internal sealed class HardwareTelemetry : IDisposable
             }
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
-        finally { try { computer?.Close(); } catch (Exception error) when (error is not OutOfMemoryException) { } }
+        finally
+        {
+            advanced?.Disconnect();
+            try { computer?.Close(); } catch (Exception error) when (error is not OutOfMemoryException) { }
+        }
     }
     private HardwareSample Read(Computer? computer, string status)
     {
@@ -254,6 +263,7 @@ internal sealed class HardwareTelemetry : IDisposable
     {
         lock (sync) { if (disposed) return; disposed = true; consumers.Clear(); }
         stop.Cancel(); // Sensor cleanup stays on the worker, never the UI thread.
-        advanced?.Disconnect();
+        // The worker owns the pipe. Cancellation wakes pending I/O; disposing
+        // it here could race with a connection being adopted by Read.
     }
 }

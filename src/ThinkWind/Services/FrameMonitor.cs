@@ -37,6 +37,8 @@ public sealed class FrameMonitor : IDisposable
 	private readonly Dictionary<int, Queue<double>> _presents = new Dictionary<int, Queue<double>>();
 
 	private readonly Dictionary<int, long> _lastSeen = new Dictionary<int, long>();
+    private long _foregroundRead;
+    private uint _foregroundPid;
 
 	public bool Running => _thread?.IsAlive ?? false;
 
@@ -102,17 +104,24 @@ public sealed class FrameMonitor : IDisposable
 		{
 			return;
 		}
-		GetWindowThreadProcessId(GetForegroundWindow(), out uint foreground); if (e.ProcessID != foreground || foreground == Environment.ProcessId) return;
+        long now = Stopwatch.GetTimestamp();
+        if (_foregroundRead == 0 || Stopwatch.GetElapsedTime(_foregroundRead, now).TotalMilliseconds >= 100)
+        {
+            GetWindowThreadProcessId(GetForegroundWindow(), out _foregroundPid);
+            _foregroundRead = now;
+        }
+        uint foreground = _foregroundPid;
+        if (e.ProcessID != foreground || foreground == Environment.ProcessId) return;
         double timeStampRelativeMSec = e.TimeStampRelativeMSec;
 		lock (_lock)
 		{
 			if (!_presents.TryGetValue(e.ProcessID, out var value))
 			{
+                _presents.Clear(); _lastSeen.Clear();
 				value = (_presents[e.ProcessID] = new Queue<double>());
 			}
 			value.Enqueue(timeStampRelativeMSec);
             while (value.Count > 4096) value.Dequeue();
-            foreach (int stale in _presents.Keys.Where(pid => pid != e.ProcessID).ToArray()) { _presents.Remove(stale); _lastSeen.Remove(stale); }
 			while (value.Count > 0 && value.Peek() < timeStampRelativeMSec - 10000.0)
 			{
 				value.Dequeue();
@@ -201,6 +210,7 @@ public sealed class FrameMonitor : IDisposable
 			}
 			_session = null;
 			_thread = null;
+            _foregroundRead = 0; _foregroundPid = 0;
 			lock (_lock)
 			{
 				_presents.Clear();

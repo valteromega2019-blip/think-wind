@@ -8,33 +8,14 @@ namespace OrbyLauncher.Services;
 
 internal sealed class StartupPriority : IDisposable
 {
-    private readonly object sync = new();
-    private Timer? deadline;
-    private bool restored;
     internal StartupPriority()
     {
-        try
-        {
-            using var process = Process.GetCurrentProcess();
-            process.PriorityClass = ProcessPriorityClass.AboveNormal;
-            // Restore even if the UI dispatcher is busy constructing windows.
-            deadline = new Timer(_ => Dispose(), null, 5000, Timeout.Infinite);
-        }
-        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException) { Dispose(); }
+        // Startup must not compete at elevated priority with an already running game.
+        try { using var process = Process.GetCurrentProcess(); process.PriorityClass = ProcessPriorityClass.Normal; }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException) { }
     }
-    public void Dispose()
-    {
-        lock (sync)
-        {
-            if (restored) return;
-            restored = true;
-            deadline?.Dispose(); deadline = null;
-            try { using var process = Process.GetCurrentProcess(); process.PriorityClass = ProcessPriorityClass.Normal; }
-            catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException) { }
-        }
-    }
+    public void Dispose() { }
 }
-
 internal static class StartupPermissions
 {
     private const string Switch = "--configure-startup-permissions";
