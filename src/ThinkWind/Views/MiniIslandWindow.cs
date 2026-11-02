@@ -39,7 +39,10 @@ internal sealed class MiniIslandWindow : FloatingWindow
         Title = kind switch { MiniIslandKind.Clock => "Orby Launcher — Relógio", MiniIslandKind.Bluetooth => "Orby Launcher — Bluetooth", MiniIslandKind.Volume => "Orby Launcher — Mini volume", MiniIslandKind.Calendar => "Orby Launcher — Calendário", MiniIslandKind.Tray => "Orby Launcher — Bandeja", _ => "Orby Launcher — Mini rede" };
         ShowActivated = true;
         var heading = new DockPanel();
-        var close = ActionButton("Fechar", Dismiss); close.Padding = new Thickness(8, 4, 8, 4);
+        var close = ActionButton("Fechar este painel", Dismiss);
+        close.Style = (Style)FindResource("Think.IconButton");
+        close.Content = Glyph("\uE711", 13); close.Width = close.Height = 28;
+        close.Padding = new Thickness(4);
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
         heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Clock => "Relógio", MiniIslandKind.Bluetooth => "Bluetooth", MiniIslandKind.Volume => "Áudio e microfone", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
         panel.Children.Add(heading);
