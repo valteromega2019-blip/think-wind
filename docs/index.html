@@ -7,7 +7,8 @@
  <title>Orby Launcher — Seu Windows, em outro ritmo.</title>
  <link rel="canonical" href="https://thinkdeveloper-br.github.io/orby-launcher/">
  <link rel="icon" href="assets/orby-launcher-icon.png" type="image/png">
- <link rel="stylesheet" href="presentation.css?v=orby-release-022">
+ <link rel="stylesheet" href="presentation.css?v=orby-history-1">
+ <script defer src="updates.js?v=1"></script>
  <script defer src="assets/vendor/motion-14.9.0.js"></script>
  <script defer src="presentation.js?v=orby-release-022"></script>
 </head>
@@ -15,7 +16,7 @@
  <a class="skip" href="#conteudo">Ir para o conteúdo</a>
  <header class="header"><div class="container nav">
   <a class="brand" href="#" aria-label="Orby Launcher — início"><img class="brand-logo" src="assets/orby-launcher-logo.png" width="220" height="73" alt="Orby Launcher"></a>
-  <nav aria-label="Navegação principal"><a href="#dock">Dock</a><a href="#player">Player</a><a href="#monitoramento">Desempenho</a><a href="#recursos">Recursos</a><a href="#instalacao">Instalação</a><a href="#versao">0.27.1 Beta</a><a class="nav-github" href="https://github.com/thinkdeveloper-br/orby-launcher">GitHub ↗</a></nav>
+  <nav aria-label="Navegação principal"><a href="#dock">Dock</a><a href="#player">Player</a><a href="#monitoramento">Desempenho</a><a href="#recursos">Recursos</a><a href="#instalacao">Instalação</a><a href="#historico">Atualizações</a><a href="#versao">0.27.1 Beta</a><a class="nav-github" href="https://github.com/thinkdeveloper-br/orby-launcher">GitHub ↗</a></nav>
  </div></header>
  <main id="conteudo">
   <section class="hero container" aria-labelledby="titulo">
@@ -150,6 +151,24 @@
    <div class="requirements"><div><h3>Requisitos e compatibilidade</h3><p>Windows de 64 bits, com foco no Windows 11. Wi-Fi, brilho, mídia e bandeja dependem dos dispositivos, drivers, players e permissões do sistema.</p></div><div><h3>Uma Beta, com limites claros</h3><p>A bandeja pode não mostrar ícones que o Explorer não disponibiliza. Troca de saída padrão usa uma interface interna do Windows, sujeita a mudanças. A consulta Bluetooth respondeu, mas não retornou dispositivos; descoberta real, pareamento e conexão não foram validados. A última correção do Iniciar ainda exige confirmação interativa. O instalador ainda não tem certificado Authenticode; o pacote de atualização inclui assinatura criptográfica própria.</p></div></div>
   </section>
   <section class="container section release-section" id="versao"><div><p class="eyebrow">0.27.1 BETA</p><h2>O próximo passo<br>do <strong>seu desktop.</strong></h2><p>Arraste arquivos até o Dock e continue na janela do aplicativo. A interface usa permissões normais, com sensores em um coletor administrativo separado. A 0.27.1 Beta corrige a geometria dos ícones e indicadores do Dock, reservando espaço interno sem deslocar a indicação para fora do botão. Mantém os recursos da 0.27: data ao lado da hora, painel de relógio com cronômetro e temporizador, presets de 5, 10, 15 e 30 minutos e busca de cidade diretamente pelo clima da barra. Corrige a abertura do Wi-Fi, o espaço das abas e a ativação do Acrylic nos seletores. Preserva a revisão anterior que limita as filas de eventos de mídia e sensores, melhora a liberação de recursos, reduz consultas por frame no coletor de FPS e usa prioridade normal na inicialização. A revisão teve 64 verificações aprovadas e duas verificações de assinatura, sem garantir ganho de FPS ou compatibilidade universal. Inclui o Otimizador de Jogos com perfis Economia, Equilibrado e Desempenho, análise local sem IA e fechamento de aplicativos somente após seleção e aprovação. O tutorial inclui o otimizador após o monitoramento. Também refina as animações, a reconexão do coletor de sensores e o bloqueio da barra original nas trocas de janela. Preserva a correção do tratamento de falhas de validação do atualizador e aguarda a prontidão do auxiliar antes de encerrar o launcher. Também reorganiza a personalização em categorias com busca, páginas de aparência e editor do overlay integrado. O painel de som ganha a aba Aplicativos, com volume e mudo individuais. O brilho passa a consultar painéis internos de notebooks compatíveis, mantendo DDC/CI para monitores externos. O indicador do Dock também considera badges e contadores expostos pelos aplicativos. Inclui o teclado personalizado, a calculadora e o clima reorganizado da versão anterior. O atualizador passa a validar pacotes Beta pela assinatura criptográfica oficial, vinculada à versão e ao SHA-256. Quem usa uma versão anterior precisa instalar esta correção manualmente uma vez. Essa assinatura não é Authenticode e não remove avisos de editor desconhecido do Windows.</p><p class="fine-print">Versão Beta. A base 0.26 teve 64 verificações aprovadas e duas verificações de assinatura. As alterações da 0.27 foram compiladas e empacotadas sem novos testes ou type check separados. A compatibilidade do brilho com cada notebook, o mixer e os badges de aplicativos como o WhatsApp ainda precisam de validação em uso real. O instalador ainda não possui certificado Authenticode; a assinatura separada autentica o pacote no Orby. Consulte os limites, as notas e o SHA-256 no GitHub.</p></div><div class="release-actions"><a class="button primary" href="https://github.com/valteromega2019-blip/think-wind/releases/download/v0.27.1-beta/OrbyLauncher-Setup-0.27.1-beta.exe">Baixar instalador .exe ↓</a><p class="access-note">Código, notas da versão e SHA-256 disponíveis no GitHub.</p></div></section>
+  <section class="container section history-section" id="historico" aria-labelledby="historico-titulo">
+   <p class="eyebrow">A EVOLUÇÃO DO ORBY</p>
+   <h2 id="historico-titulo">Cada versão.<br>Uma experiência <strong>melhor.</strong></h2>
+   <p>Explore as notas das atualizações publicadas e acompanhe o que estamos preparando.</p>
+   <div class="history-filters" role="group" aria-label="Filtrar atualizações">
+    <button type="button" data-history-filter="published" aria-pressed="true" disabled>Publicadas</button>
+    <button type="button" data-history-filter="planned" aria-pressed="false" disabled>Em desenvolvimento</button>
+   </div>
+   <div class="history-layout">
+    <div class="history-list"><label for="history-picker">Escolha uma atualização</label><select id="history-picker" size="8" disabled aria-controls="history-detail"></select><p class="fine-print">Versões futuras são planos, sujeitos a mudanças. Não estão no download atual.</p></div>
+    <article id="history-detail" class="history-detail" aria-live="polite" aria-atomic="true">
+     <p class="eyebrow" id="history-status">Carregando histórico…</p><h3 id="history-title">Notas de atualização</h3>
+     <div id="history-description" class="history-description"></div>
+     <a id="history-link" class="button secondary" href="https://github.com/valteromega2019-blip/think-wind/releases" hidden>Ver notas oficiais no GitHub ↗</a>
+    </article>
+   </div>
+   <noscript><p>Ative JavaScript para selecionar versões ou <a href="https://github.com/valteromega2019-blip/think-wind/releases">consulte o histórico no GitHub</a>.</p></noscript>
+  </section>
  </main>
  <footer class="footer"><div class="container footer-inner"><div><p class="footer-brand"><img class="footer-logo" src="assets/orby-launcher-logo.png" width="220" height="73" alt="Orby Launcher"></p><p class="developer-credit">Desenvolvido pela <strong>Think</strong></p><p>Uma nova forma de organizar seu desktop.</p><p>© 2026 Think · Orby Launcher · Créditos: valteromega2019-blip. Marcas e ícones de terceiros pertencem aos respectivos titulares.</p></div><div class="footer-links"><a href="https://github.com/valteromega2019-blip/think-wind/blob/v0.27.1-beta/SECURITY.md">Segurança e downloads oficiais ↗</a><a href="https://github.com/valteromega2019-blip/think-wind/blob/v0.27.1-beta/COPYRIGHT.md">Direitos autorais e créditos ↗</a><a href="https://valteromega2019-blip.github.io/think-monitor/">Conheça o Think Monitor ↗</a><a href="https://github.com/thinkdeveloper-br/orby-launcher">Código desta página</a></div></div></footer>
 </body></html>

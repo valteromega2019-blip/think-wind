@@ -404,3 +404,16 @@ strong{font-weight:600}
 
 
 @supports ((background-clip:text) or (-webkit-background-clip:text)){.hero h1 .hero-gradient{background:var(--brand-spectrum);background-clip:text;-webkit-background-clip:text;color:transparent}}
+.history-filters{display:flex;gap:10px;flex-wrap:wrap;margin:28px 0 20px}
+.history-filters button{font:inherit;color:#c7d7ed;background:#0d1832;border:1px solid #294262;padding:11px 20px;border-radius:999px;cursor:pointer}
+.history-filters button[aria-pressed=true]{color:#fff;border-color:#6de6ff;background:#164174}
+.history-layout{display:grid;grid-template-columns:minmax(240px,1fr) minmax(0,2fr);gap:24px;align-items:start}
+.history-list label{display:block;font-weight:600;margin:0 0 12px}
+.history-list select{width:100%;font:inherit;color:#e2ecff;background:#0b1530;border:1px solid #294262;border-radius:18px;padding:12px;min-height:320px;scrollbar-color:#3973a4 #0b1530}
+.history-list option{padding:12px;border-radius:8px;white-space:normal}
+.history-detail{min-width:0;padding:clamp(20px,3vw,38px);border:1px solid #294262;border-radius:24px;background:linear-gradient(145deg,#12233ed9,#10152ed9);backdrop-filter:blur(20px)}
+.history-detail h3{font-size:clamp(24px,3vw,36px);margin:12px 0 24px}
+.history-description{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;color:#d0dcee;margin-bottom:24px}
+.history-section :focus-visible{outline:2px solid #6de6ff;outline-offset:4px}
+.history-section [hidden]{display:none}
+@media(max-width:720px){.history-layout{grid-template-columns:1fr}.history-list select{min-height:220px}.history-detail{padding:22px}}
