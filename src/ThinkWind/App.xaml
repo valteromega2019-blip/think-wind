@@ -84,9 +84,12 @@
    <Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="6"/>
    <Setter Property="Margin" Value="0"/><Setter Property="Cursor" Value="Hand"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
-    <Border x:Name="IconSurface" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" Padding="{TemplateBinding Padding}" CornerRadius="8" UseLayoutRounding="True" SnapsToDevicePixels="True">
-     <ContentPresenter x:Name="IconContent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-    </Border>
+    <Grid UseLayoutRounding="True" SnapsToDevicePixels="True">
+     <Border Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="8">
+      <ContentPresenter x:Name="IconContent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+     </Border>
+     <Border x:Name="IconSurface" BorderBrush="Transparent" BorderThickness="1" CornerRadius="8" IsHitTestVisible="False"/>
+    </Grid>
     <ControlTemplate.Triggers>
      <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="IconContent" Property="Opacity" Value="0.75"/></Trigger>
      <Trigger Property="IsPressed" Value="True"><Setter TargetName="IconContent" Property="Opacity" Value="0.5"/></Trigger>
