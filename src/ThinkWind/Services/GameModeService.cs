@@ -15,6 +15,7 @@ internal sealed class GameModeService : IDisposable
     [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
     [DllImport("user32.dll")] private static extern bool GetWindowRect(nint window, out Rect rect);
     [DllImport("user32.dll")] private static extern bool IsZoomed(nint window);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(nint window, System.Text.StringBuilder name, int capacity);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
     [DllImport("kernel32.dll")] private static extern nint OpenProcess(uint access, bool inherit, uint process);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool QueryFullProcessImageName(nint process, uint flags, System.Text.StringBuilder path, ref uint size);
@@ -142,8 +143,27 @@ internal sealed class GameModeService : IDisposable
                 installed = QueryFullProcessImageName(handle, 0, path, ref length) && InstalledGameCatalog.Contains(path.ToString());
             }
             finally { CloseHandle(handle); }
+            // Anti-cheat/elevated games can deny image-path access. Recognize
+            // packaged game windows independently of fullscreen geometry.
+            if (!installed)
+            {
+                var windowClass = new System.Text.StringBuilder(256);
+                GetClassName(window, windowClass, windowClass.Capacity);
+                installed = IsGameWindow(name, windowClass.ToString());
+            }
         }
         return new(name, full, shell, window, installed);
+    }
+    internal static bool IsGameWindow(string process, string windowClass)
+    {
+        // Never classify generic Chromium/SDL windows or any fullscreen app
+        // as a game: that would put the overlay over browsers and videos.
+        bool shipping = process.EndsWith("-Win64-Shipping", StringComparison.OrdinalIgnoreCase)
+            || process.EndsWith("-Win32-Shipping", StringComparison.OrdinalIgnoreCase);
+        return (shipping && windowClass.Equals("UnrealWindow", StringComparison.Ordinal))
+            || (windowClass.Equals("UnityWndClass", StringComparison.Ordinal)
+                && !process.Equals("Unity", StringComparison.OrdinalIgnoreCase)
+                && !process.Equals("Unity Hub", StringComparison.OrdinalIgnoreCase));
     }
     public void Dispose() { disposed = true; timer.Dispose(); if (foregroundHook != 0) UnhookWinEvent(foregroundHook); }
 }

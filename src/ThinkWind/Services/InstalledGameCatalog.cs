@@ -60,6 +60,26 @@ internal static class InstalledGameCatalog
             using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Valve\Steam");
             Steam(key?.GetValue("InstallPath") as string);
         });
+        Safe(() =>
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Valve\Steam");
+            Steam(key?.GetValue("InstallPath") as string);
+        });
+        // Steam may have no per-user key in the account running the launcher.
+        string defaultSteam = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam");
+        if (Directory.Exists(defaultSteam)) Steam(defaultSteam);
+        // Epic keeps this installation index even when the launcher manifests
+        // are missing (for example after migrating/reinstalling the launcher).
+        Safe(() =>
+        {
+            string file = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Epic", "UnrealEngineLauncher", "LauncherInstalled.dat");
+            if (!File.Exists(file) || new FileInfo(file).Length > 4 * 1024 * 1024) return;
+            using var json = JsonDocument.Parse(File.ReadAllText(file));
+            if (!json.RootElement.TryGetProperty("InstallationList", out var entries) || entries.ValueKind != JsonValueKind.Array) return;
+            foreach (var entry in entries.EnumerateArray().Take(1024))
+                if (entry.ValueKind == JsonValueKind.Object && entry.TryGetProperty("InstallLocation", out var location) && location.ValueKind == JsonValueKind.String)
+                    Add(location.GetString());
+        });
         string manifests = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Epic", "EpicGamesLauncher", "Data", "Manifests");
         Safe(() =>
         {
