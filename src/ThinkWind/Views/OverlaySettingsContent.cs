@@ -16,7 +16,7 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
     private bool syncingPosition;
     private readonly Slider positionX = new(), positionY = new();
     private readonly TextBlock positionXLabel = new(), positionYLabel = new();
-    private readonly System.Collections.Generic.Dictionary<string, RadioButton> cornerButtons = new();
+    private readonly System.Collections.Generic.Dictionary<string, Button> cornerButtons = new();
     internal OverlaySettingsContent(SettingsStore store)
     {
         settings = store;
@@ -35,9 +35,15 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
             {
                 foreach (var page in pages) page.Visibility = ReferenceEquals(page, item.Item2) ? Visibility.Visible : Visibility.Collapsed;
                 foreach (var button in tabs)
+                {
                     button.SetResourceReference(Control.BackgroundProperty, ReferenceEquals(button.Tag, item.Item2) ? "Think.AccentSurface" : "Think.Control");
+                    button.SetResourceReference(Control.ForegroundProperty, ReferenceEquals(button.Tag, item.Item2) ? "Think.Accent" : "Think.Text");
+                }
+                ClockDesign.Reveal(item.Item2);
             });
             tab.Tag = item.Item2;
+            tab.Content = ClockDesign.Label(ReferenceEquals(item.Item2, generalPage) ? "\uE790" : ReferenceEquals(item.Item2, positionPage) ? "\uE9E9" : "\uE9D9", item.Item1);
+            tab.SetResourceReference(Control.ForegroundProperty, ReferenceEquals(item.Item2, generalPage) ? "Think.Accent" : "Think.Text");
             tab.SetResourceReference(Control.BackgroundProperty, ReferenceEquals(item.Item2, generalPage) ? "Think.AccentSurface" : "Think.Control");
             tabs.Add(tab); navigation.Children.Add(tab);
         }
@@ -59,15 +65,15 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
         hotkey.SetResourceReference(Control.ForegroundProperty, "Fg");
         hotkey.Checked += (_, _) => settings.Update(p => p.OverlayHotkeyEnabled = true);
         hotkey.Unchecked += (_, _) => settings.Update(p => p.OverlayHotkeyEnabled = false); generalPage.Children.Add(hotkey);
-        generalPage.Children.Add(appearanceSection);
+        var appearanceCard = ClockDesign.Card(appearanceSection, 14); appearanceCard.Margin = new Thickness(0, 4, 0, 8);
+        generalPage.Children.Add(appearanceCard);
         var positionTitle = new TextBlock { Text = "Posição na tela", FontSize = 14, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 10) };
         positionTitle.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); positionPage.Children.Add(positionTitle);
         var choices = new WrapPanel { Margin = new Thickness(0, 0, 0, 12) };
         foreach (var item in new[] { ("TL", "Superior esquerdo"), ("TR", "Superior direito"), ("BL", "Inferior esquerdo"), ("BR", "Inferior direito") })
         {
-            var radio = new RadioButton { Content = item.Item2, GroupName = "Corner", IsChecked = !store.Value.OverlayCustomPosition && store.Value.OverlayCorner == item.Item1, Margin = new Thickness(0, 0, 12, 8) };
-            radio.SetResourceReference(Control.ForegroundProperty, "Fg");
-            radio.Checked += (_, _) => { if (!syncingPosition) settings.Update(p => { p.OverlayCorner = item.Item1; p.OverlayCustomPosition = false; }); };
+            var radio = ActionButton(item.Item2, () => { if (!syncingPosition) settings.Update(p => { p.OverlayCorner = item.Item1; p.OverlayCustomPosition = false; }); });
+            radio.Content = ClockDesign.Label(item.Item1 switch { "TL" => "\uE74A", "TR" => "\uE742", "BL" => "\uE74B", _ => "\uE741" }, item.Item2);
             cornerButtons.Add(item.Item1, radio); choices.Children.Add(radio);
         }
         positionPage.Children.Add(choices);
@@ -93,7 +99,7 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
             {
                 settings.Update(p => p.OverlayVisibleMetrics = preset == "SÓ FPS" ? new() { "fps" } : preset == "PADRÃO" ? OverlayMetrics.Defaults().ToList() : OverlayMetrics.All.Select(m => m.Key).ToList());
                 BuildMetrics();
-            }); button.SetResourceReference(StyleProperty, "OutlineButton"); presets.Children.Add(button);
+            }); button.Content = ClockDesign.Label(preset == "SÓ FPS" ? "\uE9D9" : preset == "PADRÃO" ? "\uE73E" : "\uE8B3", preset); presets.Children.Add(button);
         }
         metricsPage.Children.Add(presets);
         var metricsSection = new Expander { Header = "Métricas exibidas", Content = metricGroups, IsExpanded = true, Margin = new Thickness(0, 10, 0, 0) };
@@ -108,7 +114,10 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
     }
     private static Button ActionButton(string text, Action action)
     {
-        var button = new Button { Content = text, Margin = new Thickness(4) };
+        var button = new Button { Content = text, Margin = new Thickness(3, 3, 3, 6), MinHeight = 36, Padding = new Thickness(12, 8, 12, 8), FontSize = 12 };
+        button.SetResourceReference(Control.ForegroundProperty, "Think.Text");
+        button.SetResourceReference(Control.BackgroundProperty, "Think.Control");
+        System.Windows.Automation.AutomationProperties.SetName(button, text);
         button.Click += (_, _) => action(); return button;
     }
     public void Dispose() => settings.Changed -= RefreshTheme;
@@ -143,7 +152,13 @@ internal sealed class OverlaySettingsContent : UserControl, IDisposable
             positionY.Value = p.OverlayCustomPosition ? p.OverlayPositionY : p.OverlayCorner.StartsWith("B") ? 100 : 0;
             positionXLabel.Text = $"Posição horizontal · {positionX.Value:0.0}%";
             positionYLabel.Text = $"Posição vertical · {positionY.Value:0.0}%";
-            foreach (var pair in cornerButtons) pair.Value.IsChecked = !p.OverlayCustomPosition && pair.Key == p.OverlayCorner;
+            foreach (var pair in cornerButtons)
+            {
+                bool selected = !p.OverlayCustomPosition && pair.Key == p.OverlayCorner;
+                pair.Value.SetResourceReference(Control.BackgroundProperty, selected ? "Think.AccentSurface" : "Think.Control");
+                pair.Value.SetResourceReference(Control.ForegroundProperty, selected ? "Think.Accent" : "Think.Text");
+                System.Windows.Automation.AutomationProperties.SetHelpText(pair.Value, selected ? "Posição selecionada" : "Usar esta posição");
+            }
         }
         finally { syncingPosition = false; }
     }

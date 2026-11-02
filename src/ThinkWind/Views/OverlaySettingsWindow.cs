@@ -21,7 +21,12 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
         var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
         var close = ActionButton("Fechar personalização do overlay", Close); close.Content = Glyph("\uE711", 13); close.SetResourceReference(StyleProperty, "Think.IconButton"); close.Width = close.Height = 30;
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
-        heading.Children.Add(new TextBlock { Text = "Personalizar overlay", FontSize = 21, FontWeight = FontWeights.SemiBold });
+        var title = new StackPanel();
+        var name = new TextBlock { Text = "Personalizar overlay", FontSize = 21, FontWeight = FontWeights.SemiBold };
+        name.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); title.Children.Add(name);
+        var subtitle = new TextBlock { Text = "Aparência, posição e informações dos jogos", FontSize = 12, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
+        subtitle.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); title.Children.Add(subtitle);
+        heading.Children.Add(title);
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         var editor = new OverlaySettingsContent(store);
         var scroll = new ScrollViewer { Content = editor, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
