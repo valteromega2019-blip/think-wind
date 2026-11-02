@@ -25,3 +25,9 @@ Revisão por leitura e diff; não executados compilação, testes ou type check 
 O clique no clima abre uma mini-ilha ancorada no próprio botão, tanto na ilha quanto no modo barra. Reutiliza WeatherWidget em modo configuração: busca Open-Meteo, lista de cidades e salvamento de nome/coordenadas nas preferências existentes. Não usa localização automática nem cria novo serviço de rede. Selecionar resultado atualiza a configuração consumida pelo clima da barra/widget. A edição nas configurações continua disponível.
 
 Busca é cancelada ao ocultar e recursos são descartados ao fechar a janela. A lista de cidades aberta conta como interação para impedir recolhimento. Revisão por leitura/diff; sem compilação, testes ou type check nesta solicitação.
+
+## Acrylic dos seletores
+
+PopupBackdrop passa a observar DropDownOpened nos ComboBox carregados, encontra PART_Popup no template atual e conecta o host de composição ao filho real da lista. A inscrição é idempotente. Quando a fonte HWND ainda não existe, faz uma única tentativa adiada em prioridade Loaded, somente se o conteúdo ainda estiver visível. Menus e tooltips reutilizam a mesma abertura adiada. Fechamento preserva liberação do host existente.
+
+Isso corrige o caminho de inicialização que dependia apenas de Loaded no próprio Popup, que não é parte da árvore visual comum do ComboBox. Sem mudanças de dispositivos, estilos, opacidade ou cores. Revisão por leitura/diff; não executados compilação, testes ou type check nesta solicitação. O resultado visual ainda precisa de conferência em execução.

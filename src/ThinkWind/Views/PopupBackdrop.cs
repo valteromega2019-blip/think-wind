@@ -45,18 +45,32 @@ internal static class PopupBackdrop
     internal static bool HasMaterial(FrameworkElement content) => leases.TryGetValue(content, out var lease) && lease.Available;
     internal static void Initialize()
     {
-        EventManager.RegisterClassHandler(typeof(ContextMenu), ContextMenu.OpenedEvent, new RoutedEventHandler((s, _) => Open((FrameworkElement)s)));
+        EventManager.RegisterClassHandler(typeof(ContextMenu), ContextMenu.OpenedEvent, new RoutedEventHandler((s, _) => OpenWhenReady((FrameworkElement)s)));
         EventManager.RegisterClassHandler(typeof(ContextMenu), ContextMenu.ClosedEvent, new RoutedEventHandler((s, _) => Close((FrameworkElement)s)));
-        EventManager.RegisterClassHandler(typeof(ToolTip), ToolTip.OpenedEvent, new RoutedEventHandler((s, _) => Open((FrameworkElement)s)));
+        EventManager.RegisterClassHandler(typeof(ToolTip), ToolTip.OpenedEvent, new RoutedEventHandler((s, _) => OpenWhenReady((FrameworkElement)s)));
         EventManager.RegisterClassHandler(typeof(ToolTip), ToolTip.ClosedEvent, new RoutedEventHandler((s, _) => Close((FrameworkElement)s)));
         EventManager.RegisterClassHandler(typeof(Popup), FrameworkElement.LoadedEvent, new RoutedEventHandler((s, _) =>
         { if (s is Popup popup && popup.Name == "PART_Popup") Attach(popup); }));
+        // ComboBox popup roots are separate HWND trees and may never raise a
+        // Loaded event through the Popup itself. Attach to the actual template.
+        EventManager.RegisterClassHandler(typeof(ComboBox), FrameworkElement.LoadedEvent, new RoutedEventHandler((s, _) =>
+        {
+            if (s is ComboBox combo) { combo.DropDownOpened -= ComboOpened; combo.DropDownOpened += ComboOpened; }
+        }));
+    }
+    private static void ComboOpened(object? sender, EventArgs args)
+    {
+        if (sender is not ComboBox combo) return;
+        combo.ApplyTemplate();
+        if (combo.Template.FindName("PART_Popup", combo) is not Popup popup) return;
+        Attach(popup);
+        if (popup.Child is FrameworkElement child) OpenWhenReady(child);
     }
     internal static void Attach(Popup popup)
     {
         if ((bool)popup.GetValue(AttachedProperty)) return;
         popup.SetValue(AttachedProperty, true);
-        popup.Opened += (_, _) => { if (popup.Child is FrameworkElement content) Open(content); };
+        popup.Opened += (_, _) => { if (popup.Child is FrameworkElement content) OpenWhenReady(content); };
         popup.Closed += (_, _) => { if (popup.Child is FrameworkElement content) Close(content); };
     }
     internal static double Corner(DependencyObject node)
@@ -73,6 +87,14 @@ internal static class PopupBackdrop
         {
             Fallback(content);
         }
+    }
+    private static void OpenWhenReady(FrameworkElement content)
+    {
+        if (PresentationSource.FromVisual(content) is HwndSource) { Open(content); return; }
+        content.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (content.IsVisible && PresentationSource.FromVisual(content) is HwndSource) Open(content);
+        }));
     }
     private static void Close(FrameworkElement content)
     { if (leases.TryGetValue(content, out var lease)) { leases.Remove(content); lease.Dispose(); } }
