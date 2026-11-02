@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
@@ -13,6 +14,7 @@ internal sealed class ClockPanel : StackPanel, IDisposable
     private readonly TextBlock clock = Text(32), date = Text(13), elapsed = Text(24), remaining = Text(24), notice = Text(12);
     private readonly Stopwatch stopwatch = new(), countdown = new();
     private readonly DispatcherTimer tick = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly ProgressBar timeline = ClockDesign.Meter();
     private TimeSpan duration;
     private bool visible;
     private TextBox? minutesInput;
@@ -30,21 +32,23 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         clock.HorizontalAlignment = date.HorizontalAlignment = HorizontalAlignment.Center;
         var clockContent = new StackPanel(); clockContent.Children.Add(clock); clockContent.Children.Add(date);
         Children.Add(Card(clockContent));
-        var tabs = new WrapPanel { Margin = new Thickness(0, 12, 0, 8) };
-        var watchArea = new StackPanel(); var timerArea = new StackPanel { Visibility = Visibility.Collapsed };
-        var alarms = new AlarmPanel(((App)Application.Current).Alarms) { Visibility = Visibility.Collapsed };
+        var tabs = new System.Windows.Controls.Primitives.UniformGrid { Columns = 3, Margin = new Thickness(0, 12, 0, 8) };
+        var watchArea = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        var timerArea = new StackPanel { Visibility = Visibility.Hidden, VerticalAlignment = VerticalAlignment.Center };
+        var alarms = new AlarmPanel(((App)Application.Current).Alarms) { Visibility = Visibility.Hidden };
         alarms.LayoutChanged += () => LayoutChanged?.Invoke();
         var start = Button("Iniciar", () => { });
         start.Click += (_, _) => { if (stopwatch.IsRunning) stopwatch.Stop(); else stopwatch.Start(); start.Content = Label(stopwatch.IsRunning ? "\uE769" : "\uE768", stopwatch.IsRunning ? "Pausar" : "Continuar"); Refresh(); UpdateTimer(); };
         watchArea.Children.Add(elapsed);
-        var watchButtons = new WrapPanel(); watchButtons.Children.Add(start);
+        var watchHint = ClockDesign.Text("Cada instante conta.", 12, true); watchHint.TextAlignment = TextAlignment.Center; watchHint.Margin = new Thickness(0, 4, 0, 16); watchArea.Children.Add(watchHint);
+        var watchButtons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Center }; watchButtons.Children.Add(start);
         watchButtons.Children.Add(Button("Zerar", () => { stopwatch.Reset(); start.Content = Label("\uE768", "Iniciar"); Refresh(); UpdateTimer(); })); watchArea.Children.Add(watchButtons);
         var minutes = new TextBox { Text = "5", MinWidth = 70, MaxLength = 4, Margin = new Thickness(0, 4, 8, 4), Padding = new Thickness(8, 5, 8, 5) };
         minutesInput = minutes;
         System.Windows.Automation.AutomationProperties.SetName(minutes, "Duração do temporizador em minutos, de 1 a 1440");
         var input = new WrapPanel(); input.Children.Add(minutes); input.Children.Add(new TextBlock { Text = "minutos", VerticalAlignment = VerticalAlignment.Center });
-        timerArea.Children.Add(input); timerArea.Children.Add(remaining);
-        var timerButtons = new WrapPanel();
+        timerArea.Children.Add(input); timerArea.Children.Add(remaining); timerArea.Children.Add(timeline);
+        var timerButtons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Center };
         var run = Button("Iniciar", () => { });
         var presets = new WrapPanel { Margin = new Thickness(0, 2, 0, 6) };
         foreach (int value in new[] { 5, 10, 15, 30 })
@@ -95,12 +99,13 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         };
         timerButtons.Children.Add(run);
         timerButtons.Children.Add(Button("Cancelar", () => { countdown.Reset(); duration = TimeSpan.Zero; run.Content = Label("\uE768", "Iniciar"); notice.Text = ""; Refresh(); UpdateTimer(); }));
+        notice.MinHeight = 36; notice.MaxHeight = 48; notice.TextAlignment = TextAlignment.Center;
         timerArea.Children.Add(timerButtons); timerArea.Children.Add(notice);
-        var watchTab = Button("Cronômetro", () => { watchSelected = true; alarms.Visibility = Visibility.Collapsed; watchArea.Visibility = Visibility.Visible; timerArea.Visibility = Visibility.Collapsed; Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
-        var timerTab = Button("Temporizador", () => { watchSelected = false; alarms.Visibility = Visibility.Collapsed; watchArea.Visibility = Visibility.Collapsed; timerArea.Visibility = Visibility.Visible; Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
-        var alarmTab = Button("Alarmes", () => { watchSelected = false; watchArea.Visibility = timerArea.Visibility = Visibility.Collapsed; alarms.Visibility = Visibility.Visible; UpdateTimer(); LayoutChanged?.Invoke(); });
-        alarmTab.Content = Label("\uE823", "Alarmes");
-        watchTab.Content = Label("\uE916", "Cronômetro"); timerTab.Content = Label("\uE91E", "Temporizador");
+        var watchTab = Button("Cronômetro", () => { if (watchArea.Visibility == Visibility.Visible) return; watchSelected = true; alarms.Visibility = Visibility.Hidden; watchArea.Visibility = Visibility.Visible; timerArea.Visibility = Visibility.Hidden; ClockDesign.Reveal(watchArea); Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
+        var timerTab = Button("Temporizador", () => { if (timerArea.Visibility == Visibility.Visible) return; watchSelected = false; alarms.Visibility = Visibility.Hidden; watchArea.Visibility = Visibility.Hidden; timerArea.Visibility = Visibility.Visible; ClockDesign.Reveal(timerArea); Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
+        var alarmTab = Button("Alarmes", () => { if (alarms.Visibility == Visibility.Visible) return; watchSelected = false; watchArea.Visibility = timerArea.Visibility = Visibility.Hidden; alarms.Visibility = Visibility.Visible; ClockDesign.Reveal(alarms); UpdateTimer(); LayoutChanged?.Invoke(); });
+        alarmTab.Content = ClockDesign.Label("\uE823", "Alarmes", true);
+        watchTab.Content = ClockDesign.Label("\uE916", "Cronômetro", true); timerTab.Content = ClockDesign.Label("\uE91E", "Temporizador", true);
         void Highlight(bool timer)
         {
             alarmTab.SetResourceReference(Control.BackgroundProperty, "Think.Control");
@@ -120,7 +125,7 @@ internal sealed class ClockPanel : StackPanel, IDisposable
             }
         };
         tabs.Children.Add(watchTab); tabs.Children.Add(timerTab); tabs.Children.Add(alarmTab); Children.Add(tabs);
-        var tools = new Grid(); tools.Children.Add(watchArea); tools.Children.Add(timerArea); tools.Children.Add(alarms); Children.Add(Card(tools));
+        var tools = new Grid { MinHeight = 320 }; tools.Children.Add(watchArea); tools.Children.Add(timerArea); tools.Children.Add(alarms); Children.Add(Card(tools));
         Children.Add(Button("Abrir alarmes do Windows ↗", () => SystemActions.Run("ms-clock:")));
         tick.Tick += (_, _) =>
         {
@@ -140,8 +145,7 @@ internal sealed class ClockPanel : StackPanel, IDisposable
     }
     private static Button Button(string title, Action action)
     {
-        var button = new Button { Content = Label(title == "Iniciar" ? "\uE768" : title == "Zerar" ? "\uE777" : title == "Cancelar" ? "\uE711" : "\uE823", title), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 4, 6, 4) };
-        button.Click += (_, _) => action(); return button;
+        return ClockDesign.Button(title == "Iniciar" ? "\uE768" : title == "Zerar" ? "\uE777" : title == "Cancelar" ? "\uE711" : "\uE823", title, action);
     }
     private static Border Card(UIElement content)
     {
@@ -162,7 +166,16 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         elapsed.Text = Format(watchTime) + watchTime.ToString(@"\.ff");
         var pending = !completed && duration == TimeSpan.Zero && int.TryParse(minutesInput?.Text, out int value) && value is >= 1 and <= 1440 ? TimeSpan.FromMinutes(value) : TimeSpan.Zero;
         remaining.Text = Format(duration > countdown.Elapsed ? duration - countdown.Elapsed : pending);
-        notice.Visibility = string.IsNullOrWhiteSpace(notice.Text) ? Visibility.Collapsed : Visibility.Visible;
+        double progress = duration.TotalSeconds > 0 ? Math.Clamp(1 - countdown.Elapsed.TotalSeconds / duration.TotalSeconds, 0, 1) : completed ? 0 : 1;
+        if (Math.Abs(timeline.Value - progress) > .0001)
+        {
+            double previous = timeline.Value; timeline.BeginAnimation(System.Windows.Controls.Primitives.RangeBase.ValueProperty, null); timeline.Value = progress;
+            double milliseconds = ((App)Application.Current).AnimationDuration;
+            if (timeline.IsVisible && visible && milliseconds > 0 && SystemParameters.ClientAreaAnimation)
+                timeline.BeginAnimation(System.Windows.Controls.Primitives.RangeBase.ValueProperty, new DoubleAnimation(previous, progress, TimeSpan.FromMilliseconds(Math.Min(220, milliseconds))) { FillBehavior = FillBehavior.Stop });
+        }
+        notice.Visibility = string.IsNullOrWhiteSpace(notice.Text) ? Visibility.Hidden : Visibility.Visible;
+        notice.ToolTip = notice.Text;
     }
     private static string Format(TimeSpan value) => ((int)value.TotalHours).ToString("00") + value.ToString(@"\:mm\:ss");
     private void UpdateTimer()

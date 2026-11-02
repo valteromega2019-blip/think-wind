@@ -67,6 +67,7 @@ public partial class App : Application
     private StartupPriority? startupPriority;
     private readonly object startupSensorConsumer = new();
     internal bool IsExiting { get; private set; }
+    internal double AnimationDuration => store?.Value.AnimationMilliseconds ?? 220;
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
