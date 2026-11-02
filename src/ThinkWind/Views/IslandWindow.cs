@@ -69,7 +69,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         button.Padding = new Thickness(5, 0, 5, 0);
         button.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
         button.ToolTip = DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", CultureInfo.GetCultureInfo("pt-BR"));
-        return button;
+        return MarkPanelIcon(button, "calendar");
     }
     private readonly CompactMonitoringWidget metrics;
     private readonly TextBlock calendarDate = new() { FontSize = 15, TextWrapping = TextWrapping.Wrap };
@@ -311,7 +311,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 clockButton.Style = (Style)FindResource("Think.IconButton"); clockButton.Content = clock;
                 clockButton.Padding = new Thickness(0); clockButton.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
                 LayoutDrag.Attach(clockButton, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
-                header.Children.Add(clockButton);
+                header.Children.Add(MarkPanelIcon(clockButton, "clock"));
                 header.Children.Add(DateButton(false));
                 if (Store.Value.ShowWeatherInHeader && WeatherEnabled) header.Children.Add(WeatherButton(false));
                 continue;
@@ -332,7 +332,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             button.Width = 32 * scale; button.Height = 32 * scale;
             button.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
             if (id is not ("settings" or "windows-settings")) LayoutDrag.Attach(button, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
-            header.Children.Add(button);
+            header.Children.Add(MarkPanelIcon(button, id));
         }
         if (!IsQuickVisible("clock") && Store.Value.ShowWeatherInHeader && WeatherEnabled && !(Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing))
             header.Children.Add(WeatherButton(false));
@@ -355,7 +355,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             monitor.Content = Glyph(monitoringOpen ? "\uE80F" : "\uE9D9", 17 * scale);
             monitor.Width = monitor.Height = 32 * scale;
             monitor.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
-            header.Children.Add(monitor);
+            header.Children.Add(MarkPanelIcon(monitor, "monitor"));
         }
         if (IsQuickVisible("tools")) header.Children.Add(SystemToolsButton(false));
         BuildSecondaryQuickControls();
@@ -366,9 +366,9 @@ internal sealed partial class IslandWindow : FloatingWindow
                 var settingsButton = ActionButton("Personalizar launcher", openSettings);
                 TutorialGuide.Mark(settingsButton, "customize");
                 settingsButton.Content = Glyph(LayoutCatalog.QuickControls.First(q => q.Id == "settings").Glyph, 17 * scale);
-                StyleSecondaryControl(settingsButton); hoverQuick.Children.Add(settingsButton);
+                StyleSecondaryControl(settingsButton); hoverQuick.Children.Add(MarkPanelIcon(settingsButton, "settings"));
                 var widgetsButton = ActionButton("Editar widgets", () => ((App)Application.Current).OpenWidgetSettings());
-                widgetsButton.Content = Glyph("\uE80A", 17 * scale); StyleSecondaryControl(widgetsButton); hoverQuick.Children.Add(widgetsButton);
+                widgetsButton.Content = Glyph("\uE80A", 17 * scale); StyleSecondaryControl(widgetsButton); hoverQuick.Children.Add(MarkPanelIcon(widgetsButton, "settings"));
                 themeToggle = ActionButton("Alternar tema do Windows e do launcher", async () =>
                     await ThemeService.SelectTheme(Store, ThemeService.IsLight(Store.Value) ? "Dark" : "Light"));
                 themeToggle.Style = (Style)FindResource("Think.IconButton");
@@ -379,18 +379,19 @@ internal sealed partial class IslandWindow : FloatingWindow
             var close = ActionButton(Store.IsEditing ? "Concluir edição" : "Fechar painel completo", () =>
             { if (Store.IsEditing) Store.SetEditing(false); Transition(() => interaction.CloseFull()); });
             close.Style = (Style)FindResource("Think.IconButton"); close.Content = Glyph("\uE70E", 13);
-            close.Width = 32; close.Height = 32; close.Margin = new Thickness(4, 0, 0, 0); header.Children.Add(close);
+            close.Width = 32; close.Height = 32; close.Margin = new Thickness(4, 0, 0, 0); header.Children.Add(MarkPanelIcon(close, "expand"));
         }
         else
         {
             var expand = ActionButton("Abrir painel completo", OpenFull);
             TutorialGuide.Mark(expand, "expand");
-            expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(expand);
+            expand.Style = (Style)FindResource("Think.IconButton"); expand.Content = Glyph("\uE70D", 13); expand.Width = 28; expand.Height = 32; header.Children.Add(MarkPanelIcon(expand, "expand"));
         }
         hoverQuick.Visibility = hoverQuick.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
     private void UpdateClock()
     {
+        RefreshPanelIcons();
         metrics.RefreshPower();
         clock.Text = DateTime.Now.ToString("HH:mm", CultureInfo.GetCultureInfo("pt-BR"));
         headerDate.Text = barDate.Text = DateTime.Now.ToString("dd/MM", CultureInfo.GetCultureInfo("pt-BR"));
@@ -580,13 +581,14 @@ internal sealed partial class IslandWindow : FloatingWindow
             mini.PreviewKeyDown += (_, _) => { keyboardBusyUntil = DateTime.UtcNow.AddMilliseconds(350); ScheduleCollapse(); };
             mini.Dismissed += () =>
             {
+                RefreshPanelIcons();
                 lastMiniKind = kind; lastMiniDismissed = DateTime.UtcNow;
                 if (minis.Values.Any(m => m.IsVisible)) return;
                 interaction.CloseMini(); ScheduleCollapse();
             };
             minis[kind] = mini;
         }
-        mini.Present();
+        mini.Present(); RefreshPanelIcons();
     }
     private OverlayChrome.PixelRect MiniAnchor()
     {

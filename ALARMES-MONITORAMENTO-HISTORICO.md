@@ -53,6 +53,7 @@ Referências oficiais: [estado da barra](https://learn.microsoft.com/en-us/windo
 - Medição compartilhada de Cronômetro, Temporizador e Alarmes: abas inativas usam `Hidden`, sem alterar o tamanho ao alternar. Lista e editor também participam da mesma medição. Continua sujeito ao ajuste de escala do painel para a tela/DPI/fonte escolhidos.
 - Barra do temporizador em cápsula, sem marcador branco, com cor de destaque e atualização animada curta. Presets, contagem e agendamento permanecem os mesmos.
 - A janela do relógio usa a altura natural do conteúdo em vez do limite genérico de 520 DIP. Quando a tela/fonte ainda exigir redução, a margem inferior compensa o espaço lateral criado pelo Viewbox. As três abas mantêm sua medição compartilhada; os demais painéis não mudam.
+- Ícones dos painéis internos ficam na cor de destaque enquanto seu painel estiver visível, inclusive ao retirar o mouse. Aplica-se às mini-ilhas, ferramentas, monitoramento, expansão, personalização e teclado próprio; a ampliação continua restrita ao hover. Estado reaplicado ao reconstruir as linhas e mudar o tema, sem novo timer nem hooks. Aplicativos externos, como Configurações do Windows ou o teclado nativo, não são monitorados por esta indicação.
 
 O refinamento foi revisado por leitura/diff, sem nova compilação, testes, type check ou prévia nesta etapa. A prévia compilada anteriormente não contém estas mudanças visuais.
 

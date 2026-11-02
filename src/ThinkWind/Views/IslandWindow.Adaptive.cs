@@ -109,7 +109,7 @@ internal sealed partial class IslandWindow
         clockButton.Content = statusClock;
         clockButton.Style = (Style)FindResource("Think.IconButton");
         clockButton.Visibility = statusClock.Visibility;
-        DockPanel.SetDock(clockButton, Dock.Left); statusRow.Children.Add(clockButton);
+        DockPanel.SetDock(clockButton, Dock.Left); statusRow.Children.Add(MarkPanelIcon(clockButton, "clock"));
         var dateButton = DateButton(true);
         dateButton.Visibility = statusClock.Visibility;
         DockPanel.SetDock(dateButton, Dock.Left); statusRow.Children.Add(dateButton);
@@ -122,23 +122,23 @@ internal sealed partial class IslandWindow
         extraArea.Width = 28; extraArea.Height = 24; extraArea.Padding = new Thickness(3);
         extraArea.Margin = new Thickness(0, 0, 8, 0);
         extraArea.Visibility = IsQuickVisible("monitor") ? Visibility.Visible : Visibility.Collapsed;
-        DockPanel.SetDock(extraArea, Dock.Left); statusRow.Children.Add(extraArea);
+        DockPanel.SetDock(extraArea, Dock.Left); statusRow.Children.Add(MarkPanelIcon(extraArea, "monitor"));
         var tools = SystemToolsButton(true);
         tools.Visibility = IsQuickVisible("tools") ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(tools, Dock.Left); statusRow.Children.Add(tools);
-        void Add(string label, string glyph, Action action)
+        void Add(string label, string glyph, Action action, string panelId = "")
         {
             var button = ActionButton(label, action); button.Style = (Style)FindResource("Think.IconButton");
             if (label == "Expandir central de controle") TutorialGuide.Mark(button, "expand");
             button.Content = Glyph(glyph, 13); button.Width = 28; button.Height = 24; button.Padding = new Thickness(3);
-            controls.Children.Add(button);
+            controls.Children.Add(MarkPanelIcon(button, panelId));
         }
         void AddMini(string label, string glyph, MiniIslandKind kind)
         {
             var button = ActionButton(label, () => { }); button.Style = (Style)FindResource("Think.IconButton");
             button.Content = Glyph(glyph, 13); button.Width = 28; button.Height = 24; button.Padding = new Thickness(3);
             button.Click += (_, _) => ShowMini(kind, button);
-            controls.Children.Add(button);
+            controls.Children.Add(MarkPanelIcon(button, kind switch { MiniIslandKind.Volume => "audio", MiniIslandKind.Network => "wifi", MiniIslandKind.Bluetooth => "bluetooth", MiniIslandKind.Calendar => "calendar", MiniIslandKind.Tray => "tray", _ => "clock" }));
         }
         foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "monitor" or "tools" or "settings") && IsQuickVisible(id)))
         {
@@ -151,10 +151,10 @@ internal sealed partial class IslandWindow
                 case "calendar": AddMini(control.Name, control.Glyph, MiniIslandKind.Calendar); break;
                 case "tray": AddMini(control.Name, control.Glyph, MiniIslandKind.Tray); break;
                 case "notifications": Add(control.Name, control.Glyph, () => Desktop.Chord(0x5B, 0x4E)); break;
-                default: if (control.Target is string target) Add(control.Name, control.Glyph, () => Services.SystemActions.Run(target)); break;
+                default: if (control.Target is string target) Add(control.Name, control.Glyph, () => Services.SystemActions.Run(target), id); break;
             }
         }
-        Add("Expandir central de controle", "\uE70D", OpenFull);
+        Add("Expandir central de controle", "\uE70D", OpenFull, "expand");
         DockPanel.SetDock(controls, Dock.Right); statusRow.Children.Add(controls);
     }
     private bool AdaptiveCollapse => fullscreenReveal || Store.Value.IslandAutoCollapse

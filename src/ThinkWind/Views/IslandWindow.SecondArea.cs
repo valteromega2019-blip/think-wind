@@ -60,7 +60,11 @@ internal sealed partial class IslandWindow
     }
     private void ToggleLeftArea()
     {
-        leftArea ??= new EmptyIslandAreaWindow(Store, ((App)Application.Current).Telemetry) { MonitorDeviceOverride = MonitorDeviceOverride };
+        if (leftArea is null)
+        {
+            leftArea = new EmptyIslandAreaWindow(Store, ((App)Application.Current).Telemetry) { MonitorDeviceOverride = MonitorDeviceOverride };
+            leftArea.IsVisibleChanged += (_, _) => RefreshPanelIcons();
+        }
         if (leftArea.IsVisible) leftArea.Hide();
         else { leftArea.Show(); leftArea.Position(); TutorialGuide.Notify("monitor-open"); }
     }

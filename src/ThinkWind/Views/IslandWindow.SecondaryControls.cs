@@ -31,7 +31,7 @@ internal sealed partial class IslandWindow
                     TutorialGuide.Notify("monitor-open");
                 });
                 TutorialGuide.Mark(monitor, "monitor");
-                monitor.Content = Glyph(monitoringOpen ? "\uE80F" : "\uE9D9", 17); StyleSecondaryControl(monitor); hoverQuick.Children.Add(monitor); continue;
+                monitor.Content = Glyph(monitoringOpen ? "\uE80F" : "\uE9D9", 17); StyleSecondaryControl(monitor); hoverQuick.Children.Add(MarkPanelIcon(monitor, "monitor")); continue;
             }
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
             var button = ActionButton(control.Name, () => { });
@@ -49,7 +49,7 @@ internal sealed partial class IslandWindow
                     default: if (control.Target is string target) SystemActions.Run(target); break;
                 }
             };
-            hoverQuick.Children.Add(button);
+            hoverQuick.Children.Add(MarkPanelIcon(button, id == "clock" ? "calendar" : id));
         }
         hoverQuick.Visibility = hoverQuick.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }

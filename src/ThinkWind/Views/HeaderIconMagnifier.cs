@@ -30,6 +30,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
         internal double Growth, Velocity;
         private Brush? highlight;
         private Brush? highlightFill;
+        private bool activePanel;
         internal Item(Button button, TextBlock glyph, bool wholeKey)
         {
             Button = button; Glyph = glyph; button.ApplyTemplate();
@@ -47,7 +48,10 @@ internal sealed class HeaderIconMagnifier : IDisposable
         }
         internal void Highlight(Brush? brush, Brush? fill = null)
         {
-            if (ReferenceEquals(highlight, brush) && ReferenceEquals(highlightFill, fill)) return;
+            bool selected = ActivePanelIcon.IsActive(Button);
+            if (brush is null && selected) brush = Glyph.TryFindResource("Think.Accent") as Brush;
+            if (ReferenceEquals(highlight, brush) && ReferenceEquals(highlightFill, fill) && activePanel == selected) return;
+            activePanel = selected;
             bool updateFill = highlightFill is not null || fill is not null;
             highlight = brush; highlightFill = fill;
             // Animate the effective value, keeping the original style/binding
@@ -114,6 +118,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
                 hover && highlightKeys ? item.Button.TryFindResource("Think.Accent") as Brush : null);
         }
     }
+    internal void RefreshSelection() { if (!disposed) { RefreshTargets(); RefreshHighlight(); } }
     private void PointerChanged(object sender, MouseEventArgs args) { RefreshTargets(); RefreshHighlight(); Wake(); }
     private void Loaded(object sender, RoutedEventArgs args) { RefreshTargets(); RefreshHighlight(); Wake(); }
     private void Unloaded(object sender, RoutedEventArgs args) => Reset();
