@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Installer,
+﻿param([Parameter(Mandatory=$true)][string]$Installer,
       [Parameter(Mandatory=$true)][string]$ExpectedHash,
       [Parameter(Mandatory=$true)][string]$Launcher,
       [int]$WaitPid = 0,
@@ -10,6 +10,16 @@ $record = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Orby
 $lock = $null
 $restartAttempted = $false
 $readyEvent = $null
+$progressProcess = $null
+$progressState = $null
+function Publish-Progress([string]$Title, [string]$Detail, [bool]$Done = $false, [bool]$Failed = $false) {
+    if ($null -eq $progressState) { return }
+    try {
+        $json = @{ Title=$Title; Detail=$Detail; Done=$Done; Error=$Failed } | ConvertTo-Json
+        [IO.File]::WriteAllText($progressState + '.tmp', $json, [Text.UTF8Encoding]::new($true))
+        Move-Item -LiteralPath ($progressState + '.tmp') -Destination $progressState -Force
+    } catch { }
+}
 try {
     [IO.Directory]::CreateDirectory((Split-Path -Parent $record)) | Out-Null
     # FileShare.Read prevents modifications between validation and execution.
@@ -36,6 +46,19 @@ try {
     } else { throw 'Assinatura Authenticode invalida ou estado nao permitido. Instalacao bloqueada.' }
     if ($WaitPid -eq 0) { Write-Output 'Assinatura e integridade verificadas.'; exit 0 }
     if ([string]::IsNullOrWhiteSpace($ReadyFile)) { throw 'Confirmacao de prontidao ausente. Instalacao cancelada.' }
+    # Copy the UI script away from the installed files before they are replaced.
+    # This companion never installs anything and needs no elevation.
+    try {
+        $progressState = Join-Path (Split-Path -Parent $Installer) ('progress-' + [Guid]::NewGuid().ToString('N') + '.json')
+        $progressScript = $progressState + '.ps1'
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'UpdateProgress.ps1') -Destination $progressScript
+        Publish-Progress 'Preparando atualização' 'O pacote foi validado. Aguardando o Orby encerrar com segurança.'
+        $command = "& '" + $progressScript.Replace("'", "''") + "' -StateFile '" + $progressState.Replace("'", "''") + "' -OwnerPid " + $PID
+        $progressProcess = Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList @('-NoProfile','-STA','-ExecutionPolicy','Bypass','-EncodedCommand',[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))) -WindowStyle Hidden -PassThru
+        $uiDeadline = [DateTime]::UtcNow.AddSeconds(8)
+        while (!(Test-Path -LiteralPath ($progressState + '.ready')) -and !$progressProcess.HasExited -and [DateTime]::UtcNow -lt $uiDeadline) { Start-Sleep -Milliseconds 100 }
+        if (!(Test-Path -LiteralPath ($progressState + '.ready')) -and !$progressProcess.HasExited) { $progressProcess.Kill(); $progressProcess = $null }
+    } catch { $progressProcess = $null }
     # Publish readiness only after all prerequisites have passed. The UI stays
     # alive until this point; no installer runs while its parent still exists.
     $parent = Get-Process -Id $WaitPid -ErrorAction SilentlyContinue
@@ -53,8 +76,13 @@ try {
     # SILENT skips wizard questions but keeps Inno's actual installation
     # progress/status visible after the launcher exits. VERYSILENT + Hidden
     # left the desktop with no indication that installation was still running.
-    $setup = Start-Process -FilePath $Installer -ArgumentList @('/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/ORBYUPDATE=1',('/LOG="' + $log + '"')) -WindowStyle Normal -Wait -PassThru
+    Publish-Progress 'Instalando atualização' 'Substituindo os arquivos do Orby e preparando os componentes. Suas configurações serão preservadas.'
+    $customProgress = $null -ne $progressProcess -and !$progressProcess.HasExited -and (Test-Path -LiteralPath ($progressState + '.ready'))
+    $mode = '/SILENT'; $windowStyle = 'Normal'
+    if ($customProgress) { $mode = '/VERYSILENT'; $windowStyle = 'Hidden' }
+    $setup = Start-Process -FilePath $Installer -ArgumentList @($mode,'/SUPPRESSMSGBOXES','/NORESTART','/ORBYUPDATE=1',('/LOG="' + $log + '"')) -WindowStyle $windowStyle -Wait -PassThru
     if ($setup.ExitCode -notin @(0,3010)) { throw ('Instalador retornou erro ' + $setup.ExitCode + '. Consulte ' + $log) }
+    Publish-Progress 'Abrindo o Orby' 'A instalação terminou. Aguardando a confirmação de abertura da versão instalada.'
     # The updater can have been started from a development/portable copy.
     # Reopen the actual registered installation, never that older source path.
     $installedKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{B7408A21-58E2-4E3A-A842-84EF85965350}_is1'
@@ -74,10 +102,12 @@ try {
     }
     if (!$confirmed) { throw 'Os arquivos foram atualizados, mas o Orby nao confirmou a abertura. Feche outras copias e abra o Orby pelo menu Iniciar. Suas configuracoes foram preservadas.' }
     @{ ExitCode=$setup.ExitCode; Utc=[DateTime]::UtcNow; Log=$log; LaunchConfirmed=$true; Launcher=$installedLauncher } | ConvertTo-Json | Set-Content -LiteralPath $record -Encoding UTF8
+    Publish-Progress 'Atualização concluída' 'A versão instalada foi aberta. Você já pode continuar usando o Orby.' $true
     exit 0
 } catch {
     $message = $_.Exception.Message
     Write-Output $message
+    Publish-Progress 'Não foi possível concluir' $message $true $true
     if ($WaitPid -ne 0) {
         try { @{ ExitCode=-1; Error=$message; Utc=[DateTime]::UtcNow } | ConvertTo-Json | Set-Content -LiteralPath $record -Encoding UTF8 } catch { }
         try { Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show($message, 'Orby Launcher - Atualizacao', 'OK', 'Warning') | Out-Null } catch { }

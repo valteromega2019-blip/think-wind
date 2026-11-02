@@ -22,6 +22,7 @@
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" />
     <Content Include="UpdateInstaller.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="UpdateProgress.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Resource Include="Assets/OrbyLauncher.ico" />
     <Resource Include="Assets/OrbyLauncher.png" />
     <EmbeddedResource Include="Assets/UpdatePublicKey.xml" LogicalName="OrbyLauncher.UpdatePublicKey.xml" />
