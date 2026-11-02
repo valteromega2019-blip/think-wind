@@ -49,6 +49,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private bool preparingFullReveal;
     private bool escapeDismissed;
     private DateTime? outsideSince;
+    private OutsideClickObserver? outsidePanelClicks;
     private DateTime keyboardBusyUntil;
     private bool collapseEnabled;
     private double collapseSeconds = -1;
@@ -155,6 +156,19 @@ internal sealed partial class IslandWindow : FloatingWindow
         MouseLeave += (_, _) => { if (!NearActivationZone) escapeDismissed = false; hoverEnter.Stop(); ScheduleCollapse(); };
         LostMouseCapture += (_, _) => { if (contentResizePending) Dispatcher.BeginInvoke(new Action(ModuleSizeChanged)); };
         Deactivated += (_, _) => ScheduleCollapse();
+        Loaded += (_, _) =>
+        {
+            outsidePanelClicks ??= new OutsideClickObserver(this, () =>
+            {
+                if (Store.IsEditing || InteractionInProgress || PointerInsideGroup) return;
+                escapeDismissed = true; hoverEnter.Stop(); CancelCollapse();
+                systemTools?.Close(); leftArea?.Hide(); DismissMinis();
+                Transition(() => interaction.Compact()); RefreshPanelIcons();
+            }, () => PointerInsideGroup);
+            if (Stage != IslandStage.Compact || interaction.MiniOpen) outsidePanelClicks.Start();
+        };
+        Closed += (_, _) => outsidePanelClicks?.Dispose();
+        IsVisibleChanged += (_, _) => { if (!IsVisible) outsidePanelClicks?.Stop(); };
         PreviewKeyDown += (_, e) => keyboardBusyUntil = DateTime.UtcNow.AddMilliseconds(350);
         // Bubble after controls have had the chance to dismiss their own popup.
         KeyDown += (_, e) =>
@@ -481,6 +495,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     private void UpdateStageVisibility()
     {
+        if (IsVisible && (Stage != IslandStage.Compact || interaction.MiniOpen)) outsidePanelClicks?.Start();
+        else outsidePanelClicks?.Stop();
         hoverViewport.Visibility = Stage == IslandStage.Hover ? Visibility.Visible : Visibility.Collapsed;
         fullPanel.Visibility = Stage == IslandStage.Full ? Visibility.Visible : Visibility.Collapsed;
         secondaryQuickViewport.Visibility = Stage != IslandStage.Compact && hoverQuick.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;

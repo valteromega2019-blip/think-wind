@@ -141,7 +141,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         {
             if (IsVisible)
             {
-                outsideClicks ??= new OutsideClickObserver(this, () => { if (menus == 0 && !modal) Dismiss(); });
+                outsideClicks ??= new OutsideClickObserver(this, () => { if (menus == 0 && !modal) Dismiss(); }, () => IsMouseOver || dockHasFocus());
                 outsideClicks.Start();
             }
             else outsideClicks?.Stop();
@@ -390,8 +390,14 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private void PinDock(AppEntry app) => Store.Update(p => { if (!p.Shortcuts.Any(pin => SameTarget(pin.Target, app.Target))) p.Shortcuts.Add(new(app.Name, app.Target)); });
     private void Launch(AppEntry entry)
     {
-        if (LayoutDrag.Active || !SystemActions.Launch(entry.Target)) return;
-        Store.Update(p => { p.RecentLaunches.RemoveAll(item => item.Target.Equals(entry.Target, StringComparison.OrdinalIgnoreCase)); p.RecentLaunches.Insert(0, new(entry.Name, entry.Target)); }); Dismiss();
+        if (LayoutDrag.Active) return;
+        Dismiss();
+        // Let WPF remove the panel before ShellExecute can wait on startup/UAC.
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        {
+            if (!SystemActions.Launch(entry.Target)) return;
+            Store.Update(p => { p.RecentLaunches.RemoveAll(item => item.Target.Equals(entry.Target, StringComparison.OrdinalIgnoreCase)); p.RecentLaunches.Insert(0, new(entry.Name, entry.Target)); });
+        }));
     }
     private void MovePin(string source, int direction)
     {

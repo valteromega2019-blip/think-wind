@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -20,19 +22,24 @@ internal sealed class OutsideClickObserver : IDisposable
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
     private readonly HwndSource source;
     private readonly Action outside;
+    private readonly Func<bool>? inside;
+    private static readonly List<OutsideClickObserver> observers = new();
     private readonly nint buffer = Marshal.AllocHGlobal(64);
     private bool active, disposed, queued;
-    internal OutsideClickObserver(Window window, Action onOutside)
-    { source = HwndSource.FromHwnd(new WindowInteropHelper(window).Handle); outside = onOutside; source.AddHook(Message); }
+    internal OutsideClickObserver(Window window, Action onOutside, Func<bool>? isInside = null)
+    { source = HwndSource.FromHwnd(new WindowInteropHelper(window).Handle); outside = onOutside; inside = isInside; source.AddHook(Message); }
     internal void Start()
     {
         if (disposed || active) return;
         active = RegisterRawInputDevices(new[] { new Device { Page = 1, Usage = 2, Flags = 0x100, Target = source.Handle } }, 1, (uint)Marshal.SizeOf<Device>());
+        if (active) observers.Add(this);
     }
     internal void Stop()
     {
         if (!active) return;
-        RegisterRawInputDevices(new[] { new Device { Page = 1, Usage = 2, Flags = 1 } }, 1, (uint)Marshal.SizeOf<Device>());
+        observers.Remove(this);
+        var remaining = observers.LastOrDefault();
+        RegisterRawInputDevices(new[] { new Device { Page = 1, Usage = 2, Flags = remaining is null ? 1u : 0x100u, Target = remaining?.source.Handle ?? 0 } }, 1, (uint)Marshal.SizeOf<Device>());
         active = false;
     }
     private nint Message(nint window, int message, nint wParam, nint lParam, ref bool handled)
@@ -44,10 +51,15 @@ internal sealed class OutsideClickObserver : IDisposable
         // RAWMOUSE.usButtonFlags follows the aligned button union at offset 4.
         if ((Marshal.ReadInt16(buffer, (int)header + 4) & 0x155) == 0 || !GetCursorPos(out var point)) return 0;
         GetWindowThreadProcessId(WindowFromPoint(point), out uint process);
-        if (process == 0 || process == Environment.ProcessId) return 0;
+        if (process == 0) return 0;
         queued = true;
         source.Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
-        { queued = false; if (active && !disposed) outside(); }));
+        {
+            queued = false;
+            // One native mouse subscription shared by the visible panels.
+            foreach (var observer in observers.ToArray())
+                if (observer.active && !observer.disposed && (observer.inside is not null ? !observer.inside() : process != Environment.ProcessId)) observer.outside();
+        }));
         return 0; // Let the native default procedure clean up WM_INPUT.
     }
     public void Dispose()
