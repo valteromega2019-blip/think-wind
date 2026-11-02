@@ -37,9 +37,24 @@ public partial class App : Application
     private WindowsTaskbar? windowsTaskbar;
     private WindowsStartKey? startKey;
     private LauncherWindowsKey? launcherWindowsKey;
+    private ShellInputBridge? shellInput;
     private GameModeService? gameMode;
     private FullscreenHandleWindow? fullscreenHandle;
     internal HardwareTelemetry Telemetry { get; private set; } = null!;
+    internal AlarmService Alarms { get; private set; } = null!;
+    private AlarmNotice? alarmNotice;
+    private readonly Queue<ClockAlarm> alarmQueue = new();
+    private void ShowAlarm(ClockAlarm alarm)
+    {
+        alarmQueue.Enqueue(alarm); PresentNextAlarm();
+    }
+    private void PresentNextAlarm()
+    {
+        if (IsExiting || gameMode?.Active == true || alarmNotice is not null || alarmQueue.Count == 0) return;
+        alarmNotice = new AlarmNotice(store, alarmQueue.Dequeue(), Alarms);
+        alarmNotice.Closed += (_, _) => { alarmNotice = null; Dispatcher.BeginInvoke(new Action(PresentNextAlarm)); };
+        alarmNotice.Show();
+    }
     private HardwareOverlayWindow? hardwareOverlay;
     private OverlaySettingsWindow? overlaySettings;
     private OverlayHotkey? overlayHotkey;
@@ -55,6 +70,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (ShellInputBridge.Run(e.Args)) { Shutdown(); return; }
         AppBrand.InitializeWindowsIdentity();
         LaunchEnvironment.RemoveDevelopmentBootstrap();
         if (StartupPermissions.RunSetup(e.Args, out int startupSetupCode)) { Shutdown(startupSetupCode); return; }
@@ -113,6 +129,8 @@ public partial class App : Application
             { MessageBox.Show("Não foi possível configurar a inicialização automática: " + error.Message, "Orby Launcher"); }
         }
         ThemeService.Apply(store.Value);
+        Alarms = new AlarmService(store.AlarmStatePath);
+        Alarms.Ring += ShowAlarm;
         Optimizer.Recover();
         InitializeUpdates();
         Telemetry = new HardwareTelemetry(Dispatcher);
@@ -174,7 +192,7 @@ public partial class App : Application
                 {
                     if (store.Value.HardwareSensorsAutoSetup) store.Update(p => p.HardwareSensorsSetupAttempted = true);
                     if (await StartupPermissions.Prepare(store.Value.HardwareSensorsAutoSetup, store.Value.AutoAuthorizeWindowActions))
-                        Telemetry.RefreshAuthorizedSensors();
+                    { Telemetry.RefreshAuthorizedSensors(); ConfigureStartHotkey(); }
                 }
                 catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)
                 { MessageBox.Show("Não foi possível preparar os auxiliares: " + error.Message, "Orby Launcher"); }
@@ -241,6 +259,9 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        IsExiting = true;
+        if (Alarms is not null) { Alarms.Ring -= ShowAlarm; Alarms.Dispose(); }
+        alarmQueue.Clear(); alarmNotice?.Close();
         Optimizer.Restore();
         virtualKeyboard?.Retire();
         updateNotice?.Close(); Updates?.Dispose();
@@ -249,6 +270,7 @@ public partial class App : Application
         windowsTaskbar?.Dispose();
         startKey?.Dispose();
         launcherWindowsKey?.Dispose();
+        shellInput?.Dispose();
         if (diagnosticReport is not null && !System.IO.File.Exists(diagnosticReport)) WriteDiagnosticReport();
         gameMode?.Dispose();
         overlayHotkey?.Dispose(); hardwareOverlay?.Close();
@@ -290,7 +312,9 @@ public partial class App : Application
         // The isolated Windows key remains ours during games as requested.
         // The dedicated hook only posts the action; it does no UI/system work.
         bool interceptWindows = store.Value.WindowsKeyOpensLauncher;
-        if (!interceptWindows) { launcherWindowsKey?.Dispose(); launcherWindowsKey = null; }
+        shellInput ??= new ShellInputBridge(Dispatcher, OpenStartFromKeyboard, ConfigureStartHotkey);
+        shellInput.Configure(interceptWindows && store.Value.AutoAuthorizeWindowActions);
+        if (!interceptWindows || (shellInput.Active && store.Value.AutoAuthorizeWindowActions)) { launcherWindowsKey?.Dispose(); launcherWindowsKey = null; }
         else launcherWindowsKey ??= new LauncherWindowsKey(Dispatcher, OpenStartFromKeyboard);
         bool enabled = store.Value.StartHotkeyEnabled;
         if (!enabled) { startKey?.Dispose(); startKey = null; return; }
@@ -343,6 +367,7 @@ public partial class App : Application
             foreach (var window in gameHidden.Where(window => Windows.OfType<Window>().Contains(window)).ToArray())
             { if (ReferenceEquals(window, island) && !window.IsLoaded) island?.PrepareInitialLayout(); bool activate = window.ShowActivated; window.ShowActivated = false; window.Show(); window.ShowActivated = activate; }
             gameHidden.Clear(); windowsTaskbar?.Apply(store.Value.HideWindowsTaskbar);
+            PresentNextAlarm();
         }
         ApplyHardwareOverlay();
     }

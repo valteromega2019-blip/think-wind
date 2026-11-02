@@ -71,7 +71,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         button.ToolTip = DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", CultureInfo.GetCultureInfo("pt-BR"));
         return button;
     }
-    private readonly TextBlock metrics = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4), FontSize = 16 };
+    private readonly CompactMonitoringWidget metrics;
     private readonly TextBlock calendarDate = new() { FontSize = 15, TextWrapping = TextWrapping.Wrap };
     private DateTime calendarToday = DateTime.Today;
     private readonly AudioEndpointControl output, microphone;
@@ -86,6 +86,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     public IslandWindow(SettingsStore store, Action settings) : base(store)
     {
         PreserveKeyboardTarget();
+        metrics = new CompactMonitoringWidget(store, ((App)Application.Current).Telemetry);
+        metrics.LayoutChanged += ModuleSizeChanged;
         stableLayout.Child = root;
         InitializeHeaderMagnification();
         Title = "Orby Launcher — Central de controle"; openSettings = settings;
@@ -389,6 +391,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     private void UpdateClock()
     {
+        metrics.RefreshPower();
         clock.Text = DateTime.Now.ToString("HH:mm", CultureInfo.GetCultureInfo("pt-BR"));
         headerDate.Text = barDate.Text = DateTime.Now.ToString("dd/MM", CultureInfo.GetCultureInfo("pt-BR"));
         clock.ToolTip = DateTime.Now.ToString("dddd, dd 'de' MMMM", CultureInfo.GetCultureInfo("pt-BR"));
@@ -398,14 +401,6 @@ internal sealed partial class IslandWindow : FloatingWindow
             if (calendar.DisplayDate.Year == calendarToday.Year && calendar.DisplayDate.Month == calendarToday.Month) calendar.DisplayDate = DateTime.Today;
             calendarToday = DateTime.Today; calendar.InvalidateVisual();
         }
-        if (!IsVisible || Stage != IslandStage.Full || !Store.ModuleVisible("metrics")) return;
-        string text = Store.Value.ShowMemory ? $"RAM  {Desktop.MemoryPercent()}%" : "";
-        if (Store.Value.ShowBattery)
-        {
-            var power = System.Windows.Forms.SystemInformation.PowerStatus;
-            if (power.BatteryLifePercent is >= 0 and <= 1 && !power.BatteryChargeStatus.HasFlag(System.Windows.Forms.BatteryChargeStatus.NoSystemBattery)) text += $"     Bateria  {power.BatteryLifePercent:P0}";
-        }
-        metrics.Text = string.IsNullOrWhiteSpace(text) ? "Ative RAM ou bateria em Personalizar." : text;
     }
     private void RefreshAudio()
     {

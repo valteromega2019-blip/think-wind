@@ -32,6 +32,8 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         Children.Add(Card(clockContent));
         var tabs = new WrapPanel { Margin = new Thickness(0, 12, 0, 8) };
         var watchArea = new StackPanel(); var timerArea = new StackPanel { Visibility = Visibility.Collapsed };
+        var alarms = new AlarmPanel(((App)Application.Current).Alarms) { Visibility = Visibility.Collapsed };
+        alarms.LayoutChanged += () => LayoutChanged?.Invoke();
         var start = Button("Iniciar", () => { });
         start.Click += (_, _) => { if (stopwatch.IsRunning) stopwatch.Stop(); else stopwatch.Start(); start.Content = Label(stopwatch.IsRunning ? "\uE769" : "\uE768", stopwatch.IsRunning ? "Pausar" : "Continuar"); Refresh(); UpdateTimer(); };
         watchArea.Children.Add(elapsed);
@@ -94,19 +96,31 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         timerButtons.Children.Add(run);
         timerButtons.Children.Add(Button("Cancelar", () => { countdown.Reset(); duration = TimeSpan.Zero; run.Content = Label("\uE768", "Iniciar"); notice.Text = ""; Refresh(); UpdateTimer(); }));
         timerArea.Children.Add(timerButtons); timerArea.Children.Add(notice);
-        var watchTab = Button("Cronômetro", () => { watchSelected = true; watchArea.Visibility = Visibility.Visible; timerArea.Visibility = Visibility.Collapsed; Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
-        var timerTab = Button("Temporizador", () => { watchSelected = false; watchArea.Visibility = Visibility.Collapsed; timerArea.Visibility = Visibility.Visible; Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
+        var watchTab = Button("Cronômetro", () => { watchSelected = true; alarms.Visibility = Visibility.Collapsed; watchArea.Visibility = Visibility.Visible; timerArea.Visibility = Visibility.Collapsed; Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
+        var timerTab = Button("Temporizador", () => { watchSelected = false; alarms.Visibility = Visibility.Collapsed; watchArea.Visibility = Visibility.Collapsed; timerArea.Visibility = Visibility.Visible; Refresh(); UpdateTimer(); LayoutChanged?.Invoke(); });
+        var alarmTab = Button("Alarmes", () => { watchSelected = false; watchArea.Visibility = timerArea.Visibility = Visibility.Collapsed; alarms.Visibility = Visibility.Visible; UpdateTimer(); LayoutChanged?.Invoke(); });
+        alarmTab.Content = Label("\uE823", "Alarmes");
         watchTab.Content = Label("\uE916", "Cronômetro"); timerTab.Content = Label("\uE91E", "Temporizador");
         void Highlight(bool timer)
         {
+            alarmTab.SetResourceReference(Control.BackgroundProperty, "Think.Control");
+            alarmTab.SetResourceReference(Control.ForegroundProperty, "Think.Text");
             watchTab.SetResourceReference(Control.BackgroundProperty, timer ? "Think.Control" : "Think.AccentSurface");
             timerTab.SetResourceReference(Control.BackgroundProperty, timer ? "Think.AccentSurface" : "Think.Control");
             watchTab.SetResourceReference(Control.ForegroundProperty, timer ? "Think.Text" : "Think.Accent");
             timerTab.SetResourceReference(Control.ForegroundProperty, timer ? "Think.Accent" : "Think.Text");
         }
         watchTab.Click += (_, _) => Highlight(false); timerTab.Click += (_, _) => Highlight(true); Highlight(false);
-        tabs.Children.Add(watchTab); tabs.Children.Add(timerTab); Children.Add(tabs);
-        var tools = new Grid(); tools.Children.Add(watchArea); tools.Children.Add(timerArea); Children.Add(Card(tools));
+        alarmTab.Click += (_, _) =>
+        {
+            foreach (var tab in new[] { watchTab, timerTab, alarmTab })
+            {
+                tab.SetResourceReference(Control.BackgroundProperty, tab == alarmTab ? "Think.AccentSurface" : "Think.Control");
+                tab.SetResourceReference(Control.ForegroundProperty, tab == alarmTab ? "Think.Accent" : "Think.Text");
+            }
+        };
+        tabs.Children.Add(watchTab); tabs.Children.Add(timerTab); tabs.Children.Add(alarmTab); Children.Add(tabs);
+        var tools = new Grid(); tools.Children.Add(watchArea); tools.Children.Add(timerArea); tools.Children.Add(alarms); Children.Add(Card(tools));
         Children.Add(Button("Abrir alarmes do Windows ↗", () => SystemActions.Run("ms-clock:")));
         tick.Tick += (_, _) =>
         {

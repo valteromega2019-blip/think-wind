@@ -162,26 +162,12 @@ internal sealed class HardwareMonitorPanel : UserControl
     {
         var s = latest;
         var cards = new UniformGrid { Columns = WideLayout ? 4 : 2 };
-        Summary(cards, "\uE950", "Processador", s?.Cpu.Temperature.HasValue == true ? Number(s.Cpu.Temperature," °C") : Number(s?.Cpu.Load,"%"), $"{Number(s?.Cpu.Load,"%")} de uso · {s?.Cpu.Name ?? "Processador"}", s?.Cpu.Load);
-        Summary(cards, "\uE7F4", "Placa de vídeo", s?.Gpu.Temperature.HasValue == true ? Number(s.Gpu.Temperature," °C") : Number(s?.Gpu.Load,"%"), $"{Number(s?.Gpu.Load,"%")} de uso · {s?.Gpu.Name ?? "GPU"}", s?.Gpu.Load);
-        double? ramPct = s?.RamTotal > 0 ? s.RamUsed / s.RamTotal * 100 : null;
-        Summary(cards, "\uE964", "Memória RAM", Number(s?.RamUsed," GB","0.0"), $"{Number(ramPct,"%")} de {Number(s?.RamTotal," GB")}", ramPct);
-        double? diskPct = s?.DiskTotal > 0 ? (1-s.DiskFree/s.DiskTotal)*100 : null;
-        Summary(cards, "\uEDA2", "Armazenamento", Number(s?.DiskFree," GB","0.0"), "livres em " + (s?.Disk ?? "C:"), diskPct);
+        foreach (string id in new[] { "cpu", "gpu", "ram", "disk" })
+        { var card = new HardwareSummaryCard(id); card.Present(s); cards.Children.Add(card); }
         body.Children.Add(cards);
         var bottom = new Grid(); bottom.ColumnDefinitions.Add(new ColumnDefinition()); bottom.ColumnDefinitions.Add(new ColumnDefinition());
         var chart = Card(Chart()); bottom.Children.Add(chart);
         var rings = Card(Rings()); Grid.SetColumn(rings,1); bottom.Children.Add(rings); body.Children.Add(bottom);
-    }
-    private void Summary(Panel target, string glyph, string label, string value, string detail, double? percent)
-    {
-        var panel = new StackPanel();
-        var heading = new StackPanel { Orientation = Orientation.Horizontal };
-        var icon = Text(glyph,13,"Accent"); icon.FontFamily = new FontFamily("Segoe Fluent Icons"); icon.Margin=new Thickness(0,0,8,0); heading.Children.Add(icon); heading.Children.Add(Text(label,11,"Muted")); panel.Children.Add(heading);
-        var hero = Text(value,25); hero.FontWeight=FontWeights.SemiBold; hero.Margin=new Thickness(0,8,0,2); panel.Children.Add(hero);
-        var description=Text(detail,10,"Muted"); description.TextWrapping=TextWrapping.NoWrap; description.TextTrimming=TextTrimming.CharacterEllipsis; description.ToolTip=detail; panel.Children.Add(description);
-        var bar = new ProgressBar { Value=Math.Clamp(percent??0,0,100), Maximum=100, Height=3, Margin=new Thickness(0,8,0,0), BorderThickness=new Thickness(0), Opacity=percent.HasValue?1:.25 };
-        bar.SetResourceReference(Control.ForegroundProperty,"Accent"); bar.SetResourceReference(Control.BackgroundProperty,"Line"); panel.Children.Add(bar); target.Children.Add(Card(panel));
     }
     private UIElement Chart()
     {

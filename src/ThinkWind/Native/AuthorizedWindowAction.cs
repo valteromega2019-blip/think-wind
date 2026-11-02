@@ -94,7 +94,7 @@ internal static class AuthorizedWindowAction
         }
         finally { CloseHandle(handle); }
     }
-    private static bool SameUser(Process process, SecurityIdentifier? user)
+    internal static bool IsSameUser(Process process, SecurityIdentifier? user)
     {
         nint handle = OpenProcess(0x1000, false, (uint)process.Id);
         if (handle == 0) return false;
@@ -131,7 +131,7 @@ internal static class AuthorizedWindowAction
         GetWindowThreadProcessId((nint)window, out uint actual);
         if (actual != id || target.StartTime.ToUniversalTime().Ticks != started || requester.StartTime.ToUniversalTime().Ticks != callerStarted
             || target.SessionId != self.SessionId || requester.SessionId != self.SessionId
-            || !SameUser(target, identity.User) || !SameUser(requester, identity.User)) return 1;
+            || !IsSameUser(target, identity.User) || !IsSameUser(requester, identity.User)) return 1;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
         using var pipe = new NamedPipeClientStream(".", PipeName(fields[6]), PipeDirection.InOut, PipeOptions.Asynchronous, TokenImpersonationLevel.Identification);
         await pipe.ConnectAsync(timeout.Token).ConfigureAwait(false);

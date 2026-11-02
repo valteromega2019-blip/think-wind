@@ -217,6 +217,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
             if (await WindowActionSetup.Configure(remove: true)) store.Update(p => p.AutoAuthorizeWindowActions = false);
         }));
         Note(system, "Autorize o auxiliar uma vez pelo UAC para controlar suas janelas administrativas sem confirmar a cada clique. A autorização pode ser solicitada novamente ao atualizar o auxiliar. A interface continua normal para arrastar arquivos. Revogar remove a tarefa e desativa novas solicitações automáticas.");
+        Note(system, "O mesmo auxiliar assume somente a tecla Windows isolada em janelas administrativas, preservando os atalhos do sistema. A área protegida de consentimento do UAC não é modificada.");
         var games = Section("Jogos", "Proteção de tela cheia, detecção de jogos e exceções.");
         Check(games, "Modo Jogo automático: ocultar launcher e suspender tarefas", store.Value.GameModeEnabled, value => Change(p => p.GameModeEnabled = value));
         Check(games, "Ocultar launcher em vídeos e apps em tela cheia", store.Value.HideOverFullscreen, v => Change(p => p.HideOverFullscreen = v));
@@ -272,6 +273,18 @@ internal sealed partial class SettingsWindow : FloatingWindow
         }
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { Note(system, "A opção de inicialização não está disponível para esta conta."); }
         Note(system, "A ocultação da barra original pode ser desativada nesta seção. O launcher não substitui os arquivos do Explorer.");
+        var compactMonitoring = Section("Monitoramento compacto", "Escolha até 3 blocos da área completa. Os dados usam a mesma coleta de sensores.");
+        foreach (string metric in new[] { "cpu", "gpu", "ram", "disk" })
+        {
+            string id = metric;
+            Check(compactMonitoring, HardwareSummaryCard.Label(id), store.Value.CompactMonitoringMetrics.Contains(id), selected =>
+            {
+                if (building) return;
+                if (selected && !store.Value.CompactMonitoringMetrics.Contains(id) && store.Value.CompactMonitoringMetrics.Count >= 3)
+                { MessageBox.Show("Selecione no máximo 3 blocos. Desmarque um antes de adicionar outro.", "Monitoramento compacto"); Build(); return; }
+                Change(p => { if (selected) { if (!p.CompactMonitoringMetrics.Contains(id)) p.CompactMonitoringMetrics.Add(id); } else p.CompactMonitoringMetrics.Remove(id); });
+            });
+        }
         BuildUpdates();
         var about = Section("Sobre e segurança", "Orby Launcher · " + AppBrand.Version);
         Note(about, "Desenvolvedor: " + AppBrand.Developer);

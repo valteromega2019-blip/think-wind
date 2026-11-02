@@ -16,12 +16,13 @@ internal static class WindowActionSetup
     internal static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OrbyLauncher Window Actions", UserSid);
     internal static string Executable => Path.Combine(DirectoryPath, "OrbyLauncher.exe");
     internal static string TaskName => "OrbyLauncher-WindowActions-" + UserSid;
+    internal static string ShellTaskName => "OrbyLauncher-ShellInput-" + UserSid;
     private static string Marker => Path.Combine(DirectoryPath, "window-actions.enabled");
     internal static bool IsConfigured
     {
         get
         {
-            try { return File.Exists(Executable) && File.Exists(Marker) && File.ReadAllText(Marker) == AppBrand.Version + "|action-v2"; }
+            try { return File.Exists(Executable) && File.Exists(Marker) && File.ReadAllText(Marker) == AppBrand.Version + "|action-v3"; }
             catch (IOException) { return false; }
             catch (UnauthorizedAccessException) { return false; }
         }
@@ -53,6 +54,18 @@ internal static class WindowActionSetup
                 throw new UnauthorizedAccessException("Autorize com a mesma conta administradora que usa o Orby Launcher.");
             service = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!);
             ((dynamic)service!).Connect(); folder = ((dynamic)service).GetFolder(@"\");
+            object? shellPrevious = AdvancedSensorSetup.FindTask(folder, ShellTaskName);
+            try
+            {
+                if (shellPrevious is not null)
+                {
+                    ((dynamic)shellPrevious).Stop(0);
+                    for (int wait = 0; wait < 25 && (int)((dynamic)shellPrevious).State == 4; wait++) System.Threading.Thread.Sleep(100);
+                    if ((int)((dynamic)shellPrevious).State == 4) throw new IOException("O auxiliar da tecla Windows ainda está encerrando. Tente novamente.");
+                    if (args[0] == "--remove-window-action-task") ((dynamic)folder).DeleteTask(ShellTaskName, 0);
+                }
+            }
+            finally { CoreAudio.Release(shellPrevious); }
             previous = AdvancedSensorSetup.FindTask(folder, TaskName);
             if (previous is not null)
             {
@@ -76,21 +89,28 @@ internal static class WindowActionSetup
             ((dynamic)action).Arguments = "--authorized-window-action \"$(Arg0)\"";
             string security = "O:BAG:BAD:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGX;;;" + UserSid + ")";
             registered = ((dynamic)folder).RegisterTaskDefinition(TaskName, definition, 6 | 16, UserSid, null, 3, security);
-            File.WriteAllText(Marker, AppBrand.Version + "|action-v2"); exitCode = 0;
+            // A separate task avoids blocking one-shot window actions while the
+            // shell bridge is alive. Both executables live in the protected copy.
+            ((dynamic)settings).ExecutionTimeLimit = "PT0S";
+            ((dynamic)action).Arguments = ShellInputBridge.Switch + " \"$(Arg0)\"";
+            object? shellRegistered = null;
+            try { shellRegistered = ((dynamic)folder).RegisterTaskDefinition(ShellTaskName, definition, 6 | 16, UserSid, null, 3, security); }
+            finally { CoreAudio.Release(shellRegistered); }
+            File.WriteAllText(Marker, AppBrand.Version + "|action-v3"); exitCode = 0;
         }
         catch (Exception error) when (error is COMException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
         { MessageBox.Show("Autorização do controle de janelas: " + error.Message, "Orby Launcher"); }
         finally { foreach (var item in new[] { registered, action, actions, settings, principal, definition, previous, folder, service }) CoreAudio.Release(item); }
         return true;
     }
-    internal static void Start(string request)
+    internal static void Start(string request, bool shell = false)
     {
         object? service = null, folder = null, task = null, running = null;
         try
         {
             service = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!);
             ((dynamic)service!).Connect(); folder = ((dynamic)service).GetFolder(@"\");
-            task = ((dynamic)folder).GetTask(TaskName); running = ((dynamic)task).Run(request);
+            task = ((dynamic)folder).GetTask(shell ? ShellTaskName : TaskName); running = ((dynamic)task).Run(request);
         }
         finally { foreach (var item in new[] { running, task, folder, service }) CoreAudio.Release(item); }
     }

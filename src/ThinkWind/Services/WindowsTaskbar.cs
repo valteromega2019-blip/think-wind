@@ -67,18 +67,33 @@ internal sealed class WindowsTaskbar : IDisposable
     private delegate void ShellEvent(nint hook, uint kind, nint window, int objectId, int childId, uint thread, uint time);
     [DllImport("user32.dll")] private static extern nint SetWinEventHook(uint minimum, uint maximum, nint module, ShellEvent callback, uint process, uint thread, uint flags);
     [DllImport("user32.dll")] private static extern bool UnhookWinEvent(nint hook);
+    [StructLayout(LayoutKind.Sequential)] private struct AppbarData
+    { internal uint Size; internal nint Window; internal uint Callback, Edge; internal int Left, Top, Right, Bottom; internal nint Parameter; }
+    [DllImport("shell32.dll")] private static extern nuint SHAppBarMessage(uint message, ref AppbarData data);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern nint FindWindow(string className, string? title);
+    private static uint TaskbarState(uint? state = null)
+    {
+        var data = new AppbarData { Size = (uint)Marshal.SizeOf<AppbarData>(), Window = FindWindow("Shell_TrayWnd", null), Parameter = (nint)(state ?? 0) };
+        if (data.Window == 0) return 0;
+        return (uint)SHAppBarMessage(state.HasValue ? 10u : 4u, ref data);
+    }
     private static bool IsTaskbar(nint window)
     { var name = new StringBuilder(128); GetClassName(window, name, name.Capacity); return name.ToString() is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd"; }
     internal static bool RunGuard(string[] args)
     {
         if (args.Length == 0 || args[0] != "--taskbar-guard") return false;
         var hidden = new Dictionary<nint, (uint Process, bool Enabled, bool Visible)>();
-        nint shellHook = 0, foregroundHook = 0, switchHook = 0, stateHook = 0;
+        nint shellHook = 0, foregroundHook = 0, switchHook = 0, stateHook = 0, desktopHook = 0;
+        uint? originalState = null;
         try
         {
             if (args.Length != 3 || !int.TryParse(args[1], out int pid) || !args[2].StartsWith(@"Local\OrbyLauncher.Taskbar.", StringComparison.Ordinal)) return true;
             using var owner = Process.GetProcessById(pid);
             using var done = EventWaitHandle.OpenExisting(args[2]);
+            // Cooperate with the shell's own edge activation, instead of only
+            // fighting its visible HWND. The recovery process restores the prior
+            // preference on exit/crash; external user changes are left alone.
+            originalState = TaskbarState();
             void Suppress(nint window)
             {
                 if (!IsTaskbar(window)) return;
@@ -111,6 +126,9 @@ internal sealed class WindowsTaskbar : IDisposable
             foregroundHook = SetWinEventHook(0x0003, 0x0003, 0, changed, 0, 0, 2);
             switchHook = SetWinEventHook(0x0014, 0x0015, 0, changed, 0, 0, 2);
             stateHook = SetWinEventHook(0x800A, 0x800B, 0, shown, 0, 0, 2);
+            // Return from UAC/lock/switch desktop: re-hide on the normal desktop.
+            // Never open, draw on, or modify the protected consent desktop.
+            desktopHook = SetWinEventHook(0x0020, 0x0020, 0, changed, 0, 0, 2);
             using var context = new System.Windows.Forms.ApplicationContext();
             using var recovery = new System.Windows.Forms.Timer { Interval = 250 };
             recovery.Tick += (_, _) =>
@@ -118,7 +136,9 @@ internal sealed class WindowsTaskbar : IDisposable
                 if (owner.HasExited || done.WaitOne(0)) { context.ExitThread(); return; }
                 Sweep();
             };
-            Sweep(); recovery.Start();
+            Sweep();
+            if ((originalState.Value & 1) == 0) TaskbarState(originalState.Value | 1);
+            recovery.Start();
             System.Windows.Forms.Application.Run(context);
             System.GC.KeepAlive(shown);
             System.GC.KeepAlive(changed);
@@ -130,6 +150,8 @@ internal sealed class WindowsTaskbar : IDisposable
             if (foregroundHook != 0) UnhookWinEvent(foregroundHook);
             if (switchHook != 0) UnhookWinEvent(switchHook);
             if (stateHook != 0) UnhookWinEvent(stateHook);
+            if (desktopHook != 0) UnhookWinEvent(desktopHook);
+            if (originalState is uint state && (state & 1) == 0 && TaskbarState() == (state | 1)) TaskbarState(state);
             foreach (var entry in hidden)
             {
                 GetWindowThreadProcessId(entry.Key, out uint process);

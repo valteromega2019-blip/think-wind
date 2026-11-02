@@ -40,6 +40,7 @@ public sealed class Preferences
     public bool HardwareOverlayEnabled { get; set; } = false;
     public bool AutoAuthorizeWindowActions { get; set; } = true;
     public string MonitoringGpuId { get; set; } = "";
+    public List<string> CompactMonitoringMetrics { get; set; } = new() { "ram" };
     public bool OverlayAutomatic { get; set; } = true;
     public bool OverlayHotkeyEnabled { get; set; } = true;
     public OverlayAppearanceOptions OverlayAppearance { get; set; } = new();
@@ -131,6 +132,7 @@ public sealed class SettingsStore
     internal int DockLayoutRevision { get; private set; }
     internal bool IsNewProfile { get; private set; }
     internal string TutorialStatePath => Path.Combine(Path.GetDirectoryName(path)!, "tutorial.json");
+    internal string AlarmStatePath => Path.Combine(Path.GetDirectoryName(path)!, "alarms.json");
     public Preferences Value { get; private set; } = new();
     public string? LoadWarning { get; private set; }
     public SettingsStore() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher", "settings.json")) { }
@@ -215,6 +217,8 @@ public sealed class SettingsStore
     private static double Limit(double value, double min, double max, double fallback) => double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
     private void Normalize()
     {
+        Value.CompactMonitoringMetrics = (Value.CompactMonitoringMetrics ?? new() { "ram" })
+            .Where(id => id is "cpu" or "gpu" or "ram" or "disk").Distinct().Take(3).ToList();
         Value.KeyboardLayout = Value.KeyboardLayout == "US" ? "US" : "PT-BR";
         Value.KeyboardScale = Limit(Value.KeyboardScale, .7, 1.3, 1);
         Value.KeyboardWidth = Value.KeyboardWidth is double keyboardWidth && double.IsFinite(keyboardWidth) ? Math.Clamp(keyboardWidth, 480, 2400) : null;
