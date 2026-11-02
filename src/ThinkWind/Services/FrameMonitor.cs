@@ -39,6 +39,7 @@ public sealed class FrameMonitor : IDisposable
 	private readonly Dictionary<int, long> _lastSeen = new Dictionary<int, long>();
     private long _foregroundRead;
     private uint _foregroundPid;
+    internal volatile int TargetProcessId;
 
 	public bool Running => _thread?.IsAlive ?? false;
 
@@ -110,7 +111,7 @@ public sealed class FrameMonitor : IDisposable
             GetWindowThreadProcessId(GetForegroundWindow(), out _foregroundPid);
             _foregroundRead = now;
         }
-        uint foreground = _foregroundPid;
+        uint foreground = TargetProcessId > 0 ? (uint)TargetProcessId : _foregroundPid;
         if (e.ProcessID != foreground || foreground == Environment.ProcessId) return;
         double timeStampRelativeMSec = e.TimeStampRelativeMSec;
 		lock (_lock)
@@ -164,6 +165,7 @@ public sealed class FrameMonitor : IDisposable
 
 	public FrameStats? GetForegroundStats()
 	{
+        if (TargetProcessId > 0) return GetStats(TargetProcessId);
 		nint foregroundWindow = GetForegroundWindow();
 		if (foregroundWindow == IntPtr.Zero)
 		{

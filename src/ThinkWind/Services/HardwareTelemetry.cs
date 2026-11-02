@@ -42,6 +42,7 @@ internal sealed class HardwareTelemetry : IDisposable
     private long nextDiskRead;
     private IReadOnlyList<GpuAdapterInfo> adapterInfo = Array.Empty<GpuAdapterInfo>();
     internal volatile bool CaptureFrames;
+    internal volatile int FrameProcessId;
     private long lastIdle, lastTotal;
     private int authorizationChanged;
     private int publishQueued;
@@ -161,6 +162,7 @@ internal sealed class HardwareTelemetry : IDisposable
                 HardwareSample? remote = advanced is null ? null : await advanced.Read(stop.Token, CaptureFrames).ConfigureAwait(false);
                 if (localFrameAccess && CaptureFrames)
                 {
+                    localFrames.TargetProcessId = FrameProcessId;
                     if (!localFrames.Running && DateTime.UtcNow >= retryFrames)
                     { localFrames.Start(); retryFrames = DateTime.UtcNow.AddSeconds(15); }
                 }

@@ -45,6 +45,9 @@ internal sealed class GameModeService : IDisposable
     internal bool FullscreenPresentation { get; private set; }
     internal nint PresentationWindow => FullscreenPresentation ? presentationWindow : 0;
     internal bool RecognizedGame { get; private set; }
+    private readonly OverlayGameSession overlaySession = new();
+    internal bool OverlayGameActive => overlaySession.ProcessId != 0;
+    internal int OverlayProcessId => overlaySession.ProcessId;
     internal event Action? ForegroundChanged;
     internal string CurrentProcess { get; private set; } = "";
     internal GameModeService(Dispatcher ui, Action<bool> onChange, bool initiallyActive = false)
@@ -107,9 +110,8 @@ internal sealed class GameModeService : IDisposable
                         if (disposed) return;
                         stale = observedForeground != GetForegroundWindow(); if (stale) return;
                         CurrentProcess = game.Process;
-                        bool recognized = !game.Shell && (game.InstalledGame
-                            || include.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase)))
-                            && !exclude.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase));
+                        bool recognized = Recognizes(game, include, exclude);
+                        bool overlayChanged = overlaySession.Update(game, recognized);
                         bool recognizedChanged = RecognizedGame != recognized;
                         RecognizedGame = recognized;
                         bool presentation = active && game.Fullscreen && !game.InstalledGame
@@ -121,7 +123,7 @@ internal sealed class GameModeService : IDisposable
                         else presentationProcess = 0;
                         FullscreenPresentation = presentation;
                         if (Active != active) { Active = active; changed(active); }
-                        else if (presentationChanged || recognizedChanged) changed(active);
+                        else if (presentationChanged || recognizedChanged || overlayChanged) changed(active);
                         if (!active) ForegroundChanged?.Invoke();
                     }
                     finally { Interlocked.Exchange(ref reading, 0); if (stale && !disposed) Read(); }
@@ -132,7 +134,7 @@ internal sealed class GameModeService : IDisposable
             finally { if (!posted) Interlocked.Exchange(ref reading, 0); }
         });
     }
-    private static ForegroundGame Snapshot(nint selectedWindow = 0)
+    internal static ForegroundGame Snapshot(nint selectedWindow = 0)
     {
         nint window = selectedWindow != 0 ? selectedWindow : GetForegroundWindow(); GetWindowThreadProcessId(window, out uint pid);
         if (window == 0 || pid == 0) return new("", false, true);
@@ -174,5 +176,8 @@ internal sealed class GameModeService : IDisposable
                 && !process.Equals("Unity", StringComparison.OrdinalIgnoreCase)
                 && !process.Equals("Unity Hub", StringComparison.OrdinalIgnoreCase));
     }
-    public void Dispose() { disposed = true; timer.Dispose(); if (foregroundHook != 0) UnhookWinEvent(foregroundHook); }
+    internal static bool Recognizes(ForegroundGame game, string[] include, string[] exclude) => !game.Shell
+        && (game.InstalledGame || include.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase)))
+        && !exclude.Any(value => Path.GetFileNameWithoutExtension(value).Equals(game.Process, StringComparison.OrdinalIgnoreCase));
+    public void Dispose() { disposed = true; timer.Dispose(); overlaySession.Dispose(); if (foregroundHook != 0) UnhookWinEvent(foregroundHook); }
 }

@@ -64,7 +64,21 @@ internal static class AdvancedSensorWorker
             if (!accepted) continue;
             RecordStatus("Cliente validado; inicializando leitura de hardware.");
             using var frames = new FrameMonitor();
-            if (captureFrames) frames.Start();
+            using var gameSession = new OverlayGameSession();
+            var preferences = new SettingsStore().Value;
+            var includes = preferences.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var excludes = preferences.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (captureFrames)
+            {
+                try
+                {
+                    var game = GameModeService.Snapshot();
+                    gameSession.Update(game, GameModeService.Recognizes(game, includes, excludes));
+                    frames.TargetProcessId = gameSession.ProcessId;
+                }
+                catch (Exception error) when (error is InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception) { }
+                frames.Start();
+            }
             using var telemetry = new HardwareTelemetry(dispatcher, worker: true);
             var samples = Channel.CreateBounded<HardwareSample>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true, SingleWriter = true });
             telemetry.Changed += sample => samples.Writer.TryWrite(sample);
@@ -79,6 +93,16 @@ internal static class AdvancedSensorWorker
                     using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                     var reading = samples.Reader.ReadAsync(deadline.Token).AsTask();
                     var sample = await reading;
+                    if (captureFrames)
+                    {
+                        try
+                        {
+                            var game = GameModeService.Snapshot();
+                            gameSession.Update(game, GameModeService.Recognizes(game, includes, excludes));
+                            frames.TargetProcessId = gameSession.ProcessId;
+                        }
+                        catch (Exception error) when (error is InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception) { }
+                    }
                     if (captureFrames) sample = sample with { Frames = frames.GetForegroundStats(), Status = sample.Status + (frames.Error is null ? "" : " FPS/ETW indisponível: " + frames.Error) };
                     if (firstSample)
                     {

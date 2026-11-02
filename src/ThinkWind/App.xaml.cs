@@ -335,7 +335,8 @@ public partial class App : Application
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         Telemetry.SelectDisk(store.Value.MonitoringDiskId);
         if (!diagnosing) Telemetry.SetActive(startupSensorConsumer, !IsExiting && gameMode?.Active != true);
-        hardwareOverlay?.Apply(gameMode?.RecognizedGame == true);
+        Telemetry.FrameProcessId = gameMode?.OverlayProcessId ?? 0;
+        hardwareOverlay?.Apply(gameMode?.OverlayGameActive == true);
         if (!store.Value.OverlayHotkeyEnabled) { overlayHotkey?.Dispose(); overlayHotkey = null; }
         else if (overlayHotkey is null)
         {
