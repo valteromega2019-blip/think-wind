@@ -25,7 +25,9 @@ internal class LiquidToggle : ToggleButton
     private readonly Stopwatch time = new();
     private readonly double[] position = new double[3], velocity = new double[3];
     private double previous, changedAt, oldTarget;
-    internal LiquidToggle()
+    // FrameworkElementFactory instantiates this through Activator.CreateInstance;
+    // its parameterless constructor must be public even for an internal type.
+    public LiquidToggle()
     {
         Width = 52; Height = 26; Cursor = Cursors.Hand; Padding = new Thickness(0);
         Template = new ControlTemplate(typeof(ToggleButton));
