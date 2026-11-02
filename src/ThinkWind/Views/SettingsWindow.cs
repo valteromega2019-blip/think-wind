@@ -25,6 +25,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
     private readonly TextBlock status = new() { Margin = new Thickness(24, 12, 24, 16), FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private readonly Button editing = new() { Margin = new Thickness(0, 12, 0, 8) };
     private bool building;
+    private OutsideClickObserver? outsideClicks;
     private string layoutSignature = "";
     public SettingsWindow(SettingsStore settings) : base(settings)
     {
@@ -68,6 +69,16 @@ internal sealed partial class SettingsWindow : FloatingWindow
         KeyDown += (_, e) => { if (!e.Handled && e.Key == Key.Escape) { if (store.IsEditing) store.SetEditing(false); Close(); e.Handled = true; } };
         editing.Click += (_, _) => store.SetEditing(!store.IsEditing);
         store.Changed += StoreChanged; store.PersistenceChanged += PersistenceChanged;
+        Loaded += (_, _) =>
+        {
+            outsideClicks ??= new OutsideClickObserver(this, () =>
+            {
+                if (store.IsEditing || IsMouseCaptureWithin || Mouse.Captured is not null) return;
+                Close();
+            }, () => IsMouseOver || Mouse.Captured is not null);
+            outsideClicks.Start();
+        };
+        Closed += (_, _) => outsideClicks?.Dispose();
         Closed += (_, _) => { weatherSettings.Dispose(); store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };
         Build();
         EnableManualResize();

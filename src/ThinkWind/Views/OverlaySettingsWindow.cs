@@ -13,6 +13,7 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
     protected override string? MaterialOverride => "Acrylic";
     protected override bool HideOnClose => false;
     private readonly SettingsStore settings;
+    private OutsideClickObserver? outsideClicks;
     internal OverlaySettingsWindow(SettingsStore store) : base(store)
     {
         settings = store; Title = "Orby Launcher — Personalização do overlay"; ShowActivated = true;
@@ -32,6 +33,15 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
         var scroll = new ScrollViewer { Content = editor, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer"); root.Children.Add(scroll); Surface.Child = root;
         store.Changed += AppearanceChanged;
+        Loaded += (_, _) =>
+        {
+            outsideClicks ??= new OutsideClickObserver(this, () =>
+            {
+                if (System.Windows.Input.Mouse.Captured is null) Close();
+            }, () => IsMouseOver || System.Windows.Input.Mouse.Captured is not null);
+            outsideClicks.Start();
+        };
+        Closed += (_, _) => outsideClicks?.Dispose();
         Closed += (_, _) => { editor.Dispose(); store.Changed -= AppearanceChanged; };
     }
     private void AppearanceChanged(object? sender, EventArgs e) => RefreshAppearance();
