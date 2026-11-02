@@ -41,7 +41,10 @@ try {
     [IO.File]::Move($ReadyFile + '.tmp', $ReadyFile)
     if ($null -ne $parent -and !$parent.WaitForExit(60000)) { throw 'O launcher nao encerrou. Instalacao cancelada.' }
     $log = Join-Path (Split-Path -Parent $Installer) 'setup.log'
-    $setup = Start-Process -FilePath $Installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/ORBYUPDATE=1',('/LOG="' + $log + '"')) -WindowStyle Hidden -Wait -PassThru
+    # SILENT skips wizard questions but keeps Inno's actual installation
+    # progress/status visible after the launcher exits. VERYSILENT + Hidden
+    # left the desktop with no indication that installation was still running.
+    $setup = Start-Process -FilePath $Installer -ArgumentList @('/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/ORBYUPDATE=1',('/LOG="' + $log + '"')) -WindowStyle Normal -Wait -PassThru
     @{ ExitCode=$setup.ExitCode; Utc=[DateTime]::UtcNow; Log=$log } | ConvertTo-Json | Set-Content -LiteralPath $record -Encoding UTF8
     if ($setup.ExitCode -notin @(0,3010)) { throw ('Instalador retornou erro ' + $setup.ExitCode + '. Consulte ' + $log) }
     Start-Process -FilePath $Launcher -WindowStyle Hidden

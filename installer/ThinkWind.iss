@@ -51,6 +51,21 @@ var
 procedure InitializeWizard;
 begin
   WizardForm.WelcomeLabel2.Caption := WizardForm.WelcomeLabel2.Caption + #13#10#13#10 + CustomMessage('LauncherLanguageNote');
+  if ExpandConstant('{param:ORBYUPDATE|0}') = '1' then
+  begin
+    WizardForm.Caption := CustomMessage('UpdateTitle');
+    WizardForm.PageNameLabel.Caption := CustomMessage('UpdateTitle');
+    WizardForm.PageDescriptionLabel.Caption := CustomMessage('UpdateDescription');
+  end;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpInstalling) and (ExpandConstant('{param:ORBYUPDATE|0}') = '1') then
+  begin
+    WizardForm.PageNameLabel.Caption := CustomMessage('UpdateTitle');
+    WizardForm.PageDescriptionLabel.Caption := CustomMessage('UpdateDescription');
+  end;
 end;
 
 function PawnIOCompatible: Boolean;
@@ -95,6 +110,8 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
+    if ExpandConstant('{param:ORBYUPDATE|0}') = '1' then
+      WizardForm.StatusLabel.Caption := CustomMessage('UpdateFinishing');
     InstallPawnIO;
     { Integrated updates preserve the user's startup/taskbar choices. }
     if ExpandConstant('{param:ORBYUPDATE|0}') = '1' then Exit;
