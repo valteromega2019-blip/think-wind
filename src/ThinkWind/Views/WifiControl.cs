@@ -12,13 +12,13 @@ internal sealed class WifiControl : StackPanel, IDisposable
 {
     private readonly WifiService service = new();
     private readonly ComboBox adapters = new() { DisplayMemberPath = nameof(WifiAdapterInfo.Name), Margin = new Thickness(4), MinHeight = 30 };
-    private readonly StackPanel networks = new();
+    private readonly StackPanel networks = new() { MinHeight = 160 };
     private readonly TextBlock status = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6) };
     private readonly Button radio = new() { Padding = new Thickness(10, 5, 10, 5) };
     private readonly StackPanel credentials = new() { Visibility = Visibility.Collapsed, Margin = new Thickness(4) };
     private readonly PasswordBox password = new() { MaxLength = 64, Padding = new Thickness(10), MinHeight = 34 };
     private readonly TextBlock selectedName = new() { FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 8) };
-    private readonly StackPanel navigation = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly StackPanel navigation = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, MinHeight = 36 };
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private WifiSnapshot snapshot = new(Array.Empty<WifiAdapterInfo>(), Array.Empty<WifiNetwork>());
     private WifiNetwork? selected;
@@ -30,6 +30,9 @@ internal sealed class WifiControl : StackPanel, IDisposable
     internal event Action? LayoutChanged;
     internal WifiControl()
     {
+        status.MinHeight = 32;
+        status.Text = "Buscando informações de Wi-Fi…";
+        radio.Content = "Wi-Fi";
         var commands = new WrapPanel(); commands.Children.Add(radio);
         commands.Children.Add(Button("Atualizar redes", () => Refresh(true)));
         commands.Children.Add(Button("Redetectar adaptador", async () => await RediscoverAdapter()));
@@ -112,7 +115,7 @@ internal sealed class WifiControl : StackPanel, IDisposable
         networks.Children.Clear(); navigation.Children.Clear();
         foreach (var network in items.Skip(page * 4).Take(4))
         {
-            var button = new Button { HorizontalContentAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(4, 2, 4, 2), Padding = new Thickness(10, 6, 10, 6), IsEnabled = !operating && (network.Connectable || network.Connected) };
+            var button = new Button { MinHeight = 36, HorizontalContentAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(4, 2, 4, 2), Padding = new Thickness(10, 6, 10, 6), IsEnabled = !operating && (network.Connectable || network.Connected) };
             var row = new DockPanel(); var signal = new TextBlock { Text = $"{network.Signal}%" + (network.Connected ? "  ✓" : network.Secure ? "  •" : ""), FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
             DockPanel.SetDock(signal, Dock.Right); row.Children.Add(signal);
             row.Children.Add(new TextBlock { Text = network.Name, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });

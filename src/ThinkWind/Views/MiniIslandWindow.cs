@@ -114,7 +114,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
     internal void Present()
     {
         nextRefresh = DateTime.MinValue;
-        Show(); RefreshSettings(); RefreshContent(true); timer.Start(); Activate();
+        // Establish the reserved content geometry before the first visible frame.
+        RefreshSettings(); RefreshContent(true); Show(); Position(); timer.Start(); Activate();
         if (SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0)
         {
             var move = new TranslateTransform(); panel.RenderTransform = move;
@@ -142,6 +143,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         viewport.Width = Math.Max(1, width - Surface.Padding.Left - Surface.Padding.Right);
         viewport.MaxHeight = Math.Max(60, CompactLayout.PanelHeight(Display.Height) - 24);
         panel.Width = viewport.Width;
+        FontSizing.PrepareForMeasure(panel);
         panel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
         PlaceNear(width, Math.Min(panel.DesiredSize.Height, viewport.MaxHeight) + 24, anchor(), false);
     }
