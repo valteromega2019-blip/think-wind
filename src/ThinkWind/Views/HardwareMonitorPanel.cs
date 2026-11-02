@@ -112,7 +112,12 @@ internal sealed class HardwareMonitorPanel : UserControl
         monitoringToggle.IsChecked = store.Value.HardwareMonitoringEnabled;
         monitoringLabel.Text = store.Value.HardwareMonitoringEnabled ? "Leituras do monitoramento" : "Leituras pausadas";
         overlay.IsEnabled = store.Value.HardwareMonitoringEnabled;
-        if (!store.Value.HardwareMonitoringEnabled) sensorNotice.Visibility = Visibility.Hidden;
+        if (!store.Value.HardwareMonitoringEnabled)
+        {
+            latest = telemetry.Latest;
+            sensorNotice.Text = "Leituras desativadas. Ligue o interruptor acima para ativar o monitoramento.";
+            sensorNotice.Visibility = Visibility.Visible;
+        }
         syncingMonitoring = false;
         MonitoringDesign.Install(Resources, store.Value); UpdateGpuPicker(); Render();
     }
@@ -123,9 +128,11 @@ internal sealed class HardwareMonitorPanel : UserControl
         bool diskLayoutChanged = diskChoiceSignature != disks; diskChoiceSignature = disks;
         latest = sample;
         int errorAt = sample.Status.IndexOf("Coletor administrativo:", StringComparison.Ordinal);
-        sensorNotice.Text = errorAt >= 0 ? sample.Status[errorAt..] : "";
+        sensorNotice.Text = !store.Value.HardwareMonitoringEnabled
+            ? "Leituras desativadas. Ligue o interruptor acima para ativar o monitoramento."
+            : errorAt >= 0 ? sample.Status[errorAt..] : "";
         sensorNotice.ToolTip = sensorNotice.Text;
-        sensorNotice.Visibility = errorAt >= 0 ? Visibility.Visible : Visibility.Hidden;
+        sensorNotice.Visibility = errorAt >= 0 || !store.Value.HardwareMonitoringEnabled ? Visibility.Visible : Visibility.Hidden;
         if (IsVisible) { UpdateGpuPicker(); Render(diskLayoutChanged); }
     }
     private void UpdateGpuPicker()

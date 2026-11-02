@@ -12,6 +12,7 @@ internal sealed class CompactMonitoringWidget : StackPanel
     private readonly HardwareTelemetry telemetry;
     private readonly SettingsStore store;
     private readonly List<HardwareSummaryCard> cards = new();
+    private readonly TextBlock pausedNotice = new() { Text = "Leituras desativadas. Ative no painel de desempenho.", TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(6, 4, 6, 4), Visibility = Visibility.Collapsed };
     private readonly TextBlock battery = new() { FontSize = 14, Margin = new Thickness(6, 4, 6, 0), Visibility = Visibility.Collapsed };
     private string? signature;
     internal event Action? LayoutChanged;
@@ -19,6 +20,7 @@ internal sealed class CompactMonitoringWidget : StackPanel
     {
         store = settings; telemetry = source;
         battery.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
+        pausedNotice.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");
         Loaded += (_, _) => { store.Changed += Configure; telemetry.Changed += Present; Configure(null, EventArgs.Empty); Active(); };
         Unloaded += (_, _) => { store.Changed -= Configure; telemetry.Changed -= Present; telemetry.SetActive(this, false); };
         IsVisibleChanged += (_, _) => { Active(); if (IsVisible) Present(telemetry.Latest); };
@@ -37,8 +39,11 @@ internal sealed class CompactMonitoringWidget : StackPanel
             }
             if (cards.Count == 0) Children.Add(new TextBlock { Text = "Escolha até 3 blocos em Personalizar → Widgets → Monitoramento.", TextWrapping = TextWrapping.Wrap });
             Children.Add(battery);
+            Children.Add(pausedNotice);
             LayoutChanged?.Invoke();
         }
+        var pausedVisibility = store.Value.HardwareMonitoringEnabled ? Visibility.Collapsed : Visibility.Visible;
+        if (pausedNotice.Visibility != pausedVisibility) { pausedNotice.Visibility = pausedVisibility; LayoutChanged?.Invoke(); }
         Active(); Present(telemetry.Latest); RefreshPower();
     }
     internal void RefreshPower()

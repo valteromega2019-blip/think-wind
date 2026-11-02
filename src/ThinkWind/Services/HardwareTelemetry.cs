@@ -55,6 +55,21 @@ internal sealed class HardwareTelemetry : IDisposable
             monitoringEnabled = enabled;
             if (wake.CurrentCount == 0) wake.Release();
         }
+        if (!enabled)
+        {
+            // Publish an explicit paused snapshot instead of leaving stale
+            // temperatures/utilization on any subscriber's screen.
+            var previous = Latest;
+            DeviceReading Zero(string name) => new(name, 0, 0, 0, 0, 0, 0);
+            var extra = previous?.Extra?.ToDictionary(pair => pair.Key, _ => (double?)0);
+            Latest = new HardwareSample(DateTime.Now, Zero(previous?.Cpu.Name ?? "Processador"),
+                Zero(previous?.Gpu.Name ?? "Placa de vídeo"), 0, 0, 0, 0, previous?.Disk ?? "C:",
+                "Leituras desativadas. Ative o monitoramento para visualizar dados atuais.", extra,
+                Gpus: previous?.Gpus?.Select(gpu => gpu with { Device = Zero(gpu.Device.Name), Extra = gpu.Extra.ToDictionary(pair => pair.Key, _ => (double?)0) }).ToArray(),
+                Disks: previous?.Disks?.Select(disk => disk with { Free = 0, Total = 0 }).ToArray());
+            History.Clear();
+            Changed?.Invoke(Latest);
+        }
     }
     internal void RefreshAuthorizedSensors()
     {
