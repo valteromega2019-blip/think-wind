@@ -16,6 +16,7 @@ internal sealed class HardwareMonitorPanel : UserControl
     private readonly SettingsStore store;
     private readonly StackPanel body = new();
     private readonly OverlayToggleButton overlay;
+    private readonly MonitoringPausedNotice pausedNotice = new("Os valores estão zerados. Ligue o interruptor acima para retomar as leituras.");
     private readonly LiquidToggle monitoringToggle = new() { Width = 52, Height = 26, Glyph = "\uE9D9", Margin = new Thickness(0, 0, 8, 0) };
     private readonly TextBlock monitoringLabel = new() { VerticalAlignment = VerticalAlignment.Center };
     private bool syncingMonitoring;
@@ -78,6 +79,7 @@ internal sealed class HardwareMonitorPanel : UserControl
         }
         monitoringToggle.Checked += (_, _) => SaveMonitoring(true);
         monitoringToggle.Unchecked += (_, _) => SaveMonitoring(false);
+        root.Children.Add(pausedNotice);
         var navigation = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 4, 6) };
         AddButton(navigation, "Resumo", () => { optimizing = false; components = false; Render(); });
         var optimizerNavigation = AddButton(navigation, "Otimizador", () => { optimizing = true; Render(); TutorialGuide.Notify("optimizer-open"); });
@@ -112,11 +114,12 @@ internal sealed class HardwareMonitorPanel : UserControl
         monitoringToggle.IsChecked = store.Value.HardwareMonitoringEnabled;
         monitoringLabel.Text = store.Value.HardwareMonitoringEnabled ? "Leituras do monitoramento" : "Leituras pausadas";
         overlay.IsEnabled = store.Value.HardwareMonitoringEnabled;
+        pausedNotice.Visibility = store.Value.HardwareMonitoringEnabled ? Visibility.Collapsed : Visibility.Visible;
         if (!store.Value.HardwareMonitoringEnabled)
         {
             latest = telemetry.Latest;
             sensorNotice.Text = "Leituras desativadas. Ligue o interruptor acima para ativar o monitoramento.";
-            sensorNotice.Visibility = Visibility.Visible;
+            sensorNotice.Visibility = Visibility.Hidden;
         }
         syncingMonitoring = false;
         MonitoringDesign.Install(Resources, store.Value); UpdateGpuPicker(); Render();
@@ -132,7 +135,7 @@ internal sealed class HardwareMonitorPanel : UserControl
             ? "Leituras desativadas. Ligue o interruptor acima para ativar o monitoramento."
             : errorAt >= 0 ? sample.Status[errorAt..] : "";
         sensorNotice.ToolTip = sensorNotice.Text;
-        sensorNotice.Visibility = errorAt >= 0 || !store.Value.HardwareMonitoringEnabled ? Visibility.Visible : Visibility.Hidden;
+        sensorNotice.Visibility = errorAt >= 0 && store.Value.HardwareMonitoringEnabled ? Visibility.Visible : Visibility.Hidden;
         if (IsVisible) { UpdateGpuPicker(); Render(diskLayoutChanged); }
     }
     private void UpdateGpuPicker()
