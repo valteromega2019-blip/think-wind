@@ -10,7 +10,7 @@ using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
-internal enum MiniIslandKind { Volume, Network, Calendar, Tray, Bluetooth }
+internal enum MiniIslandKind { Volume, Network, Calendar, Tray, Bluetooth, Clock }
 internal sealed class MiniIslandWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
@@ -25,6 +25,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly TrayCard? tray;
     private readonly WifiControl? wifi;
     private readonly BluetoothControl? bluetooth;
+    private readonly ClockPanel? clockPanel;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private DateTime nextRefresh;
     internal MiniIslandKind Kind { get; }
@@ -34,12 +35,12 @@ internal sealed class MiniIslandWindow : FloatingWindow
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
-        Title = kind switch { MiniIslandKind.Bluetooth => "Orby Launcher — Bluetooth", MiniIslandKind.Volume => "Orby Launcher — Mini volume", MiniIslandKind.Calendar => "Orby Launcher — Calendário", MiniIslandKind.Tray => "Orby Launcher — Bandeja", _ => "Orby Launcher — Mini rede" };
+        Title = kind switch { MiniIslandKind.Clock => "Orby Launcher — Relógio", MiniIslandKind.Bluetooth => "Orby Launcher — Bluetooth", MiniIslandKind.Volume => "Orby Launcher — Mini volume", MiniIslandKind.Calendar => "Orby Launcher — Calendário", MiniIslandKind.Tray => "Orby Launcher — Bandeja", _ => "Orby Launcher — Mini rede" };
         ShowActivated = true;
         var heading = new DockPanel();
         var close = ActionButton("Fechar", Dismiss); close.Padding = new Thickness(8, 4, 8, 4);
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
-        heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Bluetooth => "Bluetooth", MiniIslandKind.Volume => "Áudio e microfone", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
+        heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Clock => "Relógio", MiniIslandKind.Bluetooth => "Bluetooth", MiniIslandKind.Volume => "Áudio e microfone", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
         panel.Children.Add(heading);
         if (kind == MiniIslandKind.Volume)
         {
@@ -70,6 +71,10 @@ internal sealed class MiniIslandWindow : FloatingWindow
         {
             tray = new TrayCard(store); tray.LayoutChanged += Position; panel.Children.Add(tray);
         }
+        else if (kind == MiniIslandKind.Clock)
+        {
+            clockPanel = new ClockPanel(); panel.Children.Add(clockPanel);
+        }
         else if (kind == MiniIslandKind.Calendar)
         {
             var calendar = new System.Windows.Controls.Calendar(); calendar.SetResourceReference(StyleProperty, "Think.Calendar");
@@ -89,6 +94,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
         Loaded += (_, _) => { RefreshContent(true); timer.Start(); };
         timer.Tick += (_, _) => { if (IsVisible) RefreshContent(false); };
         IsVisibleChanged += (_, _) => { wifi?.SetActive(IsVisible); bluetooth?.SetActive(IsVisible); mixer?.SetActive(IsVisible && mixerSelected); if (!IsVisible) { timer.Stop(); Dismissed?.Invoke(); } };
+        IsVisibleChanged += (_, _) => clockPanel?.SetActive(IsVisible);
+        Closed += (_, _) => clockPanel?.Dispose();
         Closed += (_, _) => { timer.Stop(); wifi?.Dispose(); bluetooth?.Dispose(); mixer?.Dispose(); };
     }
     internal void Present()

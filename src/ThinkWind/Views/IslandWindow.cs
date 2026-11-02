@@ -301,11 +301,10 @@ internal sealed partial class IslandWindow : FloatingWindow
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
             if (id == "clock")
             {
-                var clockButton = ActionButton("Relógio e calendário", () =>
+                var clockButton = ActionButton("Relógio, cronômetro e temporizador", () =>
                 {
                     if (Store.IsEditing) return;
-                    if (!Store.ModuleVisible("calendar")) Desktop.Chord(0x5B, 0x4E);
-                    else ShowMini(MiniIslandKind.Calendar);
+                    ShowMini(MiniIslandKind.Clock);
                 });
                 clockButton.Style = (Style)FindResource("Think.IconButton"); clockButton.Content = clock;
                 clockButton.Padding = new Thickness(0); clockButton.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);

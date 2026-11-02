@@ -97,12 +97,19 @@ internal sealed partial class IslandWindow
         if (statusBuilt) { DismissMinis(); systemTools?.Close(); }
         statusControlsSignature = signature;
         statusBuilt = true;
+        foreach (var old in statusRow.Children.OfType<Button>())
+            if (ReferenceEquals(old.Content, statusClock)) old.Content = null;
         statusRow.Children.Clear();
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         statusClock.Margin = new Thickness(0, 0, 8, 0);
         statusClock.Visibility = IsQuickVisible("clock") ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(statusClock, Dock.Left);
-        statusRow.Children.Add(statusClock);
+        var clockButton = ActionButton("Relógio, cronômetro e temporizador", () => { });
+        clockButton.Click += (_, _) => { if (!Store.IsEditing) ShowMini(MiniIslandKind.Clock, clockButton); };
+        clockButton.Content = statusClock;
+        clockButton.Style = (Style)FindResource("Think.IconButton");
+        clockButton.Visibility = statusClock.Visibility;
+        DockPanel.SetDock(clockButton, Dock.Left); statusRow.Children.Add(clockButton);
         var dateButton = DateButton(true);
         dateButton.Visibility = statusClock.Visibility;
         DockPanel.SetDock(dateButton, Dock.Left); statusRow.Children.Add(dateButton);
