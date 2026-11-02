@@ -79,6 +79,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         if (musicCard?.Parent is Viewbox parent) parent.Child = null;
         musicCard?.Dispose(); selectedMusic = selection;
         musicCard = new MediaCard(selection: selection);
+        musicCard.ConfigureDockPreview();
         musicCard.LayoutChanged += () => { if (IsVisible && (musicMode || browserMode)) Position(); };
     }
     internal void PresentCall(CallSnapshot snapshot, IEnumerable<Desktop.RunningWindow> source)

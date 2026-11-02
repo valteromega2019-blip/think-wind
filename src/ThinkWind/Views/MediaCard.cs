@@ -28,6 +28,23 @@ internal sealed class MediaCard : Grid, IDisposable
     private readonly StackPanel transport;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private bool seeking, dragging, busy;
+    private bool dockPreview;
+    internal void ConfigureDockPreview()
+    {
+        dockPreview = true;
+        body.Margin = new Thickness(16, 14, 16, 14);
+        body.VerticalAlignment = VerticalAlignment.Center;
+        MinHeight = 190;
+        title.FontSize = 18;
+        artist.FontSize = 14;
+        player.FontSize = time.FontSize = 13;
+        foreach (var button in new[] { previous, toggle, next })
+        {
+            button.Width = button.Height = 40;
+            button.Margin = new Thickness(5, 8, 5, 0);
+        }
+        Render();
+    }
     internal bool Available => service.State is not null;
     internal bool IsInteracting => seeking || dragging || busy || IsMouseCaptureWithin;
     internal event Action? AvailabilityChanged;
@@ -99,12 +116,14 @@ internal sealed class MediaCard : Grid, IDisposable
         bool wasAvailable = Tag is true; Tag = Available;
         var state = service.State; artwork.Source = state?.Artwork;
         UpdateArtworkBackground(state?.Artwork);
-        cover.Visibility = transport.Visibility = Available ? Visibility.Visible : Visibility.Collapsed;
-        string nextTitle = state?.Title ?? "Nenhuma mídia ativa";
+        cover.Visibility = Available && (!dockPreview || state?.Artwork is not null) ? Visibility.Visible : Visibility.Collapsed;
+        transport.Visibility = Available ? Visibility.Visible : Visibility.Collapsed;
+        string nextTitle = string.IsNullOrWhiteSpace(state?.Title) ? (Available ? "Reprodução em " + state!.Player : "Nenhuma mídia ativa") : state!.Title;
         string nextArtist = state?.Artist ?? service.Error ?? "Abra um player compatível com o Windows";
         string nextPlayer = state?.Player ?? "";
         bool metadataChanged = title.Text != nextTitle || artist.Text != nextArtist || player.Text != nextPlayer;
         title.Text = nextTitle; artist.Text = nextArtist; player.Text = nextPlayer;
+        artist.Visibility = string.IsNullOrWhiteSpace(nextArtist) ? Visibility.Collapsed : Visibility.Visible;
         toggle.Content = Icon(state?.Playing == true ? "\uE769" : "\uE768");
         title.ToolTip = title.Text; artist.ToolTip = artist.Text; player.ToolTip = player.Text;
         RenderButtons(); UpdateProgress();
