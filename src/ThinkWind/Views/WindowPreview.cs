@@ -52,6 +52,7 @@ internal sealed partial class WindowPreview : FloatingWindow
     {
         browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(10);
+        Surface.Child = viewport;
         callMode = false; call?.Stop(); musicMode = false; musicCard?.SetActive(false); viewport.Child = body;
         windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
         if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Interval = TimeSpan.FromSeconds(1); refresh.Start();
@@ -65,7 +66,8 @@ internal sealed partial class WindowPreview : FloatingWindow
         refresh.Stop(); Release(); musicMode = true;
         PrepareMusic(selection);
         ConfigurePlayerSurface();
-        viewport.Child = WithWindowActions(musicCard!, source); Show(); Position(); musicCard!.SetActive(true);
+        viewport.Child = null;
+        Surface.Child = WithWindowActions(musicCard!, source); Show(); Position(); musicCard!.SetActive(true);
     }
     private void PrepareMusic(MusicPreviewSelection selection)
     {
@@ -84,6 +86,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         if (snapshot.App == "Google Meet") { PresentBrowser(source, browserTabs, snapshot, browserMusic); return; }
         browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(10);
+        Surface.Child = viewport;
         refresh.Stop(); Release(); musicMode = false; musicCard?.SetActive(false); callMode = true;
         windows = source.ToList();
         if (call is null)
@@ -202,11 +205,11 @@ internal sealed partial class WindowPreview : FloatingWindow
         {
             double mediaWidth = Math.Max(1, Math.Min(360, Display.Width - 16));
             var mediaBounds = anchor();
-            viewport.Width = mediaWidth;
-            musicCard.Width = viewport.Width;
-            viewport.MaxHeight = Math.Max(48, Math.Min(420, (mediaBounds.Top - Display.Work.Top) / Display.Scale - 36));
-            viewport.Measure(new Size(viewport.Width, viewport.MaxHeight));
-            PlaceAbove(mediaWidth, viewport.DesiredSize.Height, mediaBounds, false);
+            musicCard.Width = mediaWidth;
+            musicCard.MinHeight = 190;
+            FontSizing.PrepareForMeasure(musicCard);
+            musicCard.Measure(new Size(mediaWidth, double.PositiveInfinity));
+            PlaceAbove(mediaWidth, Math.Max(190, musicCard.DesiredSize.Height), mediaBounds, false);
             return;
         }
         var bounds = anchor();

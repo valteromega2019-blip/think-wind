@@ -27,6 +27,7 @@ internal sealed partial class WindowPreview
     internal void PresentBrowser(IEnumerable<Desktop.RunningWindow> source, IReadOnlyList<BrowserTab> tabs, CallSnapshot? meeting = null, MusicPreviewSelection? music = null)
     {
         var currentWindows = source.ToList();
+        Surface.Child = viewport;
         string context = string.Join('|', currentWindows.Select(window => window.Handle).OrderBy(handle => handle));
         if (!browserMode || browserContext != context || meeting is not null && (browserMeeting is null || browserMeeting.RoomAddress != meeting.RoomAddress)) browserPreferMusic = false;
         browserContext = context; browserMeeting = meeting;
