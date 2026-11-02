@@ -161,7 +161,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Note(island, "A reserva usa a área útil nativa do Windows e pode reorganizar ícones do desktop ao ativar ou desativar. Permanece estável entre os modos da central de controle.");
         var overlay = Section("Overlay e sensores", "Monitoramento opcional e sensores avançados. As permissões do coletor são independentes da interface.");
         Check(overlay, "Overlay de monitoramento do PC", store.Value.HardwareOverlayEnabled, v => Change(p => p.HardwareOverlayEnabled = v));
-        overlay.Children.Add(Button("Personalizar overlay · métricas, posição e aparência", () => SelectSettingsTab("Overlay")));
+        overlay.Children.Add(Button("Personalizar overlay · métricas, posição e aparência", () => ((App)Application.Current).OpenOverlaySettings()));
         overlay.Children.Add(Button("Autorizar / atualizar coletor de sensores (UAC uma vez)", async () =>
         {
             store.Update(p => { p.HardwareSensorsSetupAttempted = true; p.HardwareSensorsAutoSetup = true; });
