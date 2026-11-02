@@ -65,7 +65,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
         root.Children.Add(CreateSettingsNavigation(new AdornerDecoratorHost(scroll)));
         Surface.Child = root;
-        PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && store.IsEditing) { store.SetEditing(false); e.Handled = true; } };
+        KeyDown += (_, e) => { if (!e.Handled && e.Key == Key.Escape) { if (store.IsEditing) store.SetEditing(false); Close(); e.Handled = true; } };
         editing.Click += (_, _) => store.SetEditing(!store.IsEditing);
         store.Changed += StoreChanged; store.PersistenceChanged += PersistenceChanged;
         Closed += (_, _) => { weatherSettings.Dispose(); store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };

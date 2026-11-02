@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using OrbyLauncher.Services;
+using OrbyLauncher.Native;
 
 namespace OrbyLauncher.Views;
 
@@ -66,7 +67,7 @@ internal sealed partial class IslandWindow
             leftArea.IsVisibleChanged += (_, _) => RefreshPanelIcons();
         }
         if (leftArea.IsVisible) leftArea.Hide();
-        else { leftArea.Show(); leftArea.Position(); TutorialGuide.Notify("monitor-open"); }
+        else { VirtualKeyboardInput.RememberTarget(); leftArea.Show(); leftArea.Position(); leftArea.Focusable = true; leftArea.Activate(); System.Windows.Input.Keyboard.Focus(leftArea); TutorialGuide.Notify("monitor-open"); }
     }
 }
 
@@ -92,7 +93,7 @@ internal sealed class EmptyIslandAreaWindow : FloatingWindow
         var monitor = new HardwareMonitorPanel(store, telemetry) { Width = 520 };
         monitorViewport.Child = monitor; Surface.Child = monitorViewport;
         monitor.LayoutChanged += () => { if (IsVisible) Position(); };
-        PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Hide(); e.Handled = true; } };
+        KeyDown += (_, e) => { if (!e.Handled && e.Key == Key.Escape) { Hide(); VirtualKeyboardInput.RestoreTarget(); e.Handled = true; } };
         Deactivated += (_, _) => Hide();
         MouseEnter += (_, _) => outsideSince = null;
         IsVisibleChanged += (_, _) => { outsideSince = null; if (IsVisible) collapse.Start(); else collapse.Stop(); };

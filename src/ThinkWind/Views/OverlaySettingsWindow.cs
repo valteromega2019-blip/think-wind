@@ -16,6 +16,7 @@ internal sealed class OverlaySettingsWindow : FloatingWindow
     internal OverlaySettingsWindow(SettingsStore store) : base(store)
     {
         settings = store; Title = "Orby Launcher — Personalização do overlay"; ShowActivated = true;
+        KeyDown += (_, e) => { if (!e.Handled && e.Key == System.Windows.Input.Key.Escape) { Close(); e.Handled = true; } };
         var root = new DockPanel();
         var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
         var close = ActionButton("Fechar personalização do overlay", Close); close.Content = Glyph("\uE711", 13); close.SetResourceReference(StyleProperty, "Think.IconButton"); close.Width = close.Height = 30;

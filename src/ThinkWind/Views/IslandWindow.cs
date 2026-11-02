@@ -47,6 +47,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private bool resizeQueued, updatingLayout, dismissingMinis, contentResizePending, readingNetwork;
     private int expansionRevision;
     private bool preparingFullReveal;
+    private bool escapeDismissed;
     private DateTime? outsideSince;
     private DateTime keyboardBusyUntil;
     private bool collapseEnabled;
@@ -123,9 +124,17 @@ internal sealed partial class IslandWindow : FloatingWindow
         InitializeSecondArea();
         BuildBodies();
         Loaded += (_, _) => { RefreshSettings(); UpdateClock(); timer.Start(); };
-        activation.Tick += (_, _) => { if (NearActivationZone && !interaction.MiniOpen) { if (!hoverEnter.IsEnabled) hoverEnter.Start(); } else if (!IsMouseOver) hoverEnter.Stop(); };
+        activation.Tick += (_, _) =>
+        {
+            if (escapeDismissed)
+            {
+                if (!IsMouseOver && !NearActivationZone && !PointerInsideGroup) escapeDismissed = false;
+                else return;
+            }
+            if (NearActivationZone && !interaction.MiniOpen) { if (!hoverEnter.IsEnabled) hoverEnter.Start(); } else if (!IsMouseOver) hoverEnter.Stop();
+        };
         timer.Tick += (_, _) => { RefreshAdaptiveReveal(); UpdateClock(); RefreshAudio(); UpdateHoverStatus(); weather.Poll(); if (contentResizePending && !ControlsBusy) ModuleSizeChanged(); if (IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("connections")) brightness.Refresh(); };
-        hoverEnter.Tick += (_, _) => { hoverEnter.Stop(); if (!edgeReduced && (IsMouseOver || NearActivationZone) && !interaction.MiniOpen) Transition(() => interaction.Enter()); };
+        hoverEnter.Tick += (_, _) => { hoverEnter.Stop(); if (!escapeDismissed && !edgeReduced && (IsMouseOver || NearActivationZone) && !interaction.MiniOpen) Transition(() => interaction.Enter()); };
         hoverLeave.Tick += (_, _) =>
         {
             hoverLeave.Stop();
@@ -141,18 +150,17 @@ internal sealed partial class IslandWindow : FloatingWindow
         MouseEnter += (_, _) =>
         {
             CancelCollapse();
-            if (!edgeReduced && Stage == IslandStage.Compact && !interaction.MiniOpen) { hoverEnter.Stop(); hoverEnter.Start(); }
+            if (!escapeDismissed && !edgeReduced && Stage == IslandStage.Compact && !interaction.MiniOpen) { hoverEnter.Stop(); hoverEnter.Start(); }
         };
-        MouseLeave += (_, _) => { hoverEnter.Stop(); ScheduleCollapse(); };
+        MouseLeave += (_, _) => { if (!NearActivationZone) escapeDismissed = false; hoverEnter.Stop(); ScheduleCollapse(); };
         LostMouseCapture += (_, _) => { if (contentResizePending) Dispatcher.BeginInvoke(new Action(ModuleSizeChanged)); };
         Deactivated += (_, _) => ScheduleCollapse();
-        PreviewKeyDown += (_, e) =>
+        PreviewKeyDown += (_, e) => keyboardBusyUntil = DateTime.UtcNow.AddMilliseconds(350);
+        // Bubble after controls have had the chance to dismiss their own popup.
+        KeyDown += (_, e) =>
         {
-            keyboardBusyUntil = DateTime.UtcNow.AddMilliseconds(350);
-            if (e.Key != Key.Escape) return;
-            if (Store.IsEditing) Store.SetEditing(false);
-            DismissMinis();
-            Transition(() => { if (Stage == IslandStage.Full) interaction.CloseFull(); else interaction.Compact(); }); e.Handled = true;
+            if (e.Handled || e.Key != Key.Escape) return;
+            DismissFromEscape(); e.Handled = true;
         };
         media.LayoutChanged += ModuleSizeChanged;
         brightness.LayoutChanged += ModuleSizeChanged;
@@ -452,10 +460,24 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     private void OpenFull()
     {
+        escapeDismissed = false;
         RefreshForegroundLayout();
         calendar.DisplayMode = CalendarMode.Month; calendar.DisplayDate = DateTime.Today;
         DismissMinis(); hoverEnter.Stop(); CancelCollapse();
         Transition(() => interaction.OpenFull());
+        // Only an explicit open requests keyboard focus; hover stays passive.
+        VirtualKeyboardInput.RememberTarget();
+        Focusable = true; Activate(); Keyboard.Focus(this);
+    }
+    private void DismissFromEscape()
+    {
+        escapeDismissed = true;
+        hoverEnter.Stop(); CancelCollapse();
+        if (Store.IsEditing) Store.SetEditing(false);
+        systemTools?.Close(); leftArea?.Hide(); DismissMinis();
+        Transition(() => interaction.Compact());
+        RefreshPanelIcons();
+        VirtualKeyboardInput.RestoreTarget();
     }
     private void UpdateStageVisibility()
     {

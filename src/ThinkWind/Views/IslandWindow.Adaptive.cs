@@ -72,6 +72,10 @@ internal sealed partial class IslandWindow
                 statusWindow = new IslandStatusWindow(Store) { Owner = this, ShowActivated = false, MonitorDeviceOverride = MonitorDeviceOverride };
                 statusWindow.MouseEnter += (_, _) => CancelCollapse();
                 statusWindow.MouseLeave += (_, _) => ScheduleCollapse();
+                statusWindow.KeyDown += (_, e) =>
+                {
+                    if (!e.Handled && e.Key == System.Windows.Input.Key.Escape) { DismissFromEscape(); e.Handled = true; }
+                };
             }
             statusRow.Width = Math.Max(1, Display.Bounds.Width / Display.Scale - 24); statusRow.Height = 24;
             statusWindow.Attach(statusRow); Surface.Child = stableLayout;
