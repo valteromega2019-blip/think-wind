@@ -46,6 +46,16 @@ internal sealed class HardwareTelemetry : IDisposable
     private long lastIdle, lastTotal;
     private int authorizationChanged;
     private int publishQueued;
+    private bool monitoringEnabled = true;
+    internal void SetMonitoringEnabled(bool enabled)
+    {
+        lock (sync)
+        {
+            if (disposed || monitoringEnabled == enabled) return;
+            monitoringEnabled = enabled;
+            if (wake.CurrentCount == 0) wake.Release();
+        }
+    }
     internal void RefreshAuthorizedSensors()
     {
         Interlocked.Exchange(ref authorizationChanged, 1);
@@ -134,7 +144,7 @@ internal sealed class HardwareTelemetry : IDisposable
             if (wake.CurrentCount == 0) wake.Release();
         }
     }
-    private bool Needed { get { lock (sync) return !disposed && consumers.Count > 0; } }
+    private bool Needed { get { lock (sync) return !disposed && monitoringEnabled && consumers.Count > 0; } }
     private async Task Run()
     {
         Computer? computer = null;

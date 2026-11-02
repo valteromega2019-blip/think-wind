@@ -38,6 +38,7 @@ public sealed class Preferences
     public bool HideOverFullscreen { get; set; } = true;
     public bool IslandReserveTop { get; set; } = true;
     public bool HardwareOverlayEnabled { get; set; } = false;
+    public bool HardwareMonitoringEnabled { get; set; } = true;
     public bool AutoAuthorizeWindowActions { get; set; } = true;
     public string MonitoringGpuId { get; set; } = "";
     public string MonitoringDiskId { get; set; } = "";

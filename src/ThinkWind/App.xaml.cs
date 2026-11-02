@@ -135,6 +135,7 @@ public partial class App : Application
         Optimizer.Recover();
         InitializeUpdates();
         Telemetry = new HardwareTelemetry(Dispatcher);
+        Telemetry.SetMonitoringEnabled(store.Value.HardwareMonitoringEnabled);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         Telemetry.SelectDisk(store.Value.MonitoringDiskId);
         // Populate the shared cache before any monitoring panel is opened.
@@ -185,15 +186,15 @@ public partial class App : Application
         ApplyHardwareOverlay();
         startupPriority?.Dispose(); startupPriority = null;
         if (!diagnosing && !initialGame) _ = WifiService.PrimeAsync();
-        if (!diagnosing && !initialGame && ((store.Value.HardwareSensorsAutoSetup && !AdvancedSensorSetup.IsConfigured)
+        if (!diagnosing && !initialGame && ((store.Value.HardwareMonitoringEnabled && store.Value.HardwareSensorsAutoSetup && !AdvancedSensorSetup.IsConfigured)
             || (store.Value.AutoAuthorizeWindowActions && !WindowActionSetup.IsConfigured)))
             Dispatcher.BeginInvoke(new Action(async () =>
             {
                 if (IsExiting || gameMode?.Active == true) return;
                 try
                 {
-                    if (store.Value.HardwareSensorsAutoSetup) store.Update(p => p.HardwareSensorsSetupAttempted = true);
-                    if (await StartupPermissions.Prepare(store.Value.HardwareSensorsAutoSetup, store.Value.AutoAuthorizeWindowActions))
+                    if (store.Value.HardwareMonitoringEnabled && store.Value.HardwareSensorsAutoSetup) store.Update(p => p.HardwareSensorsSetupAttempted = true);
+                    if (await StartupPermissions.Prepare(store.Value.HardwareMonitoringEnabled && store.Value.HardwareSensorsAutoSetup, store.Value.AutoAuthorizeWindowActions))
                     { Telemetry.RefreshAuthorizedSensors(); ConfigureStartHotkey(); }
                 }
                 catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)
@@ -331,12 +332,13 @@ public partial class App : Application
     }
     private void ApplyHardwareOverlay()
     {
+        Telemetry.SetMonitoringEnabled(store.Value.HardwareMonitoringEnabled);
         Optimizer.Apply(gameMode?.RecognizedGame == true, store.Value);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         Telemetry.SelectDisk(store.Value.MonitoringDiskId);
         if (!diagnosing) Telemetry.SetActive(startupSensorConsumer, !IsExiting && gameMode?.Active != true);
         Telemetry.FrameProcessId = gameMode?.OverlayProcessId ?? 0;
-        hardwareOverlay?.Apply(gameMode?.OverlayGameActive == true);
+        hardwareOverlay?.Apply(store.Value.HardwareMonitoringEnabled && gameMode?.OverlayGameActive == true);
         if (!store.Value.OverlayHotkeyEnabled) { overlayHotkey?.Dispose(); overlayHotkey = null; }
         else if (overlayHotkey is null)
         {

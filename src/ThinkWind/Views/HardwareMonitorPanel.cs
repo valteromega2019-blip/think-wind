@@ -16,6 +16,9 @@ internal sealed class HardwareMonitorPanel : UserControl
     private readonly SettingsStore store;
     private readonly StackPanel body = new();
     private readonly OverlayToggleButton overlay;
+    private readonly LiquidToggle monitoringToggle = new() { Width = 52, Height = 26, Glyph = "\uE9D9", Margin = new Thickness(0, 0, 8, 0) };
+    private readonly TextBlock monitoringLabel = new() { VerticalAlignment = VerticalAlignment.Center };
+    private bool syncingMonitoring;
     private sealed record GpuChoice(string Id, string Label)
     {
         public override string ToString() => Label;
@@ -61,6 +64,20 @@ internal sealed class HardwareMonitorPanel : UserControl
         overlay = new OverlayToggleButton(store);
         MonitoringDesign.Install(Resources, store.Value);
         var root = new StackPanel();
+        var monitoringHeader = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 4, 8) };
+        monitoringHeader.Children.Add(monitoringToggle);
+        monitoringLabel.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");
+        monitoringHeader.Children.Add(monitoringLabel);
+        root.Children.Add(monitoringHeader);
+        monitoringToggle.ToolTip = "Liga ou suspende todas as leituras de sensores e FPS. As escolhas do overlay são preservadas.";
+        System.Windows.Automation.AutomationProperties.SetName(monitoringToggle, "Ativar leituras do monitoramento");
+        void SaveMonitoring(bool enabled)
+        {
+            if (!syncingMonitoring && store.Value.HardwareMonitoringEnabled != enabled)
+                store.Update(p => p.HardwareMonitoringEnabled = enabled);
+        }
+        monitoringToggle.Checked += (_, _) => SaveMonitoring(true);
+        monitoringToggle.Unchecked += (_, _) => SaveMonitoring(false);
         var navigation = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 4, 6) };
         AddButton(navigation, "Resumo", () => { optimizing = false; components = false; Render(); });
         var optimizerNavigation = AddButton(navigation, "Otimizador", () => { optimizing = true; Render(); TutorialGuide.Notify("optimizer-open"); });
@@ -89,7 +106,16 @@ internal sealed class HardwareMonitorPanel : UserControl
         Unloaded += (_, _) => { telemetry.Changed -= Update; store.Changed -= SettingsChanged; telemetry.SetActive(this, false); };
         Render();
     }
-    private void SettingsChanged(object? sender, EventArgs e) { MonitoringDesign.Install(Resources, store.Value); UpdateGpuPicker(); Render(); }
+    private void SettingsChanged(object? sender, EventArgs e)
+    {
+        syncingMonitoring = true;
+        monitoringToggle.IsChecked = store.Value.HardwareMonitoringEnabled;
+        monitoringLabel.Text = store.Value.HardwareMonitoringEnabled ? "Leituras do monitoramento" : "Leituras pausadas";
+        overlay.IsEnabled = store.Value.HardwareMonitoringEnabled;
+        if (!store.Value.HardwareMonitoringEnabled) sensorNotice.Visibility = Visibility.Hidden;
+        syncingMonitoring = false;
+        MonitoringDesign.Install(Resources, store.Value); UpdateGpuPicker(); Render();
+    }
     internal static string Number(double? value, string unit, string format = "0") => value is { } number && double.IsFinite(number) ? number.ToString(format) + unit : "—";
     private void Update(HardwareSample sample)
     {
