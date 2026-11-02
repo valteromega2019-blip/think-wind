@@ -8,6 +8,8 @@ param([Parameter(Mandatory=$true)][string]$Installer,
 $ErrorActionPreference = 'Stop'
 $record = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'OrbyLauncher\Updates\installation-result.json'
 $lock = $null
+$restartAttempted = $false
+$readyEvent = $null
 try {
     [IO.Directory]::CreateDirectory((Split-Path -Parent $record)) | Out-Null
     # FileShare.Read prevents modifications between validation and execution.
@@ -40,23 +42,48 @@ try {
     [IO.File]::WriteAllText($ReadyFile + '.tmp', 'ready')
     [IO.File]::Move($ReadyFile + '.tmp', $ReadyFile)
     if ($null -ne $parent -and !$parent.WaitForExit(60000)) { throw 'O launcher nao encerrou. Instalacao cancelada.' }
+    $existing = $null
+    try { $existing = [Threading.Mutex]::OpenExisting('Local\OrbyLauncher.Launcher') }
+    catch [Threading.WaitHandleCannotBeOpenedException] { }
+    if ($null -ne $existing) {
+        $existing.Dispose()
+        throw 'Outra copia do Orby esta aberta. Feche-a pelo icone na bandeja e tente atualizar novamente. Nenhum processo sera encerrado a forca.'
+    }
     $log = Join-Path (Split-Path -Parent $Installer) 'setup.log'
     # SILENT skips wizard questions but keeps Inno's actual installation
     # progress/status visible after the launcher exits. VERYSILENT + Hidden
     # left the desktop with no indication that installation was still running.
     $setup = Start-Process -FilePath $Installer -ArgumentList @('/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/ORBYUPDATE=1',('/LOG="' + $log + '"')) -WindowStyle Normal -Wait -PassThru
-    @{ ExitCode=$setup.ExitCode; Utc=[DateTime]::UtcNow; Log=$log } | ConvertTo-Json | Set-Content -LiteralPath $record -Encoding UTF8
     if ($setup.ExitCode -notin @(0,3010)) { throw ('Instalador retornou erro ' + $setup.ExitCode + '. Consulte ' + $log) }
-    Start-Process -FilePath $Launcher -WindowStyle Hidden
+    # The updater can have been started from a development/portable copy.
+    # Reopen the actual registered installation, never that older source path.
+    $installedKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{B7408A21-58E2-4E3A-A842-84EF85965350}_is1'
+    $location = (Get-ItemProperty -LiteralPath $installedKey -ErrorAction Stop).InstallLocation
+    if ([string]::IsNullOrWhiteSpace($location)) { throw 'Pasta da instalacao nao encontrada no registro.' }
+    $installedLauncher = Join-Path $location 'OrbyLauncher.exe'
+    if (!(Test-Path -LiteralPath $installedLauncher)) { throw 'Executavel instalado nao encontrado.' }
+    $eventName = 'Local\OrbyLauncher.UpdateReady.' + [Guid]::NewGuid().ToString('N')
+    $readyEvent = New-Object Threading.EventWaitHandle($false, [Threading.EventResetMode]::ManualReset, $eventName)
+    $restartAttempted = $true
+    $opened = Start-Process -FilePath $installedLauncher -ArgumentList @('--update-ready-event', $eventName) -WorkingDirectory $location -WindowStyle Hidden -PassThru
+    $deadline = [DateTime]::UtcNow.AddSeconds(60)
+    $confirmed = $false
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if ($readyEvent.WaitOne(250)) { $confirmed = $true; break }
+        if ($opened.HasExited) { break }
+    }
+    if (!$confirmed) { throw 'Os arquivos foram atualizados, mas o Orby nao confirmou a abertura. Feche outras copias e abra o Orby pelo menu Iniciar. Suas configuracoes foram preservadas.' }
+    @{ ExitCode=$setup.ExitCode; Utc=[DateTime]::UtcNow; Log=$log; LaunchConfirmed=$true; Launcher=$installedLauncher } | ConvertTo-Json | Set-Content -LiteralPath $record -Encoding UTF8
     exit 0
 } catch {
     $message = $_.Exception.Message
     Write-Output $message
     if ($WaitPid -ne 0) {
         try { @{ ExitCode=-1; Error=$message; Utc=[DateTime]::UtcNow } | ConvertTo-Json | Set-Content -LiteralPath $record -Encoding UTF8 } catch { }
-        if ($null -eq (Get-Process -Id $WaitPid -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath $Launcher)) {
+        try { Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show($message, 'Orby Launcher - Atualizacao', 'OK', 'Warning') | Out-Null } catch { }
+        if (!$restartAttempted -and $null -eq (Get-Process -Id $WaitPid -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath $Launcher)) {
             try { Start-Process -FilePath $Launcher -WindowStyle Hidden } catch { Write-Output $_.Exception.Message }
         }
     }
     exit 1
-} finally { if ($null -ne $lock) { $lock.Dispose() } }
+} finally { if ($null -ne $lock) { $lock.Dispose() }; if ($null -ne $readyEvent) { $readyEvent.Dispose() } }

@@ -113,7 +113,7 @@ public partial class App : Application
             Shutdown(first ? InstallationSetup.Run() : 2);
             return;
         }
-        if (!first) { MessageBox.Show("O Orby Launcher já está em execução. Use o ícone na bandeja do Windows.", "Orby Launcher"); Shutdown(); return; }
+        if (!first) { MessageBox.Show("Outra cópia do Orby Launcher já está aberta, possivelmente em outra pasta. Feche essa cópia pelo ícone na bandeja antes de abrir a versão instalada.", "Orby Launcher", MessageBoxButton.OK, MessageBoxImage.Information); Shutdown(2); return; }
         diagnosing = e.Args.Contains("--diagnostic");
         int reportIndex = Array.IndexOf(e.Args, "--diagnostic-report");
         diagnosticReport = reportIndex >= 0 && reportIndex + 1 < e.Args.Length ? e.Args[reportIndex + 1] : null;
@@ -211,6 +211,13 @@ public partial class App : Application
             exit.Tick += (_, _) => { exit.Stop(); WriteDiagnosticReport(); IsExiting = true; Shutdown(); }; exit.Start();
         }
         if (e.Args.Contains("--settings")) OpenSettings();
+        int readyIndex = Array.IndexOf(e.Args, "--update-ready-event");
+        if (readyIndex >= 0 && readyIndex + 1 < e.Args.Length
+            && System.Text.RegularExpressions.Regex.IsMatch(e.Args[readyIndex + 1], @"^Local\\OrbyLauncher\.UpdateReady\.[a-f0-9]{32}$"))
+        {
+            try { using var ready = EventWaitHandle.OpenExisting(e.Args[readyIndex + 1]); ready.Set(); }
+            catch (Exception error) when (error is WaitHandleCannotBeOpenedException or UnauthorizedAccessException) { }
+        }
         if (store.LoadWarning is not null) MessageBox.Show(store.LoadWarning, "Orby Launcher");
     }
     internal void OpenWeatherSettings()

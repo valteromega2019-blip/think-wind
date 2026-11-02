@@ -11,7 +11,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/OrbyLauncher.ico</ApplicationIcon>
-    <Version>0.28.3-beta</Version>
+    <Version>0.28.4-beta</Version>
     <Company>Think</Company>
     <Authors>Think</Authors>
     <Product>Orby Launcher</Product>
