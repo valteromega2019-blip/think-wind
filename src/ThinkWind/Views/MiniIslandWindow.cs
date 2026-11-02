@@ -26,6 +26,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly WifiControl? wifi;
     private readonly BluetoothControl? bluetooth;
     private readonly ClockPanel? clockPanel;
+    private readonly System.Windows.Controls.Calendar? calendarView;
     private readonly WeatherWidget? weatherLocation;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private DateTime nextRefresh;
@@ -91,8 +92,9 @@ internal sealed class MiniIslandWindow : FloatingWindow
         }
         else if (kind == MiniIslandKind.Calendar)
         {
-            var calendar = new System.Windows.Controls.Calendar(); calendar.SetResourceReference(StyleProperty, "Think.Calendar");
-            calendar.DisplayModeChanged += (_, _) => Position(); panel.Children.Add(calendar);
+            calendarView = new System.Windows.Controls.Calendar { HorizontalAlignment = HorizontalAlignment.Center };
+            calendarView.SetResourceReference(StyleProperty, "Think.Calendar");
+            calendarView.DisplayModeChanged += (_, _) => Position(); panel.Children.Add(calendarView);
         }
         else if (kind == MiniIslandKind.Bluetooth)
         {
@@ -141,6 +143,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     }
     public override void Position()
     {
+        if (Kind == MiniIslandKind.Calendar) { PositionCalendar(); return; }
         if (Kind == MiniIslandKind.Clock) { PositionClock(); return; }
         double width = Math.Min(390, Display.Width - 16);
         if (mixer is not null) mixer.MaximumListHeight = Math.Max(100, Math.Min(340, CompactLayout.PanelHeight(Display.Height) - 160));
@@ -150,6 +153,25 @@ internal sealed class MiniIslandWindow : FloatingWindow
         FontSizing.PrepareForMeasure(panel);
         panel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
         PlaceNear(width, Math.Min(panel.DesiredSize.Height, viewport.MaxHeight) + 24, anchor(), false);
+    }
+    private void PositionCalendar()
+    {
+        if (calendarView is null) return;
+        FontSizing.PrepareForMeasure(panel);
+        calendarView.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        // Size the host around the calendar instead of reserving 390 DIP while
+        // its intrinsic 280-DIP month grid remains aligned to the left.
+        double contentWidth = Math.Max(280, calendarView.DesiredSize.Width);
+        panel.Width = contentWidth;
+        panel.Measure(new Size(contentWidth, double.PositiveInfinity));
+        double contentHeight = Math.Max(1, panel.DesiredSize.Height);
+        double horizontal = Surface.Padding.Left + Surface.Padding.Right;
+        double vertical = Surface.Padding.Top + Surface.Padding.Bottom;
+        double fit = Math.Min(1, Math.Min(Math.Max(1, Display.Width - 16 - horizontal) / contentWidth,
+            Math.Max(1, CompactLayout.PanelHeight(Display.Height) - vertical) / contentHeight));
+        viewport.Width = contentWidth * fit; viewport.Height = contentHeight * fit;
+        viewport.MaxHeight = double.PositiveInfinity;
+        PlaceNear(viewport.Width + horizontal, viewport.Height + vertical, anchor(), false);
     }
     private void PositionClock()
     {
