@@ -75,12 +75,13 @@ internal sealed partial class DockWindow
         foreach (var handle in handles) if (Desktop.IsActiveWindow(handle, active)) attentionWindows.Remove(handle);
         var dot = new Border
         {
-            Width = 7, Height = 7, CornerRadius = new CornerRadius(3.5),
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top,
-            RenderTransform = new TranslateTransform(0, -3), IsHitTestVisible = false,
+            Width = 4, Height = 4, CornerRadius = new CornerRadius(2),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
             Visibility = handles.Any(attentionWindows.Contains) || HasUnreadMetadata(item) ? Visibility.Visible : Visibility.Hidden
         };
         dot.SetResourceReference(Border.BackgroundProperty, "Think.Accent");
+        Grid.SetRow(dot, 0);
         panel.Children.Add(dot);
         attentionDots.Add((dot, button, handles, item));
         SetAttentionAccessibility(button, dot.Visibility == Visibility.Visible);

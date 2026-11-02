@@ -432,7 +432,11 @@ internal sealed partial class DockWindow : FloatingWindow
         var selected = focused ?? item.Windows.FirstOrDefault(w => !w.Minimized) ?? item.Windows.FirstOrDefault();
         bool minimized = item.Windows.Count > 0 && item.Windows.All(w => w.Minimized);
         var size = fit.Icon;
-        var panel = new Grid { Height = size + 14, VerticalAlignment = VerticalAlignment.Center };
+        // Move the former 4-DIP top button padding into a measured badge row.
+        // The icon, running indicator and total button height keep their exact
+        // previous positions; no badge needs to render outside its container.
+        var panel = new Grid { Height = size + 18, VerticalAlignment = VerticalAlignment.Center };
+        panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4) });
         panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(size) });
         panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(6) });
         panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4) });
@@ -442,6 +446,7 @@ internal sealed partial class DockWindow : FloatingWindow
             || (item.Target is not null && app.Target.Equals(item.Target, StringComparison.OrdinalIgnoreCase))) : null;
         var icon = item.Glyph is null ? catalogApp?.Icon ?? icons.Get(item.Target, selected?.Handle ?? 0, selected?.AppId) : null;
         var image = new Image { Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
+        Grid.SetRow(image, 1);
         FrameworkElement? fallback = null;
         if (item.Glyph is null) panel.Children.Add(image);
         if (icon is null)
@@ -449,6 +454,7 @@ internal sealed partial class DockWindow : FloatingWindow
             bool settingsIcon = item.Target?.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) == true
                 || string.Equals(System.IO.Path.GetFileName(selected?.Executable ?? item.Target ?? ""), "SystemSettings.exe", StringComparison.OrdinalIgnoreCase);
             fallback = new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform, Child = Glyph(item.Glyph ?? (settingsIcon ? "\uE713" : "\uE8A5"), 32) };
+            Grid.SetRow(fallback, 1);
             panel.Children.Add(fallback);
         }
         if (item.Glyph is null) PrepareDetailedIcon(image, catalogApp?.Target ?? item.Target, fallback);
@@ -460,12 +466,12 @@ internal sealed partial class DockWindow : FloatingWindow
             Opacity = item.Windows.Count == 0 ? 0 : 1,
             IsHitTestVisible = false
         };
-        Grid.SetRow(indicator, 2);
+        Grid.SetRow(indicator, 3);
         if (focused is not null) indicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent");
         else indicator.Background = SystemParameters.HighContrast ? SystemColors.WindowTextBrush : Brushes.WhiteSmoke;
         panel.Children.Add(indicator);
         var dropIndicator = new Border { Height = 2, Width = Math.Min(size, 20), CornerRadius = new CornerRadius(1), VerticalAlignment = VerticalAlignment.Center, Visibility = Visibility.Hidden };
-        Grid.SetRow(dropIndicator, 2);
+        Grid.SetRow(dropIndicator, 3);
         dropIndicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent"); panel.Children.Add(dropIndicator);
         nint foregroundBeforeClick = 0;
         var button = ActionButton(item.Name, () =>
@@ -482,7 +488,7 @@ internal sealed partial class DockWindow : FloatingWindow
         button.PreviewMouseLeftButtonDown += (_, _) => foregroundBeforeClick = Desktop.GetForegroundWindow();
         button.PreviewKeyDown += (_, _) => foregroundBeforeClick = 0;
         button.Style = (Style)FindResource("Think.IconButton");
-        button.Content = panel; button.Width = size + 2 * fit.Padding; button.Padding = new Thickness(fit.Padding, 4, fit.Padding, 4);
+        button.Content = panel; button.Width = size + 2 * fit.Padding; button.Padding = new Thickness(fit.Padding, 0, fit.Padding, 4);
         AddAttentionDot(panel, button, item);
         button.Margin = new Thickness(fit.Gap / 2, 0, fit.Gap / 2, 0);
         var menu = new ContextMenu();
