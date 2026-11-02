@@ -57,7 +57,10 @@ internal sealed class HardwareOverlayWindow : Window
         if (!visible) { Hide(); return; }
         surface.LayoutTransform = new ScaleTransform(p.OverlayScale, p.OverlayScale);
         Render(telemetry.Latest);
-        Show(); PositionOverlay();
+        // Do not repeatedly show an already visible overlay when preferences or
+        // game state refresh: showing can trigger native activation/z-order work.
+        if (!IsVisible) Show();
+        PositionOverlay();
     }
     private void Update(HardwareSample sample) { if (IsVisible && store.Value.HardwareOverlayEnabled) Render(sample); }
     private void Render(HardwareSample? sample)

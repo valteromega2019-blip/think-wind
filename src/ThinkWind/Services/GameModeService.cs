@@ -80,14 +80,23 @@ internal sealed class GameModeService : IDisposable
             {
                 nint observedForeground = GetForegroundWindow();
                 GetWindowThreadProcessId(observedForeground, out uint foregroundProcess);
+                // Foreground is briefly null during activation/minimize. This is
+                // not a switch to the desktop; wait for the next event/sample.
+                if (observedForeground == 0 || foregroundProcess == 0) return;
                 var game = Snapshot(observedForeground);
                 // Opening our Start menu is not Alt+Tab away from a game/video.
                 // Recheck its real HWND instead of restoring all launcher UI.
-                if (foregroundProcess == Environment.ProcessId && presentationWindow != 0
+                if ((foregroundProcess == Environment.ProcessId || foregroundProcess == presentationProcess) && presentationWindow != 0
                     && IsWindowVisible(presentationWindow) && !IsIconic(presentationWindow)
                     && GetWindowThreadProcessId(presentationWindow, out uint owner) != 0 && owner == presentationProcess
                     && !(DwmGetWindowAttribute(presentationWindow, 14, out int cloaked, 4) >= 0 && cloaked != 0))
+                {
                     game = Snapshot(presentationWindow);
+                    // Class/path queries may temporarily fail during a game's
+                    // window transitions. Preserve recognition for this live
+                    // HWND/PID only, not when focus moves to another application.
+                    if (RecognizedGame) game = game with { InstalledGame = true };
+                }
                 bool active = Eligible(game, enabled, include, exclude, hideFullscreen);
                 if (disposed || dispatcher.HasShutdownStarted) return;
                 dispatcher.BeginInvoke(DispatcherPriority.Send, new Action(() =>
