@@ -138,6 +138,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     }
     public override void Position()
     {
+        if (Kind == MiniIslandKind.Clock) { PositionClock(); return; }
         double width = Math.Min(390, Display.Width - 16);
         if (mixer is not null) mixer.MaximumListHeight = Math.Max(100, Math.Min(340, CompactLayout.PanelHeight(Display.Height) - 160));
         viewport.Width = Math.Max(1, width - Surface.Padding.Left - Surface.Padding.Right);
@@ -146,5 +147,28 @@ internal sealed class MiniIslandWindow : FloatingWindow
         FontSizing.PrepareForMeasure(panel);
         panel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
         PlaceNear(width, Math.Min(panel.DesiredSize.Height, viewport.MaxHeight) + 24, anchor(), false);
+    }
+    private void PositionClock()
+    {
+        // The generic 520-DIP limit shrank the whole clock inside a fixed-width
+        // window: large side gutters, but almost no space beneath its last card.
+        // Give the shared three-tab layout its natural height first.
+        double width = Math.Min(390, Display.Width - 16);
+        double edge = Surface.Padding.Left;
+        double inner = Math.Max(1, width - edge * 2);
+        panel.Width = inner;
+        FontSizing.PrepareForMeasure(panel);
+        panel.Measure(new Size(inner, double.PositiveInfinity));
+        double natural = Math.Max(1, panel.DesiredSize.Height);
+        double available = Math.Max(100, Display.Height - 80);
+        double fit = Math.Min(1, Math.Max(.05, (available - edge * 2 - inner / 2) / Math.Max(1, natural - inner / 2)));
+        double sideGutter = inner * (1 - fit) / 2;
+        // On small displays/font scales that still need downscaling, reserve
+        // the same extra inset below as the Viewbox creates at either side.
+        Surface.Padding = new Thickness(edge, edge, edge, edge + sideGutter);
+        viewport.Width = inner; viewport.MaxHeight = double.PositiveInfinity;
+        viewport.Height = Math.Ceiling(natural * fit);
+        viewport.VerticalAlignment = VerticalAlignment.Top;
+        PlaceNear(width, viewport.Height + edge * 2 + sideGutter, anchor(), false);
     }
 }
