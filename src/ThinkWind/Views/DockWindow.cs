@@ -284,6 +284,7 @@ internal sealed partial class DockWindow : FloatingWindow
             return;
         }
         var active = Desktop.GetForegroundWindow();
+        RememberApplicationForeground();
         RefreshUnreadMetadata();
         var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}:{w.Executable}")) + active
             + string.Join("|", pins.Select(pin => $"{pin.Target}:{pinIdentities[pin.Target].Path}:{pinIdentities[pin.Target].AppId}"));
@@ -477,7 +478,7 @@ internal sealed partial class DockWindow : FloatingWindow
         var button = ActionButton(item.Name, () =>
         {
             if (Store.IsEditing && item.Key != "system:add") return;
-            if (item.Action is not null) item.Action();
+            if (item.Action is not null && item.Windows.Count == 0) item.Action();
             else
             {
                 var current = item.Windows.FirstOrDefault(window => Desktop.IsActiveWindow(window.Handle, foregroundBeforeClick)) ?? selected;
@@ -485,7 +486,8 @@ internal sealed partial class DockWindow : FloatingWindow
             }
             foregroundBeforeClick = 0;
         }, item.Name + (minimized ? " · minimizado" : focused is not null ? " · ativo" : item.Windows.Count > 0 ? " · em execução" : ""));
-        button.PreviewMouseLeftButtonDown += (_, _) => foregroundBeforeClick = Desktop.GetForegroundWindow();
+        button.MouseEnter += (_, _) => RememberApplicationForeground();
+        button.PreviewMouseLeftButtonDown += (_, _) => foregroundBeforeClick = DockClickForeground();
         button.PreviewKeyDown += (_, _) => foregroundBeforeClick = 0;
         button.Style = (Style)FindResource("Think.IconButton");
         button.Content = panel; button.Width = size + 2 * fit.Padding; button.Padding = new Thickness(fit.Padding, 0, fit.Padding, 4);
@@ -524,6 +526,19 @@ internal sealed partial class DockWindow : FloatingWindow
         return button;
     }
     private bool openingDockItem;
+    private nint lastApplicationForeground;
+    private void RememberApplicationForeground()
+    {
+        nint foreground = Desktop.GetForegroundWindow();
+        if (!Desktop.ForegroundIsOurs() && Desktop.IsVisibleAndRestored(foreground)) lastApplicationForeground = foreground;
+    }
+    private nint DockClickForeground()
+    {
+        RememberApplicationForeground();
+        nint foreground = Desktop.GetForegroundWindow();
+        return Desktop.ForegroundIsOurs() && Desktop.IsVisibleAndRestored(lastApplicationForeground)
+            ? lastApplicationForeground : foreground;
+    }
     private async void OpenDockItem(Item item, Desktop.RunningWindow? selected, bool minimizeIfActive, nint foregroundBeforeClick = 0)
     {
         if (openingDockItem) return;
@@ -531,7 +546,7 @@ internal sealed partial class DockWindow : FloatingWindow
         try
         {
             nint foregroundAtClick = foregroundBeforeClick != 0
-                ? foregroundBeforeClick : Desktop.GetForegroundWindow();
+                ? foregroundBeforeClick : DockClickForeground();
             bool shouldMinimize = minimizeIfActive && selected is not null
                 && Desktop.IsVisibleAndRestored(selected.Handle)
                 && Desktop.IsActiveWindow(selected.Handle, foregroundAtClick);

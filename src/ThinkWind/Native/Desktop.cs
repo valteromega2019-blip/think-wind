@@ -103,7 +103,9 @@ internal static class Desktop
     }
     internal static bool WindowExists(nint hwnd) => hwnd != 0 && IsWindow(hwnd);
     [DllImport("user32.dll")] private static extern nint GetAncestor(nint window, uint flags);
-    internal static bool IsActiveWindow(nint window, nint foreground) => foreground != 0 && (foreground == window || GetAncestor(foreground, 3) == window);
+    internal static bool IsActiveWindow(nint window, nint foreground) => window != 0 && foreground != 0
+        && (foreground == window || GetAncestor(foreground, 3) == window
+            || (GetAncestor(window, 3) is var owner && owner != 0 && owner == GetAncestor(foreground, 3)));
     internal static bool MinimizeWindow(nint window) => WindowExists(window) && !IsIconic(window) && ShowWindowAsync(window, 6);
     internal static bool IsVisibleAndRestored(nint window) => WindowExists(window) && IsWindowVisible(window) && !IsIconic(window);
     internal static async System.Threading.Tasks.Task<bool> ActivateFromDock(nint hwnd, bool minimizeRequested)
