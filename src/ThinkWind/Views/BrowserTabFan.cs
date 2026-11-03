@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Media3D;
 using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
@@ -18,6 +17,8 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly List<Border> surfaces = new();
     private readonly List<FrameworkElement> cards = new();
     private readonly List<RectangleGeometry> cardClips = new();
+    private readonly List<ContextMenu> tabMenus = new();
+    internal bool IsInteracting => tabMenus.Any(menu => menu.IsOpen);
     private readonly List<BackdropHost> cardBackdrops = new();
     private readonly List<(FrameworkElement Panel, BackdropHost Host)> companionBackdrops = new();
     private double cardRadius;
@@ -29,7 +30,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     internal event Action? DismissRequested;
     internal void AttachPanelMaterial(FrameworkElement panel)
     {
-        var host = new BackdropHost(thumbnailOwner, false, thumbnailOwner, "Orby — material da integração");
+        var host = new BackdropHost(thumbnailOwner, false, 0, "Orby — material da integração");
         host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
         companionBackdrops.Add((panel, host));
     }
@@ -56,9 +57,10 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear(); cardClips.Clear();
         hoveredCard = -1; cardImages.Clear();
         thumbnailOwner = owner;
-        // Include the selected tab of each real window before filling spare
-        // slots with background tabs. Otherwise all four slots can lack images.
-        var shown = tabs.Where(t => t.Selected).Concat(tabs).Distinct().Take(4).OrderBy(t => t.Selected).ToArray();
+        // DWM exposes top-level windows. Group tabs by their real HWND instead
+        // of presenting unavailable background-tab images as separate previews.
+        var groups = tabs.GroupBy(tab => tab.Window).Take(4).ToArray();
+        var shown = groups.Select(group => group.FirstOrDefault(tab => tab.Selected) ?? group.First()).ToArray();
         int count = shown.Length;
         // Reserve room for the rotated corners instead of clipping them.
         Height = 184 + Math.Max(0, count - 1) * 46;
@@ -66,7 +68,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         foreach (var tab in shown)
         {
             var row = new StackPanel { Width = 300 };
-            var heading = new DockPanel { Margin = new Thickness(10, 8, 10, 6) };
+            var heading = new DockPanel { Height = 36, Margin = new Thickness(10, 0, 10, 0) };
             var windowControls = new StackPanel { Orientation = Orientation.Horizontal };
             DockPanel.SetDock(windowControls, Dock.Right); heading.Children.Add(windowControls);
             windowControls.Children.Add(WindowControl("Minimizar esta janela do navegador", "\uE921", async () =>
@@ -88,20 +90,10 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             }));
             var marker = new TextBlock { Text = tab.Selected ? "●" : "○", Margin = new Thickness(0, 0, 7, 0), FontSize = 12 };
             marker.SetResourceReference(TextBlock.ForegroundProperty, tab.Selected ? "Think.Accent" : "Think.Muted"); heading.Children.Add(marker);
-            heading.Children.Add(new TextBlock { Text = tab.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis }); row.Children.Add(heading);
+            heading.Children.Add(new TextBlock { Text = tab.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); row.Children.Add(heading);
             var area = new Border { Height = 112, Margin = new Thickness(10, 0, 10, 8) };
-            bool live = tab.Selected || tab.RuntimeId.Length == 0;
+            bool live = true; // One card per HWND: DWM previews the window, not individual background tabs.
             cardImages.Add((area, tab.Window, live));
-            if (!live)
-            {
-                var unavailable = new TextBlock { Text = "A imagem desta aba em segundo plano não está disponível. Clique para abrir.",
-                    TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 12,
-                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10) };
-                unavailable.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");
-                area.Child = unavailable;
-            }
-            // Rear tabs are identified by their exposed title; avoid placeholder
-            // text bleeding across the card immediately in front of them.
             row.Children.Add(area);
             var surface = new Border { Child = row, BorderThickness = new Thickness(1) };
             surfaces.Add(surface);
@@ -109,30 +101,48 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                 Background = Brushes.Transparent };
             if (tab.Cached) button.ToolTip = tab.Title + " · Última lista identificada; clique para restaurar e selecionar.";
             button.SetResourceReference(StyleProperty, "Think.IconButton");
+            var windowTabs = tabs.Where(candidate => candidate.Window == tab.Window).ToArray();
+            if (windowTabs.Length > 1)
+            {
+                var menu = new ContextMenu();
+                foreach (var candidate in windowTabs)
+                {
+                    var entry = new MenuItem { Header = candidate.Title, IsCheckable = true, IsChecked = candidate.Selected };
+                    entry.Click += async (_, _) =>
+                    {
+                        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+                        try { if (await BrowserTabs.SelectAsync(candidate, cancellation.Token)) DismissRequested?.Invoke(); }
+                        catch (OperationCanceledException) { }
+                    };
+                    menu.Items.Add(entry);
+                }
+                button.ContextMenu = menu;
+                tabMenus.Add(menu);
+                button.ToolTip = tab.Title + " · Botão direito: abas desta janela";
+            }
             button.MouseEnter += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
             button.MouseLeave += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
-            System.Windows.Automation.AutomationProperties.SetName(button, "Abrir aba: " + tab.Title);
+            System.Windows.Automation.AutomationProperties.SetName(button, "Abrir janela: " + tab.Title);
             button.Click += async (_, _) =>
             {
                 button.IsEnabled = false;
                 using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(4));
                 try
                 {
-                    if (tab.RuntimeId.Length == 0 || await BrowserTabs.SelectAsync(tab, cancellation.Token))
-                    { await Desktop.ActivateFromDock(tab.Window, false); DismissRequested?.Invoke(); }
+                    if (await Desktop.ActivateFromDock(tab.Window, false)) DismissRequested?.Invoke();
                     else button.ToolTip = "A aba não está mais disponível. Reabra a prévia.";
                 }
                 catch (OperationCanceledException) { }
                 finally { button.IsEnabled = true; }
             };
-            FrameworkElement card = index == count - 1 ? button : TiltVertically(button, (count - index - 1) * 5);
+            FrameworkElement card = button;
             cards.Add(card);
             var clip = new RectangleGeometry(new Rect(-8, -8, 316, 176));
             card.Clip = clip; cardClips.Add(clip);
             SetLeft(card, 10); SetTop(card, 12 + index * 46); SetZIndex(card, index);
             card.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = Colors.Black, Opacity = .22, BlurRadius = 14, ShadowDepth = 2 };
             Children.Add(card);
-            cardBackdrops.Add(new BackdropHost(owner, false, owner, "Orby — material da prévia"));
+            cardBackdrops.Add(new BackdropHost(owner, false, 0, "Orby — material da prévia"));
             if (SystemParameters.ClientAreaAnimation)
                 button.BeginAnimation(OpacityProperty, new DoubleAnimation(.5, 1, TimeSpan.FromMilliseconds(160 + index * 35)));
             index++;
@@ -151,14 +161,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         {
             var card = cards[i];
             SetZIndex(card, i == index ? 100 : i);
-            if (card is Viewport3D tilted && tilted.Children.OfType<Viewport2DVisual3D>().FirstOrDefault()?.Transform is RotateTransform3D rotation
-                && rotation.Rotation is AxisAngleRotation3D angle)
-            {
-                double targetAngle = i == index ? 0 : (cards.Count - i - 1) * 5;
-                if (animate && SystemParameters.ClientAreaAnimation)
-                    angle.BeginAnimation(AxisAngleRotation3D.AngleProperty, new DoubleAnimation(targetAngle, TimeSpan.FromMilliseconds(150)));
-                else { angle.BeginAnimation(AxisAngleRotation3D.AngleProperty, null); angle.Angle = targetAngle; }
-            }
             // Keep each remaining title reachable. The selected card uses the
             // existing full slot; subsequent title strips move below it.
             double top = 12 + i * 46 + (i > index ? 114 : 0);
@@ -186,25 +188,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             finally { button.IsEnabled = true; }
         };
         return button;
-    }
-    private static Viewport3D TiltVertically(Button button, double degrees)
-    {
-        // Tilt around X (top/bottom depth), never around the screen's Z axis.
-        // Viewport2DVisual3D preserves real button hit-testing and accessibility.
-        var viewport = new Viewport3D { Width = 300, Height = 160, ClipToBounds = false,
-            Camera = new PerspectiveCamera(new Point3D(0, 0, 3), new Vector3D(0, 0, -1), new Vector3D(0, 1, 0), 36.86989765) };
-        var mesh = new MeshGeometry3D
-        {
-            Positions = new Point3DCollection { new(-1, -.533333, 0), new(1, -.533333, 0), new(1, .533333, 0), new(-1, .533333, 0) },
-            TextureCoordinates = new PointCollection { new(0, 1), new(1, 1), new(1, 0), new(0, 0) },
-            TriangleIndices = new Int32Collection { 0, 1, 2, 0, 2, 3 }
-        };
-        var material = new DiffuseMaterial(Brushes.White);
-        Viewport2DVisual3D.SetIsVisualHostMaterial(material, true);
-        viewport.Children.Add(new ModelVisual3D { Content = new AmbientLight(Colors.White) });
-        viewport.Children.Add(new Viewport2DVisual3D { Geometry = mesh, Material = material, Visual = button,
-            Transform = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), degrees)) });
-        return viewport;
     }
     internal void ConfigureAppearance(Preferences preferences)
     {
@@ -270,6 +253,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     }
     public void Dispose()
     {
+        foreach (var menu in tabMenus) menu.IsOpen = false; tabMenus.Clear();
         foreach (var item in images) item.Host.Dispose(); images.Clear(); liveImageAttempted = true;
         foreach (var host in cardBackdrops) host.Dispose(); cardBackdrops.Clear();
         foreach (var companion in companionBackdrops) companion.Host.Dispose(); companionBackdrops.Clear();

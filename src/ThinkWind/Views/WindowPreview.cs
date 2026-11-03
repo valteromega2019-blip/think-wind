@@ -41,7 +41,7 @@ internal sealed partial class WindowPreview : FloatingWindow
             return point.X >= bounds.Left && point.X < bounds.Right && point.Y >= bounds.Top && point.Y < bounds.Bottom;
         }
     }
-    internal bool IsInteracting => WindowActionInteracting || ((musicMode || browserMode && !callMode) && musicCard?.IsInteracting == true) || (callMode && call?.IsInteracting == true);
+    internal bool IsInteracting => WindowActionInteracting || browserFan?.IsInteracting == true || ((musicMode || browserMode && !callMode) && musicCard?.IsInteracting == true) || (callMode && call?.IsInteracting == true);
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         anchor = getAnchor; Title = "Orby Launcher — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;

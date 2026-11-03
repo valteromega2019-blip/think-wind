@@ -23,7 +23,7 @@ internal sealed partial class WindowPreview
     private CallSnapshot? browserMeeting;
     private bool browserPreferMusic;
     private string browserContext = "";
-    private bool BrowserControlsBusy => WindowActionInteracting || musicCard?.IsInteracting == true || call?.IsUserInteracting == true;
+    private bool BrowserControlsBusy => WindowActionInteracting || browserFan?.IsInteracting == true || musicCard?.IsInteracting == true || call?.IsUserInteracting == true;
     internal void PresentBrowser(IEnumerable<Desktop.RunningWindow> source, IReadOnlyList<BrowserTab> tabs, CallSnapshot? meeting = null, MusicPreviewSelection? music = null)
     {
         var currentWindows = source.ToList();
@@ -41,7 +41,8 @@ internal sealed partial class WindowPreview
         Surface.Padding = new Thickness(10); browserLayout.Children.Clear();
         browserFan ??= new BrowserTabFan();
         browserFan.DismissRequested -= DismissBrowser; browserFan.DismissRequested += DismissBrowser;
-        var shown = tabs.Count > 0 ? tabs : windows.Take(1).Select(window => new BrowserTab(window.Handle, 0, window.Title, Array.Empty<int>(), true)).ToArray();
+        var shown = tabs.Concat(windows.Where(window => !tabs.Any(tab => tab.Window == window.Handle))
+            .Select(window => new BrowserTab(window.Handle, 0, window.Title, Array.Empty<int>(), true))).ToArray();
         browserFan.Present(shown, new WindowInteropHelper(this).EnsureHandle(), Store.Value);
         browserLayout.Children.Add(browserFan);
         var integration = new StackPanel { Width = 320, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10, 0, 0, 12) };
