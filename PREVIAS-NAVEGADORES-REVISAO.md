@@ -34,3 +34,12 @@ Validação: leitura de código e diff. Sem compilação, testes, type check ou 
 - A contagem é de janelas reais. Duas janelas com seis abas continuam sendo duas fontes DWM, com as abas nos menus correspondentes.
 
 Esta revisão não foi compilada nem testada.
+
+## Organização por janela e abas
+
+- `BrowserWindowFans` apresenta até seis grupos de janelas lado a lado.
+- Cada grupo usa seu próprio leque com até seis abas, contador e expansão independentes.
+- A largura externa soma a largura real dos grupos; a altura acompanha o maior grupo. O redimensionamento fica limitado à área de apresentação existente.
+- Hover só reorganiza cartões; clicar no cartão de uma aba usa a seleção de aba existente. Imagens ao vivo só são anexadas a abas selecionadas ou representações da janela sem informação de abas, evitando atribuir a imagem de uma aba à outra.
+- Rótulos de abas em segundo plano permanecem disponíveis, mas o DWM não produz imagens independentes delas.
+- Sem compilação, testes ou type check nesta etapa.

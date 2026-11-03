@@ -64,10 +64,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear();
         hoveredCard = -1; cardImages.Clear();
         thumbnailOwner = owner;
-        // DWM exposes top-level windows. Group tabs by their real HWND instead
-        // of presenting unavailable background-tab images as separate previews.
-        var groups = tabs.GroupBy(tab => tab.Window).Take(6).ToArray();
-        var shown = groups.Select(group => group.FirstOrDefault(tab => tab.Selected) ?? group.First()).ToArray();
+        // The parent owns one horizontal group per HWND. Keep this window's
+        // tabs stacked, with its selected tab initially at the front.
+        var shown = tabs.Where(tab => tab.Selected).Concat(tabs).Distinct().Take(6).OrderBy(tab => tab.Selected).ToArray();
         int count = shown.Length;
         // Reserve room for the rotated corners instead of clipping them.
         Height = 220 + Math.Max(0, count - 1) * 46;
@@ -99,8 +98,14 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             marker.SetResourceReference(TextBlock.ForegroundProperty, tab.Selected ? "Think.Accent" : "Think.Muted"); heading.Children.Add(marker);
             heading.Children.Add(new TextBlock { Text = tab.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); row.Children.Add(heading);
             var area = new Border { Height = 112, Margin = new Thickness(10, 0, 10, 8) };
-            bool live = true; // One card per HWND: DWM previews the window, not individual background tabs.
+            bool live = tab.Selected || tab.RuntimeId.Length == 0;
             cardImages.Add((area, tab.Window, live));
+            if (!live)
+            {
+                var hint = new TextBlock { Text = "Aba em segundo plano. Clique para abrir seu conteúdo.", TextWrapping = TextWrapping.Wrap,
+                    TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Margin = new Thickness(12) };
+                hint.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); area.Child = hint;
+            }
             row.Children.Add(area);
             var surface = new Border { Child = row, BorderThickness = new Thickness(1) };
             surfaces.Add(surface);
@@ -129,14 +134,16 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             }
             button.MouseEnter += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
             button.MouseLeave += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
-            System.Windows.Automation.AutomationProperties.SetName(button, "Abrir janela: " + tab.Title);
+            System.Windows.Automation.AutomationProperties.SetName(button, "Abrir aba: " + tab.Title);
             button.Click += async (_, _) =>
             {
                 button.IsEnabled = false;
                 using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(4));
                 try
                 {
-                    if (await Desktop.ActivateFromDock(tab.Window, false)) DismissRequested?.Invoke();
+                    bool opened = tab.RuntimeId.Length == 0 ? await Desktop.ActivateFromDock(tab.Window, false)
+                        : await BrowserTabs.SelectAsync(tab, cancellation.Token);
+                    if (opened) DismissRequested?.Invoke();
                     else button.ToolTip = "A aba não está mais disponível. Reabra a prévia.";
                 }
                 catch (OperationCanceledException) { }
@@ -167,7 +174,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         Height = expanded ? 58 + Math.Ceiling(cards.Count / 2d) * 180
             : (cards.Count > 1 ? 220 : 184) + Math.Max(0, cards.Count - 1) * 46;
         expansion.Visibility = cards.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-        expansion.Content = expanded ? $"Recolher · {cards.Count} janelas" : $"{cards.Count - 1} outra(s) janela(s) · Expandir todas";
+        expansion.Content = expanded ? $"Recolher · {cards.Count} abas" : $"{cards.Count - 1} outra(s) aba(s) · Expandir todas";
         System.Windows.Automation.AutomationProperties.SetName(expansion, expansion.Content.ToString());
         SetTop(expansion, expanded ? 8 : 12 + (cards.Count - 1) * 46 + (index < cards.Count - 1 ? 114 : 0));
         for (int i = 0; i < cards.Count; i++)
@@ -251,6 +258,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             liveImageAttempted = true;
             foreach (var image in expanded ? cardImages : new[] { cardImages[hoveredCard] }.ToList())
             {
+            if (!image.Live) continue;
             var host = new WindowThumbnail(thumbnailOwner, image.Window);
             if (host.Available) images.Add((image.Area, host));
             else

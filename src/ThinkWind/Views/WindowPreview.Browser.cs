@@ -14,7 +14,7 @@ namespace OrbyLauncher.Views;
 internal sealed partial class WindowPreview
 {
     private bool browserMode, browserReading;
-    private BrowserTabFan? browserFan;
+    private BrowserWindowFans? browserFan;
     private readonly StackPanel browserLayout = new() { Orientation = Orientation.Horizontal };
     private IReadOnlyList<BrowserTab> browserTabs = Array.Empty<BrowserTab>();
     private CancellationTokenSource? browserLifetime;
@@ -39,7 +39,7 @@ internal sealed partial class WindowPreview
         browserMusic = music;
         windows = currentWindows; browserTabs = tabs.ToArray(); browserSignature = TabsSignature(tabs);
         Surface.Padding = new Thickness(10); browserLayout.Children.Clear();
-        browserFan ??= new BrowserTabFan();
+        browserFan ??= new BrowserWindowFans();
         browserFan.LayoutChanged -= PositionBrowser;
         browserFan.LayoutChanged += PositionBrowser;
         browserFan.DismissRequested -= DismissBrowser; browserFan.DismissRequested += DismissBrowser;
