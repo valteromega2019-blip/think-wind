@@ -26,6 +26,12 @@ internal sealed partial class SettingsWindow : FloatingWindow
     private readonly Button editing = new() { Margin = new Thickness(0, 12, 0, 8) };
     private bool building;
     private OutsideClickObserver? outsideClicks;
+    private bool updateConfirmationOpen;
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool IsWindowEnabled(nint window);
+    private bool CanDismissOutside => !updateConfirmationOpen
+        && (Application.Current is not App app || app.Updates?.Busy != true)
+        && IsWindowEnabled(new WindowInteropHelper(this).Handle);
     private string layoutSignature = "";
     public SettingsWindow(SettingsStore settings) : base(settings)
     {
@@ -73,9 +79,9 @@ internal sealed partial class SettingsWindow : FloatingWindow
         {
             outsideClicks ??= new OutsideClickObserver(this, () =>
             {
-                if (store.IsEditing || IsMouseCaptureWithin || Mouse.Captured is not null) return;
+                if (!CanDismissOutside || store.IsEditing || IsMouseCaptureWithin || Mouse.Captured is not null) return;
                 Close();
-            }, () => IsMouseOver || Mouse.Captured is not null);
+            }, () => !CanDismissOutside || IsMouseOver || Mouse.Captured is not null);
             outsideClicks.Start();
         };
         Closed += (_, _) => outsideClicks?.Dispose();

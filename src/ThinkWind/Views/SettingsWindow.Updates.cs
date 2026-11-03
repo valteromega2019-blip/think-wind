@@ -27,7 +27,14 @@ internal sealed partial class SettingsWindow
         {
             if (updates.Available is null || updates.Busy) return;
             string tag = updates.Available.Tag;
-            if (MessageBox.Show(this, "Baixar e instalar " + tag + "? O launcher será encerrado após validar o arquivo. Suas configurações serão preservadas.", "Atualizar Orby Launcher", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            MessageBoxResult confirmation;
+            updateConfirmationOpen = true;
+            try
+            {
+                confirmation = MessageBox.Show(this, "Baixar e instalar " + tag + "? O launcher será encerrado após validar o arquivo. Suas configurações serão preservadas.", "Atualizar Orby Launcher", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            }
+            finally { updateConfirmationOpen = false; }
+            if (confirmation != MessageBoxResult.Yes) return;
             await updates.DownloadAndInstallAsync(true, () =>
             {
                 store.Flush(); if (store.SaveError is not null) throw new IOException(store.SaveError);
