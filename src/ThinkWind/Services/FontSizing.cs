@@ -45,15 +45,19 @@ internal static class FontSizing
         foreach (object child in LogicalTreeHelper.GetChildren(node))
             if (child is DependencyObject dependency) Walk(dependency, visited);
     }
-    private static void ApplyElement(DependencyObject element)
+    private static void ApplyElement(DependencyObject? element)
     {
-        if (element is Window) return;
-        double scale = (double)element.GetValue(ScaleProperty);
+        if (element is null or Window) return;
         DependencyProperty font;
         FontFamily? family;
         if (element is TextBlock text) { font = TextBlock.FontSizeProperty; family = text.FontFamily; }
         else if (element is Control control) { font = Control.FontSizeProperty; family = control.FontFamily; }
         else return;
+        // Only read inherited metrics on actual text controls. A disconnected
+        // preview can expose an unset value while its source/tree is changing;
+        // unboxing null as double would terminate the dispatcher.
+        double scale = element.GetValue(ScaleProperty) is double inherited && double.IsFinite(inherited) && inherited > 0
+            ? inherited : 1d;
         // Symbol fonts are icons, not user text. Inherited font sizes already
         // follow the window; scale only explicit numeric sizes once.
         // A dynamic font resource may be unresolved while a preview is being
