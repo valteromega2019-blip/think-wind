@@ -39,6 +39,11 @@ internal sealed partial class MediaCard : Grid, IDisposable
         title.FontSize = 18;
         artist.FontSize = 14;
         player.FontSize = time.FontSize = 13;
+        progress.Width = 280;
+        progress.HorizontalAlignment = HorizontalAlignment.Center;
+        progress.LayoutTransform = new ScaleTransform(.7, .7);
+        progress.Margin = new Thickness(0, 5, 0, 0);
+        time.FontSize = 11;
         foreach (var button in new[] { previous, toggle, next })
         {
             button.Width = button.Height = 40;
@@ -47,6 +52,11 @@ internal sealed partial class MediaCard : Grid, IDisposable
         Render();
     }
     internal bool Available => service.State is not null;
+    internal async Task<bool> PreparePreviewAsync()
+    {
+        await service.SetActiveAsync(true);
+        return Available;
+    }
     internal bool IsInteracting => seeking || dragging || busy || volumeBusy || IsMouseCaptureWithin;
     internal event Action? AvailabilityChanged;
     internal event Action? LayoutChanged;

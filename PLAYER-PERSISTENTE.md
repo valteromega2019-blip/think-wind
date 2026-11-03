@@ -12,3 +12,11 @@ Base: tag publicada `v0.28.9-beta`. Branch: `feature/player-persistente`.
 - Chamadas e vídeos de navegador mantêm a política anterior; o novo estado em pausa é restrito a identidades conhecidas de música instaladas.
 
 Validação desta etapa: leitura de código e diff. Testes, type check e compilação não executados conforme preferência do usuário. A versão instalada publicada não foi substituída.
+
+## Refinamento da abertura e barras
+
+- A identificação da integração acontece antes de mostrar miniaturas nativas; players dedicados sem sessão disponível permanecem sem miniatura substituta.
+- O cartão aguarda os metadados antes de aparecer e descarta aberturas que deixaram de corresponder ao ícone sob o cursor.
+- Volume vertical compacto usando o controle do tema existente, com consultas apenas durante a apresentação e gravações agrupadas durante o arraste.
+- Progresso da música permanece horizontal e menor, preservando busca e tempo. Os controles de abrir, minimizar e fechar permanecem.
+- Esta revisão não foi compilada nem testada; o pedido anterior de compilação se referia à versão anterior.

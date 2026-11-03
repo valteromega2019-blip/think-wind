@@ -32,7 +32,9 @@ internal sealed partial class DockWindow
             var requested = previewItem;
             retainedPreviewAnchor = CurrentPreviewIconBounds();
             bool dedicatedPlayer = MusicSessionPolicy.KnownMusic(requested.Name);
-            if (dedicatedPlayer) preview.Hide(); else preview.Present(requested.Windows);
+            // Resolve the integration before displaying any native thumbnail.
+            // App names and session discovery can arrive at different times.
+            preview.Hide();
             callProbe?.Cancel(); callProbe?.Dispose(); callProbe = new CancellationTokenSource(); var token = callProbe.Token;
             try
             {
@@ -50,15 +52,15 @@ internal sealed partial class DockWindow
                     var browserMedia = await MediaService.FindForAppAsync(identity, token);
                     if (Current())
                     {
-                        if (meeting is null && browserMedia?.KeepIdle == true) preview.PresentMusic(browserMedia, requested.Windows);
+                        if (meeting is null && browserMedia?.KeepIdle == true) await preview.PresentMusicAsync(browserMedia, requested.Windows, token, Current);
                         else preview.PresentBrowser(requested.Windows, tabs, meeting, browserMedia);
                     }
                     return;
                 }
                 var media = await MediaService.FindForAppAsync(MediaIdentity(requested), token);
                 if (!Current()) return;
-                if (media is not null) preview.PresentMusic(media, requested.Windows);
-                else if (dedicatedPlayer) preview.Present(requested.Windows);
+                if (media is not null) await preview.PresentMusicAsync(media, requested.Windows, token, Current);
+                else if (!dedicatedPlayer) preview.Present(requested.Windows);
                 if (Store.Value.CallPreviewsEnabled && requested.Windows.Any(CallIntegration.IsCandidate))
                 {
                     var call = await CallIntegration.FindAsync(requested.Windows, token);

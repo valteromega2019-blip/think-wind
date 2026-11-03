@@ -26,6 +26,7 @@ internal sealed partial class WindowPreview : FloatingWindow
     private int page, perPage = 4;
     private MediaCard? musicCard;
     private bool musicMode;
+    private int musicPresentationRevision;
     private MusicPreviewSelection? selectedMusic;
     private CallPreviewCard? call;
     private bool callMode;
@@ -57,8 +58,9 @@ internal sealed partial class WindowPreview : FloatingWindow
         windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
         if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Interval = TimeSpan.FromSeconds(1); refresh.Start();
     }
-    internal void PresentMusic(MusicPreviewSelection selection, IEnumerable<Desktop.RunningWindow> source)
+    internal async System.Threading.Tasks.Task PresentMusicAsync(MusicPreviewSelection selection, IEnumerable<Desktop.RunningWindow> source, System.Threading.CancellationToken cancellation, Func<bool> stillRequested)
     {
+        int revision = ++musicPresentationRevision;
         if (!selection.KeepIdle && source.Any(BrowserTabs.IsBrowser)) { PresentBrowser(source, browserTabs, music: selection); return; }
         browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(0);
@@ -68,7 +70,13 @@ internal sealed partial class WindowPreview : FloatingWindow
         PrepareMusic(selection);
         ConfigurePlayerSurface();
         viewport.Child = null;
-        Surface.Child = WithWindowActions(musicCard!, windows); Show(); Position(); musicCard!.SetActive(true);
+        Surface.Child = WithWindowActions(musicCard!, windows);
+        var prepared = musicCard!;
+        bool ready = await prepared.PreparePreviewAsync();
+        if (revision != musicPresentationRevision) return;
+        if (cancellation.IsCancellationRequested || !stillRequested() || !ReferenceEquals(musicCard, prepared) || !ready)
+        { prepared.SetActive(false); return; }
+        Position(); Show(); prepared.SetActive(true);
     }
     private void PrepareMusic(MusicPreviewSelection selection)
     {
@@ -87,9 +95,10 @@ internal sealed partial class WindowPreview : FloatingWindow
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (!IsVisible || musicCard?.IsInteracting == true) return;
+                if (selectedMusic?.KeepIdle == true && musicCard?.Available == true) return;
                 if (browserMode && !callMode && browserMusic is not null)
                     PresentBrowser(windows.ToArray(), browserTabs, browserMeeting, music: null);
-                else if (musicMode) Present(windows.ToArray());
+                else if (musicMode) Hide();
             }));
         };
         musicCard.LayoutChanged += () => { if (IsVisible && (musicMode || browserMode)) Position(); };
