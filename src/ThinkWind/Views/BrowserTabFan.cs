@@ -114,9 +114,8 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             row.Children.Add(area);
             var surface = new Border { Child = row, BorderThickness = new Thickness(1) };
             surfaces.Add(surface);
-            var button = new Button { Width = 300, Height = 160, Padding = new Thickness(0), Margin = new Thickness(0), Content = surface, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch, ToolTip = tab.Title,
+            var button = new Button { Width = 300, Height = 160, Padding = new Thickness(0), Margin = new Thickness(0), Content = surface, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch,
                 Background = Brushes.Transparent };
-            if (tab.Cached) button.ToolTip = tab.Title + " · Última lista identificada; clique para restaurar e selecionar.";
             button.SetResourceReference(StyleProperty, "Think.IconButton");
             var windowTabs = tabs.Where(candidate => candidate.Window == tab.Window).ToArray();
             if (windowTabs.Length > 1)
@@ -135,7 +134,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                 }
                 button.ContextMenu = menu;
                 tabMenus.Add(menu);
-                button.ToolTip = tab.Title + " · Botão direito: abas desta janela";
             }
             button.MouseEnter += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
             button.MouseLeave += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
@@ -149,7 +147,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                     bool opened = tab.RuntimeId.Length == 0 ? await Desktop.ActivateFromDock(tab.Window, false)
                         : await BrowserTabs.SelectAsync(tab, cancellation.Token);
                     if (opened) DismissRequested?.Invoke();
-                    else button.ToolTip = "A aba não está mais disponível. Reabra a prévia.";
+                    else System.Windows.Automation.AutomationProperties.SetHelpText(button, "A aba não está mais disponível. Reabra a prévia.");
                 }
                 catch (OperationCanceledException) { }
                 finally { button.IsEnabled = true; }
