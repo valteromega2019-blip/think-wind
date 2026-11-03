@@ -1,5 +1,13 @@
 [
     {
+        "id":  "v0.28.9-beta",
+        "title":  "Orby Launcher 0.28.9 Beta — teste do atualizador",
+        "state":  "published",
+        "date":  "2026-11-03T02:29:25Z",
+        "url":  "https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.28.9-beta",
+        "description":  "# Orby Launcher 0.28.9 Beta — atualização de teste\n\nPublicação sem mudanças de funcionalidades, destinada à conferência manual do atualizador a partir da 0.28.8: confirmação, minimização das janelas, painel de progresso e reabertura da versão instalada.\n\nPreserva configurações e todos os recursos da 0.28.8. Compilação Release e empacotamento concluídos. Não foram executados testes ou type check separados, conforme preferência do usuário. O resultado do fluxo de atualização ainda depende da conferência manual solicitada.\n\nInstalador x64 com runtime e PawnIO oficial opcional. SHA-256 e assinatura RSA separada acompanham o pacote. A assinatura não é certificado Authenticode e não remove avisos de editor desconhecido do Windows."
+    },
+    {
         "id":  "v0.28.8-beta",
         "title":  "Orby Launcher 0.28.8 Beta",
         "state":  "published",
