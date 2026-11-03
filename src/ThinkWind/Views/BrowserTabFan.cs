@@ -18,9 +18,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly List<Border> surfaces = new();
     private readonly List<FrameworkElement> cards = new();
     private readonly List<RectangleGeometry> cardClips = new();
-    private int hoveredCard = -1, liveCard = -1;
-    private Border? liveArea;
-    private nint thumbnailOwner, liveWindow;
+    private readonly List<(Border Area, nint Window, bool Live)> cardImages = new();
+    private int hoveredCard = -1;
+    private nint thumbnailOwner;
     private bool liveImageAttempted;
     private Point lastPointer = new(double.NaN, double.NaN);
     internal event Action? DismissRequested;
@@ -45,13 +45,16 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner, Preferences preferences)
     {
         Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear(); cardClips.Clear();
-        hoveredCard = liveCard = -1; liveArea = null;
+        hoveredCard = -1; cardImages.Clear();
         thumbnailOwner = owner;
-        int count = Math.Min(4, tabs.Count);
+        // Include the selected tab of each real window before filling spare
+        // slots with background tabs. Otherwise all four slots can lack images.
+        var shown = tabs.Where(t => t.Selected).Concat(tabs).Distinct().Take(4).OrderBy(t => t.Selected).ToArray();
+        int count = shown.Length;
         // Reserve room for the rotated corners instead of clipping them.
         Height = 184 + Math.Max(0, count - 1) * 46;
         int index = 0;
-        foreach (var tab in tabs.Take(4))
+        foreach (var tab in shown)
         {
             var row = new StackPanel { Width = 300 };
             var heading = new DockPanel { Margin = new Thickness(10, 8, 10, 6) };
@@ -78,7 +81,16 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             marker.SetResourceReference(TextBlock.ForegroundProperty, tab.Selected ? "Think.Accent" : "Think.Muted"); heading.Children.Add(marker);
             heading.Children.Add(new TextBlock { Text = tab.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis }); row.Children.Add(heading);
             var area = new Border { Height = 112, Margin = new Thickness(10, 0, 10, 8) };
-            bool live = tab.Selected && index == tabs.Count - 1;
+            bool live = tab.Selected || tab.RuntimeId.Length == 0;
+            cardImages.Add((area, tab.Window, live));
+            if (!live)
+            {
+                var unavailable = new TextBlock { Text = "A imagem desta aba em segundo plano não está disponível. Clique para abrir.",
+                    TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, FontSize = 12,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10) };
+                unavailable.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text");
+                area.Child = unavailable;
+            }
             // Rear tabs are identified by their exposed title; avoid placeholder
             // text bleeding across the card immediately in front of them.
             row.Children.Add(area);
@@ -110,10 +122,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             card.Clip = clip; cardClips.Add(clip);
             SetLeft(card, 10); SetTop(card, 12 + index * 46); SetZIndex(card, index);
             Children.Add(card);
-            if (live)
-            {
-                liveCard = index; liveArea = area; liveWindow = tab.Window;
-            }
             if (SystemParameters.ClientAreaAnimation)
                 button.BeginAnimation(OpacityProperty, new DoubleAnimation(.5, 1, TimeSpan.FromMilliseconds(160 + index * 35)));
             index++;
@@ -132,6 +140,14 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         {
             var card = cards[i];
             SetZIndex(card, i == index ? 100 : i);
+            if (card is Viewport3D tilted && tilted.Children.OfType<Viewport2DVisual3D>().FirstOrDefault()?.Transform is RotateTransform3D rotation
+                && rotation.Rotation is AxisAngleRotation3D angle)
+            {
+                double targetAngle = i == index ? 0 : (cards.Count - i - 1) * 5;
+                if (animate && SystemParameters.ClientAreaAnimation)
+                    angle.BeginAnimation(AxisAngleRotation3D.AngleProperty, new DoubleAnimation(targetAngle, TimeSpan.FromMilliseconds(150)));
+                else { angle.BeginAnimation(AxisAngleRotation3D.AngleProperty, null); angle.Angle = targetAngle; }
+            }
             // Keep each remaining title reachable. The selected card uses the
             // existing full slot; subsequent title strips move below it.
             double top = 12 + i * 46 + (i > index ? 114 : 0);
@@ -196,11 +212,18 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     internal void PlaceImages()
     {
         if (!IsVisible) return;
-        if (!liveImageAttempted && hoveredCard == liveCard && liveArea is not null)
+        if (!liveImageAttempted && hoveredCard >= 0 && hoveredCard < cardImages.Count && cardImages[hoveredCard] is var image && image.Live)
         {
             liveImageAttempted = true;
-            var host = new WindowThumbnail(thumbnailOwner, liveWindow);
-            if (host.Available) images.Add((liveArea, host)); else host.Dispose();
+            var host = new WindowThumbnail(thumbnailOwner, image.Window);
+            if (host.Available) images.Add((image.Area, host));
+            else
+            {
+                host.Dispose();
+                var unavailable = new TextBlock { Text = "Prévia indisponível nesta janela. Clique para abrir.", TextWrapping = TextWrapping.Wrap,
+                    TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, FontSize = 12 };
+                unavailable.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); image.Area.Child = unavailable;
+            }
         }
         foreach (var item in images)
         {
