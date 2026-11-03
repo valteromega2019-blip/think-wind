@@ -25,10 +25,15 @@
       <Thumb.Template><ControlTemplate TargetType="Thumb">
        <Grid Width="32" Height="32" VerticalAlignment="Center" SnapsToDevicePixels="True">
         <Border Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" CornerRadius="16"/>
+        <Border x:Name="HandleShade" Background="Black" Opacity="0.28" CornerRadius="16"/>
        </Grid>
+       <ControlTemplate.Triggers><Trigger Property="IsDragging" Value="True"><Setter TargetName="HandleShade" Property="Opacity" Value="0.22"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></Thumb.Template>
      </Thumb></Track.Thumb>
-     <Track.IncreaseRepeatButton><RepeatButton Height="32" Command="Slider.IncreaseLarge" Background="{TemplateBinding Background}" Style="{StaticResource Think.SliderPart}"/></Track.IncreaseRepeatButton>
+     <!-- The full rounded background is already painted beneath the Track.
+          Painting this shrinking remainder again creates a squeezed capsule
+          and doubles the opacity near the end. Keep its hit target only. -->
+     <Track.IncreaseRepeatButton><RepeatButton Height="32" Command="Slider.IncreaseLarge" Background="Transparent" Style="{StaticResource Think.SliderPart}"/></Track.IncreaseRepeatButton>
     </Track>
    </Grid>
    <ControlTemplate.Triggers>
