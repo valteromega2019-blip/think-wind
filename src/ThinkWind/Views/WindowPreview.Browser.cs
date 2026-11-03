@@ -23,6 +23,7 @@ internal sealed partial class WindowPreview
     private CallSnapshot? browserMeeting;
     private bool browserPreferMusic;
     private string browserContext = "";
+    private DateTime nextFullTabRead;
     private bool BrowserControlsBusy => WindowActionInteracting || browserFan?.IsInteracting == true || musicCard?.IsInteracting == true || call?.IsUserInteracting == true;
     internal void PresentBrowser(IEnumerable<Desktop.RunningWindow> source, IReadOnlyList<BrowserTab> tabs, CallSnapshot? meeting = null, MusicPreviewSelection? music = null)
     {
@@ -92,17 +93,26 @@ internal sealed partial class WindowPreview
             browserLayout.Children.Add(integration);
             browserFan.AttachPanelMaterial(integration);
         }
-        viewport.Child = browserLayout; RefreshAppearance(); Show(); Position(); refresh.Interval = TimeSpan.FromSeconds(2); refresh.Start();
+        viewport.Child = browserLayout;
+        RefreshAppearance();
+        // Resolve the complete fan's desired size before making its HWND
+        // visible, so it never opens as a small window-only placeholder.
+        Position();
+        Show();
+        nextFullTabRead = DateTime.UtcNow.AddSeconds(8);
+        refresh.Interval = TimeSpan.FromSeconds(2); refresh.Start();
     }
     private void DismissBrowser() => Hide();
-    private static string TabsSignature(IReadOnlyList<BrowserTab> tabs) => string.Join("|", tabs.Select(tab => $"{tab.Window}:{string.Join(",", tab.RuntimeId)}:{tab.Selected}:{tab.Title}:{tab.Cached}"));
+    private static string TabsSignature(IReadOnlyList<BrowserTab> tabs) => string.Join("|", tabs.Select(tab => $"{tab.Window}:{string.Join(",", tab.RuntimeId)}:{tab.Selected}:{tab.Title}"));
     private async Task RefreshBrowserAsync()
     {
         if (browserReading || browserLifetime is null || BrowserControlsBusy) return;
         browserReading = true; var token = browserLifetime.Token;
         try
         {
-            var tabs = await BrowserTabs.ReadAsync(windows, token);
+            bool fullRead = DateTime.UtcNow >= nextFullTabRead;
+            if (fullRead) nextFullTabRead = DateTime.UtcNow.AddSeconds(8);
+            var tabs = fullRead ? await BrowserTabs.ReadAsync(windows, token) : await BrowserTabs.ReadForPreviewAsync(windows, token);
             if (token.IsCancellationRequested || !IsVisible || !browserMode) return;
             var meeting = Store.Value.CallPreviewsEnabled
                 ? callMode ? call?.CurrentCall : await CallIntegration.FindAsync(windows, token) : null;

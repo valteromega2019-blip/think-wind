@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
 using System.Threading;
+using System.Threading.Tasks;
 using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
@@ -43,13 +44,16 @@ internal sealed partial class DockWindow
                     && Store.Value.WindowPreviewsEnabled && (preview.IsVisible || previewIconHovered);
                 if (browser)
                 {
-                    var tabs = await BrowserTabs.ReadAsync(requested.Windows, token);
-                    if (!Current()) return;
                     var identity = MediaIdentity(requested);
-                    var titles = await BrowserTabs.KnownTitlesAsync(requested.Windows, token);
-                    identity = identity with { WindowTitles = identity.WindowTitles.Concat(titles).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() };
-                    var meeting = Store.Value.CallPreviewsEnabled ? await CallIntegration.FindAsync(requested.Windows, token) : null;
-                    var browserMedia = await MediaService.FindForAppAsync(identity, token);
+                    var tabsTask = BrowserTabs.ReadForPreviewAsync(requested.Windows, token);
+                    var meetingTask = Store.Value.CallPreviewsEnabled ? CallIntegration.FindAsync(requested.Windows, token)
+                        : Task.FromResult<CallSnapshot?>(null);
+                    var mediaTask = MediaService.FindForAppAsync(identity, token);
+                    await Task.WhenAll(tabsTask, meetingTask, mediaTask);
+                    if (!Current()) return;
+                    var tabs = await tabsTask;
+                    var meeting = await meetingTask;
+                    var browserMedia = await mediaTask;
                     if (Current())
                     {
                         if (meeting is null && browserMedia?.KeepIdle == true) await preview.PresentMusicAsync(browserMedia, requested.Windows, token, Current);

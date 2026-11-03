@@ -16,6 +16,22 @@ internal static class BrowserTabs
     private static readonly SemaphoreSlim gate = new(1, 1);
     private sealed record CachedTabs(uint Process, IReadOnlyList<BrowserTab> Tabs, DateTime Updated);
     private static readonly Dictionary<nint, CachedTabs> cache = new();
+    private static BrowserTab[] previewSnapshot = Array.Empty<BrowserTab>();
+    internal static Task<IReadOnlyList<BrowserTab>> ReadForPreviewAsync(IEnumerable<Desktop.RunningWindow> source, CancellationToken cancellation)
+    {
+        cancellation.ThrowIfCancellationRequested();
+        var windows = source.Where(IsBrowser).Take(6).ToArray();
+        var snapshot = Volatile.Read(ref previewSnapshot);
+        var result = new List<BrowserTab>();
+        foreach (var window in windows)
+        {
+            GetWindowThreadProcessId(window.Handle, out uint process);
+            var known = snapshot.Where(tab => tab.Window == window.Handle && tab.ProcessId == process).ToArray();
+            if (known.Length == 0) return ReadAsync(windows, cancellation);
+            result.AddRange(known.Select(tab => tab with { Cached = true }));
+        }
+        return Task.FromResult<IReadOnlyList<BrowserTab>>(result);
+    }
     private static int observing;
     private static string observed = "";
     private static DateTime observedAt;
@@ -88,6 +104,7 @@ internal static class BrowserTabs
                     else if (previous is not null) result.AddRange(previous.Tabs.Select(tab => tab with { Cached = true }));
                 }
                 foreach (var handle in cache.OrderByDescending(entry => entry.Value.Updated).Skip(16).Select(entry => entry.Key).ToArray()) cache.Remove(handle);
+                Volatile.Write(ref previewSnapshot, cache.Values.SelectMany(entry => entry.Tabs).ToArray());
                 // Six actual windows, keeping their tab metadata for the menu.
                 // Titles never establish whether a call is active.
                 return result.Take(384).ToArray();
