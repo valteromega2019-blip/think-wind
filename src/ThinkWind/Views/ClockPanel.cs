@@ -46,7 +46,9 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         var minutes = new TextBox { Text = "5", MinWidth = 70, MaxLength = 4, Margin = new Thickness(0, 4, 8, 4), Padding = new Thickness(8, 5, 8, 5) };
         minutesInput = minutes;
         System.Windows.Automation.AutomationProperties.SetName(minutes, "Duração do temporizador em minutos, de 1 a 1440");
-        var input = new StackPanel { Margin = new Thickness(0, 4, 0, 10), MaxWidth = 180, HorizontalAlignment = HorizontalAlignment.Center };
+        var input = new StackPanel { Margin = new Thickness(0, 4, 0, 8), MaxWidth = 180, HorizontalAlignment = HorizontalAlignment.Center };
+        var durationRow = new DockPanel();
+        var durationArrows = new StackPanel { Margin = new Thickness(6, 0, 0, 0) }; DockPanel.SetDock(durationArrows, Dock.Right); durationRow.Children.Add(durationArrows);
         var durationLabel = ClockDesign.Text("Minutos", 11, true); durationLabel.HorizontalAlignment = HorizontalAlignment.Center; input.Children.Add(durationLabel);
         void StepDuration(int delta)
         {
@@ -55,16 +57,16 @@ internal sealed class ClockPanel : StackPanel, IDisposable
             minutes.Text = Math.Clamp(current + delta, 1, 1440).ToString(CultureInfo.InvariantCulture);
         }
         var up = ClockDesign.Button("\uE70E", "Aumentar minutos", () => StepDuration(1), true);
-        up.MinHeight = 24; up.Padding = new Thickness(8, 2, 8, 2); input.Children.Add(up);
+        up.MinHeight = 24; up.Padding = new Thickness(6, 2, 6, 2); up.Margin = new Thickness(0, 0, 0, 2); durationArrows.Children.Add(up);
         minutes.Margin = new Thickness(0, 3, 0, 3); minutes.FontSize = 30; minutes.FontWeight = FontWeights.SemiBold;
         minutes.TextAlignment = TextAlignment.Center; minutes.BorderThickness = new Thickness(0);
         minutes.SetResourceReference(Control.ForegroundProperty, "Think.Accent"); minutes.SetResourceReference(Control.BackgroundProperty, "Think.Control");
         minutes.GotKeyboardFocus += (_, _) => minutes.SelectAll();
         minutes.PreviewTextInput += (_, e) => e.Handled = !System.Linq.Enumerable.All(e.Text, c => c is >= '0' and <= '9');
         minutes.PreviewKeyDown += (_, e) => { if (e.Key is System.Windows.Input.Key.Up or System.Windows.Input.Key.Down) { StepDuration(e.Key == System.Windows.Input.Key.Up ? 1 : -1); e.Handled = true; } };
-        input.Children.Add(minutes);
+        minutes.VerticalContentAlignment = VerticalAlignment.Center; durationRow.Children.Add(minutes);
         var down = ClockDesign.Button("\uE70D", "Diminuir minutos", () => StepDuration(-1), true);
-        down.MinHeight = 24; down.Padding = new Thickness(8, 2, 8, 2); input.Children.Add(down);
+        down.MinHeight = 24; down.Padding = new Thickness(6, 2, 6, 2); down.Margin = new Thickness(0); durationArrows.Children.Add(down); input.Children.Add(durationRow);
         input.PreviewMouseWheel += (_, e) => { if (e.Delta == 0) return; StepDuration(e.Delta > 0 ? 1 : -1); e.Handled = true; };
         timerArea.Children.Add(input); timerArea.Children.Add(remaining); timerArea.Children.Add(timeline);
         var timerButtons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Center };
@@ -144,7 +146,7 @@ internal sealed class ClockPanel : StackPanel, IDisposable
             }
         };
         tabs.Children.Add(watchTab); tabs.Children.Add(timerTab); tabs.Children.Add(alarmTab); Children.Add(tabs);
-        var tools = new Grid { MinHeight = 320 }; tools.Children.Add(watchArea); tools.Children.Add(timerArea); tools.Children.Add(alarms); Children.Add(Card(tools));
+        var tools = new Grid { MinHeight = 280 }; tools.Children.Add(watchArea); tools.Children.Add(timerArea); tools.Children.Add(alarms); Children.Add(Card(tools));
         Children.Add(Button("Abrir alarmes do Windows ↗", () => SystemActions.Run("ms-clock:")));
         tick.Tick += (_, _) =>
         {

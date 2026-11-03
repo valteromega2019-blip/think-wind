@@ -46,10 +46,13 @@ internal sealed class AlarmTimePicker : Grid
     private Border Unit(TextBox input, string label, int range)
     {
         var stack = new StackPanel();
+        var row = new DockPanel();
+        var arrows = new StackPanel { Margin = new Thickness(6, 0, 0, 0) };
+        DockPanel.SetDock(arrows, Dock.Right); row.Children.Add(arrows);
         var title = ClockDesign.Text(label, 11, true); title.HorizontalAlignment = HorizontalAlignment.Center; stack.Children.Add(title);
         var up = ClockDesign.Button("\uE70E", "Aumentar " + label.ToLowerInvariant(), () => Step(input, range, 1), true);
-        up.MinHeight = 24; up.Padding = new Thickness(8, 2, 8, 2); up.HorizontalAlignment = HorizontalAlignment.Stretch; stack.Children.Add(up);
-        input.FontSize = 30; input.FontWeight = FontWeights.SemiBold; input.TextAlignment = TextAlignment.Center;
+        up.MinHeight = 24; up.Padding = new Thickness(6, 2, 6, 2); up.Margin = new Thickness(0, 0, 0, 2); arrows.Children.Add(up);
+        input.FontSize = 26; input.FontWeight = FontWeights.SemiBold; input.TextAlignment = TextAlignment.Center; input.VerticalContentAlignment = VerticalAlignment.Center;
         input.MaxLength = 2; input.Padding = new Thickness(4); input.BorderThickness = new Thickness(0);
         input.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
         input.SetResourceReference(Control.BackgroundProperty, "Think.Control");
@@ -66,9 +69,10 @@ internal sealed class AlarmTimePicker : Grid
             if (int.TryParse(input.Text, out int n) && n >= 0 && n < range)
             { if (range == 24) lastHour = n; else lastMinute = n; input.Text = n.ToString("00"); }
         };
-        stack.Children.Add(input);
+        row.Children.Add(input);
         var down = ClockDesign.Button("\uE70D", "Diminuir " + label.ToLowerInvariant(), () => Step(input, range, -1), true);
-        down.MinHeight = 24; down.Padding = new Thickness(8, 2, 8, 2); down.HorizontalAlignment = HorizontalAlignment.Stretch; stack.Children.Add(down);
+        down.MinHeight = 24; down.Padding = new Thickness(6, 2, 6, 2); down.Margin = new Thickness(0); arrows.Children.Add(down);
+        stack.Children.Add(row);
         var surface = ClockDesign.Card(stack, 8);
         surface.PreviewMouseWheel += (_, e) => { if (e.Delta == 0) return; Step(input, range, e.Delta > 0 ? 1 : -1); e.Handled = true; };
         return surface;

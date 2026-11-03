@@ -32,7 +32,7 @@ internal sealed class AlarmPanel : StackPanel
         var title = ClockDesign.Text("Seus alarmes", 14); title.FontWeight = FontWeights.SemiBold; title.VerticalAlignment = VerticalAlignment.Center; heading.Children.Add(title); Children.Add(heading);
         // Hidden pages still measure, so list/editor keep one common size.
         editor.Visibility = Visibility.Hidden;
-        var body = new Grid { MinHeight = 260 }; body.Children.Add(list); body.Children.Add(editor); Children.Add(body);
+        var body = new Grid { MinHeight = 220 }; body.Children.Add(list); body.Children.Add(editor); Children.Add(body);
         editor.Children.Add(time);
         var nameField = new StackPanel(); nameField.Children.Add(ClockDesign.Text("Nome", 11, true)); nameField.Children.Add(name); editor.Children.Add(nameField);
         editor.Children.Add(ClockDesign.Text("Repetir nos dias", 11, true));
@@ -51,9 +51,9 @@ internal sealed class AlarmPanel : StackPanel
         var actions = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 6, 0, 0) };
         actions.Children.Add(ClockDesign.Button("\uE711", "Cancelar", CloseEditor));
         var save = ClockDesign.Button("\uE74E", "Salvar", Save); save.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface"); save.SetResourceReference(Control.ForegroundProperty, "Think.Accent"); actions.Children.Add(save); editor.Children.Add(actions);
-        foreach (var field in new Control[] { name, sound }) { field.Margin = new Thickness(0, 4, 0, 8); field.Padding = new Thickness(8); field.MinHeight = 34; }
+        foreach (var field in new Control[] { name, sound }) { field.Margin = new Thickness(0, 3, 0, 5); field.Padding = new Thickness(6); field.MinHeight = 32; }
         System.Windows.Automation.AutomationProperties.SetName(time, "Horário do alarme em HH:mm"); System.Windows.Automation.AutomationProperties.SetName(name, "Nome do alarme"); System.Windows.Automation.AutomationProperties.SetName(sound, "Som do alarme");
-        status.MinHeight = 18; status.Margin = new Thickness(0, 4, 0, 0); Children.Add(status);
+        status.MinHeight = 14; status.Margin = new Thickness(0, 2, 0, 0); Children.Add(status);
         var help = ClockDesign.Text("Funciona enquanto o Orby estiver aberto.", 10, true); help.ToolTip = "Não liga nem desperta o PC. Após suspensão, avisa as ocorrências das últimas 24 h durante as quais o Orby permaneceu aberto."; Children.Add(help);
         Loaded += (_, _) => { service.Changed += Render; Render(); }; Unloaded += (_, _) => service.Changed -= Render;
     }
