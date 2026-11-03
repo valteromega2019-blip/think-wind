@@ -34,16 +34,21 @@ internal static class FontSizing
         PrepareForMeasure(window);
     }
     internal static void PrepareForMeasure(DependencyObject root) => Walk(root, new HashSet<DependencyObject>());
-    private static void Walk(DependencyObject node, HashSet<DependencyObject> visited)
+    private static void Walk(DependencyObject? node, HashSet<DependencyObject> visited)
     {
-        if (!visited.Add(node)) return;
-        ApplyElement(node);
+        if (node is null || !visited.Add(node)) return;
         // Collapsed pages and freshly rehosted cards may not have a visual
         // tree yet. Their explicit text sizes must be ready before measuring.
+        // Snapshot before changing fonts: setting font resources can invalidate
+        // templates. A freshly detached Viewbox may expose an empty visual slot.
+        var children = new List<DependencyObject>();
         if (node is Visual)
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++) Walk(VisualTreeHelper.GetChild(node, i), visited);
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++)
+                if (VisualTreeHelper.GetChild(node, i) is { } visual) children.Add(visual);
         foreach (object child in LogicalTreeHelper.GetChildren(node))
-            if (child is DependencyObject dependency) Walk(dependency, visited);
+            if (child is DependencyObject dependency) children.Add(dependency);
+        ApplyElement(node);
+        foreach (var child in children) Walk(child, visited);
     }
     private static void ApplyElement(DependencyObject? element)
     {
