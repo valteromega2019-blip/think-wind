@@ -50,15 +50,19 @@ internal static class FontSizing
         if (element is Window) return;
         double scale = (double)element.GetValue(ScaleProperty);
         DependencyProperty font;
-        FontFamily family;
+        FontFamily? family;
         if (element is TextBlock text) { font = TextBlock.FontSizeProperty; family = text.FontFamily; }
         else if (element is Control control) { font = Control.FontSizeProperty; family = control.FontFamily; }
         else return;
         // Symbol fonts are icons, not user text. Inherited font sizes already
         // follow the window; scale only explicit numeric sizes once.
-        if (family.Source.Contains("Icons", StringComparison.OrdinalIgnoreCase)
-            || family.Source.Contains("MDL2", StringComparison.OrdinalIgnoreCase)) return;
-        if (element is FrameworkElement target)
+        // A dynamic font resource may be unresolved while a preview is being
+        // rehosted and its native source is initialized. Scale its numeric
+        // metrics safely; Loaded will apply the font once resources resolve.
+        string source = family?.Source ?? "";
+        if (source.Contains("Icons", StringComparison.OrdinalIgnoreCase)
+            || source.Contains("MDL2", StringComparison.OrdinalIgnoreCase)) return;
+        if (element is FrameworkElement target && target.TryFindResource("Think.FontFamily") is FontFamily)
             target.SetResourceReference(element is TextBlock ? TextBlock.FontFamilyProperty : Control.FontFamilyProperty, "Think.FontFamily");
         var metrics = originals.GetValue(element, _ => new Metrics());
         if (double.IsNaN(metrics.Font) && element.ReadLocalValue(font) is double size) metrics.Font = size;
