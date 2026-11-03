@@ -39,9 +39,17 @@ internal static class Typography
         var requested = (Color)ColorConverter.ConvertFromString(preferences.FontColor);
         var brushes = new Dictionary<Color, SolidColorBrush>();
         Walk(root, background);
-        void Walk(DependencyObject node, Color behind)
+        void Walk(DependencyObject? node, Color behind)
         {
-            if (!visited.Add(node)) return;
+            if (node is null || !visited.Add(node)) return;
+            // Resource updates below can rebuild templates. Capture children
+            // first and ignore empty slots in newly detached Viewboxes.
+            var children = new List<DependencyObject>();
+            if (node is Visual)
+                for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++)
+                    if (VisualTreeHelper.GetChild(node, i) is { } visual) children.Add(visual);
+            foreach (object child in LogicalTreeHelper.GetChildren(node))
+                if (child is DependencyObject dependency) children.Add(dependency);
             if (node is Border border && border.Background is SolidColorBrush surface && surface.Color.A > 0)
             {
                 behind = Blend(surface.Color, behind, surface.Color.A / 255d);
@@ -53,10 +61,7 @@ internal static class Typography
                 border.Resources["Muted"] = border.Resources["Think.Text"];
                 border.Resources["Faint"] = border.Resources["Think.Text"];
             }
-            if (node is Visual)
-                for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++) Walk(VisualTreeHelper.GetChild(node, i), behind);
-            foreach (object child in LogicalTreeHelper.GetChildren(node))
-                if (child is DependencyObject dependency) Walk(dependency, behind);
+            foreach (var child in children) Walk(child, behind);
         }
     }
 }
