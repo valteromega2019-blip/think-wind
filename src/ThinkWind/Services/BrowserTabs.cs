@@ -58,7 +58,7 @@ internal static class BrowserTabs
             {
                 var result = new List<BrowserTab>();
                 foreach (var handle in cache.Keys.Where(handle => !Desktop.WindowExists(handle)).ToArray()) cache.Remove(handle);
-                foreach (var window in windows.Where(IsBrowser).Take(4))
+                foreach (var window in windows.Where(IsBrowser).Take(6))
                 {
                     cancellation.ThrowIfCancellationRequested();
                     GetWindowThreadProcessId(window.Handle, out uint process);
@@ -88,8 +88,9 @@ internal static class BrowserTabs
                     else if (previous is not null) result.AddRange(previous.Tabs.Select(tab => tab with { Cached = true }));
                 }
                 foreach (var handle in cache.OrderByDescending(entry => entry.Value.Updated).Skip(16).Select(entry => entry.Key).ToArray()) cache.Remove(handle);
-                // Four visual slots; titles never establish whether a call is active.
-                return result.OrderByDescending(tab => tab.Selected).Take(4).OrderBy(tab => tab.Selected).ToArray();
+                // Six actual windows, keeping their tab metadata for the menu.
+                // Titles never establish whether a call is active.
+                return result.Take(384).ToArray();
             }, cancellation);
         }
         finally { gate.Release(); }

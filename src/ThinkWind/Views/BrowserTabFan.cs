@@ -16,7 +16,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly List<(Border Area, WindowThumbnail Host)> images = new();
     private readonly List<Border> surfaces = new();
     private readonly List<FrameworkElement> cards = new();
-    private readonly List<RectangleGeometry> cardClips = new();
     private readonly List<ContextMenu> tabMenus = new();
     internal bool IsInteracting => tabMenus.Any(menu => menu.IsOpen);
     private readonly List<BackdropHost> cardBackdrops = new();
@@ -27,6 +26,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private nint thumbnailOwner;
     private bool liveImageAttempted;
     private Point lastPointer = new(double.NaN, double.NaN);
+    private readonly Button expansion = new() { Height = 30, Width = 300, Padding = new Thickness(8, 3, 8, 3) };
+    private bool expanded;
+    internal event Action? LayoutChanged;
     internal event Action? DismissRequested;
     internal void AttachPanelMaterial(FrameworkElement panel)
     {
@@ -37,12 +39,17 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     internal BrowserTabFan()
     {
         Width = 320;
+        expansion.SetResourceReference(StyleProperty, "Think.IconButton");
+        expansion.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
+        expansion.SetResourceReference(Control.BackgroundProperty, "Think.Control");
+        expansion.Click += (_, _) => { expanded = !expanded; hoveredCard = -1; BringCardForward(cards.Count - 1, false); LayoutChanged?.Invoke(); };
         PreviewMouseMove += (_, e) =>
         {
             var point = e.GetPosition(this);
             // Reflow under a stationary cursor must not promote another card.
             if (point == lastPointer) return;
             lastPointer = point;
+            if (expanded) return; // Every image is already exposed in the grid.
             if (point.X < 10 || point.X > 310) return;
             for (int i = 0; i < cards.Count; i++)
             {
@@ -54,16 +61,16 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     }
     internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner, Preferences preferences)
     {
-        Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear(); cardClips.Clear();
+        Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear();
         hoveredCard = -1; cardImages.Clear();
         thumbnailOwner = owner;
         // DWM exposes top-level windows. Group tabs by their real HWND instead
         // of presenting unavailable background-tab images as separate previews.
-        var groups = tabs.GroupBy(tab => tab.Window).Take(4).ToArray();
+        var groups = tabs.GroupBy(tab => tab.Window).Take(6).ToArray();
         var shown = groups.Select(group => group.FirstOrDefault(tab => tab.Selected) ?? group.First()).ToArray();
         int count = shown.Length;
         // Reserve room for the rotated corners instead of clipping them.
-        Height = 184 + Math.Max(0, count - 1) * 46;
+        Height = 220 + Math.Max(0, count - 1) * 46;
         int index = 0;
         foreach (var tab in shown)
         {
@@ -97,7 +104,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             row.Children.Add(area);
             var surface = new Border { Child = row, BorderThickness = new Thickness(1) };
             surfaces.Add(surface);
-            var button = new Button { Width = 300, Height = 160, Padding = new Thickness(0), Margin = new Thickness(0), Content = surface, HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = tab.Title,
+            var button = new Button { Width = 300, Height = 160, Padding = new Thickness(0), Margin = new Thickness(0), Content = surface, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch, ToolTip = tab.Title,
                 Background = Brushes.Transparent };
             if (tab.Cached) button.ToolTip = tab.Title + " · Última lista identificada; clique para restaurar e selecionar.";
             button.SetResourceReference(StyleProperty, "Think.IconButton");
@@ -137,8 +144,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             };
             FrameworkElement card = button;
             cards.Add(card);
-            var clip = new RectangleGeometry(new Rect(-8, -8, 316, 176));
-            card.Clip = clip; cardClips.Add(clip);
             SetLeft(card, 10); SetTop(card, 12 + index * 46); SetZIndex(card, index);
             card.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = Colors.Black, Opacity = .22, BlurRadius = 14, ShadowDepth = 2 };
             Children.Add(card);
@@ -147,6 +152,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                 button.BeginAnimation(OpacityProperty, new DoubleAnimation(.5, 1, TimeSpan.FromMilliseconds(160 + index * 35)));
             index++;
         }
+        Children.Add(expansion); SetLeft(expansion, 10); SetZIndex(expansion, 200);
         ConfigureAppearance(preferences);
         BringCardForward(count - 1, animate: false);
     }
@@ -157,18 +163,28 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         foreach (var image in images) image.Host.Dispose();
         images.Clear();
         liveImageAttempted = false;
+        Width = expanded && cards.Count > 1 ? 640 : 320;
+        Height = expanded ? 58 + Math.Ceiling(cards.Count / 2d) * 180
+            : (cards.Count > 1 ? 220 : 184) + Math.Max(0, cards.Count - 1) * 46;
+        expansion.Visibility = cards.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        expansion.Content = expanded ? $"Recolher · {cards.Count} janelas" : $"{cards.Count - 1} outra(s) janela(s) · Expandir todas";
+        System.Windows.Automation.AutomationProperties.SetName(expansion, expansion.Content.ToString());
+        SetTop(expansion, expanded ? 8 : 12 + (cards.Count - 1) * 46 + (index < cards.Count - 1 ? 114 : 0));
         for (int i = 0; i < cards.Count; i++)
         {
             var card = cards[i];
             SetZIndex(card, i == index ? 100 : i);
             // Keep each remaining title reachable. The selected card uses the
             // existing full slot; subsequent title strips move below it.
-            double top = 12 + i * 46 + (i > index ? 114 : 0);
+            double top = expanded ? 48 + (i / 2) * 180 : 12 + i * 46 + (i > index ? 114 : 0) + (i == cards.Count - 1 && cards.Count > 1 ? 36 : 0);
+            SetLeft(card, expanded ? 10 + (i % 2) * 320 : 10);
+            bool full = expanded || i == index;
+            card.Height = full ? 160 : 40;
+            cardImages[i].Area.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
             if (animate && SystemParameters.ClientAreaAnimation)
                 card.BeginAnimation(TopProperty, new DoubleAnimation(top, TimeSpan.FromMilliseconds(150))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
             else { card.BeginAnimation(TopProperty, null); SetTop(card, top); }
-            cardClips[i].Rect = new Rect(-8, -8, 316, i == index ? 176 : 48);
             surfaces[i].SetResourceReference(Border.BorderBrushProperty, i == index ? "Think.Accent" : "Think.Hover");
         }
         PlaceImages();
@@ -208,7 +224,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     }
     internal void PlaceImages()
     {
-        if (!IsVisible) return;
+        if (!IsVisible || !IsMeasureValid || !IsArrangeValid) return;
         foreach (var companion in companionBackdrops)
         {
             var panel = companion.Panel;
@@ -223,16 +239,18 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         {
             var card = cards[i];
             if (!card.IsVisible || !card.IsLoaded || PresentationSource.FromVisual(card) is null) { cardBackdrops[i].Hide(); continue; }
-            double height = i == hoveredCard ? 160 : 40;
+            double height = expanded || i == hoveredCard ? 160 : 40;
             var start = card.PointToScreen(new Point(0, 0));
             var end = card.PointToScreen(new Point(300, height));
             double scale = Math.Max(.1, (end.X - start.X) / 300);
             cardBackdrops[i].Synchronize(new OverlayChrome.PixelRect { Left = (int)Math.Floor(start.X), Top = (int)Math.Floor(start.Y),
                 Right = (int)Math.Ceiling(end.X), Bottom = (int)Math.Ceiling(end.Y) }, cardRadius * scale, false, true);
         }
-        if (!liveImageAttempted && hoveredCard >= 0 && hoveredCard < cardImages.Count && cardImages[hoveredCard] is var image && image.Live)
+        if (!liveImageAttempted && hoveredCard >= 0 && hoveredCard < cardImages.Count)
         {
             liveImageAttempted = true;
+            foreach (var image in expanded ? cardImages : new[] { cardImages[hoveredCard] }.ToList())
+            {
             var host = new WindowThumbnail(thumbnailOwner, image.Window);
             if (host.Available) images.Add((image.Area, host));
             else
@@ -241,6 +259,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                 var unavailable = new TextBlock { Text = "Prévia indisponível nesta janela. Clique para abrir.", TextWrapping = TextWrapping.Wrap,
                     TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, FontSize = 12 };
                 unavailable.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); image.Area.Child = unavailable;
+            }
             }
         }
         foreach (var item in images)

@@ -23,3 +23,14 @@ Referências consultadas:
 - https://learn.microsoft.com/en-us/windows/win32/winmsg/window-features
 
 Validação: leitura de código e diff. Sem compilação, testes, type check ou verificação visual em execução nesta etapa, conforme preferência do usuário.
+
+## Até seis janelas e expansão
+
+- Leitura limitada a seis janelas de navegador, com até 64 metadados de abas por janela; os metadados não são truncados para quatro itens antes do agrupamento.
+- Indicador acima do último cartão informa quantas outras janelas estão recolhidas. Expandir todas apresenta as imagens em grade de duas colunas; Recolher retorna ao leque.
+- A largura e altura do painel acompanham a grade e o espaço útil disponível. O Viewbox existente reduz a apresentação quando necessário.
+- Removido o recorte retangular dos cartões. Em estado recolhido, a área da imagem é ocultada e a altura real do cartão é reduzida, preservando os cantos e a sombra fora do cartão.
+- Reposicionamento nativo só após medida e arranjo válidos.
+- A contagem é de janelas reais. Duas janelas com seis abas continuam sendo duas fontes DWM, com as abas nos menus correspondentes.
+
+Esta revisão não foi compilada nem testada.

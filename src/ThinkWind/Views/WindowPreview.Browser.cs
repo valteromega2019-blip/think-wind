@@ -40,6 +40,8 @@ internal sealed partial class WindowPreview
         windows = currentWindows; browserTabs = tabs.ToArray(); browserSignature = TabsSignature(tabs);
         Surface.Padding = new Thickness(10); browserLayout.Children.Clear();
         browserFan ??= new BrowserTabFan();
+        browserFan.LayoutChanged -= PositionBrowser;
+        browserFan.LayoutChanged += PositionBrowser;
         browserFan.DismissRequested -= DismissBrowser; browserFan.DismissRequested += DismissBrowser;
         var shown = tabs.Concat(windows.Where(window => !tabs.Any(tab => tab.Window == window.Handle))
             .Select(window => new BrowserTab(window.Handle, 0, window.Title, Array.Empty<int>(), true))).ToArray();
@@ -124,7 +126,7 @@ internal sealed partial class WindowPreview
     private void PositionBrowser()
     {
         var bounds = anchor();
-        double naturalWidth = browserLayout.Children.Count > 1 ? 650 : 320;
+        double naturalWidth = (browserFan?.Width ?? 320) + (browserLayout.Children.Count > 1 ? 330 : 0);
         double width = Math.Min(Display.Width - 16, naturalWidth + 20);
         browserLayout.Width = naturalWidth;
         viewport.Width = width - 20;
