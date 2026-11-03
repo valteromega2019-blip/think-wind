@@ -106,7 +106,7 @@ internal sealed partial class MediaCard
         {
             volumeBusy = false;
             if (!token.IsCancellationRequested && pendingVolume is not null)
-                Dispatcher.BeginInvoke(new Action(() => _ = ReadPlayerVolume()));
+                _ = Dispatcher.BeginInvoke(new Action(() => _ = ReadPlayerVolume()));
         }
     }
 }
