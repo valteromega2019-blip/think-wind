@@ -46,6 +46,14 @@ try {
     } else { throw 'Assinatura Authenticode invalida ou estado nao permitido. Instalacao bloqueada.' }
     if ($WaitPid -eq 0) { Write-Output 'Assinatura e integridade verificadas.'; exit 0 }
     if ([string]::IsNullOrWhiteSpace($ReadyFile)) { throw 'Confirmacao de prontidao ausente. Instalacao cancelada.' }
+    # Clear the desktop once, only after authorization and package validation,
+    # before showing our independent progress window. Never close user apps.
+    $desktopShell = $null
+    try {
+        $desktopShell = New-Object -ComObject Shell.Application
+        $desktopShell.MinimizeAll()
+    } catch { Write-Output 'Nao foi possivel minimizar as janelas. A atualizacao continuara normalmente.' }
+    finally { if ($null -ne $desktopShell) { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($desktopShell) } }
     # Copy the UI script away from the installed files before they are replaced.
     # This companion never installs anything and needs no elevation.
     try {
