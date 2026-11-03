@@ -43,3 +43,7 @@ Esta revisão não foi compilada nem testada.
 - Hover só reorganiza cartões; clicar no cartão de uma aba usa a seleção de aba existente. Imagens ao vivo só são anexadas a abas selecionadas ou representações da janela sem informação de abas, evitando atribuir a imagem de uma aba à outra.
 - Rótulos de abas em segundo plano permanecem disponíveis, mas o DWM não produz imagens independentes delas.
 - Sem compilação, testes ou type check nesta etapa.
+
+## Recorte antigo preservado na janela reutilizada
+
+O caminho `SuppressMaterial` retornava antes de limpar o `Grid.Clip`. Após abrir uma prévia normal ou de mídia e depois o leque do navegador, o recorte anterior podia continuar aplicado ao novo conteúdo. Agora esse caminho remove o recorte externo e invalida seu cache; ao voltar ao modo com fundo, o recorte é recalculado normalmente. Verificação por leitura; sem compilação ou testes nesta alteração.

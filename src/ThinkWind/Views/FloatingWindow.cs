@@ -183,7 +183,17 @@ internal abstract class FloatingWindow : Window
         OverlayChrome.PixelRect rectangle;
         if (destination is { } requested) rectangle = requested;
         else if (!OverlayChrome.GetWindowRect(hwnd, out rectangle)) return;
-        if (SuppressMaterial) { if (destination.HasValue) OverlayChrome.Move(hwnd, rectangle); backdrop?.Hide(); return; }
+        if (SuppressMaterial)
+        {
+            // Reused preview windows can still carry the rounded clip of a
+            // previous, smaller native-window/player panel. Individual-card
+            // mode owns its outlines; retaining that clip slices the new fan.
+            ((Grid)Content).Clip = null;
+            lastClip = default;
+            if (destination.HasValue) OverlayChrome.Move(hwnd, rectangle);
+            backdrop?.Hide();
+            return;
+        }
         if (backdrop is null && destination.HasValue) OverlayChrome.Move(hwnd, rectangle);
         var scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1;
         var next = (rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top, (int)Math.Round(radius * scale), SquareTopCorners, scale);
