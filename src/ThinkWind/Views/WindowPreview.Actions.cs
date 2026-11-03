@@ -22,11 +22,29 @@ internal sealed partial class WindowPreview
         var candidates = source.Where(w => WindowThumbnail.IsWindow(w.Handle)).DistinctBy(w => w.Handle).ToArray();
         var targets = preferred != 0 ? candidates.Where(w => w.Handle == preferred).ToArray() : candidates;
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+        if (content is MediaCard playerCard)
+        {
+            var open = PreviewControl("Abrir player", "\uE8A7", () => _ = OpenPlayer());
+            open.SetResourceReference(StyleProperty, "Think.IconButton");
+            open.IsEnabled = targets.Length > 0;
+            controls.Children.Add(open);
+            playerCard.ConfigurePlayerActions(targets.Select(w => w.Executable).OfType<string>().ToArray(), () => _ = OpenPlayer());
+        }
         Add("Minimizar janela do aplicativo", "\uE921", false);
         Add("Fechar janela do aplicativo", "\uE711", true);
         if (content is MediaCard media) media.SetWindowActions(controls);
         else if (content is CallPreviewCard callCard) callCard.SetWindowActions(controls);
         return content;
+
+        async Task OpenPlayer()
+        {
+            var target = targets.FirstOrDefault(w => WindowThumbnail.IsWindow(w.Handle));
+            if (target is null) return;
+            bool opened = await Desktop.ActivateFromDock(target.Handle, false);
+            if (!opened && ElevatedWindowAction.NeedsAdminFallback(target.Handle))
+                opened = await ElevatedWindowAction.Request(target.Handle, close: false, owner: Owner ?? this);
+            if (opened) Hide();
+        }
 
         void Add(string label, string glyph, bool close)
         {

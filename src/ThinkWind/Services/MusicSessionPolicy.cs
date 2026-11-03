@@ -10,6 +10,8 @@ namespace OrbyLauncher.Services;
 internal sealed record MediaAppIdentity(IReadOnlyList<string> AppIds, IReadOnlyList<string> Executables, IReadOnlyList<string> WindowTitles, string Name, bool BrowserGroup = false);
 internal sealed record MusicPreviewSelection(GlobalSystemMediaTransportControlsSession Session, bool MusicIdentity)
 {
+    internal bool KeepIdle { get; init; }
+    internal MediaState? LastState { get; init; }
     internal string SourceId { get; } = Session.SourceAppUserModelId;
 }
 

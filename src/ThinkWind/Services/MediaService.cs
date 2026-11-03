@@ -40,6 +40,8 @@ internal sealed class MediaService : IDisposable
     private bool metadataDirty = true;
     private string playerId = "", playerName = "";
     private readonly HashSet<GlobalSystemMediaTransportControlsSession> watched = new();
+    private static readonly Dictionary<string, MediaState> lastPlayerStates = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object lastPlayerLock = new();
     internal MediaState? State { get; private set; }
     internal string? Error { get; private set; }
     internal event Action? Changed;
@@ -56,11 +58,18 @@ internal sealed class MediaService : IDisposable
                 try
                 {
                     var playback = candidate.GetPlaybackInfo();
-                    if (playback.PlaybackStatus != GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing
+                    bool keepIdle = MusicSessionPolicy.KnownMusic(identity.Name) && !identity.BrowserGroup;
+                    if (playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed
+                        || (!keepIdle && playback.PlaybackStatus != GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
                         || !MusicSessionPolicy.HasControls(playback.Controls)) continue;
                     var properties = await candidate.TryGetMediaPropertiesAsync(); cancellation.ThrowIfCancellationRequested();
                     if (MusicSessionPolicy.Matches(candidate.SourceAppUserModelId, properties.Title, identity, out bool dedicated)
-                        && MusicSessionPolicy.IsMusic(candidate.SourceAppUserModelId, properties.PlaybackType, dedicated)) matches.Add(new(candidate, dedicated));
+                        && MusicSessionPolicy.IsMusic(candidate.SourceAppUserModelId, properties.PlaybackType, dedicated))
+                    {
+                        MediaState? last;
+                        lock (lastPlayerLock) lastPlayerStates.TryGetValue(candidate.SourceAppUserModelId, out last);
+                        matches.Add(new(candidate, dedicated) { KeepIdle = keepIdle, LastState = keepIdle ? last : null });
+                    }
                 }
                 catch (Exception error) when (Unavailable(error)) { }
             }
@@ -122,7 +131,8 @@ internal sealed class MediaService : IDisposable
                 var selected = session;
                 if (selected is null) { State = null; Error = null; Changed?.Invoke(); continue; }
                 var playback = selected.GetPlaybackInfo();
-                if (playback.PlaybackStatus is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed or GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped)
+                if (playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed
+                    || (playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped && selectedPreview?.KeepIdle != true))
                 { State = null; Error = null; Changed?.Invoke(); continue; }
                 if (metadataDirty || metadata is null)
                 {
@@ -137,11 +147,21 @@ internal sealed class MediaService : IDisposable
                 string source = selected.SourceAppUserModelId;
                 if (playerId != source || playerName.Length == 0) { playerId = source; playerName = PlayerName(source); }
                 string player = playerName;
-                State = new(string.IsNullOrWhiteSpace(metadata!.Title) ? player : metadata.Title, metadata.Artist, player, art,
+                var retained = selectedPreview?.KeepIdle == true ? State ?? selectedPreview.LastState : null;
+                var updatedState = new MediaState(string.IsNullOrWhiteSpace(metadata!.Title) ? retained?.Title ?? player : metadata.Title,
+                    string.IsNullOrWhiteSpace(metadata.Title) ? retained?.Artist ?? metadata.Artist : metadata.Artist, player,
+                    art ?? (string.IsNullOrWhiteSpace(metadata.Title) || metadata.Title == retained?.Title ? retained?.Artwork : null),
                     playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
                     timeline.StartTime, timeline.EndTime, timeline.Position, timeline.LastUpdatedTime, playback.PlaybackRate ?? 1,
                     timeline.MinSeekTime, timeline.MaxSeekTime, controls.IsPlaybackPositionEnabled && timeline.EndTime > timeline.StartTime,
                     controls.IsPlayPauseToggleEnabled || controls.IsPlayEnabled || controls.IsPauseEnabled, controls.IsNextEnabled, controls.IsPreviousEnabled);
+                State = updatedState;
+                if (selectedPreview?.KeepIdle == true)
+                    lock (lastPlayerLock)
+                    {
+                        if (!lastPlayerStates.ContainsKey(source) && lastPlayerStates.Count >= 16) lastPlayerStates.Remove(lastPlayerStates.Keys.First());
+                        lastPlayerStates[source] = updatedState;
+                    }
                 Error = null; Changed?.Invoke();
             } while (refreshAgain && active && !disposed);
         }
@@ -203,7 +223,8 @@ internal sealed class MediaService : IDisposable
             try
             {
                 var playback = candidate.GetPlaybackInfo();
-                if (playback.PlaybackStatus is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed or GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped) continue;
+                if (playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed
+                    || (playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped && selectedPreview?.KeepIdle != true)) continue;
                 if (!MusicSessionPolicy.HasControls(playback.Controls)) continue;
                 var properties = await candidate.TryGetMediaPropertiesAsync();
                 if (!active || disposed) return null;

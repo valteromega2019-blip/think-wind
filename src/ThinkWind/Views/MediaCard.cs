@@ -9,7 +9,7 @@ using System.Windows.Threading;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
-internal sealed class MediaCard : Grid, IDisposable
+internal sealed partial class MediaCard : Grid, IDisposable
 {
     private readonly MediaService service;
     private readonly StackPanel body = new() { Margin = new Thickness(12) };
@@ -29,6 +29,7 @@ internal sealed class MediaCard : Grid, IDisposable
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private bool seeking, dragging, busy;
     private bool dockPreview;
+    private readonly bool keepIdlePreview;
     internal void ConfigureDockPreview()
     {
         dockPreview = true;
@@ -46,7 +47,7 @@ internal sealed class MediaCard : Grid, IDisposable
         Render();
     }
     internal bool Available => service.State is not null;
-    internal bool IsInteracting => seeking || dragging || busy || IsMouseCaptureWithin;
+    internal bool IsInteracting => seeking || dragging || busy || volumeBusy || IsMouseCaptureWithin;
     internal event Action? AvailabilityChanged;
     internal event Action? LayoutChanged;
     internal event Action? PreviewPlaybackStopped;
@@ -56,7 +57,7 @@ internal sealed class MediaCard : Grid, IDisposable
         windowActions = actions;
         actions.Margin = new Thickness(0, 6, 6, 0);
         Panel.SetZIndex(actions, 10);
-        metadataRow.Margin = new Thickness(0, 0, 54, 0);
+        metadataRow.Margin = new Thickness(0, 20, 0, 0);
         Children.Add(actions);
     }
     internal void ConfigurePreviewSurface(double radius, double opacity)
@@ -69,6 +70,7 @@ internal sealed class MediaCard : Grid, IDisposable
     }
     internal MediaCard(string? sourceFilter = null, MusicPreviewSelection? selection = null)
     {
+        keepIdlePreview = selection?.KeepIdle == true;
         service = new MediaService(Dispatcher, sourceFilter, selection);
         backgroundCover = new Border { Background = artworkBackground, CornerRadius = new CornerRadius(20), IsHitTestVisible = false, Visibility = Visibility.Collapsed };
         backgroundShade = new Border { CornerRadius = new CornerRadius(20), IsHitTestVisible = false, Visibility = Visibility.Collapsed,
@@ -128,7 +130,7 @@ internal sealed class MediaCard : Grid, IDisposable
         toggle.Content = Icon(state?.Playing == true ? "\uE769" : "\uE768");
         title.ToolTip = title.Text; artist.ToolTip = artist.Text; player.ToolTip = player.Text;
         RenderButtons(); UpdateProgress();
-        if (dockPreview && IsVisible && state?.Playing != true) PreviewPlaybackStopped?.Invoke();
+        if (dockPreview && IsVisible && state?.Playing != true && (!keepIdlePreview || state is null)) PreviewPlaybackStopped?.Invoke();
         if (wasAvailable != Available) AvailabilityChanged?.Invoke();
         if (wasAvailable != Available || metadataChanged) { InvalidateMeasure(); LayoutChanged?.Invoke(); }
     }
@@ -161,7 +163,7 @@ internal sealed class MediaCard : Grid, IDisposable
         time.Text = Format(TimeSpan.FromSeconds(progress.Value)) + " / " + Format(state.End - state.Start);
     }
     private static string Format(TimeSpan value) => value.TotalHours >= 1 ? value.ToString(@"h\:mm\:ss") : value.ToString(@"m\:ss");
-    internal async void SetActive(bool active) { if (active) timer.Start(); else { timer.Stop(); seeking = false; } await service.SetActiveAsync(active); }
+    internal async void SetActive(bool active) { SetVolumeActive(active); if (active) timer.Start(); else { timer.Stop(); seeking = false; } await service.SetActiveAsync(active); }
     private void AppearanceChanged() => UpdateArtworkBackground(service.State?.Artwork);
-    public void Dispose() { timer.Stop(); ThemeService.Changed -= AppearanceChanged; service.Changed -= Render; service.Dispose(); }
+    public void Dispose() { SetVolumeActive(false); timer.Stop(); ThemeService.Changed -= AppearanceChanged; service.Changed -= Render; service.Dispose(); }
 }

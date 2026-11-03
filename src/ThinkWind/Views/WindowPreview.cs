@@ -59,15 +59,16 @@ internal sealed partial class WindowPreview : FloatingWindow
     }
     internal void PresentMusic(MusicPreviewSelection selection, IEnumerable<Desktop.RunningWindow> source)
     {
-        if (source.Any(BrowserTabs.IsBrowser)) { PresentBrowser(source, browserTabs, music: selection); return; }
+        if (!selection.KeepIdle && source.Any(BrowserTabs.IsBrowser)) { PresentBrowser(source, browserTabs, music: selection); return; }
         browserMode = false; browserLifetime?.Cancel();
         Surface.Padding = new Thickness(0);
         callMode = false; call?.Stop();
         refresh.Stop(); Release(); musicMode = true;
+        windows = source.ToList();
         PrepareMusic(selection);
         ConfigurePlayerSurface();
         viewport.Child = null;
-        Surface.Child = WithWindowActions(musicCard!, source); Show(); Position(); musicCard!.SetActive(true);
+        Surface.Child = WithWindowActions(musicCard!, windows); Show(); Position(); musicCard!.SetActive(true);
     }
     private void PrepareMusic(MusicPreviewSelection selection)
     {

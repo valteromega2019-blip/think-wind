@@ -31,7 +31,8 @@ internal sealed partial class DockWindow
             }
             var requested = previewItem;
             retainedPreviewAnchor = CurrentPreviewIconBounds();
-            preview.Present(requested.Windows);
+            bool dedicatedPlayer = MusicSessionPolicy.KnownMusic(requested.Name);
+            if (dedicatedPlayer) preview.Hide(); else preview.Present(requested.Windows);
             callProbe?.Cancel(); callProbe?.Dispose(); callProbe = new CancellationTokenSource(); var token = callProbe.Token;
             try
             {
@@ -47,12 +48,17 @@ internal sealed partial class DockWindow
                     identity = identity with { WindowTitles = identity.WindowTitles.Concat(titles).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() };
                     var meeting = Store.Value.CallPreviewsEnabled ? await CallIntegration.FindAsync(requested.Windows, token) : null;
                     var browserMedia = await MediaService.FindForAppAsync(identity, token);
-                    if (Current()) preview.PresentBrowser(requested.Windows, tabs, meeting, browserMedia);
+                    if (Current())
+                    {
+                        if (meeting is null && browserMedia?.KeepIdle == true) preview.PresentMusic(browserMedia, requested.Windows);
+                        else preview.PresentBrowser(requested.Windows, tabs, meeting, browserMedia);
+                    }
                     return;
                 }
                 var media = await MediaService.FindForAppAsync(MediaIdentity(requested), token);
                 if (!Current()) return;
                 if (media is not null) preview.PresentMusic(media, requested.Windows);
+                else if (dedicatedPlayer) preview.Present(requested.Windows);
                 if (Store.Value.CallPreviewsEnabled && requested.Windows.Any(CallIntegration.IsCandidate))
                 {
                     var call = await CallIntegration.FindAsync(requested.Windows, token);

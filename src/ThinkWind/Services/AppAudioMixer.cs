@@ -13,10 +13,10 @@ internal sealed record AppAudioState(string Id, string Name, double Volume, bool
 internal static class AppAudioMixer
 {
     private static readonly SemaphoreSlim gate = new(1, 1);
-    internal static async Task<AppAudioState[]> ReadAsync(CancellationToken cancellation)
+    internal static async Task<AppAudioState[]> ReadAsync(CancellationToken cancellation, bool includeInactive = false)
     {
         await gate.WaitAsync(cancellation).ConfigureAwait(false);
-        try { return await Task.Run(() => Read(cancellation), cancellation).ConfigureAwait(false); }
+        try { return await Task.Run(() => Read(cancellation, includeInactive), cancellation).ConfigureAwait(false); }
         finally { gate.Release(); }
     }
     internal static async Task<bool> SetAsync(AppAudioState target, double? volume, bool? mute, CancellationToken cancellation)
@@ -40,7 +40,7 @@ internal static class AppAudioMixer
         }
         finally { gate.Release(); }
     }
-    private static AppAudioState[] Read(CancellationToken cancellation)
+    private static AppAudioState[] Read(CancellationToken cancellation, bool includeInactive)
     {
         var sessions = new List<(string Group, string Name, double Volume, bool Muted, bool Active, AudioSessionKey Key)>();
         var names = new Dictionary<uint, (string Group, string Name)>();
@@ -48,7 +48,7 @@ internal static class AppAudioMixer
         {
             CoreAudio.Check(control.GetState(out int state)); if (state == 2) return;
             CoreAudio.Check(volume.GetMute(out bool muted));
-            if (state != 1 && !muted) return;
+            if (!includeInactive && state != 1 && !muted) return;
             CoreAudio.Check(control.GetProcessId(out uint process));
             CoreAudio.Check(control.GetSessionInstanceIdentifier(out string instance));
             CoreAudio.Check(volume.GetMasterVolume(out float level));
