@@ -9,6 +9,7 @@ namespace OrbyLauncher.Views;
 internal sealed partial class IslandWindow
 {
     private TextBlock? headerWeather, stripWeather;
+    private WeatherIcon? headerWeatherIcon, stripWeatherIcon;
     private Button? stripWeatherButton;
     private SystemToolsWindow? systemTools;
     private bool SystemToolsOpen => systemTools?.IsVisible == true;
@@ -20,19 +21,22 @@ internal sealed partial class IslandWindow
         var button = ActionButton("Clima · escolher cidade", () => { });
         button.Click += (_, _) => { if (!Store.IsEditing) ShowMini(MiniIslandKind.Weather, button); };
         button.Style = (Style)FindResource("Think.IconButton");
-        button.Content = reading; button.Padding = new Thickness(5, 0, 5, 0);
+        var icon = new WeatherIcon { FontSize = strip ? 14 : 17, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 5, 0) };
+        var content = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        content.Children.Add(icon); content.Children.Add(reading);
+        button.Content = content; button.Padding = new Thickness(5, 0, 5, 0);
         button.Height = strip ? 24 : 32; button.Width = strip ? 72 : 78;
         button.Margin = strip ? new Thickness(0, 0, 8, 0) : new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
-        if (strip) { stripWeather = reading; stripWeatherButton = button; }
-        else headerWeather = reading;
+        if (strip) { stripWeather = reading; stripWeatherButton = button; stripWeatherIcon = icon; }
+        else { headerWeather = reading; headerWeatherIcon = icon; }
         RefreshHeaderWeather();
         return MarkPanelIcon(button, "weather");
     }
     private void RefreshHeaderWeather()
     {
         var value = weather.Reading;
-        string icon = WeatherService.Icon(value?.Code);
-        string text = value is null ? icon + " —" : $"{icon} {value.Temperature:0}°C";
+        string text = value is null ? "—" : $"{value.Temperature:0}°C";
+        foreach (var icon in new[] { headerWeatherIcon, stripWeatherIcon }) if (icon is not null) icon.Code = value?.Code;
         string tip = value is null ? "Escolha uma cidade em Personalizar > Clima" : $"{Store.Value.WeatherCity} · {WeatherService.Description(value.Code)} · atualizado {value.Updated:HH:mm}";
         foreach (var label in new[] { headerWeather, stripWeather })
             if (label is not null) { label.Text = text; label.ToolTip = tip; }

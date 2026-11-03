@@ -23,7 +23,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
     private readonly TextBlock feelsLike = new() { Text = "—", FontSize = 15, FontWeight = FontWeights.SemiBold };
     private readonly TextBlock minimum = new() { Text = "—", FontSize = 15, FontWeight = FontWeights.SemiBold };
     private readonly TextBlock maximum = new() { Text = "—", FontSize = 15, FontWeight = FontWeights.SemiBold };
-    private readonly TextBlock conditionIcon = new() { Text = "☁", FontSize = 32, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Top };
+    private readonly WeatherIcon conditionIcon = new() { FontSize = 32, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Top };
     private readonly TextBlock details = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
     private readonly TextBlock status = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, MaxHeight = 32, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
     private CancellationTokenSource? request;
@@ -119,7 +119,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
         if (configured == key) return;
         configured = key; Cancel(); city.Text = store.Value.WeatherCity;
         Reading = null; ReadingChanged?.Invoke();
-        conditionIcon.Text = WeatherService.Icon(null);
+        conditionIcon.Code = null;
         bool editable = configurationMode || !HasLocation;
         setupRow.Visibility = editable ? Visibility.Visible : Visibility.Collapsed;
         locationName.Text = store.Value.WeatherCity;
@@ -173,7 +173,7 @@ internal sealed class WeatherWidget : Grid, IDisposable
             var weather = await WeatherService.ReadAsync(store.Value.WeatherLatitude!.Value, store.Value.WeatherLongitude!.Value, token);
             if (current != revision || !Requested || (!IsVisible && !headerActive)) return;
             Reading = weather; ReadingChanged?.Invoke();
-            conditionIcon.Text = WeatherService.Icon(weather.Code);
+            conditionIcon.Code = weather.Code;
             conditionIcon.ToolTip = WeatherService.Description(weather.Code);
             temperature.Text = $"{weather.Temperature:0}°C";
             condition.Text = WeatherService.Description(weather.Code);
