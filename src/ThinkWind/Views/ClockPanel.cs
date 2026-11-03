@@ -20,6 +20,9 @@ internal sealed class ClockPanel : StackPanel, IDisposable
     private TextBox? minutesInput;
     private bool completed;
     private bool watchSelected = true;
+    private readonly System.Collections.Generic.List<(TimeSpan Split, TimeSpan Total)> laps = new();
+    private TimeSpan lastLap;
+    private int lapPage;
     internal event Action? LayoutChanged;
     internal ClockPanel()
     {
@@ -42,7 +45,67 @@ internal sealed class ClockPanel : StackPanel, IDisposable
         watchArea.Children.Add(elapsed);
         var watchHint = ClockDesign.Text("Cada instante conta.", 12, true); watchHint.TextAlignment = TextAlignment.Center; watchHint.Margin = new Thickness(0, 4, 0, 16); watchArea.Children.Add(watchHint);
         var watchButtons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Center }; watchButtons.Children.Add(start);
-        watchButtons.Children.Add(Button("Zerar", () => { stopwatch.Reset(); start.Content = Label("\uE768", "Iniciar"); Refresh(); UpdateTimer(); })); watchArea.Children.Add(watchButtons);
+        var lapRows = new StackPanel();
+        var lapCount = ClockDesign.Text("", 10, true);
+        var lapBack = ClockDesign.Button("\uE76B", "Voltas anteriores", () => { }, true);
+        var lapNext = ClockDesign.Button("\uE76C", "Próximas voltas", () => { }, true);
+        void RenderLaps()
+        {
+            const int pageSize = 3;
+            int pages = Math.Max(1, (laps.Count + pageSize - 1) / pageSize);
+            lapPage = Math.Clamp(lapPage, 0, pages - 1); lapRows.Children.Clear();
+            if (laps.Count == 0)
+            {
+                var hint = ClockDesign.Text("Toque em Volta durante a contagem para registrar um parcial.", 11, true);
+                hint.TextAlignment = TextAlignment.Center; hint.Margin = new Thickness(4, 12, 4, 0); lapRows.Children.Add(hint);
+            }
+            for (int index = laps.Count - 1 - lapPage * pageSize; index >= 0 && index > laps.Count - 1 - (lapPage + 1) * pageSize; index--)
+            {
+                var row = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+                row.ColumnDefinitions.Add(new ColumnDefinition()); row.ColumnDefinitions.Add(new ColumnDefinition());
+                var number = ClockDesign.Text($"{index + 1:00}", 11, true); number.Margin = new Thickness(0, 0, 8, 0); row.Children.Add(number);
+                var split = ClockDesign.Text(Format(laps[index].Split) + laps[index].Split.ToString(@"\.ff"), 12);
+                split.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent"); split.HorizontalAlignment = HorizontalAlignment.Center;
+                Grid.SetColumn(split, 1); row.Children.Add(split);
+                var total = ClockDesign.Text(Format(laps[index].Total) + laps[index].Total.ToString(@"\.ff"), 12);
+                total.HorizontalAlignment = HorizontalAlignment.Right; Grid.SetColumn(total, 2); row.Children.Add(total);
+                lapRows.Children.Add(row);
+            }
+            lapCount.Text = laps.Count == 0 ? "Nenhuma volta" : $"{lapPage + 1} / {pages}";
+            lapBack.IsEnabled = lapPage > 0; lapNext.IsEnabled = lapPage + 1 < pages;
+        }
+        var lapButton = ClockDesign.Button("\uE916", "Volta", () =>
+        {
+            if (!stopwatch.IsRunning) return;
+            TimeSpan total = stopwatch.Elapsed;
+            laps.Add((total - lastLap, total)); lastLap = total; lapPage = 0; RenderLaps();
+        });
+        lapButton.IsEnabled = false; watchButtons.Children.Add(lapButton);
+        start.Click += (_, _) => lapButton.IsEnabled = stopwatch.IsRunning;
+        watchButtons.Children.Add(Button("Zerar", () =>
+        {
+            stopwatch.Reset(); laps.Clear(); lastLap = TimeSpan.Zero; lapPage = 0; lapButton.IsEnabled = false;
+            start.Content = Label("\uE768", "Iniciar"); RenderLaps(); Refresh(); UpdateTimer();
+        })); watchArea.Children.Add(watchButtons);
+        var lapArea = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+        var lapHeading = new Grid();
+        lapHeading.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+        lapHeading.ColumnDefinitions.Add(new ColumnDefinition()); lapHeading.ColumnDefinitions.Add(new ColumnDefinition());
+        string[] lapLabels = { "Volta", "Parcial", "Total" };
+        for (int column = 0; column < lapLabels.Length; column++)
+        {
+            var label = ClockDesign.Text(lapLabels[column], 10, true);
+            label.HorizontalAlignment = column == 0 ? HorizontalAlignment.Left : column == 1 ? HorizontalAlignment.Center : HorizontalAlignment.Right;
+            Grid.SetColumn(label, column); lapHeading.Children.Add(label);
+        }
+        lapArea.Children.Add(lapHeading);
+        lapRows.Height = 94; lapArea.Children.Add(lapRows);
+        var lapNavigation = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+        lapCount.VerticalAlignment = VerticalAlignment.Center; lapCount.Margin = new Thickness(8, 0, 8, 0);
+        lapNavigation.Children.Add(lapBack); lapNavigation.Children.Add(lapCount); lapNavigation.Children.Add(lapNext);
+        lapBack.Click += (_, _) => { lapPage--; RenderLaps(); }; lapNext.Click += (_, _) => { lapPage++; RenderLaps(); };
+        lapArea.Children.Add(lapNavigation); watchArea.Children.Add(lapArea); RenderLaps();
         var minutes = new TextBox { Text = "5", MinWidth = 70, MaxLength = 4, Margin = new Thickness(0, 4, 8, 4), Padding = new Thickness(8, 5, 8, 5) };
         minutesInput = minutes;
         System.Windows.Automation.AutomationProperties.SetName(minutes, "Duração do temporizador em minutos, de 1 a 1440");
