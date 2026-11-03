@@ -16,11 +16,37 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
 {
     private readonly List<(Border Area, WindowThumbnail Host)> images = new();
     private readonly List<Border> surfaces = new();
+    private readonly List<FrameworkElement> cards = new();
+    private readonly List<RectangleGeometry> cardClips = new();
+    private int hoveredCard = -1, liveCard = -1;
+    private Border? liveArea;
+    private nint thumbnailOwner, liveWindow;
+    private bool liveImageAttempted;
+    private Point lastPointer = new(double.NaN, double.NaN);
     internal event Action? DismissRequested;
-    internal BrowserTabFan() { Width = 320; }
+    internal BrowserTabFan()
+    {
+        Width = 320;
+        PreviewMouseMove += (_, e) =>
+        {
+            var point = e.GetPosition(this);
+            // Reflow under a stationary cursor must not promote another card.
+            if (point == lastPointer) return;
+            lastPointer = point;
+            if (point.X < 10 || point.X > 310) return;
+            for (int i = 0; i < cards.Count; i++)
+            {
+                double top = GetTop(cards[i]);
+                if (point.Y >= top && point.Y < top + 40) { BringCardForward(i); break; }
+            }
+        };
+        MouseLeave += (_, _) => { lastPointer = new(double.NaN, double.NaN); BringCardForward(cards.Count - 1); };
+    }
     internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner, Preferences preferences)
     {
-        Dispose(); Children.Clear(); surfaces.Clear();
+        Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear(); cardClips.Clear();
+        hoveredCard = liveCard = -1; liveArea = null;
+        thumbnailOwner = owner;
         int count = Math.Min(4, tabs.Count);
         // Reserve room for the rotated corners instead of clipping them.
         Height = 184 + Math.Max(0, count - 1) * 46;
@@ -79,19 +105,44 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                 finally { button.IsEnabled = true; }
             };
             FrameworkElement card = index == count - 1 ? button : TiltVertically(button, (count - index - 1) * 5);
+            cards.Add(card);
+            var clip = new RectangleGeometry(new Rect(-8, -8, 316, 176));
+            card.Clip = clip; cardClips.Add(clip);
             SetLeft(card, 10); SetTop(card, 12 + index * 46); SetZIndex(card, index);
             Children.Add(card);
             if (live)
             {
-                var host = new WindowThumbnail(owner, tab.Window);
-                if (host.Available) images.Add((area, host));
-                else { host.Dispose(); area.Child = new TextBlock { Text = "Clique para abrir esta aba", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center }; }
+                liveCard = index; liveArea = area; liveWindow = tab.Window;
             }
             if (SystemParameters.ClientAreaAnimation)
                 button.BeginAnimation(OpacityProperty, new DoubleAnimation(.5, 1, TimeSpan.FromMilliseconds(160 + index * 35)));
             index++;
         }
         ConfigureAppearance(preferences);
+        BringCardForward(count - 1, animate: false);
+    }
+    private void BringCardForward(int index, bool animate = true)
+    {
+        if (index < 0 || index >= cards.Count || hoveredCard == index) return;
+        hoveredCard = index;
+        foreach (var image in images) image.Host.Dispose();
+        images.Clear();
+        liveImageAttempted = false;
+        for (int i = 0; i < cards.Count; i++)
+        {
+            var card = cards[i];
+            SetZIndex(card, i == index ? 100 : i);
+            // Keep each remaining title reachable. The selected card uses the
+            // existing full slot; subsequent title strips move below it.
+            double top = 12 + i * 46 + (i > index ? 114 : 0);
+            if (animate && SystemParameters.ClientAreaAnimation)
+                card.BeginAnimation(TopProperty, new DoubleAnimation(top, TimeSpan.FromMilliseconds(150))
+                { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            else { card.BeginAnimation(TopProperty, null); SetTop(card, top); }
+            cardClips[i].Rect = new Rect(-8, -8, 316, i == index ? 176 : 48);
+            surfaces[i].SetResourceReference(Border.BorderBrushProperty, i == index ? "Think.Accent" : "Think.Hover");
+        }
+        PlaceImages();
     }
     private static Button WindowControl(string name, string glyph, Func<System.Threading.Tasks.Task> action)
     {
@@ -144,6 +195,13 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     }
     internal void PlaceImages()
     {
+        if (!IsVisible) return;
+        if (!liveImageAttempted && hoveredCard == liveCard && liveArea is not null)
+        {
+            liveImageAttempted = true;
+            var host = new WindowThumbnail(thumbnailOwner, liveWindow);
+            if (host.Available) images.Add((liveArea, host)); else host.Dispose();
+        }
         foreach (var item in images)
         {
             if (!item.Area.IsVisible || item.Area.ActualWidth <= 0 || item.Area.ActualHeight <= 0) continue;
@@ -152,5 +210,5 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             item.Host.Place(start, new Size(Math.Max(1, end.X - start.X), Math.Max(1, end.Y - start.Y)));
         }
     }
-    public void Dispose() { foreach (var item in images) item.Host.Dispose(); images.Clear(); }
+    public void Dispose() { foreach (var item in images) item.Host.Dispose(); images.Clear(); liveImageAttempted = true; }
 }
