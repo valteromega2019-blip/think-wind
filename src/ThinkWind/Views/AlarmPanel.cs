@@ -14,7 +14,8 @@ internal sealed class AlarmPanel : StackPanel
     private const int PageSize = 2;
     private readonly AlarmService service;
     private readonly StackPanel list = new(), editor = new();
-    private readonly TextBox time = new() { Text = "07:00", MaxLength = 5 }, name = new() { Text = "Alarme", MaxLength = 80 };
+    private readonly AlarmTimePicker time = new();
+    private readonly TextBox name = new() { Text = "Alarme", MaxLength = 80 };
     private readonly ComboBox sound = new() { ItemsSource = new[] { "Padrão", "Aviso", "Bipe", "Sem som" }, SelectedIndex = 0 };
     private readonly ToggleButton[] days = new ToggleButton[7];
     private readonly Dictionary<string, LiquidToggle> switches = new();
@@ -32,9 +33,8 @@ internal sealed class AlarmPanel : StackPanel
         // Hidden pages still measure, so list/editor keep one common size.
         editor.Visibility = Visibility.Hidden;
         var body = new Grid { MinHeight = 260 }; body.Children.Add(list); body.Children.Add(editor); Children.Add(body);
-        var fields = new Grid(); fields.ColumnDefinitions.Add(new ColumnDefinition()); fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.5, GridUnitType.Star) });
-        var timeField = new StackPanel(); timeField.Children.Add(ClockDesign.Text("Horário", 11, true)); time.FontSize = 20; timeField.Children.Add(time); fields.Children.Add(timeField);
-        var nameField = new StackPanel { Margin = new Thickness(8, 0, 0, 0) }; nameField.Children.Add(ClockDesign.Text("Nome", 11, true)); nameField.Children.Add(name); Grid.SetColumn(nameField, 1); fields.Children.Add(nameField); editor.Children.Add(fields);
+        editor.Children.Add(time);
+        var nameField = new StackPanel(); nameField.Children.Add(ClockDesign.Text("Nome", 11, true)); nameField.Children.Add(name); editor.Children.Add(nameField);
         editor.Children.Add(ClockDesign.Text("Repetir nos dias", 11, true));
         var week = new UniformGrid { Columns = 7, Margin = new Thickness(0, 4, 0, 6) };
         string[] labels = { "D", "S", "T", "Q", "Q", "S", "S" };
@@ -51,7 +51,7 @@ internal sealed class AlarmPanel : StackPanel
         var actions = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 6, 0, 0) };
         actions.Children.Add(ClockDesign.Button("\uE711", "Cancelar", CloseEditor));
         var save = ClockDesign.Button("\uE74E", "Salvar", Save); save.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface"); save.SetResourceReference(Control.ForegroundProperty, "Think.Accent"); actions.Children.Add(save); editor.Children.Add(actions);
-        foreach (var field in new Control[] { time, name, sound }) { field.Margin = new Thickness(0, 4, 0, 8); field.Padding = new Thickness(8); field.MinHeight = 34; }
+        foreach (var field in new Control[] { name, sound }) { field.Margin = new Thickness(0, 4, 0, 8); field.Padding = new Thickness(8); field.MinHeight = 34; }
         System.Windows.Automation.AutomationProperties.SetName(time, "Horário do alarme em HH:mm"); System.Windows.Automation.AutomationProperties.SetName(name, "Nome do alarme"); System.Windows.Automation.AutomationProperties.SetName(sound, "Som do alarme");
         status.MinHeight = 18; status.Margin = new Thickness(0, 4, 0, 0); Children.Add(status);
         var help = ClockDesign.Text("Funciona enquanto o Orby estiver aberto.", 10, true); help.ToolTip = "Não liga nem desperta o PC. Após suspensão, avisa as ocorrências das últimas 24 h durante as quais o Orby permaneceu aberto."; Children.Add(help);
@@ -111,17 +111,17 @@ internal sealed class AlarmPanel : StackPanel
     private void CloseEditor() { editor.Visibility = Visibility.Hidden; list.Visibility = Visibility.Visible; add.IsEnabled = true; status.Text = service.Error ?? ""; ClockDesign.Reveal(list); LayoutChanged?.Invoke(); }
     private void Edit(ClockAlarm? alarm)
     {
-        editing = alarm?.Id; name.Text = alarm?.Name ?? "Alarme"; time.Text = alarm is null ? "07:00" : $"{alarm.Minute / 60:00}:{alarm.Minute % 60:00}";
+        editing = alarm?.Id; name.Text = alarm?.Name ?? "Alarme"; time.MinuteOfDay = alarm?.Minute ?? 7 * 60;
         for (int i = 0; i < 7; i++) days[i].IsChecked = alarm?.Days.Contains((DayOfWeek)i) == true;
         sound.SelectedIndex = alarm?.Sound switch { "Exclamation" => 1, "Beep" => 2, "Silent" => 3, _ => 0 };
         list.Visibility = Visibility.Hidden; editor.Visibility = Visibility.Visible; add.IsEnabled = false; status.Text = ""; ClockDesign.Reveal(editor); LayoutChanged?.Invoke();
     }
     private void Save()
     {
-        if (!TimeSpan.TryParseExact(time.Text, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture, out var value)) { status.Text = "Informe um horário de 00:00 a 23:59."; return; }
+        if (!time.TryGetMinute(out int value)) { status.Text = "Escolha horas de 00 a 23 e minutos de 00 a 59."; return; }
         var original = service.Items.FirstOrDefault(a => a.Id == editing);
         service.Put(new ClockAlarm { Id = editing ?? Guid.NewGuid().ToString("N"), Name = string.IsNullOrWhiteSpace(name.Text) ? "Alarme" : name.Text.Trim(), Enabled = original?.Enabled ?? true,
-            LastDate = original?.Minute == (int)value.TotalMinutes ? original.LastDate : null, Minute = (int)value.TotalMinutes,
+            LastDate = original?.Minute == value ? original.LastDate : null, Minute = value,
             Days = Enumerable.Range(0, 7).Where(i => days[i].IsChecked == true).Select(i => (DayOfWeek)i).ToList(), Sound = sound.SelectedIndex switch { 1 => "Exclamation", 2 => "Beep", 3 => "Silent", _ => "Asterisk" } });
         CloseEditor(); Render();
     }
