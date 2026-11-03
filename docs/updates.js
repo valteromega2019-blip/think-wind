@@ -29,11 +29,20 @@
   }
   picker.addEventListener('change', select);
   for (const button of filters) button.addEventListener('click', () => filter(button.dataset.historyFilter));
-  fetch('updates.json').then(response => {
+  fetch('updates.json', { cache: 'no-cache' }).then(response => {
     if (!response.ok) throw new Error('Histórico indisponível');
     return response.json();
   }).then(data => {
-    entries = data; picker.disabled = false;
+    // Tolerate an older cached export with PowerShell array wrappers.
+    function flatten(value, depth = 0) {
+      if (!value || depth > 20) return [];
+      if (Array.isArray(value)) return value.flatMap(item => flatten(item, depth + 1));
+      if (typeof value.id === 'string' && ['published', 'planned'].includes(value.state)) return [value];
+      return Array.isArray(value.value) ? flatten(value.value, depth + 1) : [];
+    }
+    entries = [...new Map(flatten(data).map(entry => [entry.id, entry])).values()];
+    if (!entries.length) throw new Error('Histórico vazio');
+    picker.disabled = false;
     filters.forEach(button => { button.disabled = false; }); filter('published');
   }).catch(() => {
     status.textContent = 'Não foi possível carregar o histórico. Tente novamente mais tarde.';
