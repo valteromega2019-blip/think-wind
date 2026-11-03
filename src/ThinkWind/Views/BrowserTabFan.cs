@@ -17,7 +17,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly List<Border> surfaces = new();
     private readonly List<FrameworkElement> cards = new();
     private readonly List<ContextMenu> tabMenus = new();
-    internal bool IsInteracting => tabMenus.Any(menu => menu.IsOpen);
+    internal bool IsInteracting => openingWindow || tabMenus.Any(menu => menu.IsOpen);
     private readonly List<BackdropHost> cardBackdrops = new();
     private readonly List<(FrameworkElement Panel, BackdropHost Host)> companionBackdrops = new();
     private double cardRadius;
@@ -30,7 +30,8 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly TextBlock extraCount = new() { FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock expansionIcon = new() { FontSize = 14, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
         Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-    private bool expanded;
+    private int previewCard = -1;
+    private bool openingWindow;
     internal event Action? LayoutChanged;
     internal event Action? DismissRequested;
     internal void AttachPanelMaterial(FrameworkElement panel)
@@ -47,14 +48,19 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         expansion.SetResourceReference(Control.BackgroundProperty, "Think.Control");
         var expansionContent = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         expansionContent.Children.Add(extraCount); expansionContent.Children.Add(expansionIcon); expansion.Content = expansionContent;
-        expansion.Click += (_, _) => { expanded = !expanded; hoveredCard = -1; BringCardForward(cards.Count - 1, false); LayoutChanged?.Invoke(); };
+        expansion.Click += async (_, _) =>
+        {
+            if (openingWindow || previewCard < 0) return;
+            openingWindow = true;
+            try { if (await Desktop.ActivateFromDock(cardImages[previewCard].Window, false)) DismissRequested?.Invoke(); }
+            finally { openingWindow = false; }
+        };
         PreviewMouseMove += (_, e) =>
         {
             var point = e.GetPosition(this);
             // Reflow under a stationary cursor must not promote another card.
             if (point == lastPointer) return;
             lastPointer = point;
-            if (expanded) return; // Every image is already exposed in the grid.
             if (point.X < 10 || point.X > 310) return;
             for (int i = 0; i < cards.Count; i++)
             {
@@ -68,6 +74,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     {
         Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear();
         hoveredCard = -1; cardImages.Clear();
+        liveImageAttempted = false;
         thumbnailOwner = owner;
         // The parent owns one horizontal group per HWND. Keep this window's
         // tabs stacked, with its selected tab initially at the front.
@@ -164,22 +171,20 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         }
         Children.Add(expansion); SetLeft(expansion, 10); SetZIndex(expansion, 200);
         ConfigureAppearance(preferences);
+        previewCard = cardImages.FindLastIndex(image => image.Live);
         BringCardForward(count - 1, animate: false);
+        LayoutChanged?.Invoke();
     }
     private void BringCardForward(int index, bool animate = true)
     {
         if (index < 0 || index >= cards.Count || hoveredCard == index) return;
         hoveredCard = index;
-        foreach (var image in images) image.Host.Dispose();
-        images.Clear();
-        liveImageAttempted = false;
-        Width = expanded && cards.Count > 1 ? 640 : 320;
-        Height = expanded ? 58 + Math.Ceiling(cards.Count / 2d) * 180
-            : (cards.Count > 1 ? 220 : 184) + Math.Max(0, cards.Count - 1) * 46;
-        expansion.Visibility = cards.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-        extraCount.Text = expanded ? $"{cards.Count}" : $"+{cards.Count - 1}";
-        expansionIcon.Text = expanded ? "\uE73F" : "\uE740";
-        expansion.ToolTip = expanded ? "Recolher abas" : $"Mais {cards.Count - 1} abas · Expandir todas";
+        Width = 320;
+        Height = 220 + Math.Max(0, cards.Count - 1) * 46;
+        expansion.Visibility = Visibility.Visible;
+        extraCount.Text = cards.Count > 1 ? $"+{cards.Count - 1}" : "";
+        expansionIcon.Text = "\uE8A7";
+        expansion.ToolTip = "Abrir janela do navegador";
         System.Windows.Automation.AutomationProperties.SetName(expansion, (string)expansion.ToolTip);
         SetLeft(expansion, Width - expansion.Width - 10); SetTop(expansion, 6);
         for (int i = 0; i < cards.Count; i++)
@@ -188,9 +193,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             SetZIndex(card, i == index ? 100 : i);
             // Keep each remaining title reachable. The selected card uses the
             // existing full slot; subsequent title strips move below it.
-            double top = expanded ? 48 + (i / 2) * 180 : (cards.Count > 1 ? 48 : 12) + i * 46 + (i > index ? 114 : 0);
-            SetLeft(card, expanded ? 10 + (i % 2) * 320 : 10);
-            bool full = expanded || i == index;
+            double top = 48 + i * 46;
+            SetLeft(card, 10);
+            bool full = i == previewCard;
             card.Height = full ? 160 : 40;
             cardImages[i].Area.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
             if (animate && SystemParameters.ClientAreaAnimation)
@@ -251,17 +256,17 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         {
             var card = cards[i];
             if (!card.IsVisible || !card.IsLoaded || PresentationSource.FromVisual(card) is null) { cardBackdrops[i].Hide(); continue; }
-            double height = expanded || i == hoveredCard ? 160 : 40;
+            double height = i == previewCard ? 160 : 40;
             var start = card.PointToScreen(new Point(0, 0));
             var end = card.PointToScreen(new Point(300, height));
             double scale = Math.Max(.1, (end.X - start.X) / 300);
             cardBackdrops[i].Synchronize(new OverlayChrome.PixelRect { Left = (int)Math.Floor(start.X), Top = (int)Math.Floor(start.Y),
                 Right = (int)Math.Ceiling(end.X), Bottom = (int)Math.Ceiling(end.Y) }, cardRadius * scale, false, true);
         }
-        if (!liveImageAttempted && hoveredCard >= 0 && hoveredCard < cardImages.Count)
+        if (!liveImageAttempted && previewCard >= 0 && previewCard < cardImages.Count)
         {
             liveImageAttempted = true;
-            foreach (var image in expanded ? cardImages : new[] { cardImages[hoveredCard] }.ToList())
+            foreach (var image in new[] { cardImages[previewCard] })
             {
             if (!image.Live) continue;
             var host = new WindowThumbnail(thumbnailOwner, image.Window);

@@ -44,7 +44,7 @@ internal sealed partial class WindowPreview
         browserFan.LayoutChanged -= PositionBrowser;
         browserFan.LayoutChanged += PositionBrowser;
         browserFan.DismissRequested -= DismissBrowser; browserFan.DismissRequested += DismissBrowser;
-        var shown = tabs.Concat(windows.Where(window => !tabs.Any(tab => tab.Window == window.Handle))
+        var shown = tabs.Concat(windows.Where(window => !tabs.Any(tab => tab.Window == window.Handle && tab.Selected))
             .Select(window => new BrowserTab(window.Handle, 0, window.Title, Array.Empty<int>(), true))).ToArray();
         browserFan.Present(shown, new WindowInteropHelper(this).EnsureHandle(), Store.Value);
         browserLayout.Children.Add(browserFan);
