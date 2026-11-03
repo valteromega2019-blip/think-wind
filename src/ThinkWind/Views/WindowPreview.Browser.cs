@@ -84,8 +84,12 @@ internal sealed partial class WindowPreview
                 Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = WithWindowActions(musicCard!, windows) };
             integration.Children.Add(playerBox); musicCard.SetActive(true);
         }
-        if (integration.Children.Count > 0) browserLayout.Children.Add(integration);
-        viewport.Child = browserLayout; Show(); Position(); refresh.Interval = TimeSpan.FromSeconds(2); refresh.Start();
+        if (integration.Children.Count > 0)
+        {
+            browserLayout.Children.Add(integration);
+            browserFan.AttachPanelMaterial(integration);
+        }
+        viewport.Child = browserLayout; RefreshAppearance(); Show(); Position(); refresh.Interval = TimeSpan.FromSeconds(2); refresh.Start();
     }
     private void DismissBrowser() => Hide();
     private static string TabsSignature(IReadOnlyList<BrowserTab> tabs) => string.Join("|", tabs.Select(tab => $"{tab.Window}:{string.Join(",", tab.RuntimeId)}:{tab.Selected}:{tab.Title}:{tab.Cached}"));

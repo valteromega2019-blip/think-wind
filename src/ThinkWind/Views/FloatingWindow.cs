@@ -24,6 +24,7 @@ internal abstract class FloatingWindow : Window
     protected virtual string? TopPanelSide => null;
     protected virtual double TopEdgeOffset => 0;
     protected virtual bool SuppressMaterial => false;
+    protected virtual bool TransparentSurface => false;
     protected virtual Color MaterialTint => Store.Value.UseCustomBarColor
         ? (Color)ColorConverter.ConvertFromString(Store.Value.BarBackgroundColor) : ThemeService.BaseColor;
     protected virtual bool MaterialLight => ThemeService.Light;
@@ -167,6 +168,7 @@ internal abstract class FloatingWindow : Window
             Surface.Background = new LinearGradientBrush(
                 Color.FromArgb(235, 132, 149, 168), Color.FromArgb(220, 76, 91, 110), 90);
         }
+        if (TransparentSurface) Surface.Background = Brushes.Transparent;
         var corners = SquareTopCorners ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
         if (Surface.CornerRadius != corners) Surface.CornerRadius = corners;
         Surface.Margin = TransparentInsets;

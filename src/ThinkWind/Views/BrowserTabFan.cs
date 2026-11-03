@@ -18,12 +18,21 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly List<Border> surfaces = new();
     private readonly List<FrameworkElement> cards = new();
     private readonly List<RectangleGeometry> cardClips = new();
+    private readonly List<BackdropHost> cardBackdrops = new();
+    private readonly List<(FrameworkElement Panel, BackdropHost Host)> companionBackdrops = new();
+    private double cardRadius;
     private readonly List<(Border Area, nint Window, bool Live)> cardImages = new();
     private int hoveredCard = -1;
     private nint thumbnailOwner;
     private bool liveImageAttempted;
     private Point lastPointer = new(double.NaN, double.NaN);
     internal event Action? DismissRequested;
+    internal void AttachPanelMaterial(FrameworkElement panel)
+    {
+        var host = new BackdropHost(thumbnailOwner, false, thumbnailOwner, "Orby — material da integração");
+        host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
+        companionBackdrops.Add((panel, host));
+    }
     internal BrowserTabFan()
     {
         Width = 320;
@@ -121,7 +130,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             var clip = new RectangleGeometry(new Rect(-8, -8, 316, 176));
             card.Clip = clip; cardClips.Add(clip);
             SetLeft(card, 10); SetTop(card, 12 + index * 46); SetZIndex(card, index);
+            card.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = Colors.Black, Opacity = .22, BlurRadius = 14, ShadowDepth = 2 };
             Children.Add(card);
+            cardBackdrops.Add(new BackdropHost(owner, false, owner, "Orby — material da prévia"));
             if (SystemParameters.ClientAreaAnimation)
                 button.BeginAnimation(OpacityProperty, new DoubleAnimation(.5, 1, TimeSpan.FromMilliseconds(160 + index * 35)));
             index++;
@@ -201,6 +212,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         // Match the dock's material tint rather than reducing it to 48% again.
         // The existing native Acrylic remains behind each rounded card.
         double opacity = Math.Clamp(preferences.DockOpacity ?? preferences.TintOpacity, .05, 1);
+        cardRadius = Math.Clamp(preferences.DockRadius, 0, 24);
+        foreach (var host in cardBackdrops) host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
+        foreach (var companion in companionBackdrops) companion.Host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
         tint.A = (byte)Math.Round(255 * opacity);
         foreach (var surface in surfaces)
         {
@@ -212,6 +226,27 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     internal void PlaceImages()
     {
         if (!IsVisible) return;
+        foreach (var companion in companionBackdrops)
+        {
+            var panel = companion.Panel;
+            if (!panel.IsVisible || !panel.IsLoaded || panel.ActualWidth <= 0 || panel.ActualHeight <= 0) { companion.Host.Hide(); continue; }
+            var start = panel.PointToScreen(new Point());
+            var end = panel.PointToScreen(new Point(panel.ActualWidth, panel.ActualHeight));
+            double scale = Math.Max(.1, (end.X - start.X) / panel.ActualWidth);
+            companion.Host.Synchronize(new OverlayChrome.PixelRect { Left = (int)Math.Floor(start.X), Top = (int)Math.Floor(start.Y),
+                Right = (int)Math.Ceiling(end.X), Bottom = (int)Math.Ceiling(end.Y) }, cardRadius * scale, false, true);
+        }
+        for (int i = 0; i < cards.Count && i < cardBackdrops.Count; i++)
+        {
+            var card = cards[i];
+            if (!card.IsVisible || !card.IsLoaded || PresentationSource.FromVisual(card) is null) { cardBackdrops[i].Hide(); continue; }
+            double height = i == hoveredCard ? 160 : 40;
+            var start = card.PointToScreen(new Point(0, 0));
+            var end = card.PointToScreen(new Point(300, height));
+            double scale = Math.Max(.1, (end.X - start.X) / 300);
+            cardBackdrops[i].Synchronize(new OverlayChrome.PixelRect { Left = (int)Math.Floor(start.X), Top = (int)Math.Floor(start.Y),
+                Right = (int)Math.Ceiling(end.X), Bottom = (int)Math.Ceiling(end.Y) }, cardRadius * scale, false, true);
+        }
         if (!liveImageAttempted && hoveredCard >= 0 && hoveredCard < cardImages.Count && cardImages[hoveredCard] is var image && image.Live)
         {
             liveImageAttempted = true;
@@ -233,5 +268,10 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             item.Host.Place(start, new Size(Math.Max(1, end.X - start.X), Math.Max(1, end.Y - start.Y)));
         }
     }
-    public void Dispose() { foreach (var item in images) item.Host.Dispose(); images.Clear(); liveImageAttempted = true; }
+    public void Dispose()
+    {
+        foreach (var item in images) item.Host.Dispose(); images.Clear(); liveImageAttempted = true;
+        foreach (var host in cardBackdrops) host.Dispose(); cardBackdrops.Clear();
+        foreach (var companion in companionBackdrops) companion.Host.Dispose(); companionBackdrops.Clear();
+    }
 }

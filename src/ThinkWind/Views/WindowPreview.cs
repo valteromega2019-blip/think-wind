@@ -13,6 +13,8 @@ namespace OrbyLauncher.Views;
 internal sealed partial class WindowPreview : FloatingWindow
 {
     protected override bool AttachedTop => false;
+    protected override bool SuppressMaterial => browserMode;
+    protected override bool TransparentSurface => SuppressMaterial;
     private readonly StackPanel body = new();
     private readonly Viewbox viewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     private readonly StackPanel grid = new() { Orientation = Orientation.Horizontal };
@@ -56,7 +58,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         Surface.Child = viewport;
         callMode = false; call?.Stop(); musicMode = false; musicCard?.SetActive(false); viewport.Child = body;
         windows = source.Where(window => WindowThumbnail.IsWindow(window.Handle)).ToList(); page = 0;
-        if (windows.Count == 0) { Hide(); return; } Show(); Render(); refresh.Interval = TimeSpan.FromSeconds(1); refresh.Start();
+        if (windows.Count == 0) { Hide(); return; } RefreshAppearance(); Show(); Render(); refresh.Interval = TimeSpan.FromSeconds(1); refresh.Start();
     }
     internal async System.Threading.Tasks.Task PresentMusicAsync(MusicPreviewSelection selection, IEnumerable<Desktop.RunningWindow> source, System.Threading.CancellationToken cancellation, Func<bool> stillRequested)
     {
@@ -69,6 +71,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         windows = source.ToList();
         PrepareMusic(selection);
         ConfigurePlayerSurface();
+        RefreshAppearance();
         viewport.Child = null;
         Surface.Child = WithWindowActions(musicCard!, windows);
         var prepared = musicCard!;
@@ -120,7 +123,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         DetachCallCard();
         call.ConfigureCompact(false);
         call.Margin = new Thickness(0);
-        viewport.Child = WithWindowActions(call, windows, snapshot.Window); call.Present(snapshot, windows); Show(); Position();
+        viewport.Child = WithWindowActions(call, windows, snapshot.Window); call.Present(snapshot, windows); RefreshAppearance(); Show(); Position();
     }
     private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); browserFan?.Dispose(); }
     private void DetachCallCard()
