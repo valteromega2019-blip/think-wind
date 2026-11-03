@@ -25,9 +25,7 @@
       <Thumb.Template><ControlTemplate TargetType="Thumb">
        <Grid Width="32" Height="32" VerticalAlignment="Center" SnapsToDevicePixels="True">
         <Border Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" CornerRadius="16"/>
-        <Border x:Name="HandleShade" Background="Black" Opacity="0.28" CornerRadius="16"/>
        </Grid>
-       <ControlTemplate.Triggers><Trigger Property="IsDragging" Value="True"><Setter TargetName="HandleShade" Property="Opacity" Value="0.22"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></Thumb.Template>
      </Thumb></Track.Thumb>
      <Track.IncreaseRepeatButton><RepeatButton Height="32" Command="Slider.IncreaseLarge" Background="{TemplateBinding Background}" Style="{StaticResource Think.SliderPart}"/></Track.IncreaseRepeatButton>
