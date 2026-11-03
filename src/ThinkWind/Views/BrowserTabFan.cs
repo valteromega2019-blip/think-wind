@@ -26,7 +26,10 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private nint thumbnailOwner;
     private bool liveImageAttempted;
     private Point lastPointer = new(double.NaN, double.NaN);
-    private readonly Button expansion = new() { Height = 30, Width = 300, Padding = new Thickness(8, 3, 8, 3) };
+    private readonly Button expansion = new() { Height = 30, Width = 76, Padding = new Thickness(8, 3, 8, 3) };
+    private readonly TextBlock extraCount = new() { FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock expansionIcon = new() { FontSize = 14, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+        Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
     private bool expanded;
     internal event Action? LayoutChanged;
     internal event Action? DismissRequested;
@@ -42,6 +45,8 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         expansion.SetResourceReference(StyleProperty, "Think.IconButton");
         expansion.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
         expansion.SetResourceReference(Control.BackgroundProperty, "Think.Control");
+        var expansionContent = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+        expansionContent.Children.Add(extraCount); expansionContent.Children.Add(expansionIcon); expansion.Content = expansionContent;
         expansion.Click += (_, _) => { expanded = !expanded; hoveredCard = -1; BringCardForward(cards.Count - 1, false); LayoutChanged?.Invoke(); };
         PreviewMouseMove += (_, e) =>
         {
@@ -174,16 +179,18 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         Height = expanded ? 58 + Math.Ceiling(cards.Count / 2d) * 180
             : (cards.Count > 1 ? 220 : 184) + Math.Max(0, cards.Count - 1) * 46;
         expansion.Visibility = cards.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-        expansion.Content = expanded ? $"Recolher · {cards.Count} abas" : $"{cards.Count - 1} outra(s) aba(s) · Expandir todas";
-        System.Windows.Automation.AutomationProperties.SetName(expansion, expansion.Content.ToString());
-        SetTop(expansion, expanded ? 8 : 12 + (cards.Count - 1) * 46 + (index < cards.Count - 1 ? 114 : 0));
+        extraCount.Text = expanded ? $"{cards.Count}" : $"+{cards.Count - 1}";
+        expansionIcon.Text = expanded ? "\uE73F" : "\uE740";
+        expansion.ToolTip = expanded ? "Recolher abas" : $"Mais {cards.Count - 1} abas · Expandir todas";
+        System.Windows.Automation.AutomationProperties.SetName(expansion, (string)expansion.ToolTip);
+        SetLeft(expansion, Width - expansion.Width - 10); SetTop(expansion, 6);
         for (int i = 0; i < cards.Count; i++)
         {
             var card = cards[i];
             SetZIndex(card, i == index ? 100 : i);
             // Keep each remaining title reachable. The selected card uses the
             // existing full slot; subsequent title strips move below it.
-            double top = expanded ? 48 + (i / 2) * 180 : 12 + i * 46 + (i > index ? 114 : 0) + (i == cards.Count - 1 && cards.Count > 1 ? 36 : 0);
+            double top = expanded ? 48 + (i / 2) * 180 : (cards.Count > 1 ? 48 : 12) + i * 46 + (i > index ? 114 : 0);
             SetLeft(card, expanded ? 10 + (i % 2) * 320 : 10);
             bool full = expanded || i == index;
             card.Height = full ? 160 : 40;
