@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Media.Imaging;
+using WpfPixelFormats = System.Windows.Media.PixelFormats;
 using OrbyLauncher.Native;
 using Drawing = System.Drawing;
 
@@ -114,9 +115,17 @@ internal static class BrowserTabImages
             graphics.InterpolationMode = Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
             graphics.DrawImage(original, 0, 0, small.Width, small.Height);
         }
-        using var bytes = new MemoryStream(); small.Save(bytes, ImageFormat.Png); bytes.Position = 0;
-        var bitmap = new BitmapImage(); bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.StreamSource = bytes; bitmap.EndInit(); bitmap.Freeze();
+        // Copy the reduced pixels directly. PNG encoding and decoding added CPU
+        // work and kept an unnecessary compressed stream for every cached image.
+        var pixels = small.LockBits(new Drawing.Rectangle(0, 0, small.Width, small.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        BitmapSource bitmap;
+        try
+        {
+            bitmap = BitmapSource.Create(small.Width, small.Height, 96, 96, WpfPixelFormats.Bgra32, null,
+                pixels.Scan0, checked(pixels.Stride * small.Height), pixels.Stride);
+            bitmap.Freeze();
+        }
+        finally { small.UnlockBits(pixels); }
         lock (sync)
         {
             images[Key(tab)] = new(Title(tab.Title), bitmap, DateTime.UtcNow);

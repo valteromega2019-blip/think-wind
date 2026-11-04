@@ -67,8 +67,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             // Compare physical coordinates, not coordinates relative to that Canvas.
             if (!double.IsNaN(lastPointer.X) && (screen - lastPointer).LengthSquared < 4) return;
             lastPointer = screen;
-            var hit = InputHitTest(PointFromScreen(screen)) as DependencyObject;
-            int index = HitCard(hit);
+            int index = CardAt(PointFromScreen(screen));
             if (index < 0) { ClearHover(); return; }
             BringCardForward(index);
             if (cardImages[index].Live) WindowHovered?.Invoke(cardImages[index].Window, cards[index]);
@@ -78,10 +77,11 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         {
             // Native thumbnail HWNDs can emit a leave while still over a card.
             var cursor = System.Windows.Forms.Cursor.Position;
-            if (IsVisible && IsLoaded && HitCard(InputHitTest(PointFromScreen(new Point(cursor.X, cursor.Y))) as DependencyObject) >= 0) return;
+            if (IsVisible && IsLoaded && CardAt(PointFromScreen(new Point(cursor.X, cursor.Y))) >= 0) return;
             ClearHover(); lastPointer = new(double.NaN, double.NaN);
         };
     }
+    internal int CardAt(Point point) => HitCard(InputHitTest(point) as DependencyObject);
     private int HitCard(DependencyObject? hit)
     {
         // WPF's hit test honors the visible rounded shape and Z-order during
@@ -281,11 +281,13 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         foreach (var host in cardBackdrops) host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
         foreach (var companion in companionBackdrops) companion.Host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
         tint.A = (byte)Math.Round(255 * opacity);
-        foreach (var surface in surfaces)
+        var background = new SolidColorBrush(tint); background.Freeze();
+        for (int i = 0; i < surfaces.Count; i++)
         {
-            surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(tint);
+            var surface = surfaces[i];
+            surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : background;
             surface.CornerRadius = new CornerRadius(Math.Clamp(preferences.DockRadius, 0, 24));
-            surface.SetResourceReference(Border.BorderBrushProperty, surfaces.IndexOf(surface) == hoveredCard ? "Think.Accent" : "Think.Hover");
+            surface.SetResourceReference(Border.BorderBrushProperty, i == hoveredCard ? "Think.Accent" : "Think.Hover");
         }
     }
     internal void PlaceImages()
@@ -344,5 +346,10 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         foreach (var item in images) item.Host.Dispose(); images.Clear(); liveImageAttempted = true;
         foreach (var host in cardBackdrops) host.Dispose(); cardBackdrops.Clear();
         foreach (var companion in companionBackdrops) companion.Host.Dispose(); companionBackdrops.Clear();
+        // Closed previews must not retain image controls, tab menus, captured
+        // titles and animation clocks until the next time this app is hovered.
+        foreach (var card in cards) { card.BeginAnimation(TopProperty, null); card.BeginAnimation(OpacityProperty, null); }
+        Children.Clear(); cards.Clear(); surfaces.Clear(); cardImages.Clear(); cachedImages.Clear();
+        hoveredCard = previewCard = -1; lastPointer = new(double.NaN, double.NaN);
     }
 }

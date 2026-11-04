@@ -147,6 +147,9 @@ internal static class Program
         });
         Run("0.18: calendário não recorta células em fontes maiores", Release018Checks.CalendarCells);
         Run("0.21: leque vertical, alinhamento e tonalidade Acrylic das abas", Release021Checks.BrowserFan);
+        Run("Prévias: seis abas, contador apenas de ocultas, recolhimento e descarte", Release021Checks.BrowserLimitsAndDispose);
+        Run("Prévias: hover respeita o cartão da frente e ignora áreas vazias", Release021Checks.BrowserHoverOverlap);
+        Run("Prévias: imagem no desktop preserva foco, posição e minimização, sem reter DWM", Release021Checks.DesktopPeekLifecycle);
         Run("0.21: comandos Meet compactos e indicação de mudo em vermelho", Release021Checks.CompactCall);
         Run("0.21: tutorial distingue perfil novo de atualização e preserva pendência", () =>
         {

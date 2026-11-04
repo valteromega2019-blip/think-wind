@@ -30,9 +30,10 @@ internal sealed partial class WindowPreview
         var p = Store.Value;
         var tint = p.UseCustomBarColor ? (Color)ColorConverter.ConvertFromString(p.BarBackgroundColor) : ThemeService.BaseColor;
         tint.A = (byte)Math.Round(255 * Math.Clamp(p.DockOpacity ?? p.TintOpacity, .05, 1));
+        var background = new SolidColorBrush(tint); background.Freeze();
         foreach (var item in individualSurfaces)
         {
-            item.Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(tint);
+            item.Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : background;
             item.Surface.CornerRadius = new CornerRadius(Math.Clamp(p.DockRadius, 0, 24));
             item.Surface.SetResourceReference(Border.BorderBrushProperty, item.Surface.IsMouseOver ? "Think.Accent" : "Think.Hover");
             item.Host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);

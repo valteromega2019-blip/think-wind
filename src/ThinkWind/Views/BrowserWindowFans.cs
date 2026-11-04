@@ -41,5 +41,5 @@ internal sealed class BrowserWindowFans : StackPanel, IDisposable
     internal void ConfigureAppearance(Preferences preferences)
     { foreach (var group in groups) group.ConfigureAppearance(preferences); }
     internal void PlaceImages() { foreach (var group in groups) group.PlaceImages(); }
-    public void Dispose() { foreach (var group in groups) group.Dispose(); }
+    public void Dispose() { foreach (var group in groups) group.Dispose(); Children.Clear(); groups.Clear(); }
 }
