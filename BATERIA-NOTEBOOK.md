@@ -11,3 +11,9 @@ Base: versão publicada v0.29.0-beta. Nenhuma integração com as branches exper
 - Largura do botão estável enquanto a carga varia, fontes/cores seguindo recursos do tema, desenho vetorial para diferentes DPI e identificação acessível do estado.
 
 Revisão por leitura e diff. Não compilado ou executado nesta entrega. Testes e type check não executados, conforme preferência do usuário; comportamento em notebook, alimentação conectada/desconectada, temas e DPI ainda não validados em execução. Nenhum instalador ou publicação criado.
+
+## Prévia solicitada com simulação
+
+Adicionado argumento explícito `--simulate-battery`, sem preferência persistente ou alteração do Windows. Alterna a cada 15 segundos entre 72% em uso, 18% com economia, 45% carregando e 100% na tomada. Tooltip e nome acessível indicam SIMULAÇÃO. A execução normal continua nativa. Esta prévia também evita reconfigurar a inicialização automática e os auxiliares administrativos para o caminho de desenvolvimento.
+
+Compilação Release/publish concluída sem erros/avisos emitidos. Prévia aberta em `artifacts/preview-battery/OrbyLauncher.exe --simulate-battery` e processo confirmado respondendo. Nenhum teste automatizado ou type check separado executado. A avaliação visual e a leitura de bateria física permanecem pendentes; não foi gerado instalador.

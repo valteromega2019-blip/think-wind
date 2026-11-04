@@ -23,6 +23,8 @@ internal static class BatteryStatusService
     private static readonly object Gate = new();
     private static long nextRead;
     private static BatteryReading reading;
+    internal static bool IsSimulation { get; } = Array.IndexOf(Environment.GetCommandLineArgs(), "--simulate-battery") >= 0;
+    private static readonly long simulationStarted = Environment.TickCount64;
 
     internal static BatteryReading Read()
     {
@@ -31,6 +33,19 @@ internal static class BatteryStatusService
             long now = Environment.TickCount64;
             if (now < nextRead) return reading;
             nextRead = now + 5000;
+            if (IsSimulation)
+            {
+                // Explicit preview argument only. Never written to preferences
+                // or the OS; all normal launches continue using native readings.
+                reading = ((now - simulationStarted) / 15000 % 4) switch
+                {
+                    0 => new(true, 72, false, false, false, 185),
+                    1 => new(true, 18, false, false, true, 38),
+                    2 => new(true, 45, true, true, false, null),
+                    _ => new(true, 100, false, true, false, null)
+                };
+                return reading;
+            }
             // Preserve the last successful result on transient API failure.
             if (!GetSystemPowerStatus(out var power)) return reading;
             int? percentage = power.BatteryLifePercent <= 100 ? power.BatteryLifePercent : null;

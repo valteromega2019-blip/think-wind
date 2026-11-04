@@ -115,15 +115,16 @@ public partial class App : Application
         }
         if (!first) { MessageBox.Show("Outra cópia do Orby Launcher já está aberta, possivelmente em outra pasta. Feche essa cópia pelo ícone na bandeja antes de abrir a versão instalada.", "Orby Launcher", MessageBoxButton.OK, MessageBoxImage.Information); Shutdown(2); return; }
         diagnosing = e.Args.Contains("--diagnostic");
+        bool batteryPreview = e.Args.Contains("--simulate-battery");
         int reportIndex = Array.IndexOf(e.Args, "--diagnostic-report");
         diagnosticReport = reportIndex >= 0 && reportIndex + 1 < e.Args.Length ? e.Args[reportIndex + 1] : null;
         store = diagnosing ? new SettingsStore(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "OrbyLauncherDiagnostic", Guid.NewGuid() + ".json")) : new SettingsStore();
         WindowActionSetup.AutomaticAuthorizationEnabled = store.Value.AutoAuthorizeWindowActions;
         bool initialGame = false;
         try { initialGame = GameModeService.Probe(store.Value); } catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
-        if (!diagnosing && !initialGame) startupPriority = new StartupPriority();
+        if (!diagnosing && !initialGame && !batteryPreview) startupPriority = new StartupPriority();
         if (diagnosing) { store.Value.AutoHide = false; store.Value.GameModeEnabled = !e.Args.Contains("--diagnostic-normal"); }
-        if (!diagnosing)
+        if (!diagnosing && !batteryPreview)
         {
             try { SystemActions.ApplyStartupDefault(store); }
             catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
@@ -186,7 +187,7 @@ public partial class App : Application
         ApplyHardwareOverlay();
         startupPriority?.Dispose(); startupPriority = null;
         if (!diagnosing && !initialGame) _ = WifiService.PrimeAsync();
-        if (!diagnosing && !initialGame && ((store.Value.HardwareMonitoringEnabled && store.Value.HardwareSensorsAutoSetup && !AdvancedSensorSetup.IsConfigured)
+        if (!diagnosing && !initialGame && !batteryPreview && ((store.Value.HardwareMonitoringEnabled && store.Value.HardwareSensorsAutoSetup && !AdvancedSensorSetup.IsConfigured)
             || (store.Value.AutoAuthorizeWindowActions && !WindowActionSetup.IsConfigured)))
             Dispatcher.BeginInvoke(new Action(async () =>
             {

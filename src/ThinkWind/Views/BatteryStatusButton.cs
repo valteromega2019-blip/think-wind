@@ -37,7 +37,7 @@ internal sealed class BatteryStatusButton : Button
         string level = reading.Percentage is int value ? $"{value}%" : "nível indisponível";
         string state = reading.Charging ? "Carregando" : reading.PluggedIn ? "Conectada à tomada" : "Usando bateria";
         string remaining = reading.RemainingMinutes is int minutes && minutes > 0 ? $" · autonomia estimada: {minutes / 60}h {minutes % 60:00}min" : "";
-        string description = $"Bateria: {level} · {state}{remaining}" + (reading.Saving ? " · Economia de bateria" : "");
+        string description = (BatteryStatusService.IsSimulation ? "[SIMULAÇÃO] " : "") + $"Bateria: {level} · {state}{remaining}" + (reading.Saving ? " · Economia de bateria" : "");
         ToolTip = description + "\nAbrir Energia e bateria";
         AutomationProperties.SetName(this, description);
     }
