@@ -80,6 +80,7 @@ internal sealed partial class WindowPreview
             var compactCall = new Viewbox { Width = 320, Height = 160, VerticalAlignment = VerticalAlignment.Bottom,
                 Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = WithWindowActions(call, windows, meeting.Window) };
             integration.Children.Add(compactCall); call.Present(meeting, windows);
+            browserFan.AttachPanelMaterial(call);
         }
         else if (music is not null)
         {
@@ -87,11 +88,13 @@ internal sealed partial class WindowPreview
             var playerBox = new Viewbox { Width = 320, Height = 230, VerticalAlignment = VerticalAlignment.Bottom,
                 Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = WithWindowActions(musicCard!, windows) };
             integration.Children.Add(playerBox); musicCard.SetActive(true);
+            // The Viewbox can letterbox a tall player. Track the transformed
+            // card itself, not its fixed-size outer slot, for the Acrylic HWND.
+            browserFan.AttachPanelMaterial(musicCard);
         }
         if (integration.Children.Count > 0)
         {
             browserLayout.Children.Add(integration);
-            browserFan.AttachPanelMaterial(integration);
         }
         viewport.Child = browserLayout;
         RefreshAppearance();
