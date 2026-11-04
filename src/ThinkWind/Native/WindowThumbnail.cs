@@ -19,6 +19,9 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
     [DllImport("gdi32.dll")] private static extern nint GetStockObject(int index);
     [DllImport("gdi32.dll")] private static extern nint CreateSolidBrush(int color);
     [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint value);
+    [DllImport("gdi32.dll")] private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
+    [DllImport("gdi32.dll")] private static extern int CombineRgn(nint result, nint first, nint second, int mode);
+    [DllImport("user32.dll")] private static extern int SetWindowRgn(nint window, nint region, bool redraw);
     [DllImport("dwmapi.dll")] private static extern int DwmRegisterThumbnail(nint destination, nint source, out nint thumbnail);
     [DllImport("dwmapi.dll")] private static extern int DwmUnregisterThumbnail(nint thumbnail);
     [DllImport("dwmapi.dll")] private static extern int DwmUpdateThumbnailProperties(nint thumbnail, ref Properties properties);
@@ -29,6 +32,7 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
     private nint thumbnail;
     private Rect previous;
     private bool placed;
+    private OverlayChrome.PixelRect? previousExclusion;
     private nint outlineBrush;
     internal static int ActiveCount { get; private set; }
     internal bool Available => thumbnail != 0;
@@ -45,7 +49,7 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
             AspectRatio = sourceSize.Width / (double)sourceSize.Height;
         ActiveCount++;
     }
-    internal bool Place(Point topLeft, Size size, nint behind = 0)
+    internal bool Place(Point topLeft, Size size, nint behind = 0, OverlayChrome.PixelRect? exclude = null)
     {
         if (!Available) return false;
         var next = new Rect { Left = (int)Math.Round(topLeft.X), Top = (int)Math.Round(topLeft.Y), Right = (int)Math.Round(topLeft.X + size.Width), Bottom = (int)Math.Round(topLeft.Y + size.Height) };
@@ -59,14 +63,31 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
             next.Left += (width - w) / 2; next.Top += (height - h) / 2;
             width = w; height = h; next.Right = next.Left + w; next.Bottom = next.Top + h;
         }
-        if (placed && next.Left == previous.Left && next.Top == previous.Top && next.Right == previous.Right && next.Bottom == previous.Bottom) return true;
+        if (placed && next.Left == previous.Left && next.Top == previous.Top && next.Right == previous.Right && next.Bottom == previous.Bottom
+            && Nullable.Equals(previousExclusion, exclude)) return true;
+        if (exclude is { } protectedArea)
+        {
+            // HostBackdropBrush samples pixels behind the dock. Keep the large
+            // hover replica out of those pixels instead of changing dock opacity.
+            nint region = CreateRectRgn(0, 0, width, height);
+            if (region == 0) return false;
+            nint hole = CreateRectRgn(Math.Clamp(protectedArea.Left - next.Left, 0, width), Math.Clamp(protectedArea.Top - next.Top, 0, height),
+                Math.Clamp(protectedArea.Right - next.Left, 0, width), Math.Clamp(protectedArea.Bottom - next.Top, 0, height));
+            if (hole == 0) { DeleteObject(region); return false; }
+            int combined;
+            try { combined = CombineRgn(region, region, hole, 4); }
+            finally { DeleteObject(hole); }
+            if (combined == 0 || SetWindowRgn(Handle, region, false) == 0) { DeleteObject(region); return false; }
+            // Windows now owns region; do not delete it after SetWindowRgn succeeds.
+        }
+        else if (previousExclusion.HasValue) SetWindowRgn(Handle, 0, false);
         int inset = outlineBrush != 0 ? 2 : 0;
         var destination = new Rect { Left = inset, Top = inset, Right = Math.Max(inset + 1, width - inset), Bottom = Math.Max(inset + 1, height - inset) };
         var properties = new Properties { Flags = 1 | 4 | 8 | 16, Destination = destination, Opacity = 255, Visible = true, ClientOnly = false };
         SetWindowPos(Handle, behind, next.Left, next.Top, width, height, 0x0010);
         if (DwmUpdateThumbnailProperties(thumbnail, ref properties) < 0) { SetWindowPos(Handle, 0, 0, 0, 0, 0, 0x0013 | 0x0080); return false; }
         SetWindowPos(Handle, behind, next.Left, next.Top, width, height, 0x0010 | 0x0040);
-        previous = next; placed = true;
+        previous = next; previousExclusion = exclude; placed = true;
         return true;
     }
     internal static bool CloseWindow(nint window) => IsWindow(window) && PostMessage(window, 0x10, 0, 0);

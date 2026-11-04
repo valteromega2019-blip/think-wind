@@ -8,6 +8,7 @@ Implementação em `feature/player-persistente`.
 - A reprodução não recebe foco nem cliques e fica na faixa de janelas normais, abaixo de todos os cartões e materiais do launcher. Uma borda de 2 pixels usa a cor de destaque. Não há hook global, captura periódica de tela ou serviço adicional. O temporizador só é armado durante o hover e para ao disparar ou cancelar.
 - Aplica-se às janelas de aplicativos e à imagem da aba selecionada de cada janela do navegador. Não transforma abas em segundo plano em janelas independentes.
 - O hover do navegador também é reconhecido pelo cartão, usando os limites físicos do popup para não depender de `IsMouseOver` sobre um HWND nativo. Abas sem imagem salva permanecem recolhidas.
+- A reprodução grande exclui a região do material do Dock, com margem de 24 pixels para a amostragem do desfoque. Isso evita introduzir os pixels da reprodução atrás do Acrylic da barra, sem alterar sua opacidade ou cor. O recorte usa uma região nativa, somente na reprodução; a janela real não é modificada.
 
 Limitações: a reprodução depende do conteúdo que o DWM disponibiliza. Janelas minimizadas podem mostrar a última imagem; superfícies protegidas podem não fornecer conteúdo. Não equivale a ativar a janela real nem usa APIs privadas de Aero Peek.
 

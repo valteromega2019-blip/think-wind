@@ -22,7 +22,15 @@ internal sealed partial class WindowPreview
             if (IsVisible && peekTarget != 0 && !WindowActionInteracting && PeekAreaContainsPointer())
             {
                 var color = (TryFindResource("Think.Accent") as SolidColorBrush)?.Color ?? Colors.White;
-                desktopPeek.Show(peekTarget, color.R | color.G << 8 | color.B << 16);
+                OverlayChrome.PixelRect? protectedDock = null;
+                if (Owner is DockWindow dock && dock.IsVisible && OverlayChrome.GetWindowRect(dock.BackdropHandle, out var dockBounds))
+                {
+                    // Include a small sampling margin around Acrylic's surface.
+                    dockBounds.Left -= 24; dockBounds.Right += 24;
+                    dockBounds.Top -= 24; dockBounds.Bottom += 24;
+                    protectedDock = dockBounds;
+                }
+                desktopPeek.Show(peekTarget, color.R | color.G << 8 | color.B << 16, protectedDock);
             }
             else EndWindowPeek();
         };
