@@ -13,6 +13,8 @@ internal sealed class BrowserWindowFans : StackPanel, IDisposable
     private readonly List<BrowserTabFan> groups = new();
     internal event Action? DismissRequested;
     internal event Action? LayoutChanged;
+    internal event Action<nint>? WindowHovered;
+    internal event Action? WindowHoverEnded;
     internal bool IsInteracting => groups.Any(group => group.IsInteracting);
     internal BrowserWindowFans() { Orientation = Orientation.Horizontal; Width = 320; }
     internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner, Preferences preferences)
@@ -22,6 +24,8 @@ internal sealed class BrowserWindowFans : StackPanel, IDisposable
         {
             var fan = new BrowserTabFan { VerticalAlignment = VerticalAlignment.Bottom };
             fan.DismissRequested += () => DismissRequested?.Invoke();
+            fan.WindowHovered += window => WindowHovered?.Invoke(window);
+            fan.WindowHoverEnded += () => WindowHoverEnded?.Invoke();
             fan.LayoutChanged += () => { UpdateSize(); LayoutChanged?.Invoke(); };
             fan.Present(window.ToArray(), owner, preferences);
             groups.Add(fan); Children.Add(fan);

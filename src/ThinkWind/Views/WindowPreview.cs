@@ -45,6 +45,7 @@ internal sealed partial class WindowPreview : FloatingWindow
     internal WindowPreview(SettingsStore store, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         anchor = getAnchor; Title = "Orby Launcher — Janelas abertas"; body.Children.Add(grid); viewport.Child = body; Surface.Child = viewport;
+        InitializePeek();
         refresh.Tick += async (_, _) => { if (browserMode) { await RefreshBrowserAsync(); return; } if (windows.Any(window => !WindowThumbnail.IsWindow(window.Handle))) { windows.RemoveAll(window => !WindowThumbnail.IsWindow(window.Handle)); Render(); } };
         LayoutUpdated += (_, _) => PlaceThumbnails();
         IsVisibleChanged += (_, _) => { if (!IsVisible) { refresh.Stop(); browserLifetime?.Cancel(); Release(); musicCard?.SetActive(false); call?.Stop(); } };
@@ -125,7 +126,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         call.Margin = new Thickness(0);
         viewport.Child = PreviewSurface(WithWindowActions(call, windows, snapshot.Window), false); call.Present(snapshot, windows); RefreshAppearance(); Show(); Position();
     }
-    private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); browserFan?.Dispose(); ReleaseSurfaces(); }
+    private void Release() { EndWindowPeek(); foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); browserFan?.Dispose(); ReleaseSurfaces(); }
     private void DetachCallCard()
     {
         if (call?.Parent is Panel parent) parent.Children.Remove(call);
@@ -180,6 +181,7 @@ internal sealed partial class WindowPreview : FloatingWindow
             heading.Children.Add(new TextBlock { Text = window.Title, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); card.Children.Add(heading);
             var area = new Border { Height = 120, Margin = new Thickness(0, 4, 0, 0), Background = Brushes.Transparent };
             previewAreas.Add(area);
+            AttachWindowPeek(area, window.Handle);
             var open = ActionButton(window.Title, async () => { Hide(); if (!await Desktop.ActivateFromDock(window.Handle, false) && ElevatedWindowAction.NeedsAdminFallback(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: false, owner: Owner ?? this); }); open.ToolTip = null; open.Content = area; open.SetResourceReference(StyleProperty, "Think.IconButton"); open.Padding = new Thickness(0); card.Children.Add(open); grid.Children.Add(PreviewSurface(card));
             var host = new WindowThumbnail(new WindowInteropHelper(this).Handle, window.Handle);
             area.Tag = host.AspectRatio;

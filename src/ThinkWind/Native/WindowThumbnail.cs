@@ -30,17 +30,17 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
     internal static int ActiveCount { get; private set; }
     internal bool Available => thumbnail != 0;
     internal double AspectRatio { get; private set; } = 16d / 9;
-    internal WindowThumbnail(nint owner, nint source)
+    internal WindowThumbnail(nint owner, nint source, bool clickThrough = false)
     {
         // DWM thumbnails need a redirected destination. NOREDIRECTIONBITMAP is
         // appropriate for our Composition backdrop, but not for this HWND.
-        CreateHandle(new Forms.CreateParams { Caption = "", Parent = owner, Style = unchecked((int)0x80000000), ExStyle = 0x08000088, X = -10000, Y = -10000, Width = 1, Height = 1 });
+        CreateHandle(new Forms.CreateParams { Caption = "", Parent = owner, Style = unchecked((int)0x80000000), ExStyle = 0x08000088 | (clickThrough ? 0x20 : 0), X = -10000, Y = -10000, Width = 1, Height = 1 });
         if (DwmRegisterThumbnail(Handle, source, out thumbnail) < 0) { thumbnail = 0; DestroyHandle(); return; }
         if (DwmQueryThumbnailSourceSize(thumbnail, out var sourceSize) >= 0 && sourceSize.Width > 0 && sourceSize.Height > 0)
             AspectRatio = sourceSize.Width / (double)sourceSize.Height;
         ActiveCount++;
     }
-    internal bool Place(Point topLeft, Size size)
+    internal bool Place(Point topLeft, Size size, nint behind = 0)
     {
         if (!Available) return false;
         var next = new Rect { Left = (int)Math.Round(topLeft.X), Top = (int)Math.Round(topLeft.Y), Right = (int)Math.Round(topLeft.X + size.Width), Bottom = (int)Math.Round(topLeft.Y + size.Height) };
@@ -57,9 +57,9 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
         if (placed && next.Left == previous.Left && next.Top == previous.Top && next.Right == previous.Right && next.Bottom == previous.Bottom) return true;
         var destination = new Rect { Right = width, Bottom = height };
         var properties = new Properties { Flags = 1 | 4 | 8 | 16, Destination = destination, Opacity = 255, Visible = true, ClientOnly = false };
-        SetWindowPos(Handle, 0, next.Left, next.Top, width, height, 0x0010);
+        SetWindowPos(Handle, behind, next.Left, next.Top, width, height, 0x0010);
         if (DwmUpdateThumbnailProperties(thumbnail, ref properties) < 0) { SetWindowPos(Handle, 0, 0, 0, 0, 0, 0x0013 | 0x0080); return false; }
-        SetWindowPos(Handle, 0, next.Left, next.Top, width, height, 0x0010 | 0x0040);
+        SetWindowPos(Handle, behind, next.Left, next.Top, width, height, 0x0010 | 0x0040);
         previous = next; placed = true;
         return true;
     }

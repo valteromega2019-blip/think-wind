@@ -35,6 +35,8 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private bool openingWindow;
     internal event Action? LayoutChanged;
     internal event Action? DismissRequested;
+    internal event Action<nint>? WindowHovered;
+    internal event Action? WindowHoverEnded;
     internal void AttachPanelMaterial(FrameworkElement panel)
     {
         var host = new BackdropHost(thumbnailOwner, false, 0, "Orby — material da integração");
@@ -114,6 +116,11 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             heading.Children.Add(new TextBlock { Text = tab.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); row.Children.Add(heading);
             var area = new Border { Height = 112, Margin = new Thickness(10, 0, 10, 8) };
             bool live = tab.Selected || tab.RuntimeId.Length == 0;
+            if (live)
+            {
+                area.MouseEnter += (_, _) => WindowHovered?.Invoke(tab.Window);
+                area.MouseLeave += (_, _) => WindowHoverEnded?.Invoke();
+            }
             cardImages.Add((area, tab.Window, live));
             var snapshot = live ? null : BrowserTabImages.Get(tab);
             if (snapshot is not null)
@@ -311,6 +318,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     }
     public void Dispose()
     {
+        WindowHoverEnded?.Invoke();
         foreach (var menu in tabMenus) menu.IsOpen = false; tabMenus.Clear();
         foreach (var item in images) item.Host.Dispose(); images.Clear(); liveImageAttempted = true;
         foreach (var host in cardBackdrops) host.Dispose(); cardBackdrops.Clear();
