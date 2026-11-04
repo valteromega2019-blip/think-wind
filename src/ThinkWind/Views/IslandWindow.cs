@@ -318,7 +318,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         {
             var grip = Glyph("\uE784", 15); grip.Width = 22; AttachPositionGrip(grip); header.Children.Add(grip);
         }
-        var standard = Store.Value.QuickOrder.Where(id => id is not ("settings" or "monitor" or "tools") && IsQuickVisible(id));
+        var standard = OrderBatteryBefore(Store.Value.QuickOrder.Where(id => id is not ("settings" or "monitor" or "tools") && IsQuickVisible(id)), "windows-settings");
         var headerIds = Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing ? Array.Empty<string>() : standard;
         header.HorizontalAlignment = Stage == IslandStage.Full && maximizedOnDisplay ? HorizontalAlignment.Right : HorizontalAlignment.Center;
         foreach (var id in headerIds)

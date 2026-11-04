@@ -146,7 +146,7 @@ internal sealed partial class IslandWindow
             button.Click += (_, _) => ShowMini(kind, button);
             controls.Children.Add(MarkPanelIcon(button, kind switch { MiniIslandKind.Volume => "audio", MiniIslandKind.Network => "wifi", MiniIslandKind.Bluetooth => "bluetooth", MiniIslandKind.Calendar => "calendar", MiniIslandKind.Tray => "tray", _ => "clock" }));
         }
-        foreach (var id in Store.Value.QuickOrder.Where(id => id is not ("clock" or "monitor" or "tools" or "settings") && IsQuickVisible(id)))
+        foreach (var id in OrderBatteryBefore(Store.Value.QuickOrder.Where(id => id is not ("clock" or "monitor" or "tools" or "settings") && IsQuickVisible(id)), "wifi"))
         {
             var control = Services.LayoutCatalog.QuickControls.First(q => q.Id == id);
             switch (id)

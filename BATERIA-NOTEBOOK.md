@@ -2,7 +2,7 @@
 
 Base: versão publicada v0.29.0-beta. Nenhuma integração com as branches experimentais do Explorer.
 
-- Controle Bateria incluído ao lado do relógio na ordem inicial da ilha. No modo barra acompanha a ordem dos acessos da direita, como os demais ícones.
+- No modo ilha, Bateria aparece imediatamente à esquerda de Configurações do Windows. No modo barra, fica no grupo da direita, imediatamente à esquerda do Wi-Fi. A apresentação posiciona a bateria conforme o modo sem reordenar as preferências dos outros controles. Se o vizinho estiver oculto, a bateria fica no final dos controles disponíveis desse grupo.
 - Ativação automática por presença de bateria reportada pelo Windows, não por heurísticas do nome do computador/instalador. Computadores sem bateria não exibem o ícone. A detecção também cobre configurações antigas, inserindo o novo controle uma vez sem apagar posições e escolhas já existentes.
 - Ícone vetorial com preenchimento proporcional à carga, raio de carregamento e marca de alimentação externa. Percentual desconhecido mostra um indicador de leitura indisponível, sem inventar um valor. Tooltip inclui carga, alimentação, economia e autonomia estimada quando informada pelo Windows.
 - Porcentagem numérica desligada por padrão. Em Personalizar, na configuração do ícone Bateria, a opção Mostrar porcentagem em número aplica e salva a escolha. Mantém os controles existentes para mover o ícone à área secundária, reorganizá-lo ou ocultá-lo nas duas áreas.

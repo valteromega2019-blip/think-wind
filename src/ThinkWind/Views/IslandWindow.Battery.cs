@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Collections.Generic;
+using System.Linq;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
@@ -7,6 +9,18 @@ internal sealed partial class IslandWindow
 {
     private bool batteryAvailable = BatteryStatusService.Read().Available;
     private BatteryStatusButton? headerBattery, stripBattery, secondaryBattery;
+
+    // Battery follows a different neighbour in each mode. Keep the remaining
+    // user-defined order and visibility intact, without rewriting preferences
+    // whenever the island changes to the full-width status bar.
+    private static IEnumerable<string> OrderBatteryBefore(IEnumerable<string> controls, string neighbour)
+    {
+        var order = controls.ToList();
+        if (!order.Remove("battery")) return order;
+        int index = order.IndexOf(neighbour);
+        order.Insert(index < 0 ? order.Count : index, "battery");
+        return order;
+    }
 
     private BatteryStatusButton BatteryButton(bool strip)
     {
