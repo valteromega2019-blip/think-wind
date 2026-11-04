@@ -1,8 +1,8 @@
-# Empacotamento 0.28.0 Beta
+# Empacotamento 0.29.1 Beta
 
 1. Baixar https://github.com/namazso/PawnIO.Setup/releases/download/2.2.0/PawnIO_setup.exe para `artifacts/dependencies/PawnIO_setup.exe`.
 2. Conferir Authenticode válido do fornecedor namazso e SHA-256 `1F519A22E47187F70A1379A48CA604981C4FCF694F4E65B734AAA74A9FBA3032`.
-3. Publicar: `dotnet publish src/ThinkWind/ThinkWind.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:DebugType=None -p:RunAnalyzers=false -o artifacts/publish-v0.28.0-beta`.
+3. Publicar: `dotnet publish src/ThinkWind/ThinkWind.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:DebugType=None -p:RunAnalyzers=false -o artifacts/publish-v0.29.1-beta`.
 4. Compilar `installer/ThinkWind.iss` com Inno Setup 6.7 ou superior.
 
 Nenhum desses comandos executa a suíte de testes. Não adicionar chamadas de testes, lint ou type check sem solicitação explícita do usuário. A publicação normal C#/XAML é a compilação necessária para gerar o executável.
