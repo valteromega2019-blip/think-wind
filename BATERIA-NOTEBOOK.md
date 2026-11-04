@@ -21,3 +21,5 @@ Compilação Release/publish concluída sem erros/avisos emitidos. Prévia abert
 ## Hover do ícone
 
 O magnificador existente reconhecia apenas glyphs TextBlock, deixando o desenho vetorial da bateria de fora. Estendido o mesmo magnificador para reconhecer BatteryStatusButton e animar seu BatteryIcon: ampliação com a mesma mola contínua e contorno na cor de destaque durante hover, restaurando o recurso do tema ao sair. A porcentagem mantém seu espaço fixo. Sem timer ou motor de animação adicional. Correção revisada por leitura; não compilada nem executada nesta etapa, sem testes/type check.
+
+Após relato de corte no hover, incluído um contêiner transparente com espaço reservado para o ícone ampliado, alinhamento central e ClipToBounds desativado na hierarquia local. A largura já reserva o espaço antes da animação e a porcentagem tem uma coluna fixa, sem redimensionamento por movimento do mouse. Correção ainda não compilada ou validada visualmente; nenhum teste/type check executado.
