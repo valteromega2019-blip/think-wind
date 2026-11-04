@@ -1,5 +1,21 @@
 [
     {
+        "id":  "v0.29.0-beta",
+        "title":  "Orby Launcher 0.29.0 Beta",
+        "state":  "published",
+        "date":  "2026-11-04T19:44:51Z",
+        "url":  "https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.29.0-beta",
+        "description":  "# Orby Launcher 0.29.0 Beta\n\n- Player persistente para aplicativos de música compatíveis: mantém a última faixa disponível ao pausar, com reprodução, progresso e volume individual quando o Windows oferece esses controles.\n- Prévias do navegador organizadas por janela, com janelas lado a lado, até seis cartões de abas empilhados e contador somente das abas não exibidas. Abas sem imagem salva permanecem recolhidas.\n- Cache em memória da última imagem de abas visitadas, sem extensão, gravação em disco ou ativação da aba no hover. O cache é limitado e descartado ao encerrar o app; as imagens não são capturas ao vivo das abas em segundo plano.\n- Prévias individuais com Acrylic, sombra e controles de janela, sem bloco externo. Corrigidos recorte, fundo do player, seleção por posição do mouse e destaques em cartões sobrepostos.\n- Prévia temporária da janela no desktop ao permanecer sobre sua miniatura: não dá foco nem restaura a janela real; sair remove a reprodução e clicar mantém a ativação normal. O conteúdo depende do que o DWM disponibiliza, especialmente em janelas minimizadas ou protegidas.\n- Clique repetido no ícone de um aplicativo em primeiro plano minimiza todas as janelas do grupo.\n- Menos trabalho no cache: transferência direta de pixels, brushes compartilhadas e liberação dos controles, menus, animações e recursos nativos ao fechar as prévias.\n- A prévia grande passa a excluir a região atrás do Dock para preservar o fundo capturado pelo Acrylic.\n\n## Validação e limitações\n\nAntes do último ajuste de recorte do fundo: 61 checks gerais e 10 do atualizador aprovados, zero falhas; compilação Release sem avisos ou erros. A consulta NuGet de dependências diretas e transitivas não apontou vulnerabilidades conhecidas. O ajuste final do fundo foi compilado posteriormente, sem uma nova execução da suíte. Nesta etapa de empacotamento não foram executados novos testes ou type check separados.\n\nNão há nova medição de FPS ou input lag em jogos. Conteúdo protegido, tela cheia exclusiva e combinações de DPI/monitores exigem conferência em uso real. As amostras curtas de CPU/RAM constam em `VALIDACAO-PLAYER-2026-11-04.md` e não comprovam um ganho sustentado.\n\nInstalador Windows x64, com runtime, configurações preservadas, seleção inicial de idioma e PawnIO oficial opcional. A interface do launcher permanece em português. SHA-256 e assinatura RSA separada acompanham o instalador para o atualizador integrado. Essa assinatura não é certificado Authenticode e não elimina os avisos de editor desconhecido do Windows.\n"
+    },
+    {
+        "id":  "v0.28.9-beta",
+        "title":  "Orby Launcher 0.28.9 Beta — teste do atualizador",
+        "state":  "published",
+        "date":  "2026-11-03T02:29:25Z",
+        "url":  "https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.28.9-beta",
+        "description":  "# Orby Launcher 0.28.9 Beta — atualização de teste\n\nPublicação sem mudanças de funcionalidades, destinada à conferência manual do atualizador a partir da 0.28.8: confirmação, minimização das janelas, painel de progresso e reabertura da versão instalada.\n\nPreserva configurações e todos os recursos da 0.28.8. Compilação Release e empacotamento concluídos. Não foram executados testes ou type check separados, conforme preferência do usuário. O resultado do fluxo de atualização ainda depende da conferência manual solicitada.\n\nInstalador x64 com runtime e PawnIO oficial opcional. SHA-256 e assinatura RSA separada acompanham o pacote. A assinatura não é certificado Authenticode e não remove avisos de editor desconhecido do Windows."
+    },
+    {
         "id":  "v0.28.8-beta",
         "title":  "Orby Launcher 0.28.8 Beta",
         "state":  "published",
