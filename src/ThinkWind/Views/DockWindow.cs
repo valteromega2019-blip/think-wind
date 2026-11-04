@@ -551,6 +551,19 @@ internal sealed partial class DockWindow : FloatingWindow
                 && Desktop.IsVisibleAndRestored(selected.Handle)
                 && Desktop.IsActiveWindow(selected.Handle, foregroundAtClick);
             StopPreviews();
+            if (shouldMinimize && item.Windows.Count > 1)
+            {
+                // A repeated click applies to this dock group, including its
+                // background windows, without restoring those already minimized.
+                foreach (var window in item.Windows.DistinctBy(window => window.Handle).ToArray())
+                {
+                    if (!Desktop.IsVisibleAndRestored(window.Handle)) continue;
+                    bool minimized = Desktop.MinimizeWindow(window.Handle);
+                    if (!minimized && ElevatedWindowAction.NeedsAdminFallback(window.Handle))
+                        await ElevatedWindowAction.Request(window.Handle, close: false, minimize: true, owner: this);
+                }
+                return;
+            }
             // OSK is a UIAccess application: let its own shell activation
             // restore the existing instance instead of forcing foreground.
             if (selected?.Executable is string keyboard
