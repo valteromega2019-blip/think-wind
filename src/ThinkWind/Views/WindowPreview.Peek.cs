@@ -11,6 +11,7 @@ internal sealed partial class WindowPreview
     private readonly DesktopWindowPeek desktopPeek = new();
     private readonly DispatcherTimer peekDelay = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private nint peekTarget;
+    private FrameworkElement? peekArea;
     private void InitializePeek()
     {
         peekDelay.Tick += (_, _) =>
@@ -18,29 +19,42 @@ internal sealed partial class WindowPreview
             peekDelay.Stop();
             // Native DWM thumbnail HWNDs can make WPF's IsMouseOver false.
             // Use the physical popup bounds instead of rejecting their hover.
-            if (IsVisible && peekTarget != 0 && !WindowActionInteracting && PointerInside)
+            if (IsVisible && peekTarget != 0 && !WindowActionInteracting && PeekAreaContainsPointer())
             {
                 var color = (TryFindResource("Think.Accent") as SolidColorBrush)?.Color ?? Colors.White;
                 desktopPeek.Show(peekTarget, color.R | color.G << 8 | color.B << 16);
             }
+            else EndWindowPeek();
         };
         PreviewMouseDown += (_, _) => EndWindowPeek();
         PreviewKeyDown += (_, _) => EndWindowPeek();
-        MouseLeave += (_, _) => EndWindowPeek();
+        MouseLeave += (_, _) => { if (!PointerInside) EndWindowPeek(); };
         Closed += (_, _) => EndWindowPeek();
     }
-    private void BeginWindowPeek(nint window)
+    private bool PeekAreaContainsPointer()
     {
-        if (peekTarget == window) return;
-        EndWindowPeek(); peekTarget = window; peekDelay.Start();
+        if (peekArea is not { IsLoaded: true, IsVisible: true } || !PointerInside) return false;
+        var cursor = System.Windows.Forms.Cursor.Position;
+        var hit = InputHitTest(PointFromScreen(new Point(cursor.X, cursor.Y))) as DependencyObject;
+        while (hit is not null)
+        {
+            if (ReferenceEquals(hit, peekArea)) return true;
+            hit = hit is Visual ? VisualTreeHelper.GetParent(hit) : LogicalTreeHelper.GetParent(hit);
+        }
+        return false;
+    }
+    private void BeginWindowPeek(nint window, FrameworkElement area)
+    {
+        if (peekTarget == window && ReferenceEquals(peekArea, area)) return;
+        EndWindowPeek(); peekTarget = window; peekArea = area; peekDelay.Start();
     }
     private void EndWindowPeek()
     {
-        peekDelay.Stop(); peekTarget = 0; desktopPeek.Dispose();
+        peekDelay.Stop(); peekTarget = 0; peekArea = null; desktopPeek.Dispose();
     }
     private void AttachWindowPeek(FrameworkElement area, nint window)
     {
-        area.MouseEnter += (_, _) => BeginWindowPeek(window);
+        area.MouseEnter += (_, _) => BeginWindowPeek(window, area);
         area.MouseLeave += (_, _) => EndWindowPeek();
         area.ContextMenuOpening += (_, _) => EndWindowPeek();
     }

@@ -36,7 +36,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private bool openingWindow;
     internal event Action? LayoutChanged;
     internal event Action? DismissRequested;
-    internal event Action<nint>? WindowHovered;
+    internal event Action<nint, FrameworkElement>? WindowHovered;
     internal event Action? WindowHoverEnded;
     internal void AttachPanelMaterial(FrameworkElement panel)
     {
@@ -61,24 +61,43 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         };
         PreviewMouseMove += (_, e) =>
         {
-            var point = e.GetPosition(this);
-            // Reflow under a stationary cursor must not promote another card.
-            if (point == lastPointer) return;
-            lastPointer = point;
-            if (point.X < 10 || point.X > 310) return;
-            for (int i = 0; i < cards.Count; i++)
-            {
-                double top = GetTop(cards[i]);
-                if (point.Y >= top && point.Y < top + cards[i].Height)
-                {
-                    BringCardForward(i);
-                    if (cardImages[i].Live) WindowHovered?.Invoke(cardImages[i].Window);
-                    else WindowHoverEnded?.Invoke();
-                    break;
-                }
-            }
+            var cursor = System.Windows.Forms.Cursor.Position;
+            var screen = new Point(cursor.X, cursor.Y);
+            // Layout/animation can move the Canvas below a stationary mouse.
+            // Compare physical coordinates, not coordinates relative to that Canvas.
+            if (!double.IsNaN(lastPointer.X) && (screen - lastPointer).LengthSquared < 4) return;
+            lastPointer = screen;
+            var hit = InputHitTest(PointFromScreen(screen)) as DependencyObject;
+            int index = HitCard(hit);
+            if (index < 0) { ClearHover(); return; }
+            BringCardForward(index);
+            if (cardImages[index].Live) WindowHovered?.Invoke(cardImages[index].Window, cards[index]);
+            else WindowHoverEnded?.Invoke();
         };
-        MouseLeave += (_, _) => { WindowHoverEnded?.Invoke(); lastPointer = new(double.NaN, double.NaN); BringCardForward(cards.Count - 1); };
+        MouseLeave += (_, _) =>
+        {
+            // Native thumbnail HWNDs can emit a leave while still over a card.
+            var cursor = System.Windows.Forms.Cursor.Position;
+            if (IsVisible && IsLoaded && HitCard(InputHitTest(PointFromScreen(new Point(cursor.X, cursor.Y))) as DependencyObject) >= 0) return;
+            ClearHover(); lastPointer = new(double.NaN, double.NaN);
+        };
+    }
+    private int HitCard(DependencyObject? hit)
+    {
+        // WPF's hit test honors the visible rounded shape and Z-order during
+        // overlapping animations; scanning card rectangles by list index does not.
+        while (hit is not null && !ReferenceEquals(hit, this))
+        {
+            int index = hit is FrameworkElement element ? cards.IndexOf(element) : -1;
+            if (index >= 0) return index;
+            hit = hit is Visual ? VisualTreeHelper.GetParent(hit) : LogicalTreeHelper.GetParent(hit);
+        }
+        return -1;
+    }
+    private void ClearHover()
+    {
+        WindowHoverEnded?.Invoke(); hoveredCard = -1;
+        foreach (var surface in surfaces) surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
     }
     internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner, Preferences preferences)
     {
@@ -123,11 +142,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             heading.Children.Add(new TextBlock { Text = tab.Title, FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); row.Children.Add(heading);
             var area = new Border { Height = 112, Margin = new Thickness(10, 0, 10, 8) };
             bool live = tab.Selected || tab.RuntimeId.Length == 0;
-            if (live)
-            {
-                area.MouseEnter += (_, _) => WindowHovered?.Invoke(tab.Window);
-                area.MouseLeave += (_, _) => WindowHoverEnded?.Invoke();
-            }
             cardImages.Add((area, tab.Window, live));
             var snapshot = live ? null : BrowserTabImages.Get(tab);
             cachedImages.Add(snapshot is not null);
@@ -168,8 +182,6 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
                 button.ContextMenu = menu;
                 tabMenus.Add(menu);
             }
-            button.MouseEnter += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
-            button.MouseLeave += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
             System.Windows.Automation.AutomationProperties.SetName(button, "Abrir aba: " + tab.Title);
             button.Click += async (_, _) =>
             {
@@ -199,6 +211,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         ConfigureAppearance(preferences);
         previewCard = cardImages.FindLastIndex(image => image.Live);
         BringCardForward(count - 1, animate: false);
+        ClearHover();
         LayoutChanged?.Invoke();
     }
     private void BringCardForward(int index, bool animate = true)
@@ -272,7 +285,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         {
             surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(tint);
             surface.CornerRadius = new CornerRadius(Math.Clamp(preferences.DockRadius, 0, 24));
-            surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
+            surface.SetResourceReference(Border.BorderBrushProperty, surfaces.IndexOf(surface) == hoveredCard ? "Think.Accent" : "Think.Hover");
         }
     }
     internal void PlaceImages()
