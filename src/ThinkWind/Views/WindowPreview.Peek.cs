@@ -1,6 +1,6 @@
 using System;
 using System.Windows;
-using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using OrbyLauncher.Native;
 
@@ -16,8 +16,13 @@ internal sealed partial class WindowPreview
         peekDelay.Tick += (_, _) =>
         {
             peekDelay.Stop();
-            if (IsVisible && peekTarget != 0 && !IsInteracting && IsMouseOver)
-                desktopPeek.Show(peekTarget, new WindowInteropHelper(this).Handle);
+            // Native DWM thumbnail HWNDs can make WPF's IsMouseOver false.
+            // Use the physical popup bounds instead of rejecting their hover.
+            if (IsVisible && peekTarget != 0 && !WindowActionInteracting && PointerInside)
+            {
+                var color = (TryFindResource("Think.Accent") as SolidColorBrush)?.Color ?? Colors.White;
+                desktopPeek.Show(peekTarget, color.R | color.G << 8 | color.B << 16);
+            }
         };
         PreviewMouseDown += (_, _) => EndWindowPeek();
         PreviewKeyDown += (_, _) => EndWindowPeek();

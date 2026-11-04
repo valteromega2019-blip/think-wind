@@ -17,6 +17,8 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
     [DllImport("user32.dll")] private static extern bool GetClientRect(nint window, out Rect rect);
     [DllImport("user32.dll")] private static extern int FillRect(nint dc, ref Rect rect, nint brush);
     [DllImport("gdi32.dll")] private static extern nint GetStockObject(int index);
+    [DllImport("gdi32.dll")] private static extern nint CreateSolidBrush(int color);
+    [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint value);
     [DllImport("dwmapi.dll")] private static extern int DwmRegisterThumbnail(nint destination, nint source, out nint thumbnail);
     [DllImport("dwmapi.dll")] private static extern int DwmUnregisterThumbnail(nint thumbnail);
     [DllImport("dwmapi.dll")] private static extern int DwmUpdateThumbnailProperties(nint thumbnail, ref Properties properties);
@@ -27,15 +29,18 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
     private nint thumbnail;
     private Rect previous;
     private bool placed;
+    private nint outlineBrush;
     internal static int ActiveCount { get; private set; }
     internal bool Available => thumbnail != 0;
     internal double AspectRatio { get; private set; } = 16d / 9;
-    internal WindowThumbnail(nint owner, nint source, bool clickThrough = false)
+    internal WindowThumbnail(nint owner, nint source, bool clickThrough = false, int? outlineColor = null)
     {
         // DWM thumbnails need a redirected destination. NOREDIRECTIONBITMAP is
         // appropriate for our Composition backdrop, but not for this HWND.
-        CreateHandle(new Forms.CreateParams { Caption = "", Parent = owner, Style = unchecked((int)0x80000000), ExStyle = 0x08000088 | (clickThrough ? 0x20 : 0), X = -10000, Y = -10000, Width = 1, Height = 1 });
-        if (DwmRegisterThumbnail(Handle, source, out thumbnail) < 0) { thumbnail = 0; DestroyHandle(); return; }
+        if (outlineColor is int color) outlineBrush = CreateSolidBrush(color);
+        try { CreateHandle(new Forms.CreateParams { Caption = "", Parent = owner, Style = unchecked((int)0x80000000), ExStyle = clickThrough ? 0x080000A0 : 0x08000088, X = -10000, Y = -10000, Width = 1, Height = 1 }); }
+        catch { if (outlineBrush != 0) { DeleteObject(outlineBrush); outlineBrush = 0; } throw; }
+        if (DwmRegisterThumbnail(Handle, source, out thumbnail) < 0) { thumbnail = 0; DestroyHandle(); if (outlineBrush != 0) { DeleteObject(outlineBrush); outlineBrush = 0; } return; }
         if (DwmQueryThumbnailSourceSize(thumbnail, out var sourceSize) >= 0 && sourceSize.Width > 0 && sourceSize.Height > 0)
             AspectRatio = sourceSize.Width / (double)sourceSize.Height;
         ActiveCount++;
@@ -55,7 +60,8 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
             width = w; height = h; next.Right = next.Left + w; next.Bottom = next.Top + h;
         }
         if (placed && next.Left == previous.Left && next.Top == previous.Top && next.Right == previous.Right && next.Bottom == previous.Bottom) return true;
-        var destination = new Rect { Right = width, Bottom = height };
+        int inset = outlineBrush != 0 ? 2 : 0;
+        var destination = new Rect { Left = inset, Top = inset, Right = Math.Max(inset + 1, width - inset), Bottom = Math.Max(inset + 1, height - inset) };
         var properties = new Properties { Flags = 1 | 4 | 8 | 16, Destination = destination, Opacity = 255, Visible = true, ClientOnly = false };
         SetWindowPos(Handle, behind, next.Left, next.Top, width, height, 0x0010);
         if (DwmUpdateThumbnailProperties(thumbnail, ref properties) < 0) { SetWindowPos(Handle, 0, 0, 0, 0, 0, 0x0013 | 0x0080); return false; }
@@ -69,15 +75,15 @@ internal sealed class WindowThumbnail : Forms.NativeWindow, IDisposable
         if (message.Msg == 0x84) { message.Result = -1; return; }
         if (message.Msg == 0x21) { message.Result = 3; return; }
         if (message.Msg == 0x83) { message.Result = 0; return; }
-        if (message.Msg == 0x14) { GetClientRect(Handle, out var area); FillRect(message.WParam, ref area, GetStockObject(4)); message.Result = 1; return; }
+        if (message.Msg == 0x14) { GetClientRect(Handle, out var area); FillRect(message.WParam, ref area, outlineBrush != 0 ? outlineBrush : GetStockObject(4)); message.Result = 1; return; }
         if (message.Msg == 0x0F)
         {
             var dc = BeginPaint(Handle, out var paint);
-            try { GetClientRect(Handle, out var area); FillRect(dc, ref area, GetStockObject(4)); }
+            try { GetClientRect(Handle, out var area); FillRect(dc, ref area, outlineBrush != 0 ? outlineBrush : GetStockObject(4)); }
             finally { EndPaint(Handle, ref paint); }
             message.Result = 0; return;
         }
         base.WndProc(ref message);
     }
-    public void Dispose() { if (thumbnail != 0) { DwmUnregisterThumbnail(thumbnail); thumbnail = 0; ActiveCount--; } if (Handle != 0) DestroyHandle(); }
+    public void Dispose() { if (thumbnail != 0) { DwmUnregisterThumbnail(thumbnail); thumbnail = 0; ActiveCount--; } if (Handle != 0) DestroyHandle(); if (outlineBrush != 0) { DeleteObject(outlineBrush); outlineBrush = 0; } }
 }

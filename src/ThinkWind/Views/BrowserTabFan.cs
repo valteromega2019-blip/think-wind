@@ -22,6 +22,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly List<(FrameworkElement Panel, BackdropHost Host)> companionBackdrops = new();
     private double cardRadius;
     private readonly List<(Border Area, nint Window, bool Live)> cardImages = new();
+    private readonly List<bool> cachedImages = new();
     private int hoveredCard = -1;
     private nint thumbnailOwner;
     private bool liveImageAttempted;
@@ -68,15 +69,21 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             for (int i = 0; i < cards.Count; i++)
             {
                 double top = GetTop(cards[i]);
-                if (point.Y >= top && point.Y < top + 40) { BringCardForward(i); break; }
+                if (point.Y >= top && point.Y < top + cards[i].Height)
+                {
+                    BringCardForward(i);
+                    if (cardImages[i].Live) WindowHovered?.Invoke(cardImages[i].Window);
+                    else WindowHoverEnded?.Invoke();
+                    break;
+                }
             }
         };
-        MouseLeave += (_, _) => { lastPointer = new(double.NaN, double.NaN); BringCardForward(cards.Count - 1); };
+        MouseLeave += (_, _) => { WindowHoverEnded?.Invoke(); lastPointer = new(double.NaN, double.NaN); BringCardForward(cards.Count - 1); };
     }
     internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner, Preferences preferences)
     {
         Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear();
-        hoveredCard = -1; cardImages.Clear();
+        hoveredCard = -1; cardImages.Clear(); cachedImages.Clear();
         liveImageAttempted = false;
         thumbnailOwner = owner;
         // The parent owns one horizontal group per HWND. Keep this window's
@@ -123,6 +130,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             }
             cardImages.Add((area, tab.Window, live));
             var snapshot = live ? null : BrowserTabImages.Get(tab);
+            cachedImages.Add(snapshot is not null);
             if (snapshot is not null)
             {
                 var picture = new Image { Source = snapshot, Stretch = Stretch.Uniform };
@@ -197,9 +205,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     {
         if (index < 0 || index >= cards.Count || hoveredCard == index) return;
         hoveredCard = index;
-        // Hover expands every tab card, even before its first cached image.
-        // Image availability controls only the contents, never the interaction.
-        int nextPreview = index;
+        // Tabs without a saved image remain compact; the actual window stays
+        // available in its selected tab's card.
+        int nextPreview = cardImages[index].Live || cachedImages[index] ? index : cardImages.FindLastIndex(image => image.Live);
         if (nextPreview != previewCard)
         {
             foreach (var item in images) item.Host.Dispose();

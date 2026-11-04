@@ -19,7 +19,7 @@ internal sealed class DesktopWindowPeek : IDisposable
     [DllImport("user32.dll")] private static extern bool GetWindowPlacement(nint window, ref Placement placement);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
     private WindowThumbnail? image;
-    internal void Show(nint source, nint preview)
+    internal void Show(nint source, int outlineColor)
     {
         Dispose();
         if (!Desktop.WindowExists(source) || !OverlayChrome.GetWindowRect(source, out var bounds)) return;
@@ -48,8 +48,10 @@ internal sealed class DesktopWindowPeek : IDisposable
         if (width < 32 || height < 32 || width > 16384 || height > 16384) return;
         try
         {
-            image = new WindowThumbnail(0, source, clickThrough: true);
-            if (!image.Available || !image.Place(new Point(bounds.Left, bounds.Top), new Size(width, height), preview)) Dispose();
+            image = new WindowThumbnail(0, source, clickThrough: true, outlineColor: outlineColor);
+            // HWND_NOTOPMOST: above ordinary apps but below every launcher
+            // card/material/thumbnail, not between the alpha content and Acrylic.
+            if (!image.Available || !image.Place(new Point(bounds.Left, bounds.Top), new Size(width, height), new nint(-2))) Dispose();
         }
         catch (Exception error) when (error is System.ComponentModel.Win32Exception or ExternalException or InvalidOperationException)
         { Dispose(); }

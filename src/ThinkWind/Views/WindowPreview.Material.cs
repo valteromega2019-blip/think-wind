@@ -20,6 +20,8 @@ internal sealed partial class WindowPreview
             Effect = new DropShadowEffect { Color = Colors.Black, Opacity = .22, BlurRadius = 14, ShadowDepth = 2 } };
         var host = new BackdropHost(new WindowInteropHelper(this).EnsureHandle(), false, 0, "Prévia de aplicativo");
         individualSurfaces.Add((surface, host));
+        surface.MouseEnter += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
+        surface.MouseLeave += (_, _) => surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
         ConfigureSurfaces();
         return surface;
     }
@@ -32,7 +34,7 @@ internal sealed partial class WindowPreview
         {
             item.Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(tint);
             item.Surface.CornerRadius = new CornerRadius(Math.Clamp(p.DockRadius, 0, 24));
-            item.Surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
+            item.Surface.SetResourceReference(Border.BorderBrushProperty, item.Surface.IsMouseOver ? "Think.Accent" : "Think.Hover");
             item.Host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
         }
     }
