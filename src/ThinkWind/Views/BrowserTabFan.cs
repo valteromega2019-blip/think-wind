@@ -32,6 +32,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly TextBlock expansionIcon = new() { FontSize = 14, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
         Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
     private int previewCard = -1;
+    private int hiddenTabCount;
     private bool openingWindow;
     internal event Action? LayoutChanged;
     internal event Action? DismissRequested;
@@ -79,7 +80,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         thumbnailOwner = owner;
         // The parent owns one horizontal group per HWND. Keep this window's
         // tabs stacked, with its selected tab initially at the front.
-        var shown = tabs.Where(tab => tab.Selected).Concat(tabs).Distinct().Take(6).OrderBy(tab => tab.Selected).ToArray();
+        var all = tabs.Where(tab => tab.Selected).Concat(tabs).Distinct().ToArray();
+        var shown = all.Take(6).OrderBy(tab => tab.Selected).ToArray();
+        hiddenTabCount = Math.Max(0, all.Length - shown.Length);
         int count = shown.Length;
         // Reserve room for the rotated corners instead of clipping them.
         Height = 220 + Math.Max(0, count - 1) * 46;
@@ -198,7 +201,9 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
         Width = 320;
         Height = 220 + Math.Max(0, cards.Count - 1) * 46;
         expansion.Visibility = Visibility.Visible;
-        extraCount.Text = cards.Count > 1 ? $"+{cards.Count - 1}" : "";
+        extraCount.Text = hiddenTabCount > 0 ? $"+{hiddenTabCount}" : "";
+        extraCount.Visibility = hiddenTabCount > 0 ? Visibility.Visible : Visibility.Collapsed;
+        expansionIcon.Margin = new Thickness(hiddenTabCount > 0 ? 8 : 0, 0, 0, 0);
         expansionIcon.Text = "\uE8A7";
         expansion.ToolTip = "Abrir janela do navegador";
         System.Windows.Automation.AutomationProperties.SetName(expansion, (string)expansion.ToolTip);
