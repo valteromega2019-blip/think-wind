@@ -11,7 +11,7 @@ internal sealed class BatteryIcon : Control
     private static readonly DependencyProperty ChargeProperty = DependencyProperty.Register(nameof(Charge), typeof(int), typeof(BatteryIcon), new FrameworkPropertyMetadata(-1, FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty ChargingProperty = DependencyProperty.Register(nameof(Charging), typeof(bool), typeof(BatteryIcon), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty PluggedProperty = DependencyProperty.Register(nameof(Plugged), typeof(bool), typeof(BatteryIcon), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
-    private static readonly DependencyProperty OutlineProperty = DependencyProperty.Register(nameof(Outline), typeof(Brush), typeof(BatteryIcon), new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
+    internal static readonly DependencyProperty OutlineProperty = DependencyProperty.Register(nameof(Outline), typeof(Brush), typeof(BatteryIcon), new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly Geometry Bolt = MakeBolt();
     internal int Charge { get => (int)GetValue(ChargeProperty); set => SetValue(ChargeProperty, value); }
     internal bool Charging { get => (bool)GetValue(ChargingProperty); set => SetValue(ChargingProperty, value); }

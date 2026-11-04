@@ -17,3 +17,7 @@ Revisão por leitura e diff. Não compilado ou executado nesta entrega. Testes e
 Adicionado argumento explícito `--simulate-battery`, sem preferência persistente ou alteração do Windows. Alterna a cada 15 segundos entre 72% em uso, 18% com economia, 45% carregando e 100% na tomada. Tooltip e nome acessível indicam SIMULAÇÃO. A execução normal continua nativa. Esta prévia também evita reconfigurar a inicialização automática e os auxiliares administrativos para o caminho de desenvolvimento.
 
 Compilação Release/publish concluída sem erros/avisos emitidos. Prévia aberta em `artifacts/preview-battery/OrbyLauncher.exe --simulate-battery` e processo confirmado respondendo. Nenhum teste automatizado ou type check separado executado. A avaliação visual e a leitura de bateria física permanecem pendentes; não foi gerado instalador.
+
+## Hover do ícone
+
+O magnificador existente reconhecia apenas glyphs TextBlock, deixando o desenho vetorial da bateria de fora. Estendido o mesmo magnificador para reconhecer BatteryStatusButton e animar seu BatteryIcon: ampliação com a mesma mola contínua e contorno na cor de destaque durante hover, restaurando o recurso do tema ao sair. A porcentagem mantém seu espaço fixo. Sem timer ou motor de animação adicional. Correção revisada por leitura; não compilada nem executada nesta etapa, sem testes/type check.

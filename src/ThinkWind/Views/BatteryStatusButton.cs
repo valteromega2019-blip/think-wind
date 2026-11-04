@@ -8,6 +8,7 @@ namespace OrbyLauncher.Views;
 internal sealed class BatteryStatusButton : Button
 {
     private readonly BatteryIcon icon;
+    internal BatteryIcon IconElement => icon;
     private readonly TextBlock number;
     private readonly bool strip;
     private readonly double scale;

@@ -18,7 +18,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
     private sealed class Item
     {
         internal readonly Button Button;
-        internal readonly TextBlock Glyph;
+        internal readonly FrameworkElement Glyph;
         internal readonly FrameworkElement Visual;
         internal readonly int OriginalZ;
         internal readonly Transform Original;
@@ -31,7 +31,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
         private Brush? highlight;
         private Brush? highlightFill;
         private bool activePanel;
-        internal Item(Button button, TextBlock glyph, bool wholeKey)
+        internal Item(Button button, FrameworkElement glyph, bool wholeKey)
         {
             Button = button; Glyph = glyph; button.ApplyTemplate();
             Visual = wholeKey ? button : glyph;
@@ -62,7 +62,7 @@ internal sealed class HeaderIconMagnifier : IDisposable
                 animation = new ObjectAnimationUsingKeyFrames { Duration = TimeSpan.Zero, FillBehavior = FillBehavior.HoldEnd };
                 animation.KeyFrames.Add(new DiscreteObjectKeyFrame(brush, KeyTime.FromTimeSpan(TimeSpan.Zero)));
             }
-            Glyph.BeginAnimation(TextBlock.ForegroundProperty, animation);
+            Glyph.BeginAnimation(Glyph is BatteryIcon ? BatteryIcon.OutlineProperty : TextBlock.ForegroundProperty, animation);
             ObjectAnimationUsingKeyFrames? background = null;
             if (fill is not null)
             {
@@ -88,11 +88,13 @@ internal sealed class HeaderIconMagnifier : IDisposable
         row.Loaded += Loaded; row.Unloaded += Unloaded; row.IsVisibleChanged += VisibilityChanged;
         ThemeService.Changed += RefreshHighlight;
     }
-    private static IEnumerable<(Button Button, TextBlock Glyph)> Targets(Panel panel, bool includeText)
+    private static IEnumerable<(Button Button, FrameworkElement Glyph)> Targets(Panel panel, bool includeText)
     {
         foreach (UIElement child in panel.Children)
         {
-            if (child is Button button && button.Content is TextBlock glyph
+            if (child is BatteryStatusButton battery)
+                yield return (battery, battery.IconElement);
+            else if (child is Button button && button.Content is TextBlock glyph
                 && (includeText || glyph.FontFamily.Source.Contains("Icons", StringComparison.OrdinalIgnoreCase)
                     || glyph.FontFamily.Source.Contains("MDL2", StringComparison.OrdinalIgnoreCase)))
                 yield return (button, glyph);
