@@ -22,6 +22,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     private readonly List<(FrameworkElement Panel, BackdropHost Host)> companionBackdrops = new();
     private double cardRadius;
     private readonly List<(Border Area, nint Window, bool Live)> cardImages = new();
+    private readonly List<bool> cachedImages = new();
     private int hoveredCard = -1;
     private nint thumbnailOwner;
     private bool liveImageAttempted;
@@ -73,7 +74,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     internal void Present(IReadOnlyList<BrowserTab> tabs, nint owner, Preferences preferences)
     {
         Dispose(); Children.Clear(); surfaces.Clear(); cards.Clear();
-        hoveredCard = -1; cardImages.Clear();
+        hoveredCard = -1; cardImages.Clear(); cachedImages.Clear();
         liveImageAttempted = false;
         thumbnailOwner = owner;
         // The parent owns one horizontal group per HWND. Keep this window's
@@ -112,7 +113,16 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             var area = new Border { Height = 112, Margin = new Thickness(10, 0, 10, 8) };
             bool live = tab.Selected || tab.RuntimeId.Length == 0;
             cardImages.Add((area, tab.Window, live));
-            if (!live)
+            var snapshot = live ? null : BrowserTabImages.Get(tab);
+            cachedImages.Add(snapshot is not null);
+            if (snapshot is not null)
+            {
+                var picture = new Image { Source = snapshot, Stretch = Stretch.Uniform };
+                RenderOptions.SetBitmapScalingMode(picture, BitmapScalingMode.HighQuality);
+                System.Windows.Automation.AutomationProperties.SetHelpText(picture, "Última imagem capturada ao visitar esta aba.");
+                area.Child = picture;
+            }
+            else if (!live)
             {
                 var hint = new TextBlock { Text = "Aba em segundo plano. Clique para abrir seu conteúdo.", TextWrapping = TextWrapping.Wrap,
                     TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Margin = new Thickness(12) };
@@ -179,6 +189,12 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
     {
         if (index < 0 || index >= cards.Count || hoveredCard == index) return;
         hoveredCard = index;
+        int nextPreview = cardImages[index].Live || cachedImages[index] ? index : cardImages.FindLastIndex(image => image.Live);
+        if (nextPreview != previewCard)
+        {
+            foreach (var item in images) item.Host.Dispose();
+            images.Clear(); liveImageAttempted = false; previewCard = nextPreview;
+        }
         Width = 320;
         Height = 220 + Math.Max(0, cards.Count - 1) * 46;
         expansion.Visibility = Visibility.Visible;
@@ -193,7 +209,7 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             SetZIndex(card, i == index ? 100 : i);
             // Keep each remaining title reachable. The selected card uses the
             // existing full slot; subsequent title strips move below it.
-            double top = 48 + i * 46;
+            double top = 48 + i * 46 + (previewCard >= 0 && i > previewCard ? 120 : 0);
             SetLeft(card, 10);
             bool full = i == previewCard;
             card.Height = full ? 160 : 40;

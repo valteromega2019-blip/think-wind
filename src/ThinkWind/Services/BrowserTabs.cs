@@ -55,7 +55,13 @@ internal static class BrowserTabs
             bool inspectCall = changed || DateTime.UtcNow - callObservedAt >= TimeSpan.FromSeconds(10);
             if (!readTabs && !inspectCall) return;
             observed = key;
-            if (readTabs) { observedAt = DateTime.UtcNow; await ReadAsync(new[] { active }, CancellationToken.None); }
+            if (readTabs)
+            {
+                observedAt = DateTime.UtcNow;
+                var tabs = await ReadAsync(new[] { active }, CancellationToken.None);
+                var selected = tabs.FirstOrDefault(tab => tab.Window == active.Handle && tab.Selected && !tab.Cached);
+                if (changed && selected is not null) await BrowserTabImages.CaptureAsync(selected);
+            }
             // Custom meeting names need not contain "Meet". Probe the native
             // URL + controls at a bounded cadence using the existing dock tick.
             if (inspectCall) { callObservedAt = DateTime.UtcNow; await CallIntegration.FindAsync(new[] { active }, CancellationToken.None); }
