@@ -13,7 +13,8 @@ internal sealed partial class IslandWindow
     private Button? stripWeatherButton;
     private SystemToolsWindow? systemTools;
     private bool SystemToolsOpen => systemTools?.IsVisible == true;
-    private bool IsQuickVisible(string id) => !Store.Value.HiddenQuickControls.Contains(id) && !Store.Value.DisabledQuickControls.Contains(id);
+    private bool IsQuickVisible(string id) => !Store.Value.HiddenQuickControls.Contains(id) && !Store.Value.DisabledQuickControls.Contains(id)
+        && (id != "battery" || batteryAvailable);
 
     private Button WeatherButton(bool strip)
     {

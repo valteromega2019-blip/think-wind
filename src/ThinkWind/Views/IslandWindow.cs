@@ -310,6 +310,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         UpdateSecondAreaMode();
         foreach (var old in header.Children.OfType<Button>()) if (ReferenceEquals(old.Content, clock)) old.Content = null;
         header.Children.Clear();
+        headerBattery = null;
         themeToggle = null;
         hoverQuick.Children.Clear();
         var scale = Store.Value.IslandScale;
@@ -323,6 +324,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         foreach (var id in headerIds)
         {
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
+            if (id == "battery") { headerBattery = BatteryButton(false); header.Children.Add(headerBattery); continue; }
             if (id == "clock")
             {
                 var clockButton = ActionButton("Relógio, cronômetro e temporizador", () =>
@@ -413,6 +415,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     private void UpdateClock()
     {
+        RefreshBattery();
         RefreshPanelIcons();
         metrics.RefreshPower();
         clock.Text = DateTime.Now.ToString("HH:mm", CultureInfo.GetCultureInfo("pt-BR"));

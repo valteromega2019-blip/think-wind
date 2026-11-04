@@ -10,6 +10,7 @@ internal static class LayoutCatalog
     internal static readonly QuickControl[] QuickControls =
     {
         new("clock", "Relógio", "\uE917", null),
+        new("battery", "Bateria", "\uE859", "ms-settings:powersleep"),
         new("wifi", "Wi-Fi", "\uE701", "ms-settings:network-wifi"),
         new("bluetooth", "Bluetooth", "\uE702", "ms-settings:bluetooth"),
         new("audio", "Áudio", "\uE767", null),

@@ -69,6 +69,7 @@ public sealed class Preferences
     public Dictionary<string, TrayActivity> TrayActivity { get; set; } = new();
     public bool ShowMemory { get; set; } = true;
     public bool ShowBattery { get; set; } = true;
+    public bool ShowBatteryPercentage { get; set; }
     public bool ShowAudio { get; set; } = true;
     public int MonitorIndex { get; set; }
     public string? MonitorDeviceName { get; set; }
@@ -114,7 +115,7 @@ public sealed class Preferences
     public double IslandCollapseSeconds { get; set; } = .45;
     public double AnimationMilliseconds { get; set; } = 220;
     public List<string> DockOrder { get; set; } = new();
-    public List<string> QuickOrder { get; set; } = new() { "clock", "wifi", "bluetooth", "audio", "tray", "notifications", "calendar", "airplane", "settings" };
+    public List<string> QuickOrder { get; set; } = new() { "clock", "battery", "wifi", "bluetooth", "audio", "tray", "notifications", "calendar", "airplane", "settings" };
     public List<string> HiddenQuickControls { get; set; } = new() { "calendar", "airplane", "settings", "keyboard" };
     public List<string> DisabledQuickControls { get; set; } = new();
     public List<string> ModuleOrder { get; set; } = new() { "connections", "media", "audio", "metrics", "calendar" };
@@ -205,6 +206,7 @@ public sealed class SettingsStore
             p.ModuleOrder = defaults.ModuleOrder; p.HiddenModules.Clear();
             p.QuickOrder = defaults.QuickOrder; p.HiddenQuickControls = defaults.HiddenQuickControls; p.DisabledQuickControls.Clear();
             p.ShowWeatherInHeader = defaults.ShowWeatherInHeader;
+            p.ShowBatteryPercentage = defaults.ShowBatteryPercentage;
             p.IslandScale = 1; p.IslandExpandedWidth = defaults.IslandExpandedWidth; p.IslandSpacing = defaults.IslandSpacing;
             p.IslandRadius = defaults.IslandRadius; p.IslandHorizontalOffset = 0;
             p.IslandPanelSide = defaults.IslandPanelSide;
@@ -282,6 +284,10 @@ public sealed class SettingsStore
             p.HiddenQuickControls ??= new();
             if (!p.HiddenQuickControls.Contains("keyboard")) p.HiddenQuickControls.Add("keyboard");
         }
+        // Introduce the battery beside the clock once. Visibility follows real
+        // battery presence at runtime; later user placement/disable choices win.
+        p.QuickOrder ??= new();
+        if (!p.QuickOrder.Contains("battery")) p.QuickOrder.Insert(Math.Max(0, p.QuickOrder.IndexOf("clock") + 1), "battery");
         p.QuickOrder = LayoutCatalog.Complete(p.QuickOrder, quickIds);
         if (!p.UnifiedWidgetLayout)
         {

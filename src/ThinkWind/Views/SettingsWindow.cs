@@ -129,7 +129,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
             Bottom = screen.Work.Top + gap + (int)Math.Round(Height * screen.Scale)
         });
     }
-    private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.DisabledQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio + store.Value.ShowWeatherInHeader;
+    private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.DisabledQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio + store.Value.ShowWeatherInHeader + store.Value.ShowBatteryPercentage;
     private void PersistenceChanged(object? sender, EventArgs e) => UpdateStatus();
     private void UpdateStatus()
     {
@@ -319,6 +319,14 @@ internal sealed partial class SettingsWindow : FloatingWindow
                 enabled => store.Update(p => { if (enabled) p.HiddenQuickControls.Remove(id); else p.HiddenQuickControls.Add(id); }),
                 (from, to, after) => store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
             ((FrameworkElement)quickRows.Children[quickRows.Children.Count - 1]).IsEnabled = !disabled;
+            if (id == "battery")
+            {
+                var percentage = Check(quickRows, "Mostrar porcentagem em número", store.Value.ShowBatteryPercentage,
+                    value => Change(p => p.ShowBatteryPercentage = value));
+                percentage.Margin = new Thickness(26, 0, 0, 8);
+                percentage.IsEnabled = !disabled;
+                percentage.ToolTip = "Desligado por padrão. A bateria aparece automaticamente quando o computador possui uma bateria disponível.";
+            }
             AddDisabledIconOption(quickRows, id, label);
         }
         foreach (var id in store.Value.ModuleOrder.ToArray())

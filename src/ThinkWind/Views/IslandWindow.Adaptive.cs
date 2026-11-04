@@ -96,7 +96,8 @@ internal sealed partial class IslandWindow
     private string statusControlsSignature = "";
     private void BuildStatusRow()
     {
-        string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls) + ":" + string.Join('|', Store.Value.DisabledQuickControls);
+        string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls) + ":" + string.Join('|', Store.Value.DisabledQuickControls)
+            + ":" + batteryAvailable + ":" + Store.Value.ShowBatteryPercentage;
         if (statusBuilt && statusControlsSignature == signature) return;
         if (statusBuilt) { DismissMinis(); systemTools?.Close(); }
         statusControlsSignature = signature;
@@ -104,6 +105,7 @@ internal sealed partial class IslandWindow
         foreach (var old in statusRow.Children.OfType<Button>())
             if (ReferenceEquals(old.Content, statusClock)) old.Content = null;
         statusRow.Children.Clear();
+        stripBattery = null;
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         statusClock.Margin = new Thickness(0, 0, 8, 0);
         statusClock.Visibility = IsQuickVisible("clock") ? Visibility.Visible : Visibility.Collapsed;
@@ -149,6 +151,7 @@ internal sealed partial class IslandWindow
             var control = Services.LayoutCatalog.QuickControls.First(q => q.Id == id);
             switch (id)
             {
+                case "battery": stripBattery = BatteryButton(true); controls.Children.Add(stripBattery); break;
                 case "wifi": AddMini(control.Name, control.Glyph, MiniIslandKind.Network); break;
                 case "audio": AddMini(control.Name, control.Glyph, MiniIslandKind.Volume); break;
                 case "bluetooth": AddMini(control.Name, control.Glyph, MiniIslandKind.Bluetooth); break;

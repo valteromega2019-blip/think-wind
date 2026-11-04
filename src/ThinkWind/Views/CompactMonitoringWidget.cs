@@ -48,11 +48,10 @@ internal sealed class CompactMonitoringWidget : StackPanel
     internal void RefreshPower()
     {
         if (!IsVisible) return;
-        var power = System.Windows.Forms.SystemInformation.PowerStatus;
-        bool show = store.Value.ShowBattery && power.BatteryLifePercent is >= 0 and <= 1
-            && !power.BatteryChargeStatus.HasFlag(System.Windows.Forms.BatteryChargeStatus.NoSystemBattery);
+        var power = BatteryStatusService.Read();
+        bool show = store.Value.ShowBattery && power.Available && power.Percentage.HasValue;
         var visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        battery.Text = show ? $"Bateria  {power.BatteryLifePercent:P0}" : "";
+        battery.Text = show ? $"Bateria  {power.Percentage.GetValueOrDefault() / 100.0:P0}" : "";
         if (battery.Visibility != visibility) { battery.Visibility = visibility; LayoutChanged?.Invoke(); }
     }
     private void Present(HardwareSample? sample) { if (IsVisible) foreach (var card in cards) card.Present(sample); }

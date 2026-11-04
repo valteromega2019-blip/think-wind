@@ -12,10 +12,16 @@ internal sealed partial class IslandWindow
     private void BuildSecondaryQuickControls()
     {
         hoverQuick.Children.Clear();
+        secondaryBattery = null;
         if (!Store.Value.ShowWeatherInHeader && WeatherEnabled) hoverQuick.Children.Add(WeatherButton(false));
         foreach (string id in Store.Value.QuickOrder.Where(id => id != "settings"
             && Store.Value.HiddenQuickControls.Contains(id) && !Store.Value.DisabledQuickControls.Contains(id)))
         {
+            if (id == "battery")
+            {
+                if (batteryAvailable) { secondaryBattery = BatteryButton(false); hoverQuick.Children.Add(secondaryBattery); }
+                continue;
+            }
             if (id == "tools") { hoverQuick.Children.Add(SystemToolsButton(false)); continue; }
             if (id == "monitor")
             {
