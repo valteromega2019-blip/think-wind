@@ -13,7 +13,7 @@ namespace OrbyLauncher.Views;
 internal sealed partial class WindowPreview : FloatingWindow
 {
     protected override bool AttachedTop => false;
-    protected override bool SuppressMaterial => browserMode;
+    protected override bool SuppressMaterial => true;
     protected override bool TransparentSurface => SuppressMaterial;
     private readonly StackPanel body = new();
     private readonly Viewbox viewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
@@ -73,7 +73,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         ConfigurePlayerSurface();
         RefreshAppearance();
         viewport.Child = null;
-        Surface.Child = WithWindowActions(musicCard!, windows);
+        Surface.Child = PreviewSurface(WithWindowActions(musicCard!, windows), false);
         var prepared = musicCard!;
         bool ready = await prepared.PreparePreviewAsync();
         if (revision != musicPresentationRevision) return;
@@ -123,9 +123,9 @@ internal sealed partial class WindowPreview : FloatingWindow
         DetachCallCard();
         call.ConfigureCompact(false);
         call.Margin = new Thickness(0);
-        viewport.Child = WithWindowActions(call, windows, snapshot.Window); call.Present(snapshot, windows); RefreshAppearance(); Show(); Position();
+        viewport.Child = PreviewSurface(WithWindowActions(call, windows, snapshot.Window), false); call.Present(snapshot, windows); RefreshAppearance(); Show(); Position();
     }
-    private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); browserFan?.Dispose(); }
+    private void Release() { foreach (var item in thumbnails) item.Host.Dispose(); thumbnails.Clear(); browserFan?.Dispose(); ReleaseSurfaces(); }
     private void DetachCallCard()
     {
         if (call?.Parent is Panel parent) parent.Children.Remove(call);
@@ -136,6 +136,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         base.RefreshAppearance();
         ConfigurePlayerSurface();
         browserFan?.ConfigureAppearance(Store.Value);
+        ConfigureSurfaces();
         if (IsVisible && browserMode && !Store.Value.CallPreviewsEnabled && browserMeeting is not null) PresentBrowser(windows.ToArray(), browserTabs, music: browserMusic);
         if (IsVisible && callMode && !Store.Value.CallPreviewsEnabled) { if (browserMode) PresentBrowser(windows.ToArray(), browserTabs, music: browserMusic); else Present(windows.ToArray()); }
     }
@@ -160,7 +161,7 @@ internal sealed partial class WindowPreview : FloatingWindow
         var shown = windows.Skip(page * perPage).Take(perPage).ToArray();
         foreach (var window in shown)
         {
-            var card = new StackPanel { Margin = new Thickness(4), VerticalAlignment = VerticalAlignment.Bottom }; var heading = new DockPanel();
+            var card = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom }; var heading = new DockPanel();
             previewCards.Add(card);
             var controls = new StackPanel { Orientation = Orientation.Horizontal };
             DockPanel.SetDock(controls, Dock.Right); heading.Children.Add(controls);
@@ -179,7 +180,7 @@ internal sealed partial class WindowPreview : FloatingWindow
             heading.Children.Add(new TextBlock { Text = window.Title, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); card.Children.Add(heading);
             var area = new Border { Height = 120, Margin = new Thickness(0, 4, 0, 0), Background = Brushes.Transparent };
             previewAreas.Add(area);
-            var open = ActionButton(window.Title, async () => { Hide(); if (!await Desktop.ActivateFromDock(window.Handle, false) && ElevatedWindowAction.NeedsAdminFallback(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: false, owner: Owner ?? this); }); open.ToolTip = null; open.Content = area; open.SetResourceReference(StyleProperty, "Think.IconButton"); open.Padding = new Thickness(0); card.Children.Add(open); grid.Children.Add(card);
+            var open = ActionButton(window.Title, async () => { Hide(); if (!await Desktop.ActivateFromDock(window.Handle, false) && ElevatedWindowAction.NeedsAdminFallback(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: false, owner: Owner ?? this); }); open.ToolTip = null; open.Content = area; open.SetResourceReference(StyleProperty, "Think.IconButton"); open.Padding = new Thickness(0); card.Children.Add(open); grid.Children.Add(PreviewSurface(card));
             var host = new WindowThumbnail(new WindowInteropHelper(this).Handle, window.Handle);
             area.Tag = host.AspectRatio;
             if (host.Available) thumbnails.Add((area, host)); else { host.Dispose(); area.Child = new TextBlock { Text = "Prévia indisponível. Clique para abrir.", TextWrapping = TextWrapping.Wrap, FontSize = 11, VerticalAlignment = VerticalAlignment.Center }; }
@@ -204,6 +205,7 @@ internal sealed partial class WindowPreview : FloatingWindow
     private void PlaceThumbnails()
     {
         if (!IsVisible) return;
+        PlaceSurfaces();
         if (browserMode) { browserFan?.PlaceImages(); return; }
         foreach (var item in thumbnails) if (item.Area.ActualWidth > 0 && item.Area.ActualHeight > 0)
         {
@@ -230,11 +232,11 @@ internal sealed partial class WindowPreview : FloatingWindow
         {
             double mediaWidth = Math.Max(1, Math.Min(360, Display.Width - 16));
             var mediaBounds = anchor();
-            musicCard.Width = mediaWidth;
+            musicCard.Width = Math.Max(1, mediaWidth - 2);
             musicCard.MinHeight = 190;
             FontSizing.PrepareForMeasure(musicCard);
-            musicCard.Measure(new Size(mediaWidth, double.PositiveInfinity));
-            PlaceAbove(mediaWidth, Math.Max(190, musicCard.DesiredSize.Height), mediaBounds, false);
+            musicCard.Measure(new Size(musicCard.Width, double.PositiveInfinity));
+            PlaceAbove(mediaWidth, Math.Max(190, musicCard.DesiredSize.Height) + 2, mediaBounds, false);
             return;
         }
         var bounds = anchor();
@@ -250,7 +252,7 @@ internal sealed partial class WindowPreview : FloatingWindow
             // thumbnail in a fixed wide cell with unused side/background space.
             area.Width = previewCards[index].Width = imageWidth;
             area.Height = imageWidth / aspect;
-            contentWidth += imageWidth + 8;
+            contentWidth += imageWidth + 28;
         }
         double width = Math.Min(Display.Width - 16, Math.Max(48, contentWidth) + 20);
         body.Width = width - 20;
