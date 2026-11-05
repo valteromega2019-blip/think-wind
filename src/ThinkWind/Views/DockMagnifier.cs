@@ -33,6 +33,7 @@ internal sealed class DockMagnifier : IDisposable
     private readonly FrameClock clock = new();
     private readonly Stopwatch elapsed = new();
     private readonly List<Item> items = new();
+    private readonly List<Item> activeItems = new();
     private double previous, intensity, speed, reserve;
     private int neighbors;
     private bool enabled;
@@ -73,11 +74,18 @@ internal sealed class DockMagnifier : IDisposable
             item.Center = offset + margin.Left + item.Element.ActualWidth / 2;
             offset += margin.Left + item.Element.ActualWidth + margin.Right;
         }
-        var apps = items.Where(item => item.Magnify && item.Element.ActualWidth > 0).ToArray();
-        if (apps.Length == 0) { Reset(); return; }
+        // Reuse the per-frame working set. At high refresh rates a LINQ array
+        // and captured nearest-item predicate produced avoidable GC traffic.
+        activeItems.Clear();
+        foreach (var item in items)
+            if (item.Magnify && item.Element.ActualWidth > 0) activeItems.Add(item);
+        var apps = activeItems;
+        if (apps.Count == 0) { Reset(); return; }
         // Use stable layout centres, avoiding feedback from the animated shifts.
-        double pitch = apps.Length > 1 ? (apps[^1].Center - apps[0].Center) / (apps.Length - 1) : apps[0].Element.ActualWidth;
-        var nearest = apps.MinBy(item => Math.Abs(pointer - item.Center))!;
+        double pitch = apps.Count > 1 ? (apps[^1].Center - apps[0].Center) / (apps.Count - 1) : apps[0].Element.ActualWidth;
+        var nearest = apps[0];
+        foreach (var item in apps)
+            if (Math.Abs(pointer - item.Center) < Math.Abs(pointer - nearest.Center)) nearest = item;
         double radius = Math.Max(1, pitch * (neighbors == 0 ? .5 : neighbors + 1));
         double omega = 18 * speed;
         double damping = .85 * omega, frequency = omega * Math.Sqrt(1 - .85 * .85);
@@ -96,7 +104,8 @@ internal sealed class DockMagnifier : IDisposable
             if (Math.Abs(item.Growth - target) > .0003 || Math.Abs(item.Velocity) > .003) settled = false;
             else { item.Growth = target; item.Velocity = 0; }
         }
-        double total = apps.Sum(item => item.Element.ActualWidth * item.Growth);
+        double total = 0;
+        foreach (var item in apps) total += item.Element.ActualWidth * item.Growth;
         double factor = total > reserve && total > 0 ? reserve / total : 1;
         double shift = -Math.Min(total, reserve) / 2;
         foreach (var item in items)

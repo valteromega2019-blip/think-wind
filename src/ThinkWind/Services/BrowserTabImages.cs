@@ -67,8 +67,7 @@ internal static class BrowserTabImages
     }
     private static bool SelectedMatches(AutomationElement root, BrowserTab tab)
     {
-        foreach (AutomationElement item in root.FindAll(TreeScope.Descendants,
-            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem)))
+        foreach (var item in BrowserTabs.ReadTabElements(root))
             if (item.GetRuntimeId().SequenceEqual(tab.RuntimeId) && Title(item.Current.Name) == Title(tab.Title)
                 && item.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selected))
                 return ((SelectionItemPattern)selected).Current.IsSelected;

@@ -22,6 +22,7 @@ internal static class TrayIconCatalog
 {
     private static List<TrayIconMetadata> cached = new();
     private static DateTime refreshAfter;
+    private static int cachedPixels;
     [StructLayout(LayoutKind.Sequential)] private struct Identifier { internal uint Size; internal nint Window; internal uint Id; internal Guid Guid; }
     [DllImport("shell32.dll")] private static extern int Shell_NotifyIconGetRect(ref Identifier identifier, out OverlayChrome.PixelRect rectangle);
     [DllImport("shell32.dll")] private static extern int SHGetKnownFolderPath(ref Guid folder, uint flags, nint token, out nint path);
@@ -44,7 +45,10 @@ internal static class TrayIconCatalog
     }
     internal static List<TrayIconMetadata> Read()
     {
-        if (DateTime.UtcNow < refreshAfter) return cached;
+        // Shared by all islands: retain enough pixels for the highest-DPI display.
+        int pixels = (int)Math.Clamp(Math.Ceiling(28 * Enumerable.Range(0, System.Windows.Forms.Screen.AllScreens.Length)
+            .Select(index => OverlayChrome.GetDisplay(index).Scale).DefaultIfEmpty(1).Max()), 28, 512);
+        if (DateTime.UtcNow < refreshAfter && cachedPixels == pixels) return cached;
         var result = new List<TrayIconMetadata>();
         try
         {
@@ -62,7 +66,18 @@ internal static class TrayIconCatalog
                     ImageSource? icon = null;
                     if (item.GetValue("IconSnapshot") is byte[] bytes && bytes.Length is > 0 and < 1048576)
                     {
-                        try { using var stream = new MemoryStream(bytes); var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad; image.StreamSource = stream; image.EndInit(); image.Freeze(); icon = image; }
+                        try
+                        {
+                            using var stream = new MemoryStream(bytes);
+                            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
+                            var frame = decoder.Frames[0];
+                            int width = frame.PixelWidth, height = frame.PixelHeight;
+                            stream.Position = 0;
+                            var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad;
+                            if (width >= height) image.DecodePixelWidth = Math.Min(width, pixels);
+                            else image.DecodePixelHeight = Math.Min(height, pixels);
+                            image.StreamSource = stream; image.EndInit(); image.Freeze(); icon = image;
+                        }
                         catch (Exception error) when (error is NotSupportedException or FileFormatException or ArgumentException or IOException) { }
                     }
                     if (icon is null && File.Exists(executable)) icon = icons.Get(executable);
@@ -75,7 +90,7 @@ internal static class TrayIconCatalog
             }
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
-        cached = result; refreshAfter = DateTime.UtcNow.AddSeconds(30);
+        cached = result; cachedPixels = pixels; refreshAfter = DateTime.UtcNow.AddSeconds(30);
         return result;
     }
     internal static TrayIconMetadata? Match(IEnumerable<TrayIconMetadata> items, string name)

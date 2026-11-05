@@ -92,10 +92,10 @@ internal static class BrowserTabs
                     try
                     {
                         var root = AutomationElement.FromHandle(window.Handle);
-                        foreach (AutomationElement element in root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem)))
+                        foreach (var element in ReadTabElements(root, cancellation))
                         {
                             cancellation.ThrowIfCancellationRequested();
-                            if (!IsBrowserTab(element) || !element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var pattern)) continue;
+                            if (!element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var pattern)) continue;
                             found.Add(new(window.Handle, root.Current.ProcessId, element.Current.Name, element.GetRuntimeId(), ((SelectionItemPattern)pattern).Current.IsSelected));
                         }
                     }
@@ -165,7 +165,7 @@ internal static class BrowserTabs
             {
                 var root = AutomationElement.FromHandle(tab.Window);
                 if (root.Current.ProcessId != tab.ProcessId) return false;
-                var elements = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem)).Cast<AutomationElement>().Where(IsBrowserTab).ToArray();
+                var elements = ReadTabElements(root, cancellation);
                 var selected = elements.FirstOrDefault(element => element.GetRuntimeId().SequenceEqual(tab.RuntimeId));
                 if (selected is null && !strict)
                 {
@@ -180,6 +180,34 @@ internal static class BrowserTabs
         }
         catch (Exception e) when (Unavailable(e)) { return false; }
         finally { gate.Release(); }
+    }
+    internal static IReadOnlyList<AutomationElement> ReadTabElements(AutomationElement root, CancellationToken cancellation = default)
+    {
+        var result = new List<AutomationElement>();
+        cancellation.ThrowIfCancellationRequested();
+        if (root.Current.ControlType == ControlType.Document) return result;
+        var walker = TreeWalker.ControlViewWalker;
+        var pending = new Stack<(AutomationElement Element, int Depth)>();
+        var first = walker.GetFirstChild(root);
+        if (first is not null) pending.Push((first, 1));
+        int visited = 0;
+        while (pending.Count > 0 && visited < 4096)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            var (element, depth) = pending.Pop();
+            visited++;
+            var type = element.Current.ControlType;
+            if (type == ControlType.TabItem && IsBrowserTab(element)) result.Add(element);
+            if (visited == 4096) break;
+            // Queue only one sibling per visited node, so a wide toolbar cannot
+            // enumerate unbounded siblings before the node budget is applied.
+            var sibling = walker.GetNextSibling(element);
+            if (sibling is not null) pending.Push((sibling, depth));
+            if (type == ControlType.Document || depth >= 24) continue;
+            var child = walker.GetFirstChild(element);
+            if (child is not null) pending.Push((child, depth + 1));
+        }
+        return result;
     }
     private static bool IsBrowserTab(AutomationElement element)
     {

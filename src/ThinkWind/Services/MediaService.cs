@@ -33,13 +33,15 @@ internal sealed class MediaService : IDisposable
     private GlobalSystemMediaTransportControlsSession? session;
     private volatile bool active, disposed;
     private bool refreshing, refreshAgain;
-    private int refreshQueued, propertiesQueued;
+    private int refreshQueued, propertiesQueued, propertiesVersion;
     private Task? initializing;
     private GlobalSystemMediaTransportControlsSessionMediaProperties? metadata;
     private ImageSource? art;
     private bool metadataDirty = true;
     private string playerId = "", playerName = "";
     private readonly HashSet<GlobalSystemMediaTransportControlsSession> watched = new();
+    private sealed record CachedMedia(int Version, GlobalSystemMediaTransportControlsSessionMediaProperties Properties, bool Music);
+    private readonly Dictionary<GlobalSystemMediaTransportControlsSession, CachedMedia> sessionMetadata = new();
     private static readonly Dictionary<string, MediaState> lastPlayerStates = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object lastPlayerLock = new();
     internal MediaState? State { get; private set; }
@@ -82,7 +84,7 @@ internal sealed class MediaService : IDisposable
     {
         if (disposed || active == value) return;
         active = value;
-        if (!value) { DetachSession(); UnsubscribeManager(); State = null; Error = null; Changed?.Invoke(); return; }
+        if (!value) { Interlocked.Increment(ref propertiesVersion); DetachSession(); UnsubscribeManager(); State = null; Error = null; Changed?.Invoke(); return; }
         try
         {
             initializing ??= InitializeAsync(); await initializing;
@@ -97,13 +99,13 @@ internal sealed class MediaService : IDisposable
     private void QueueRefresh(bool properties = false)
     {
         if (disposed || !active || dispatcher.HasShutdownStarted) return;
-        if (properties) Interlocked.Exchange(ref propertiesQueued, 1);
+        if (properties) { Interlocked.Increment(ref propertiesVersion); Interlocked.Exchange(ref propertiesQueued, 1); }
         if (Interlocked.Exchange(ref refreshQueued, 1) != 0) return;
         dispatcher.BeginInvoke(new Action(() =>
         {
             Interlocked.Exchange(ref refreshQueued, 0);
             if (disposed || !active) return;
-            if (Interlocked.Exchange(ref propertiesQueued, 0) != 0) metadataDirty = true;
+            if (Interlocked.Exchange(ref propertiesQueued, 0) != 0) { sessionMetadata.Clear(); metadataDirty = true; }
             _ = RefreshAsync();
         }));
     }
@@ -137,7 +139,9 @@ internal sealed class MediaService : IDisposable
                 if (metadataDirty || metadata is null)
                 {
                     metadataDirty = false;
-                    var properties = await selected.TryGetMediaPropertiesAsync();
+                    var cached = await ReadMetadataAsync(selected);
+                    if (cached is null) { metadataDirty = true; continue; }
+                    var properties = cached.Properties;
                     if (!active || disposed || !ReferenceEquals(selected, session)) return;
                     art = await ReadArtwork(properties.Thumbnail);
                     metadata = properties;
@@ -226,18 +230,30 @@ internal sealed class MediaService : IDisposable
                 if (playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed
                     || (playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped && selectedPreview?.KeepIdle != true)) continue;
                 if (!MusicSessionPolicy.HasControls(playback.Controls)) continue;
-                var properties = await candidate.TryGetMediaPropertiesAsync();
+                var cached = await ReadMetadataAsync(candidate);
                 if (!active || disposed) return null;
-                if (MusicSessionPolicy.IsMusic(candidate.SourceAppUserModelId, properties.PlaybackType, selectedPreview?.MusicIdentity == true)) return candidate;
+                if (cached?.Music == true) return candidate;
             }
             catch (Exception e) when (Unavailable(e)) { /* A disappearing player must not hide another music session. */ }
         }
         return null;
     }
+    private async Task<CachedMedia?> ReadMetadataAsync(GlobalSystemMediaTransportControlsSession candidate)
+    {
+        int version = Volatile.Read(ref propertiesVersion);
+        if (sessionMetadata.TryGetValue(candidate, out var cached) && cached.Version == version) return cached;
+        var properties = await candidate.TryGetMediaPropertiesAsync();
+        if (!active || disposed || !watched.Contains(candidate)) return null;
+        // An event during the await invalidates the response as well.
+        if (version != Volatile.Read(ref propertiesVersion)) { refreshAgain = true; return null; }
+        cached = new(version, properties, MusicSessionPolicy.IsMusic(candidate.SourceAppUserModelId, properties.PlaybackType, selectedPreview?.MusicIdentity == true));
+        sessionMetadata[candidate] = cached;
+        return cached;
+    }
     private void Watch(GlobalSystemMediaTransportControlsSession[] candidates)
     {
         foreach (var old in watched.Where(s => !candidates.Contains(s)).ToArray())
-        { old.MediaPropertiesChanged -= PropertiesChanged; old.PlaybackInfoChanged -= PlaybackChanged; watched.Remove(old); }
+        { old.MediaPropertiesChanged -= PropertiesChanged; old.PlaybackInfoChanged -= PlaybackChanged; watched.Remove(old); sessionMetadata.Remove(old); }
         foreach (var candidate in candidates)
             if (watched.Add(candidate)) { candidate.MediaPropertiesChanged += PropertiesChanged; candidate.PlaybackInfoChanged += PlaybackChanged; }
     }

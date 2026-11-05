@@ -100,7 +100,7 @@ internal sealed partial class MediaCard
             volumeRow!.ToolTip = "Volume do aplicativo no mixer do Windows. Players baseados no navegador podem compartilhar esse volume com outras abas.";
         }
         catch (OperationCanceledException) { }
-        catch (Exception error) when (error is System.Runtime.InteropServices.COMException or InvalidOperationException or UnauthorizedAccessException)
+        catch (Exception error) when (error is AudioUnavailableException or System.Runtime.InteropServices.COMException or InvalidOperationException or UnauthorizedAccessException)
         { pendingVolume = null; if (!token.IsCancellationRequested) volumeLabel.Text = "—"; }
         finally
         {
