@@ -288,13 +288,15 @@ internal sealed partial class IslandWindow : FloatingWindow
                     sizeButton.FontSize = 11; sizeButton.Padding = new Thickness(6, 4, 6, 4);
                     var resize = new System.Windows.Controls.Primitives.Thumb
                     {
-                        Width = 24, Height = 26, Cursor = Cursors.SizeWE,
+                        Width = 32, Height = 28, Cursor = Cursors.SizeWE,
                         ToolTip = "Arraste para a direita: 2 por linha; para a esquerda: 3 por linha"
                     };
                     resize.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
                     var gripSurface = new FrameworkElementFactory(typeof(Border));
                     gripSurface.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
                     gripSurface.SetValue(Border.BackgroundProperty, new DynamicResourceExtension("Think.AccentSurface"));
+                    gripSurface.SetValue(Border.BorderBrushProperty, new DynamicResourceExtension("Think.Accent"));
+                    gripSurface.SetValue(Border.BorderThicknessProperty, new Thickness(1));
                     var gripText = new FrameworkElementFactory(typeof(TextBlock));
                     gripText.SetValue(TextBlock.TextProperty, "↔");
                     gripText.SetValue(TextBlock.ForegroundProperty, new DynamicResourceExtension("Think.Accent"));
@@ -310,6 +312,8 @@ internal sealed partial class IslandWindow : FloatingWindow
                         if (!e.Canceled && Math.Abs(distance) >= 12)
                             Store.Update(p => p.ModuleColumns[id] = distance > 0 ? 2 : 3);
                     };
+                    var heightGrip = HeightGrip(id);
+                    DockPanel.SetDock(heightGrip, Dock.Right); sizing.Children.Add(heightGrip);
                     DockPanel.SetDock(resize, Dock.Right); sizing.Children.Add(resize); sizing.Children.Add(sizeButton);
                     Grid.SetRow(sizing, 2); content.Children.Add(sizing);
                 }
@@ -326,6 +330,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         {
             var card = cards[ordered[i]];
             card.SetValue(IslandModuleBoard.ColumnsProperty, Store.Value.ModuleColumns.GetValueOrDefault(ordered[i]));
+            card.SetValue(IslandModuleBoard.ExtraHeightProperty, Store.Value.ModuleExtraHeight.GetValueOrDefault(ordered[i]));
             card.Margin = new Thickness(0); card.Padding = new Thickness(ordered[i] is "media" or "notes" ? 0 : 10);
             card.CornerRadius = new CornerRadius(WidgetRadius);
         }
@@ -429,6 +434,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             header.Children.Add(MarkPanelIcon(monitor, "monitor"));
         }
         if (IsQuickVisible("tools")) header.Children.Add(SystemToolsButton(false));
+        header.Children.Add(WidgetEditorButton(false));
         BuildSecondaryQuickControls();
         if (Stage == IslandStage.Full || Store.IsEditing)
         {

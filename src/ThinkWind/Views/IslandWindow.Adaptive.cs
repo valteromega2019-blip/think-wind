@@ -97,7 +97,7 @@ internal sealed partial class IslandWindow
     private void BuildStatusRow()
     {
         string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls) + ":" + string.Join('|', Store.Value.DisabledQuickControls)
-            + ":" + batteryAvailable + ":" + Store.Value.ShowBatteryPercentage + ":" + Store.Value.IslandPanelSide;
+            + ":" + batteryAvailable + ":" + Store.Value.ShowBatteryPercentage + ":" + Store.Value.IslandPanelSide + ":" + Store.IsEditing;
         if (statusBuilt && statusControlsSignature == signature) return;
         if (statusBuilt) { DismissMinis(); systemTools?.Close(); }
         statusControlsSignature = signature;
@@ -134,6 +134,8 @@ internal sealed partial class IslandWindow
         var tools = SystemToolsButton(true);
         tools.Visibility = IsQuickVisible("tools") ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(tools, informationSide); statusRow.Children.Add(tools);
+        var editor = WidgetEditorButton(true);
+        DockPanel.SetDock(editor, informationSide); statusRow.Children.Add(editor);
         void Add(string label, string glyph, Action action, string panelId = "")
         {
             var button = ActionButton(label, action); button.Style = (Style)FindResource("Think.IconButton");

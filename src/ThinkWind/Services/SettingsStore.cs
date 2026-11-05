@@ -121,6 +121,7 @@ public sealed class Preferences
     public List<string> DisabledQuickControls { get; set; } = new();
     public List<string> ModuleOrder { get; set; } = new() { "connections", "media", "audio", "metrics", "calendar" };
     public Dictionary<string, int> ModuleColumns { get; set; } = new();
+    public Dictionary<string, double> ModuleExtraHeight { get; set; } = new();
     public List<string> HiddenModules { get; set; } = new();
     public List<Shortcut> Shortcuts { get; set; } = new() { new("Explorador", "explorer.exe"), new("Configurações", "ms-settings:") };
 }
@@ -207,6 +208,7 @@ public sealed class SettingsStore
             var defaults = new Preferences();
             p.ModuleOrder = defaults.ModuleOrder; p.HiddenModules.Clear();
             p.ModuleColumns.Clear();
+            p.ModuleExtraHeight.Clear();
             p.QuickOrder = defaults.QuickOrder; p.HiddenQuickControls = defaults.HiddenQuickControls; p.DisabledQuickControls.Clear();
             p.ShowWeatherInHeader = defaults.ShowWeatherInHeader;
             p.ShowBatteryPercentage = defaults.ShowBatteryPercentage;
@@ -306,6 +308,8 @@ public sealed class SettingsStore
         p.ModuleOrder = LayoutCatalog.Complete((p.ModuleOrder ?? new()).Select(id => id == "notifications" ? "calculator" : id), LayoutCatalog.Modules);
         p.ModuleColumns = (p.ModuleColumns ?? new()).Where(pair => LayoutCatalog.Modules.Contains(pair.Key) && pair.Value is 2 or 3)
             .ToDictionary(pair => pair.Key, pair => pair.Value);
+        p.ModuleExtraHeight = (p.ModuleExtraHeight ?? new()).Where(pair => LayoutCatalog.Modules.Contains(pair.Key) && double.IsFinite(pair.Value))
+            .ToDictionary(pair => pair.Key, pair => Math.Clamp(pair.Value, 0, 240));
         p.HiddenQuickControls = (p.HiddenQuickControls ?? new()).Where(quickIds.Contains).Distinct().ToList();
         p.DisabledQuickControls = (p.DisabledQuickControls ?? new()).Where(id => id == "weather" || (id != "settings" && quickIds.Contains(id))).Distinct().ToList();
         p.HiddenModules = (p.HiddenModules ?? new()).Select(id => id == "notifications" ? "calculator" : id).Where(LayoutCatalog.Modules.Contains).Distinct().ToList();
