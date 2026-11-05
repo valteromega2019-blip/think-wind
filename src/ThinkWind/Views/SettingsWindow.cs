@@ -283,7 +283,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
                 try
                 {
                     SystemActions.SetStartup(value);
-                    Change(p => { p.StartWithWindows = value; p.StartupDefaultsInitialized = true; });
+                    Change(p => { p.StartWithWindows = value; p.StartupDefaultsInitialized = true; p.StartupRegistrationVersion = 1; });
                 }
                 catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { MessageBox.Show(e.Message, "Não foi possível alterar a inicialização"); Build(); }
             });

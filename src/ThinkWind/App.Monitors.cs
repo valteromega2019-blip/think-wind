@@ -27,7 +27,7 @@ public partial class App
     private void ConfigureMonitors()
     {
         var screens = Forms.Screen.AllScreens;
-        if (screens.Length == 0 || dock is null) return;
+        if (screens.Length == 0) return;
         var p = store.Value;
         var primary = screens.FirstOrDefault(s => s.DeviceName.Equals(p.MonitorDeviceName, StringComparison.OrdinalIgnoreCase))
             ?? screens[Math.Clamp(p.MonitorIndex, 0, screens.Length - 1)];

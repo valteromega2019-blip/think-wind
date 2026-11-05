@@ -64,13 +64,15 @@ public partial class App : Application
     private int gameTransitions;
     private SettingsStore store = null!;
     private PreferenceStamp? preferenceStamp;
-    private StartupPriority? startupPriority;
+    internal ApplicationCatalog Catalog { get; private set; } = null!;
+    private bool startupServicesReady;
     private readonly object startupSensorConsumer = new();
     internal bool IsExiting { get; private set; }
     internal double AnimationDuration => store?.Value.AnimationMilliseconds ?? 220;
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (StartupRegistration.Run(e.Args, out int startupRegistrationCode)) { Shutdown(startupRegistrationCode); return; }
         if (ShellInputBridge.Run(e.Args)) { Shutdown(); return; }
         AppBrand.InitializeWindowsIdentity();
         LaunchEnvironment.RemoveDevelopmentBootstrap();
@@ -113,7 +115,11 @@ public partial class App : Application
             Shutdown(first ? InstallationSetup.Run() : 2);
             return;
         }
-        if (!first) { MessageBox.Show("Outra cópia do Orby Launcher já está aberta, possivelmente em outra pasta. Feche essa cópia pelo ícone na bandeja antes de abrir a versão instalada.", "Orby Launcher", MessageBoxButton.OK, MessageBoxImage.Information); Shutdown(2); return; }
+        if (!first)
+        {
+            if (e.Args.Contains("--startup")) { Shutdown(0); return; }
+            MessageBox.Show("Outra cópia do Orby Launcher já está aberta, possivelmente em outra pasta. Feche essa cópia pelo ícone na bandeja antes de abrir a versão instalada.", "Orby Launcher", MessageBoxButton.OK, MessageBoxImage.Information); Shutdown(2); return;
+        }
         diagnosing = e.Args.Contains("--diagnostic");
         bool batteryPreview = e.Args.Contains("--simulate-battery");
         int reportIndex = Array.IndexOf(e.Args, "--diagnostic-report");
@@ -122,40 +128,22 @@ public partial class App : Application
         WindowActionSetup.AutomaticAuthorizationEnabled = store.Value.AutoAuthorizeWindowActions;
         bool initialGame = false;
         try { initialGame = GameModeService.Probe(store.Value); } catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
-        if (!diagnosing && !initialGame && !batteryPreview) startupPriority = new StartupPriority();
+        if (!diagnosing && !batteryPreview) StartupPriority.EnsureNormal();
         if (diagnosing) { store.Value.AutoHide = false; store.Value.GameModeEnabled = !e.Args.Contains("--diagnostic-normal"); }
-        if (!diagnosing && !batteryPreview)
-        {
-            try { SystemActions.ApplyStartupDefault(store); }
-            catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
-            { MessageBox.Show("Não foi possível configurar a inicialização automática: " + error.Message, "Orby Launcher"); }
-        }
         ThemeService.Apply(store.Value);
         Alarms = new AlarmService(store.AlarmStatePath);
         Alarms.Ring += ShowAlarm;
-        Optimizer.Recover();
-        InitializeUpdates();
         Telemetry = new HardwareTelemetry(Dispatcher);
         Telemetry.SetMonitoringEnabled(store.Value.HardwareMonitoringEnabled);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         Telemetry.SelectDisk(store.Value.MonitoringDiskId);
-        // Populate the shared cache before any monitoring panel is opened.
-        if (!diagnosing && !initialGame) Telemetry.SetActive(startupSensorConsumer, true);
         hardwareOverlay = new HardwareOverlayWindow(store, Telemetry);
-        dock = new DockWindow(store);
-        island = new IslandWindow(store, OpenSettings);
-        island.FullscreenRevealClosed += () =>
-        {
-            if (gameMode?.Active == true && gameMode.FullscreenPresentation)
-            { fullscreenHandle?.Show(); fullscreenHandle?.Position(); }
-        };
+        Catalog = new ApplicationCatalog(Dispatcher);
+        Catalog.SetSuspended(initialGame);
         preferenceStamp = PreferenceStamp.Capture(store);
         store.Changed += PreferencesChanged;
         SystemEvents.UserPreferenceChanged += WindowsPreferencesChanged;
         SystemEvents.DisplaySettingsChanged += DisplaySettingsChanged;
-        // Expose both overlay windows to desktop inspection tools during manual QA.
-        // Normal launches keep the launcher out of the native taskbar.
-        if (e.Args.Contains("--inspect")) { dock.ShowInTaskbar = true; island.ShowInTaskbar = true; }
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Personalizar", null, (_, _) => Dispatcher.Invoke(OpenSettings));
         menu.Items.Add("Editar / concluir layout", null, (_, _) => Dispatcher.Invoke(() => store.SetEditing(!store.IsEditing)));
@@ -181,12 +169,31 @@ public partial class App : Application
         gameMode.ForegroundChanged += RefreshForegroundLayouts;
         VirtualKeyboardInput.RememberTarget();
         gameMode.ForegroundChanged += VirtualKeyboardInput.RememberTarget;
-        if (initialGame) { gameHidden.Add(dock); gameHidden.Add(island); dock.SuspendForGame(true); gameTransitions++; }
+        if (initialGame) gameTransitions++;
         gameMode.Configure(store.Value); ConfigureStartHotkey();
         ConfigureMonitors();
+        // ConfigureMonitors owns the initial windows as well as later rebuilds.
+        if (e.Args.Contains("--inspect"))
+            foreach (var window in Windows.OfType<FloatingWindow>()) window.ShowInTaskbar = true;
+        InitializeUpdates();
         ApplyHardwareOverlay();
-        startupPriority?.Dispose(); startupPriority = null;
-        if (!diagnosing && !initialGame) _ = WifiService.PrimeAsync();
+        // Window families are built once by ConfigureMonitors. Let their first
+        // layout/render complete before warming nonvisual services. The cache
+        // still starts at launch, without waiting for the monitoring panel.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
+        {
+            if (IsExiting) return;
+            Optimizer.Recover();
+            startupServicesReady = true;
+            ApplyHardwareOverlay();
+            if (!diagnosing && !batteryPreview)
+            {
+                try { SystemActions.ApplyStartupDefault(store); }
+                catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                { MessageBox.Show("Não foi possível configurar a inicialização automática: " + error.Message, "Orby Launcher"); }
+            }
+            if (!diagnosing && gameMode?.Active != true) _ = WifiService.PrimeAsync();
+        }));
         if (!diagnosing && !initialGame && !batteryPreview && ((store.Value.HardwareMonitoringEnabled && store.Value.HardwareSensorsAutoSetup && !AdvancedSensorSetup.IsConfigured)
             || (store.Value.AutoAuthorizeWindowActions && !WindowActionSetup.IsConfigured)))
             Dispatcher.BeginInvoke(new Action(async () =>
@@ -283,7 +290,6 @@ public partial class App : Application
         virtualKeyboard?.Retire();
         updateNotice?.Close(); Updates?.Dispose();
         tutorial?.Close();
-        startupPriority?.Dispose(); startupPriority = null;
         windowsTaskbar?.Dispose();
         startKey?.Dispose();
         launcherWindowsKey?.Dispose();
@@ -292,6 +298,7 @@ public partial class App : Application
         gameMode?.Dispose();
         overlayHotkey?.Dispose(); hardwareOverlay?.Close();
         Telemetry?.Dispose();
+        Catalog?.Dispose();
         fullscreenHandle?.Close();
         TrayService.RegisterLocal(null);
         SystemEvents.UserPreferenceChanged -= WindowsPreferencesChanged;
@@ -347,10 +354,10 @@ public partial class App : Application
     private void ApplyHardwareOverlay()
     {
         Telemetry.SetMonitoringEnabled(store.Value.HardwareMonitoringEnabled);
-        Optimizer.Apply(gameMode?.RecognizedGame == true, store.Value);
+        if (startupServicesReady) Optimizer.Apply(gameMode?.RecognizedGame == true, store.Value);
         Telemetry.SelectGpu(store.Value.MonitoringGpuId ?? "");
         Telemetry.SelectDisk(store.Value.MonitoringDiskId);
-        if (!diagnosing) Telemetry.SetActive(startupSensorConsumer, !IsExiting && gameMode?.Active != true);
+        if (!diagnosing) Telemetry.SetActive(startupSensorConsumer, startupServicesReady && !IsExiting && gameMode?.Active != true);
         Telemetry.FrameProcessId = gameMode?.OverlayProcessId ?? 0;
         hardwareOverlay?.Apply(store.Value.HardwareMonitoringEnabled && gameMode?.OverlayGameActive == true,
             store.Value.HardwareMonitoringEnabled && overlayEditors.Count > 0);
@@ -367,6 +374,7 @@ public partial class App : Application
         tutorial?.Suspend(active);
         if (IsExiting) return; gameTransitions++;
         ConfigureStartHotkey();
+        Catalog?.SetSuspended(active);
         dock?.SuspendForGame(active);
         foreach (var pair in extraMonitors) pair.Dock.SuspendForGame(active);
         if (active)

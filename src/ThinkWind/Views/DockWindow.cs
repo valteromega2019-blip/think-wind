@@ -77,8 +77,8 @@ internal sealed partial class DockWindow : FloatingWindow
         items.Background = Brushes.Transparent;
         PageWheel.Attach(items, () => fit.Pages(entries.Count), () => page, value => { page = value; RenderPage(); Position(); }, () => fileDragging || MenuOpen || LayoutDrag.Active || Store.IsEditing || dockSearch.IsMouseOver);
         magnifier = new DockMagnifier(items, () => !hidden && !IsPositionAnimating && !Store.IsEditing && !LayoutDrag.Active && !fileDragging && !MenuOpen);
-        catalog = new ApplicationCatalog(Dispatcher);
-        catalog.Changed += () => { signature = ""; nextAppRefresh = DateTime.MinValue; };
+        catalog = ((App)Application.Current).Catalog;
+        catalog.Changed += CatalogChanged;
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
         System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Orby Launcher");
         TutorialGuide.Mark(dockSearch, "search");
@@ -129,13 +129,13 @@ internal sealed partial class DockWindow : FloatingWindow
                 activeContextMenu = null;
             }
         };
-        Closed += (_, _) => { iconsClosed = true; detailedIcons.Clear(); magnifier.Dispose(); timer.Stop(); DisposeFileDrop(); catalog.Dispose(); LayoutDrag.Completed -= DragCompleted; };
+        Closed += (_, _) => { iconsClosed = true; detailedIcons.Clear(); magnifier.Dispose(); timer.Stop(); DisposeFileDrop(); catalog.Changed -= CatalogChanged; LayoutDrag.Completed -= DragCompleted; };
     }
+    private void CatalogChanged() { signature = ""; nextAppRefresh = DateTime.MinValue; }
     private void DragCompleted() { signature = ""; RefreshApps(); }
     internal void SuspendForGame(bool active)
     {
         if (!active) temporaryFullscreenStart = false;
-        catalog.SetSuspended(active);
         if (active) { StopPreviews(); magnifier.Reset(); timer.Stop(); launcher?.Dismiss(); FinishFileDrag(); }
     }
     private nint NoActivate(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
@@ -254,7 +254,7 @@ internal sealed partial class DockWindow : FloatingWindow
             windows = await System.Threading.Tasks.Task.Run(Desktop.Windows);
             pinIdentities = await catalog.ResolvePinsAsync(pins.Concat(startPins).DistinctBy(pin => pin.Target, StringComparer.OrdinalIgnoreCase).ToArray());
         }
-        catch (System.Threading.Tasks.TaskCanceledException) { return; }
+        catch (OperationCanceledException) { return; }
         catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { return; }
         finally { readingWindows = false; }
         if (!pins.SequenceEqual(Store.Value.Shortcuts) || !startPins.SequenceEqual(Store.Value.StartPins)) { signature = ""; nextAppRefresh = DateTime.MinValue; return; }

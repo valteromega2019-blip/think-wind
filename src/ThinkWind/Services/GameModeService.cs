@@ -36,6 +36,7 @@ internal sealed class GameModeService : IDisposable
     private bool enabled = true;
     private bool hideFullscreen = true;
     private string[] include = Array.Empty<string>(), exclude = Array.Empty<string>();
+    private (bool Enabled, bool HideFullscreen, string Include, string Exclude)? configuration;
     private nint presentationWindow;
     private uint presentationProcess;
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
@@ -59,7 +60,15 @@ internal sealed class GameModeService : IDisposable
     }
     internal static bool Probe(Preferences p) => Eligible(Snapshot(), p.GameModeEnabled, p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), p.HideOverFullscreen);
     internal void Configure(Preferences p)
-    { enabled = p.GameModeEnabled; hideFullscreen = p.HideOverFullscreen; include = p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); exclude = p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries); Read(); }
+    {
+        var next = (p.GameModeEnabled, p.HideOverFullscreen, p.GameModeInclude, p.GameModeExclude);
+        if (configuration == next) return;
+        configuration = next;
+        enabled = p.GameModeEnabled; hideFullscreen = p.HideOverFullscreen;
+        include = p.GameModeInclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        exclude = p.GameModeExclude.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        Read();
+    }
     internal static bool Eligible(ForegroundGame game, bool enabled, string[] include, string[] exclude, bool hideFullscreen = true)
     {
         string Key(string value) => Path.GetFileNameWithoutExtension(value);

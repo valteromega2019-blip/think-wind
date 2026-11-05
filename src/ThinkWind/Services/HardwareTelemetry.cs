@@ -155,8 +155,8 @@ internal sealed class HardwareTelemetry : IDisposable
         lock (sync)
         {
             if (disposed) return;
-            if (active) consumers.Add(consumer); else consumers.Remove(consumer);
-            if (wake.CurrentCount == 0) wake.Release();
+            bool changed = active ? consumers.Add(consumer) : consumers.Remove(consumer);
+            if (changed && wake.CurrentCount == 0) wake.Release();
         }
     }
     private bool Needed { get { lock (sync) return !disposed && monitoringEnabled && consumers.Count > 0; } }

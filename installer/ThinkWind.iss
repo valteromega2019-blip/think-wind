@@ -44,6 +44,9 @@ Filename: "{app}\OrbyLauncher.exe"; Description: "{cm:LaunchProgram,Orby Launche
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "OrbyLauncher"; Flags: uninsdeletevalue
 
+[UninstallRun]
+Filename: "{app}\OrbyLauncher.exe"; Parameters: "--remove-startup"; Flags: runhidden skipifdoesntexist waituntilterminated; RunOnceId: "RemoveOrbyStartup"
+
 [Code]
 var
   DriverRestartRequired: Boolean;

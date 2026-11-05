@@ -1,20 +1,18 @@
 using System;
 using System.Diagnostics;
 using System.Security.Principal;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace OrbyLauncher.Services;
 
-internal sealed class StartupPriority : IDisposable
+internal static class StartupPriority
 {
-    internal StartupPriority()
+    internal static void EnsureNormal()
     {
         // Startup must not compete at elevated priority with an already running game.
         try { using var process = Process.GetCurrentProcess(); process.PriorityClass = ProcessPriorityClass.Normal; }
         catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException) { }
     }
-    public void Dispose() { }
 }
 internal static class StartupPermissions
 {

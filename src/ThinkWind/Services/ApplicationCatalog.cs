@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -17,11 +18,17 @@ internal sealed class ApplicationCatalog : IDisposable
     private readonly Dictionary<string, (string Version, LaunchIdentity Identity)> launchIdentities = new(StringComparer.OrdinalIgnoreCase);
     private readonly ShellIcons identityIcons = new();
     private readonly Dictionary<string, DateTime> missingPins = new(StringComparer.OrdinalIgnoreCase);
-    internal Task<Dictionary<string, LaunchIdentity>> ResolvePinsAsync(Shortcut[] pins) => worker.Run(() =>
+    internal Task<Dictionary<string, LaunchIdentity>> ResolvePinsAsync(Shortcut[] pins)
+    {
+        var cancellation = activity.Token;
+        return worker.Run(() => ResolvePins(pins, cancellation), cancellation);
+    }
+    private Dictionary<string, LaunchIdentity> ResolvePins(Shortcut[] pins, CancellationToken cancellation)
     {
         var result = new Dictionary<string, LaunchIdentity>(StringComparer.OrdinalIgnoreCase);
         foreach (var pin in pins)
         {
+            cancellation.ThrowIfCancellationRequested();
             bool shellTarget = pin.Target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase);
             string version = identityIcons.VersionedKey(pin.Target) + (shellTarget ? "|" + DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond / 15 : "");
             if (!launchIdentities.TryGetValue(pin.Target, out var cached) || cached.Version != version)
@@ -43,7 +50,7 @@ internal sealed class ApplicationCatalog : IDisposable
         foreach (string old in launchIdentities.Keys.Where(key => !result.ContainsKey(key)).ToArray()) launchIdentities.Remove(old);
         foreach (string old in missingPins.Keys.Where(key => !result.ContainsKey(key)).ToArray()) missingPins.Remove(old);
         return result;
-    });
+    }
     private static bool? LocalTargetExists(string path)
     {
         try
@@ -60,10 +67,15 @@ internal sealed class ApplicationCatalog : IDisposable
     }
     private readonly List<FileSystemWatcher> watchers = new();
     private readonly DispatcherTimer debounce = new() { Interval = TimeSpan.FromMilliseconds(700) };
-    private bool loading, refreshAgain, disposed;
-    private bool suspended;
-    internal Task<ImageSource?> ReadDockIconAsync(string target, int pixels) => worker.Run(() =>
-        disposed || suspended ? null : ShellIcons.ReadLarge(target, pixels));
+    private bool loading, refreshAgain;
+    private volatile bool disposed, suspended;
+    private CancellationTokenSource activity = new();
+    private int refreshPosted;
+    internal Task<ImageSource?> ReadDockIconAsync(string target, int pixels)
+    {
+        var cancellation = activity.Token;
+        return worker.Run(() => disposed || suspended ? null : ShellIcons.ReadLarge(target, pixels), cancellation);
+    }
     private DateTime refreshed;
     internal IReadOnlyList<AppEntry> Items { get; private set; } = Array.Empty<AppEntry>();
     internal string? Warning { get; private set; }
@@ -86,10 +98,21 @@ internal sealed class ApplicationCatalog : IDisposable
     private static string[] StartFolders() => new[] { Environment.GetFolderPath(Environment.SpecialFolder.Programs), Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms) };
     private void OnFilesChanged(object sender, FileSystemEventArgs args) => RequestRefresh();
     private void RequestRefresh()
-    { if (!disposed && !suspended && !dispatcher.HasShutdownStarted) dispatcher.BeginInvoke(new Action(() => { if (disposed || suspended) return; debounce.Stop(); debounce.Start(); })); }
+    {
+        if (disposed || suspended || dispatcher.HasShutdownStarted || Interlocked.Exchange(ref refreshPosted, 1) != 0) return;
+        dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        {
+            Interlocked.Exchange(ref refreshPosted, 0);
+            if (disposed || suspended) return;
+            debounce.Stop(); debounce.Start();
+        }));
+    }
     internal void SetSuspended(bool value)
     {
-        if (suspended == value) return; suspended = value; debounce.Stop();
+        if (disposed || suspended == value) return;
+        suspended = value; debounce.Stop();
+        if (value) { activity.Cancel(); refreshAgain = false; }
+        else { activity.Dispose(); activity = new CancellationTokenSource(); }
         foreach (var watcher in watchers) watcher.EnableRaisingEvents = !value;
         if (!value) RequestRefresh();
     }
@@ -97,28 +120,33 @@ internal sealed class ApplicationCatalog : IDisposable
     {
         if (disposed || suspended || (!force && DateTime.UtcNow - refreshed < TimeSpan.FromSeconds(30))) return;
         if (loading) { refreshAgain |= force; return; } loading = true;
+        var cancellation = activity.Token;
         try
         {
-            var result = await worker.Run(Read);
-            if (disposed) return;
+            var result = await worker.Run(() => Read(cancellation), cancellation);
+            if (disposed || suspended || cancellation.IsCancellationRequested) return;
             Items = result.Items; Warning = result.Warning; refreshed = DateTime.UtcNow; Changed?.Invoke();
         }
-        catch (Exception error) when (error is COMException or IOException or UnauthorizedAccessException or InvalidOperationException or System.Threading.Tasks.TaskCanceledException)
+        catch (OperationCanceledException) { }
+        catch (Exception error) when (error is COMException or IOException or UnauthorizedAccessException or InvalidOperationException)
         { Warning = "Não foi possível atualizar a biblioteca. Os aplicativos já carregados continuam disponíveis."; if (!disposed) Changed?.Invoke(); }
         finally { loading = false; if (refreshAgain && !disposed) { refreshAgain = false; RequestRefresh(); } }
     }
-    private static (AppEntry[] Items, string? Warning) Read()
+    private static (AppEntry[] Items, string? Warning) Read(CancellationToken cancellation)
     {
         var result = new Dictionary<string, AppEntry>(StringComparer.OrdinalIgnoreCase); var icons = new ShellIcons();
         object? shell = null; string? warning = null;
         try
         {
+            cancellation.ThrowIfCancellationRequested();
             shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application") ?? throw new COMException("Shell.Application indisponível."));
             foreach (var folder in StartFolders())
             {
+                cancellation.ThrowIfCancellationRequested();
                 if (!Directory.Exists(folder)) continue;
                 foreach (var path in Directory.EnumerateFiles(folder, "*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint }).Where(path => Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase) || Path.GetExtension(path).Equals(".appref-ms", StringComparison.OrdinalIgnoreCase)))
                 {
+                    cancellation.ThrowIfCancellationRequested();
                     object? directory = null, item = null;
                     try
                     {
@@ -131,6 +159,7 @@ internal sealed class ApplicationCatalog : IDisposable
                         if (id.Length == 0 && extension is not (".exe" or ".com" or ".bat" or ".cmd" or ".msc" or ".lnk" or ".appref-ms")) continue;
                         string key = id.Length > 0 ? "id:" + id : "name:" + name + "|" + resolved;
                         string launchTarget = id.Contains('!') ? @"shell:AppsFolder\" + id : path;
+                        cancellation.ThrowIfCancellationRequested();
                         result.TryAdd(key, new(name, launchTarget, category.Length > 0 ? category : "Aplicativos", icons.Get(launchTarget), id.Length > 0 ? id : null));
                     }
                     catch (Exception error) when (error is COMException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or IOException or UnauthorizedAccessException) { }
@@ -140,10 +169,12 @@ internal sealed class ApplicationCatalog : IDisposable
             object? apps = null, entries = null;
             try
             {
+                cancellation.ThrowIfCancellationRequested();
                 apps = ((dynamic)shell!).NameSpace("shell:AppsFolder"); entries = ((dynamic)apps!).Items();
                 int count = ((dynamic)entries!).Count;
                 for (int i = 0; i < count; i++)
                 {
+                    cancellation.ThrowIfCancellationRequested();
                     object? item = null;
                     try
                     {
@@ -155,6 +186,7 @@ internal sealed class ApplicationCatalog : IDisposable
                         string key = id.Length > 0 ? "id:" + id : "name:" + name + "|" + icons.Resolve(target);
                         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path)) continue;
                         if (!id.Contains('!') && result.Values.Any(app => app.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))) continue;
+                        cancellation.ThrowIfCancellationRequested();
                         result.TryAdd(key, new(name, target, id.Contains('!') ? "Microsoft Store / MSIX" : "Aplicativos", icons.Get(target), id.Length > 0 ? id : null));
                     }
                     catch (Exception error) when (error is COMException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or ArgumentException) { }
@@ -167,5 +199,11 @@ internal sealed class ApplicationCatalog : IDisposable
         finally { CoreAudio.Release(shell); }
         return (result.Values.Where(app => !AppVisibility.IsSystemTool(app)).DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warning);
     }
-    public void Dispose() { disposed = true; debounce.Stop(); foreach (var watcher in watchers) watcher.Dispose(); worker.Dispose(); }
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true; activity.Cancel(); debounce.Stop();
+        foreach (var watcher in watchers) watcher.Dispose();
+        worker.Dispose(); activity.Dispose();
+    }
 }

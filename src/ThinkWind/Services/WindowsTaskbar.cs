@@ -93,10 +93,18 @@ internal sealed class WindowsTaskbar : IDisposable
             // Cooperate with the shell's own edge activation, instead of only
             // fighting its visible HWND. The recovery process restores the prior
             // preference on exit/crash; external user changes are left alone.
-            originalState = TaskbarState();
+            void RememberShellState()
+            {
+                // A logon trigger may reach us before Explorer creates its
+                // taskbar. Absence is not the user's original state (zero).
+                if (originalState.HasValue || FindWindow("Shell_TrayWnd", null) == 0) return;
+                originalState = TaskbarState();
+                if ((originalState.Value & 1) == 0) TaskbarState(originalState.Value | 1);
+            }
             void Suppress(nint window)
             {
                 if (!IsTaskbar(window)) return;
+                RememberShellState();
                 GetWindowThreadProcessId(window, out uint process);
                 if (!hidden.TryGetValue(window, out var previous) || previous.Process != process)
                     hidden[window] = (process, IsWindowEnabled(window), IsWindowVisible(window));
@@ -110,7 +118,11 @@ internal sealed class WindowsTaskbar : IDisposable
                     if (IsWindowVisible(window)) ShowWindow(window, 0);
                 }
             }
-            void Sweep() => EnumWindows((window, _) => { Suppress(window); return true; }, 0);
+            void Sweep()
+            {
+                RememberShellState();
+                EnumWindows((window, _) => { Suppress(window); return true; }, 0);
+            }
             // The helper owns its message pump: shell show events are handled
             // here, without keyboard/mouse hooks or work on the launcher UI.
             ShellEvent shown = (_, kind, window, objectId, childId, _, _) =>
@@ -137,7 +149,6 @@ internal sealed class WindowsTaskbar : IDisposable
                 Sweep();
             };
             Sweep();
-            if ((originalState.Value & 1) == 0) TaskbarState(originalState.Value | 1);
             recovery.Start();
             System.Windows.Forms.Application.Run(context);
             System.GC.KeepAlive(shown);

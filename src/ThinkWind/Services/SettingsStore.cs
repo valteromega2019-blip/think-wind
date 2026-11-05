@@ -56,6 +56,7 @@ public sealed class Preferences
     public bool HardwareSensorsAutoSetup { get; set; } = true;
     public bool StartWithWindows { get; set; } = true;
     public bool StartupDefaultsInitialized { get; set; } = false;
+    public int StartupRegistrationVersion { get; set; }
     public bool DockMagnification { get; set; } = true;
     public double DockMagnificationAmount { get; set; } = .5;
     public double DockMagnificationSpeed { get; set; } = 1;

@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
-using Microsoft.Win32;
 
 namespace OrbyLauncher.Services;
 internal static class SystemActions
@@ -90,20 +89,15 @@ internal static class SystemActions
         info.ArgumentList.Add(action == "Reiniciar" ? "/r" : "/s"); info.ArgumentList.Add("/t"); info.ArgumentList.Add("0");
         try { Process.Start(info); } catch (System.ComponentModel.Win32Exception error) { MessageBox.Show(error.Message, "Orby Launcher"); }
     }
-    private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    internal static bool StartupEnabled()
-    { using var key = Registry.CurrentUser.OpenSubKey(RunKey); return key?.GetValue("OrbyLauncher") is string; }
-    internal static void SetStartup(bool enabled)
-    {
-        using var key = Registry.CurrentUser.CreateSubKey(RunKey);
-        if (enabled) key.SetValue("OrbyLauncher", "\"" + Environment.ProcessPath + "\"");
-        else key.DeleteValue("OrbyLauncher", false);
-    }
+    internal static bool StartupEnabled() => StartupRegistration.IsEnabled;
+    internal static void SetStartup(bool enabled) => StartupRegistration.SetEnabled(enabled);
     internal static void ApplyStartupDefault(SettingsStore store, bool installation = false)
     {
-        if (!installation && store.Value.StartupDefaultsInitialized) return;
+        if (!installation && store.Value.StartupDefaultsInitialized
+            && (store.Value.StartupRegistrationVersion >= 1 || !StartupRegistration.IsInstalledExecutable)) return;
         SetStartup(store.Value.StartWithWindows);
         store.Value.StartupDefaultsInitialized = true;
+        store.Value.StartupRegistrationVersion = 1;
         store.Save();
     }
 }
