@@ -18,9 +18,9 @@ internal sealed partial class MediaCard : Grid, IDisposable
     private readonly ImageBrush artworkBackground = new() { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };
     private readonly Border backgroundCover, backgroundShade;
     private readonly Image artwork = new() { Width = 64, Height = 64, Stretch = Stretch.UniformToFill };
-    private readonly TextBlock title = new() { FontSize = 21, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock artist = new() { FontSize = 16, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock player = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock title = new() { FontSize = 18, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock artist = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock player = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock time = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Right };
     private readonly Slider progress = new() { Minimum = 0, Margin = new Thickness(0, 8, 0, 0), IsMoveToPointEnabled = true };
     private readonly Button previous, toggle, next;

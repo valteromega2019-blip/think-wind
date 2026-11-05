@@ -723,6 +723,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         }
         var p = Store.Value;
         FontSizing.LimitScale(modules, 1.25);
+        FontSizing.LimitScale(hoverPanel, 1.25);
         System.Windows.Documents.TextElement.SetFontSize(modules,
             SystemFonts.MessageFontSize * Math.Clamp(p.FontScale, .8, 1.25));
         FontSizing.PrepareForMeasure(root);
