@@ -86,10 +86,10 @@ internal sealed class WeatherWidget : Grid, IDisposable
         header.Children.Add(locationName); Children.Add(header);
         var current = new Grid { Margin = new Thickness(2, 12, 2, 10) };
         current.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); current.ColumnDefinitions.Add(new ColumnDefinition());
-        conditionIcon.FontSize = 40; conditionIcon.Margin = new Thickness(0, 0, 12, 0); conditionIcon.VerticalAlignment = VerticalAlignment.Center;
+        conditionIcon.FontSize = 46; conditionIcon.Margin = new Thickness(0, 0, 12, 0); conditionIcon.VerticalAlignment = VerticalAlignment.Center;
         current.Children.Add(conditionIcon);
         var reading = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        temperature.FontSize = 32; temperature.FontWeight = FontWeights.SemiBold;
+        temperature.FontSize = 36; temperature.FontWeight = FontWeights.SemiBold;
         condition.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         reading.Children.Add(temperature); reading.Children.Add(condition); Grid.SetColumn(reading, 1); current.Children.Add(reading);
         Grid.SetRow(current, 1); Children.Add(current);
@@ -98,21 +98,24 @@ internal sealed class WeatherWidget : Grid, IDisposable
         for (int i = 0; i < values.Length; i++)
         {
             metrics.ColumnDefinitions.Add(new ColumnDefinition());
-            var cell = new StackPanel { Margin = new Thickness(i == 0 ? 0 : 6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            var label = new TextBlock { Text = labels[i], FontSize = 14, Margin = new Thickness(0, 0, 0, 6), TextWrapping = TextWrapping.Wrap };
-            values[i].FontSize = 26;
-            label.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
-            var heading = new DockPanel { LastChildFill = true };
+            var cell = new Grid { Margin = new Thickness(i == 0 ? 0 : 6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            cell.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            cell.ColumnDefinitions.Add(new ColumnDefinition());
             var icon = new TextBlock
             {
                 Text = i == 0 ? "\uE9CA" : i == 1 ? "\uE74B" : "\uE74A",
                 FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-                FontSize = 14, Margin = new Thickness(0, 1, 5, 6), VerticalAlignment = VerticalAlignment.Top,
+                FontSize = 25, Margin = new Thickness(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center,
                 ToolTip = labels[i]
             };
             icon.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent");
-            DockPanel.SetDock(icon, Dock.Left); heading.Children.Add(icon); heading.Children.Add(label);
-            cell.Children.Add(heading); cell.Children.Add(values[i]); Grid.SetColumn(cell, i); metrics.Children.Add(cell);
+            var readingDetails = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            var label = new TextBlock { Text = labels[i], FontSize = 14, Margin = new Thickness(0, 0, 0, 5), TextWrapping = TextWrapping.Wrap };
+            label.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
+            values[i].FontSize = 32; values[i].FontWeight = FontWeights.SemiBold;
+            readingDetails.Children.Add(label); readingDetails.Children.Add(values[i]);
+            Grid.SetColumn(readingDetails, 1); cell.Children.Add(icon); cell.Children.Add(readingDetails);
+            Grid.SetColumn(cell, i); metrics.Children.Add(cell);
         }
         Grid.SetRow(metrics, 3); Children.Add(metrics);
         var footer = new DockPanel { Margin = new Thickness(2, 0, 2, 0) };
