@@ -249,6 +249,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     public override void RefreshSettings()
     {
+        // Secondary displays keep their applied layout until editing is completed.
+        if (Store.IsEditing && !IsPrimaryEditor) return;
         RememberEditingPanel();
         if (LayoutDrag.Active) return;
         ApplyAppearance();
@@ -748,10 +750,11 @@ internal sealed partial class IslandWindow : FloatingWindow
         // Preserve the compact three-column layout before scaling. Reflowing
         // this board into narrow columns made it tall, then the Viewbox shrank
         // it again and left large empty margins on both sides.
-        double boardWidth = Math.Max(760, inner);
+        double boardWidth = Store.IsEditing && editingWidth.HasValue ? editingBoardWidth : Math.Max(760, inner);
         modules.Width = boardWidth;
         double indicatorsHeight = SecondAreaAvailable ? 14 : 0;
-        double contentLimit = Math.Max(24, limit - headerHeight - indicatorsHeight - 16);
+        double panelLimit = Store.IsEditing && editingHeight is double savedHeight ? savedHeight : limit;
+        double contentLimit = Math.Max(24, panelLimit - headerHeight - indicatorsHeight - 16);
         moduleViewport.MaxHeight = contentLimit;
         if (Stage == IslandStage.Full && !secondAreaSelected)
         {
@@ -832,7 +835,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         if (!secondAreaSelected) fullContentHeight = Math.Min(contentLimit, moduleViewport.DesiredSize.Height);
         double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
         if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
-            height = Math.Min(Display.Height - 48, Math.Max(height, previousHeight));
+            height = previousHeight;
         // Keep the destination content layout stable while the native frame
         // reveals it; do not reflow the entire module tree on every frame.
         root.Width = inner;

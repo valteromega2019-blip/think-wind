@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -14,12 +15,14 @@ internal sealed partial class IslandWindow
 {
     private bool editingPanel;
     private double? editingWidth, editingHeight;
+    private double editingBoardWidth;
+    private bool IsPrimaryEditor => System.Windows.Forms.Screen.AllScreens.Any(screen => screen.Primary && screen.Bounds == Display.Bounds);
     private (double Width, double Height, double Limit, double Maximum, string Structure)? widgetWidthFitKey;
     private double fittedWidgetBoardWidth, fittedWidgetInnerWidth;
     private BackdropHost? editorBackdrop;
     private void SyncEditorBackdrop()
     {
-        if (!Store.IsEditing || !IsVisible || Stage != IslandStage.Full)
+        if (!IsPrimaryEditor || !Store.IsEditing || !IsVisible || Stage != IslandStage.Full)
         {
             editorBackdrop?.Dispose(); editorBackdrop = null; return;
         }
@@ -47,6 +50,7 @@ internal sealed partial class IslandWindow
             var bounds = TargetBounds;
             editingWidth = (bounds.Right - bounds.Left) / Display.Scale;
             editingHeight = (bounds.Bottom - bounds.Top) / Display.Scale;
+            editingBoardWidth = double.IsFinite(modules.Width) ? modules.Width : Math.Max(760, editingWidth.Value - 24);
         }
         else { editingWidth = editingHeight = null; }
     }
@@ -69,6 +73,7 @@ internal sealed partial class IslandWindow
     }
     private void SetWidgetEditing(bool enabled)
     {
+        if (enabled && !IsPrimaryEditor) return;
         Store.SetEditing(enabled);
         TutorialGuide.Notify(enabled ? "widget-edit-open" : "widget-edit-finished");
     }
