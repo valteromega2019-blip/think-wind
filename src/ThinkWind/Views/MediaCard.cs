@@ -109,7 +109,6 @@ internal sealed partial class MediaCard : Grid, IDisposable
         transport.Children.Add(previous); transport.Children.Add(toggle); transport.Children.Add(next); body.Children.Add(transport); body.Children.Add(progress); body.Children.Add(time);
         Grid.SetRow(transport, 1); Grid.SetRow(progress, 2); Grid.SetRow(time, 3);
         foreach (var element in new FrameworkElement[] { metadataRow, transport, progress, time }) Grid.SetColumnSpan(element, 2);
-        SizeChanged += (_, _) => FitWidgetLayout();
         System.Windows.Automation.AutomationProperties.SetName(progress, "Posição da reprodução");
         progress.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => { seeking = true; dragging = true; }));
         progress.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(async (_, e) => { dragging = seeking = false; if (!e.Canceled) await Seek(); }));
@@ -155,9 +154,17 @@ internal sealed partial class MediaCard : Grid, IDisposable
         if (wasAvailable != Available) AvailabilityChanged?.Invoke();
         if (wasAvailable != Available || metadataChanged) { InvalidateMeasure(); LayoutChanged?.Invoke(); }
     }
-    private void FitWidgetLayout()
+    protected override Size MeasureOverride(Size availableSize)
     {
-        bool wide = !dockPreview && ActualWidth >= 480;
+        // A reopened/rehosted card still has the previous arranged width.
+        // Select the breakpoint from the current measure constraint instead.
+        FitWidgetLayout(double.IsFinite(availableSize.Width) ? availableSize.Width : ActualWidth);
+        return base.MeasureOverride(availableSize);
+    }
+    private void FitWidgetLayout(double? measuredWidth = null)
+    {
+        double layoutWidth = measuredWidth ?? ActualWidth;
+        bool wide = !dockPreview && layoutWidth >= 480;
         Grid.SetColumnSpan(metadataRow, wide ? 1 : 2);
         Grid.SetColumn(transport, wide ? 1 : 0);
         Grid.SetColumnSpan(transport, wide ? 1 : 2);
@@ -176,7 +183,7 @@ internal sealed partial class MediaCard : Grid, IDisposable
         artist.MaxHeight = Math.Ceiling(artist.FontSize * 1.5);
         title.TextTrimming = artist.TextTrimming = TextTrimming.CharacterEllipsis;
         player.TextWrapping = TextWrapping.NoWrap; player.TextTrimming = TextTrimming.CharacterEllipsis;
-        double size = wide ? Math.Clamp(Math.Round(ActualWidth * .15), 64, 88) : 64;
+        double size = wide ? Math.Clamp(Math.Round(layoutWidth * .15), 64, 88) : 64;
         if (cover.Width != size)
         {
             cover.Width = cover.Height = artwork.Width = artwork.Height = size;
