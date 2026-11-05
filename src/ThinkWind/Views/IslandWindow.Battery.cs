@@ -10,16 +10,10 @@ internal sealed partial class IslandWindow
     private bool batteryAvailable = BatteryStatusService.Read().Available;
     private BatteryStatusButton? headerBattery, stripBattery, secondaryBattery;
 
-    // Battery follows a different neighbour in each mode. Keep the remaining
-    // user-defined order and visibility intact, without rewriting preferences
-    // whenever the island changes to the full-width status bar.
+    // Honor the saved order, including manually repositioned battery controls.
     private static IEnumerable<string> OrderBatteryBefore(IEnumerable<string> controls, string neighbour)
     {
-        var order = controls.ToList();
-        if (!order.Remove("battery")) return order;
-        int index = order.IndexOf(neighbour);
-        order.Insert(index < 0 ? order.Count : index, "battery");
-        return order;
+        return controls.ToList();
     }
 
     private BatteryStatusButton BatteryButton(bool strip)
@@ -28,11 +22,9 @@ internal sealed partial class IslandWindow
         {
             Margin = strip ? new Thickness(0) : new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0)
         };
-        button.Click += (_, _) => { if (!Store.IsEditing) SystemActions.Run("ms-settings:powersleep"); };
+        button.Click += (_, _) => { if (!Store.IsEditing && !LayoutDrag.SuppressClick) SystemActions.Run("ms-settings:powersleep"); };
         button.Present(BatteryStatusService.Read(), Store.Value.ShowBatteryPercentage);
-        if (!strip)
-            LayoutDrag.Attach(button, "quick", "battery", () => Store.IsEditing,
-                (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
+        EnableQuickReorder(button, "battery", strip && Store.Value.IslandPanelSide == "Left");
         MarkPanelIcon(button, "battery");
         return button;
     }

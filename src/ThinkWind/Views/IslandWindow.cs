@@ -373,7 +373,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 });
                 clockButton.Style = (Style)FindResource("Think.IconButton"); clockButton.Content = clock;
                 clockButton.Padding = new Thickness(0); clockButton.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
-                LayoutDrag.Attach(clockButton, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
+                EnableQuickReorder(clockButton, id);
                 header.Children.Add(MarkPanelIcon(clockButton, "clock"));
                 header.Children.Add(DateButton(false));
                 if (Store.Value.ShowWeatherInHeader && WeatherEnabled) header.Children.Add(WeatherButton(false));
@@ -395,7 +395,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             button.Style = (Style)FindResource("Think.IconButton");
             button.Width = 32 * scale; button.Height = 32 * scale;
             button.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
-            if (id is not ("settings" or "windows-settings")) LayoutDrag.Attach(button, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
+            EnableQuickReorder(button, id);
             header.Children.Add(MarkPanelIcon(button, id));
         }
         if (!IsQuickVisible("clock") && Store.Value.ShowWeatherInHeader && WeatherEnabled && !(Stage == IslandStage.Full && maximizedOnDisplay))

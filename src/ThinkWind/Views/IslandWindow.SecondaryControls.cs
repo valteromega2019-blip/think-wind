@@ -44,6 +44,7 @@ internal sealed partial class IslandWindow
             button.Content = Glyph(control.Glyph, 17); StyleSecondaryControl(button);
             button.Click += (_, _) =>
             {
+                if (LayoutDrag.SuppressClick) return;
                 switch (id)
                 {
                     case "clock": case "calendar": ShowMini(MiniIslandKind.Calendar, button); break;
@@ -56,6 +57,7 @@ internal sealed partial class IslandWindow
                     default: if (control.Target is string target) SystemActions.Run(target); break;
                 }
             };
+            EnableQuickReorder(button, id);
             hoverQuick.Children.Add(MarkPanelIcon(button, id == "clock" ? "calendar" : id));
         }
         hoverQuick.Visibility = hoverQuick.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
