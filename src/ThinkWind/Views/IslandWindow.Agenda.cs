@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -26,6 +26,7 @@ internal sealed partial class IslandWindow
     private void InitializeCalendarAgenda()
     {
         AgendaPanel.ApplyDayStyle(calendar);
+        TutorialGuide.Mark(calendar, "agenda-calendar");
         var alarms = ((App)Application.Current).Alarms;
         alarms.Changed += QueueWidgetAgendaMarkers;
         calendar.Loaded += (_, _) => QueueWidgetAgendaMarkers();

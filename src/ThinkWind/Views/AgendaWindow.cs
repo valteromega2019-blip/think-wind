@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -76,9 +76,10 @@ internal sealed class AgendaWindow : FloatingWindow
             }
             catch (InvalidOperationException) { }
         };
-        var title = ClockDesign.Text("Eventos e notas", 18); title.FontWeight = FontWeights.SemiBold; heading.Children.Add(title);
+        var title = ClockDesign.Text("Agenda · Experimental", 18); title.FontWeight = FontWeights.SemiBold; heading.Children.Add(title);
         layout.Children.Add(heading);
         agenda = new AgendaPanel(((App)Application.Current).Alarms);
+        TutorialGuide.Mark(agenda, "agenda-form");
         scroll = new ScrollViewer { Content = agenda, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalAlignment = VerticalAlignment.Top };
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
         Grid.SetRow(scroll, 1); layout.Children.Add(scroll); Surface.Child = layout;
@@ -94,6 +95,7 @@ internal sealed class AgendaWindow : FloatingWindow
     }
     internal void Present(DateTime day, bool add)
     {
+        TutorialGuide.Notify("agenda-open");
         agenda.SelectDay(day, add); MinimizedToDock = false; minimized.Remove(this); WindowState = WindowState.Normal; Show(); RefreshSettings(); Position(); Activate();
     }
     internal void SelectDay(DateTime day)

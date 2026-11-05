@@ -114,6 +114,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         {
             calendarView = new AgendaPanel(((App)Application.Current).Alarms, calendarOnly: true);
             panel.Children.Add(calendarView);
+            TutorialGuide.Mark(calendarView, "agenda-calendar");
             void OpenAgenda(bool add)
             {
                 var day = calendarView.SelectedDay;
@@ -165,6 +166,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     {
         ++presentationRevision;
         calendarView?.Refresh();
+        if (Kind == MiniIslandKind.Calendar) TutorialGuide.Notify("agenda-calendar-open");
         nextRefresh = DateTime.MinValue;
         // Establish the reserved content geometry before the first visible frame.
         RefreshSettings(); RefreshContent(true); Show(); Position(); timer.Start(); Activate();

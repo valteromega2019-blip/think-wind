@@ -35,6 +35,9 @@ internal sealed partial class TutorialWindow : Window
     };
     private static readonly Step[] UpdateSteps =
     {
+        new("Novidades · Agenda experimental", "Abra o calendário", "A agenda é experimental. Clique no calendário para conhecer eventos, notas coloridas e lembretes. Você também pode usar o calendário do widget expandido.", "calendar", "agenda-calendar-open"),
+        new("Novidades · Agenda experimental", "Escolha um dia", "Um clique no dia consulta seus itens; dois cliques abrem a criação. A janela aparece ao lado do calendário, pode ser movida e minimizada na barra. Os lembretes funcionam enquanto o Orby estiver aberto.", "agenda-calendar", "agenda-open"),
+        new("Novidades · Agenda experimental", "Eventos e notas no mesmo lugar", "O seletor com ícones alterna Evento e Nota. Escolha uma cor para marcar o dia. O backup da agenda e das configurações fica em Personalizar → Backup, em arquivos separados. Explore e use Pular etapa para continuar sem criar um item.", "agenda-form", "agenda-saved"),
         new("Novidades · Widgets e barras", "Abra a central", "Leve o mouse ao topo para acessar os controles da central.", "island", "island-hover"),
         new("Novidades · Widgets e barras", "Veja os widgets", "Abra o painel completo pela seta. O editor aparece somente nesta área expandida.", "expand", "island-full"),
         new("Novidades · Widgets e barras", "Novo editor pelas bordas", "Clique no lápis. O fundo desfocado indica o modo de edição; os controles dos widgets ficam bloqueados enquanto você organiza o layout.", "widget-editor", "widget-edit-open"),
@@ -48,7 +51,7 @@ internal sealed partial class TutorialWindow : Window
     private bool updateTour;
     private Step[] Steps => updateTour ? UpdateSteps : MainSteps;
     private string ProgressPath => updateTour
-        ? Path.Combine(Path.GetDirectoryName(store.TutorialStatePath)!, "update-tour-widgets-v1.json") : store.TutorialStatePath;
+        ? Path.Combine(Path.GetDirectoryName(store.TutorialStatePath)!, "update-tour-0.31.0-agenda-v1.json") : store.TutorialStatePath;
     private string? CurrentTarget => progress.Step >= 0 && progress.Step < Steps.Length ? Steps[progress.Step].Target : null;
     public sealed class Progress
     {
@@ -211,7 +214,7 @@ internal sealed partial class TutorialWindow : Window
         FontSizing.Apply(this, store.Value.FontScale);
         success = false; finishing = false; lastGuideBounds = null; ClearHighlight(); actions.Children.Clear();
         TutorialGuide.KeepDockOpen = CurrentTarget is "dock" or "start" or "search";
-        TutorialGuide.KeepIslandOpen = CurrentTarget is "expand" or "widget-editor" or "widget-resize" or "widget-edit-finish" or "monitor" or "optimizer" or "optimizer-analyze" or "customize";
+        TutorialGuide.KeepIslandOpen = CurrentTarget is "expand" or "widget-editor" or "widget-resize" or "widget-edit-finish" or "monitor" or "optimizer" or "optimizer-analyze" or "customize" or "calendar" or "agenda-calendar" or "agenda-form";
         TutorialGuide.CollapseDockOnDesktop = CurrentTarget is not null && !TutorialGuide.KeepDockOpen;
         if (progress.Step < 0)
         {

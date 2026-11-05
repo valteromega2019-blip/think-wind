@@ -154,6 +154,7 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
             if (!service.Items.Any(a => a.Id == original?.Id) && service.Items.Count >= 100) { message.Text = "Limite de 100 alarmes e itens da agenda atingido."; return; }
             service.Put(new ClockAlarm { Id = original?.Id ?? Guid.NewGuid().ToString("N"), IsAgenda = true, ColorHex = color, Name = title.Text.Trim(), Notes = notes.Text, Minute = begin, EventDate = when, EndDate = note ? null : day.Date.AddMinutes(finish + (begin == 1439 && finish <= begin ? 1440 : 0)), Enabled = offset >= 0, ReminderMinutes = Math.Max(0, offset), Sound = sound.SelectedIndex switch { 1 => "Exclamation", 2 => "Beep", 3 => "Silent", _ => "Asterisk" } });
             if (service.Error is not null) { message.Text = service.Error; return; }
+            TutorialGuide.Notify("agenda-saved");
             selected = day.Date; calendar.SelectedDate = selected; calendar.DisplayDate = selected; Render();
         }));
         body.Children.Add(actions); LayoutChanged?.Invoke();
