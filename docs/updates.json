@@ -1,5 +1,13 @@
 [
     {
+        "id":  "v0.30.1-beta",
+        "title":  "Orby Launcher 0.30.1 Beta",
+        "state":  "published",
+        "date":  "2026-11-05T19:26:05Z",
+        "url":  "https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.30.1-beta",
+        "description":  "# Orby Launcher 0.30.1 Beta\n\n- Biblioteca: modo Editar para selecionar e ocultar aplicativos em lote, com Salvar, Cancelar e restaura��o em Ocultos.\n- Pesquisa com lupa, indica��o do campo, foco na cor de destaque e abas com �cones.\n- Reorganiza��o dos controles superiores por arraste, com ordem salva.\n- Arraste de atalhos a partir de Fixados, Biblioteca, Recentes e Todos; organiza��o direta dos aplicativos no Dock.\n- Mostrar �rea de trabalho ao manter um item arrastado sobre a barrinha por 450 ms, permitindo continuar o arraste at� o desktop.\n- Preservados os recursos e as prefer�ncias existentes.\n\nValida��o: 104 testes automatizados aprovados, nenhuma falha (61 regress�o, 18 layout, 10 atualizador, 10 revis�o e 5 OLE/atalhos). Compila��o Release conclu�da. Os testes OLE verificam formatos e leitura nativa; n�o substituem a confer�ncia manual de arrastar e soltar no desktop. Bluetooth passou neste PC; disponibilidade e tempo de enumera��o dependem do adaptador/driver.\n\nInstalador x64 com sele��o inicial de sete idiomas e PawnIO opcional. Configura��es preservadas. SHA-256 e assinatura RSA separada para o atualizador; o execut�vel n�o possui certificado Authenticode.\r\n"
+    },
+    {
         "id":  "v0.30.0-beta",
         "title":  "Orby Launcher 0.30.0 Beta",
         "state":  "published",
