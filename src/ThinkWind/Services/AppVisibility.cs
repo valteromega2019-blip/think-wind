@@ -6,6 +6,20 @@ internal static class AppVisibility
 {
     // Hide administrative/development utilities from the drawer, without
     // uninstalling anything or suppressing everyday Windows applications.
+    internal static bool IsAuxiliaryEntry(string name, string target)
+    {
+        string label = name.Trim();
+        foreach (string prefix in new[] { "Uninstall", "Uninstaller", "Desinstalar", "Desinstalador", "Readme", "Leia-me", "Release notes", "Notas de versão" })
+            if (label.Equals(prefix, StringComparison.CurrentCultureIgnoreCase)
+                || label.StartsWith(prefix + " ", StringComparison.CurrentCultureIgnoreCase)
+                || label.StartsWith(prefix + "-", StringComparison.CurrentCultureIgnoreCase)) return true;
+        string file = Path.GetFileNameWithoutExtension(target);
+        if (file.Equals("uninstall", StringComparison.OrdinalIgnoreCase)
+            || file.Equals("uninstaller", StringComparison.OrdinalIgnoreCase)
+            || file.Equals("unins000", StringComparison.OrdinalIgnoreCase)
+            || file.Equals("unins001", StringComparison.OrdinalIgnoreCase)) return true;
+        return IsSystemTool(new AppEntry(label, target, "", null));
+    }
     internal static bool IsSystemTool(AppEntry app)
     {
         string name = app.Name.Trim();

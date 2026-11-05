@@ -156,6 +156,8 @@ internal sealed class ApplicationCatalog : IDisposable
                         string category = Path.GetDirectoryName(Path.GetRelativePath(folder, path)) ?? "";
                         string resolved = icons.Resolve(path);
                         string extension = Path.GetExtension(resolved).ToLowerInvariant();
+                        if (AppVisibility.IsAuxiliaryEntry(name, resolved)) continue;
+                        if (id.Length == 0 && extension is (".bat" or ".cmd" or ".msc")) continue;
                         if (id.Length == 0 && extension is not (".exe" or ".com" or ".bat" or ".cmd" or ".msc" or ".lnk" or ".appref-ms")) continue;
                         string key = id.Length > 0 ? "id:" + id : "name:" + name + "|" + resolved;
                         string launchTarget = id.Contains('!') ? @"shell:AppsFolder\" + id : path;
@@ -185,6 +187,7 @@ internal sealed class ApplicationCatalog : IDisposable
                         string target = File.Exists(path) ? path : @"shell:AppsFolder\" + (id.Length > 0 ? id : path);
                         string key = id.Length > 0 ? "id:" + id : "name:" + name + "|" + icons.Resolve(target);
                         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path)) continue;
+                        if (AppVisibility.IsAuxiliaryEntry(name, icons.Resolve(target))) continue;
                         if (!id.Contains('!') && result.Values.Any(app => app.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))) continue;
                         cancellation.ThrowIfCancellationRequested();
                         result.TryAdd(key, new(name, target, id.Contains('!') ? "Microsoft Store / MSIX" : "Aplicativos", icons.Get(target), id.Length > 0 ? id : null));

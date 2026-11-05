@@ -251,7 +251,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         if (term.Length > 0)
         {
             var local = mode == LauncherPanelMode.Library ? catalog.Items : catalog.Items.Concat(LauncherSearch.Settings).Concat(Store.Value.RecentLaunches.Select(FromShortcut)).Concat(recent);
-            source = local.Where(app => app.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase) || app.Category.Contains(term, StringComparison.CurrentCultureIgnoreCase));
+            source = local.Where(app => app.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase));
         }
         else source = section switch { "Fixados" => Store.Value.StartPins.Select(FromShortcut), "Recentes" => Store.Value.RecentLaunches.Select(FromShortcut).Concat(recent), _ => catalog.Items };
         if (term.Length == 0 && (section is "Todos" or "Biblioteca"))
