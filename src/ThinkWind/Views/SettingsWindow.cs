@@ -159,7 +159,6 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Slider(dock, "Velocidade da mola", .5, 2, store.Value.DockMagnificationSpeed, v => Change(p => p.DockMagnificationSpeed = v), "0.0 '×'", .1);
         Slider(dock, "Ícones vizinhos de cada lado", 0, 4, store.Value.DockMagnificationNeighbors, v => Change(p => p.DockMagnificationNeighbors = (int)Math.Round(v)), "0", 1);
         Slider(dock, "Espaço entre os ícones", 0, 24, store.Value.DockSpacing, v => Change(p => p.DockSpacing = v));
-        Slider(dock, "Arredondamento", 0, 48, store.Value.DockRadius, v => Change(p => p.DockRadius = v));
         Slider(dock, "Distância da borda inferior", 4, 80, store.Value.DockBottomOffset, v => Change(p => p.DockBottomOffset = v));
         Slider(dock, "Posição horizontal", -4000, 4000, store.Value.DockHorizontalOffset, v => Change(p => p.DockHorizontalOffset = v));
         Check(dock, "Recolher automaticamente quando estiver ociosa", store.Value.AutoHide, v => Change(p => p.AutoHide = v));
@@ -196,7 +195,6 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Check(island, "Barra de status acompanha a cor do aplicativo abaixo", store.Value.IslandMatchAppColor, v => Change(p => p.IslandMatchAppColor = v));
         Slider(island, "Espera para recolher (segundos)", 0, 10, store.Value.IslandCollapseSeconds, v => Change(p => p.IslandCollapseSeconds = v), "0.0 's'", .1);
         Slider(island, "Espaçamento", 0, 20, store.Value.IslandSpacing, v => Change(p => p.IslandSpacing = v));
-        Slider(island, "Arredondamento inferior", 0, 48, store.Value.IslandRadius, v => Change(p => p.IslandRadius = v));
         Slider(island, "Posição horizontal", -4000, 4000, store.Value.IslandHorizontalOffset, v => Change(p => p.IslandHorizontalOffset = v));
         Note(island, "Acrylic usa o fundo real através da composição do Windows. Mica é um material opaco baseado no papel de parede. A intensidade acima controla a tonalidade; o raio do desfoque é definido pelo sistema.");
         var weatherSection = Section("Clima", "Após a primeira escolha no widget, altere a cidade somente aqui. A seleção é salva automaticamente.");

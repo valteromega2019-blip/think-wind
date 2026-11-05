@@ -15,6 +15,9 @@ internal sealed partial class SettingsWindow
         Check(colors, "Personalizar a cor de fundo das duas barras", store.Value.UseCustomBarColor, value => Change(p => p.UseCustomBarColor = value));
         AddColorSetting(colors, "Cor de fundo", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));
         Note(colors, "Para usar esta cor, ative a opção acima. Desativada, o fundo acompanha o tema ou o aplicativo, conforme suas configurações.");
+        AppearanceLabel(colors, "Arredondamento");
+        Slider(colors, "Barra de aplicativos · cantos", 0, 48, store.Value.DockRadius, value => Change(p => p.DockRadius = value));
+        Slider(colors, "Central de controle · cantos", 0, 48, store.Value.IslandRadius, value => Change(p => p.IslandRadius = value));
 
         var surfaces = Section("Transparência", "Materiais e opacidade. Ajuste cada barra separadamente; o teclado acompanha a barra superior.");
         AddContrastControl(surfaces);
