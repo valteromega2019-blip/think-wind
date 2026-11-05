@@ -246,6 +246,17 @@ public partial class App : Application
     {
         OpenSettings(); settings?.ShowWidgetsSection();
     }
+    internal (string Label, Action Action)[] TrayActions() => new (string, Action)[]
+    {
+        ("Personalizar", OpenSettings),
+        ("Editar / concluir layout", () => store.SetEditing(!store.IsEditing)),
+        ("Mostrar barra e central de controle", () =>
+        {
+            if (gameMode?.Active == true) return;
+            dock?.Show(); island?.Show(); dock?.RefreshSettings(); island?.RefreshSettings();
+        }),
+        ("Sair do Orby Launcher", () => { IsExiting = true; Shutdown(); })
+    };
     private void OpenSettings()
     {
         if (gameMode?.Active == true) return;

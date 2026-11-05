@@ -34,7 +34,29 @@
    <Setter Property="Background" Value="{DynamicResource Think.Popup}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="6"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ContextMenu"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="12"><ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/></ScrollViewer></Border></ControlTemplate></Setter.Value></Setter>
   </Style>
-  <Style TargetType="MenuItem"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,6"/></Style>
+  <Style TargetType="MenuItem">
+   <Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,8"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="MenuItem">
+    <Grid>
+     <Border x:Name="MenuSurface" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <Grid><ContentPresenter ContentSource="Icon" VerticalAlignment="Center"/><TextBlock x:Name="CheckedMark" Text="✓" Visibility="Collapsed" Foreground="{DynamicResource Think.Accent}" VerticalAlignment="Center"/></Grid>
+       <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" TextElement.Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/>
+       <TextBlock x:Name="SubmenuArrow" Grid.Column="2" Text="›" Margin="12,0,0,0" Visibility="Collapsed" VerticalAlignment="Center"/>
+      </Grid>
+     </Border>
+     <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsSubmenuOpen}" Placement="Right" AllowsTransparency="True" Focusable="False">
+      <Border Background="{DynamicResource Think.Popup}" CornerRadius="12" Padding="6"><ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Style="{StaticResource Think.SettingsScrollViewer}"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/></ScrollViewer></Border>
+     </Popup>
+    </Grid>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="MenuSurface" Property="Background" Value="{DynamicResource Think.Hover}"/></Trigger>
+     <Trigger Property="IsChecked" Value="True"><Setter TargetName="CheckedMark" Property="Visibility" Value="Visible"/></Trigger>
+     <Trigger Property="HasItems" Value="True"><Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/></Trigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter TargetName="MenuSurface" Property="Opacity" Value="0.45"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style TargetType="CheckBox"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Margin" Value="4,10"/></Style>
   <Style TargetType="ComboBoxItem"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
    <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="10,8"/>

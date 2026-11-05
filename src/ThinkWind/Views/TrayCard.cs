@@ -18,6 +18,7 @@ internal sealed class TrayCard : StackPanel
     private readonly TextBlock status = new() { FontSize = 10, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed, Margin = new Thickness(4) };
     private readonly StackPanel navigation = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly Dictionary<string, (Image Icon, TextBlock Name)> visuals = new();
+    private readonly Dictionary<string, int> positions = new(StringComparer.OrdinalIgnoreCase);
     private List<TrayEntry> entries = new();
     private string signature = "";
     private bool reading;
@@ -67,17 +68,12 @@ internal sealed class TrayCard : StackPanel
         finally { reading = false; }
     }
     private void ShowError(string text) { status.Text = text; status.Visibility = Visibility.Visible; LayoutChanged?.Invoke(); }
-    private double Score(TrayEntry entry)
-    {
-        if (!store.Value.TrayActivity.TryGetValue(entry.Key, out var activity)) return 0;
-        var last = activity.LastUsedUtc > activity.FirstSeenUtc ? activity.LastUsedUtc : activity.FirstSeenUtc;
-        double days = Math.Max(0, (DateTime.UtcNow - last).TotalDays);
-        return Math.Log2(activity.Count + 1) * 3 + 10 / (1 + days);
-    }
     private void Render()
     {
+        foreach (var entry in entries.OrderBy(entry => entry.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+            if (!positions.ContainsKey(entry.Key)) positions[entry.Key] = positions.Count;
         var ordered = entries.OrderBy(entry => { int pin = store.Value.TrayFavorites.IndexOf(entry.Key); return pin < 0 ? int.MaxValue : pin; })
-            .ThenByDescending(Score).ThenBy(entry => entry.DisplayName).ToArray();
+            .ThenBy(entry => positions[entry.Key]).ToArray();
         grid.Visibility = entries.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         int pages = Math.Max(1, (ordered.Length + 23) / 24); page = Math.Clamp(page, 0, pages - 1);
         var shown = ordered.Skip(page * 24).Take(24).ToArray();
@@ -119,6 +115,19 @@ internal sealed class TrayCard : StackPanel
     private async Task Invoke(string key, bool context, Button? anchor = null)
     {
         var entry = entries.FirstOrDefault(candidate => candidate.Key == key); if (entry is null) return;
+        if (context && entry.Key == "local:orby-launcher" && anchor is not null && Application.Current is App app)
+        {
+            var menu = new ContextMenu { PlacementTarget = anchor };
+            foreach (var action in app.TrayActions())
+            {
+                var item = new MenuItem { Header = action.Label };
+                item.Click += (_, _) => action.Action(); menu.Items.Add(item);
+            }
+            menu.Opened += (_, _) => menus++;
+            menu.Closed += (_, _) => menus = Math.Max(0, menus - 1);
+            menu.IsOpen = true;
+            return;
+        }
         bool invoked;
         menus++;
         try { invoked = await TrayService.InvokeAsync(entry, context); }

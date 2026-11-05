@@ -19,6 +19,7 @@ internal static class PopupBackdrop
         private readonly FrameworkElement content;
         private readonly HwndSource source;
         private readonly BackdropHost host;
+        private bool syncing;
         internal bool Available => host.MaterialAvailable;
         internal bool UsesSource(HwndSource candidate) => ReferenceEquals(source, candidate);
         internal void Refresh() => Sync();
@@ -27,21 +28,28 @@ internal static class PopupBackdrop
             content = element;
             source = (HwndSource)PresentationSource.FromVisual(element);
             host = new BackdropHost(source.Handle, false, 0, "Menu");
-            try { source.AddHook(Message); content.SizeChanged += SizeChanged; Sync(); }
-            catch { source.RemoveHook(Message); content.SizeChanged -= SizeChanged; host.Dispose(); throw; }
+            try { source.AddHook(Message); content.SizeChanged += SizeChanged; content.IsVisibleChanged += VisibilityChanged; Sync(); }
+            catch { source.RemoveHook(Message); content.SizeChanged -= SizeChanged; content.IsVisibleChanged -= VisibilityChanged; host.Dispose(); throw; }
         }
         private nint Message(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
         { if (message == 0x0047 || message == 0x02E0) Sync(); return 0; }
         private void SizeChanged(object sender, SizeChangedEventArgs e) => Sync();
+        private void VisibilityChanged(object sender, DependencyPropertyChangedEventArgs e) => Sync();
         private void Sync()
         {
+            if (syncing || source.IsDisposed) return;
+            syncing = true;
+            try
+            {
             host.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
             if (OverlayChrome.GetWindowRect(source.Handle, out var rect))
                 host.Synchronize(rect, Corner(content) * (source.CompositionTarget?.TransformToDevice.M11 ?? 1), false, content.IsVisible);
             if (!host.MaterialAvailable) Fallback(content);
             else RestoreBackground(content);
+            }
+            finally { syncing = false; }
         }
-        public void Dispose() { source.RemoveHook(Message); content.SizeChanged -= SizeChanged; host.Dispose(); }
+        public void Dispose() { source.RemoveHook(Message); content.SizeChanged -= SizeChanged; content.IsVisibleChanged -= VisibilityChanged; host.Dispose(); }
     }
     private static readonly ConditionalWeakTable<FrameworkElement, Lease> leases = new();
     private static readonly DependencyProperty AttachedProperty = DependencyProperty.RegisterAttached("Attached", typeof(bool), typeof(PopupBackdrop), new PropertyMetadata(false));

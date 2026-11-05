@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -42,7 +44,23 @@ internal static class LegacyTrayIcons
                 }
                 paths[pid] = path;
             }
-            if (!candidates.TryGetValue(path, out var icons)) return true;
+            if (!candidates.TryGetValue(path, out var icons))
+            {
+                // Some elevated tray owners deny image-path queries. A process
+                // name is only a candidate filter: Shell_NotifyIconGetRect below
+                // must still confirm the live HWND + exact registered UID.
+                if (path.Length != 0) return true;
+                try
+                {
+                    using var owner = Process.GetProcessById((int)pid);
+                    icons = candidates.Values.SelectMany(items => items)
+                        .Where(icon => icon.Id.HasValue && File.Exists(icon.Executable)
+                            && Path.GetFileNameWithoutExtension(icon.Executable).Equals(owner.ProcessName, StringComparison.OrdinalIgnoreCase))
+                        .Take(8).ToArray();
+                }
+                catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { return true; }
+                if (icons.Length == 0) return true;
+            }
             foreach (var icon in icons)
             {
                 // When UID is absent, make a small, bounded set of documented
