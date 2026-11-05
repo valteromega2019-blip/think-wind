@@ -93,12 +93,23 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
             finally { modal = false; }
         };
         powerMenu.Items.Add(updateAndShutdown);
-        powerMenu.Opened += async (_, _) =>
+        TrackMenu(powerMenu);
+        power.Click += async (_, _) =>
         {
-            bool ready = await WindowsUpdatePower.PendingAsync();
-            updateAndShutdown.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
+            if (!power.IsEnabled) return;
+            power.IsEnabled = false;
+            try
+            {
+                // Populate before opening: a native popup can keep its first
+                // measured bounds when an item is revealed asynchronously.
+                bool ready = await WindowsUpdatePower.PendingAsync();
+                updateAndShutdown.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
+                if (!IsVisible) return;
+                powerMenu.PlacementTarget = power;
+                powerMenu.IsOpen = true;
+            }
+            finally { power.IsEnabled = true; }
         };
-        TrackMenu(powerMenu); power.Click += (_, _) => { powerMenu.PlacementTarget = power; powerMenu.IsOpen = true; };
         DockPanel.SetDock(power, Dock.Right); footer.Children.Add(power);
         var manual = ActionButton("Executável manual…", ManualShortcut); manual.FontSize = 10; manual.Padding = new Thickness(6, 4, 6, 4); DockPanel.SetDock(manual, Dock.Right); footer.Children.Add(manual);
         footer.Children.Add(new TextBlock { Text = Environment.UserName, ToolTip = Environment.UserDomainName + "\\" + Environment.UserName, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); content.Children.Add(footer);
