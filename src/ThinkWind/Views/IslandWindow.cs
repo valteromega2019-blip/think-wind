@@ -682,8 +682,11 @@ internal sealed partial class IslandWindow : FloatingWindow
         if (lastMiniKind == kind && DateTime.UtcNow - lastMiniDismissed < TimeSpan.FromMilliseconds(200)) return;
         if (minis.TryGetValue(kind, out var existing) && existing.IsVisible) { existing.Dismiss(); return; }
         if (Store.IsEditing) return;
+        bool secondaryTrigger = trigger is not null && hoverQuick.IsAncestorOf(trigger);
         DismissMinis(); interaction.OpenMini();
-        if (Stage != IslandStage.Compact)
+        // Secondary icons exist only in the expanded area. Keep their host
+        // and anchor alive, otherwise collapsing removes the button mid-click.
+        if (Stage != IslandStage.Compact && !secondaryTrigger)
         {
             // The popup replaces the expanded contents. Keep fullscreen reveal
             // ownership alive until the popup closes instead of hiding its owner.
