@@ -27,7 +27,7 @@ internal sealed partial class SettingsWindow
         };
         fonts.SelectionChanged += (_, _) => { if (fonts.SelectedItem is string family) Change(p => p.FontFamily = family); };
         parent.Children.Add(search); parent.Children.Add(fonts);
-        Slider(parent, "Tamanho dos textos", .8, 2.5, store.Value.FontScale, v => Change(p => p.FontScale = v), "P0", .05);
+        Slider(parent, "Tamanho dos textos", .8, 1.4, store.Value.FontScale, v => Change(p => p.FontScale = v), "P0", .05);
         AppearanceLabel(parent, "Cor e legibilidade");
         var hex = AddColorSetting(parent, "Cor da fonte · HEX", store.Value.FontColor, value => Change(p => p.FontColor = value));
         var rgb = new TextBox { Padding = new Thickness(8), MinHeight = 36, Margin = new Thickness(0, 0, 0, 8), Text = Rgb(store.Value.FontColor) };

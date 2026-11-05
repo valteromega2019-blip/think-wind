@@ -17,7 +17,7 @@ internal static class FontSizing
     private static readonly DependencyProperty ScaleProperty = DependencyProperty.RegisterAttached(
         "Scale", typeof(double), typeof(FontSizing), new FrameworkPropertyMetadata(1d, FrameworkPropertyMetadataOptions.Inherits));
     private static readonly DependencyProperty MaximumScaleProperty = DependencyProperty.RegisterAttached(
-        "MaximumScale", typeof(double), typeof(FontSizing), new FrameworkPropertyMetadata(1.75d, FrameworkPropertyMetadataOptions.Inherits));
+        "MaximumScale", typeof(double), typeof(FontSizing), new FrameworkPropertyMetadata(1.4d, FrameworkPropertyMetadataOptions.Inherits));
     internal static void LimitScale(DependencyObject root, double maximum) => root.SetValue(MaximumScaleProperty, maximum);
     static FontSizing()
     {
@@ -33,7 +33,7 @@ internal static class FontSizing
     {
         if (window.ReadLocalValue(ScaleProperty) is double previous && previous == scale) return;
         window.SetValue(ScaleProperty, scale);
-        window.FontSize = SystemFonts.MessageFontSize * Math.Clamp(scale, .8, 1.75);
+        window.FontSize = SystemFonts.MessageFontSize * Math.Clamp(scale, .8, 1.4);
         PrepareForMeasure(window);
     }
     internal static void PrepareForMeasure(DependencyObject root) => Walk(root, new HashSet<DependencyObject>());
