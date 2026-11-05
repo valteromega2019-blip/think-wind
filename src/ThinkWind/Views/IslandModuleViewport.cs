@@ -27,15 +27,22 @@ internal sealed class IslandModuleViewport : Decorator
         if (Child is null) return new Size();
         // Keep natural content height unconstrained during measurement.
         Child.Measure(new Size(logicalSize.Width, double.PositiveInfinity));
-        measuredHeight = Math.Max(logicalSize.Height, Math.Ceiling(Child.DesiredSize.Height));
-        return new Size(logicalSize.Width * preferredScale, measuredHeight * preferredScale);
+        double nextHeight = Math.Max(logicalSize.Height, Math.Ceiling(Child.DesiredSize.Height));
+        if (nextHeight != measuredHeight) InvalidateArrange();
+        measuredHeight = nextHeight;
+        double availableWidth = double.IsFinite(Width) ? Width : logicalSize.Width * preferredScale;
+        double availableHeight = double.IsFinite(Height) ? Height : measuredHeight * preferredScale;
+        return new Size(Math.Min(availableWidth, logicalSize.Width * preferredScale),
+            Math.Min(availableHeight, measuredHeight * preferredScale));
     }
     protected override Size ArrangeOverride(Size finalSize)
     {
         if (Child is FrameworkElement content)
         {
+            double width = double.IsFinite(Width) ? Math.Min(finalSize.Width, Width) : finalSize.Width;
+            double height = double.IsFinite(Height) ? Math.Min(finalSize.Height, Height) : finalSize.Height;
             double fit = Math.Max(0, Math.Min(preferredScale,
-                Math.Min(finalSize.Width / logicalSize.Width, finalSize.Height / measuredHeight)));
+                Math.Min(width / logicalSize.Width, height / measuredHeight)));
             scale.ScaleX = scale.ScaleY = fit;
             content.RenderTransformOrigin = new Point(0, 0);
             if (!ReferenceEquals(content.RenderTransform, scale)) content.RenderTransform = scale;

@@ -11,6 +11,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Contains("--island-layout")) return IslandViewportChecks.Run();
         if (args.Contains("--updates")) return UpdateChecks.Run();
         if (args.Contains("--revision")) return RevisionPerformanceChecks.Run();
         if (args.Contains("--visual-background")) return VisualBackground.Run();
