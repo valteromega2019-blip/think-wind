@@ -31,6 +31,10 @@ internal sealed class AlarmService : IDisposable
     private readonly string path;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly List<ClockAlarm> alarms = new();
+    private readonly AgendaBackup backup = new();
+    private bool disposed;
+    internal string BackupFolder => backup.Folder;
+    internal string BackupStatus => backup.Status;
     private readonly Dictionary<string, DateTime> snoozes = new();
     private DateTime previous = DateTime.Now.AddSeconds(-1);
     internal IReadOnlyList<ClockAlarm> Items => alarms;
@@ -59,7 +63,14 @@ internal sealed class AlarmService : IDisposable
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         { Error = "Não foi possível ler os alarmes. O arquivo original foi preservado."; }
+        backup.Changed += BackupChanged;
+        if (Error is null && File.Exists(path)) backup.Queue(alarms.ToArray());
         timer.Tick += (_, _) => Check(); UpdateTimer();
+    }
+    private void BackupChanged()
+    {
+        if (disposed || timer.Dispatcher.HasShutdownStarted) return;
+        timer.Dispatcher.BeginInvoke(new Action(() => { if (!disposed) Changed?.Invoke(); }));
     }
 
     internal static string NormalizeSound(string? sound) => sound is "Beep" or "Exclamation" or "Silent" ? sound : "Asterisk";
@@ -122,8 +133,9 @@ internal sealed class AlarmService : IDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(alarms, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(path + ".tmp", path, true); Error = null;
+            backup.Queue(alarms.ToArray());
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Error = "Não foi possível salvar os alarmes: " + e.Message; }
     }
-    public void Dispose() { timer.Stop(); snoozes.Clear(); }
+    public void Dispose() { disposed = true; backup.Changed -= BackupChanged; timer.Stop(); snoozes.Clear(); backup.Flush(); }
 }
