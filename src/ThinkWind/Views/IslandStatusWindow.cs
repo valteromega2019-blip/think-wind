@@ -14,6 +14,7 @@ internal sealed class IslandStatusWindow : FloatingWindow
 {
     protected override bool AttachedTop => true;
     protected override bool FullWidthTop => true;
+    protected override double TextScale => Math.Clamp(Store.Value.FontScale, .8, 1.15);
     private Color? sampled;
     private DateTime nextSample;
     private Color? pendingTint;

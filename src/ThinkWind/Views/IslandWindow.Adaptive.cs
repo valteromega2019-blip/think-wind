@@ -96,6 +96,12 @@ internal sealed partial class IslandWindow
     private string statusControlsSignature = "";
     private void BuildStatusRow()
     {
+        // The compact strip has a fixed 24-DIP content slot. Larger typography
+        // belongs in the expanded panel, not outside the reserved status area.
+        Services.FontSizing.LimitScale(statusRow, 1.15);
+        System.Windows.Documents.TextElement.SetFontSize(statusRow,
+            SystemFonts.MessageFontSize * Math.Clamp(Store.Value.FontScale, .8, 1.15));
+        Services.FontSizing.PrepareForMeasure(statusRow);
         string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls) + ":" + string.Join('|', Store.Value.DisabledQuickControls)
             + ":" + batteryAvailable + ":" + Store.Value.ShowBatteryPercentage + ":" + Store.Value.IslandPanelSide + ":" + Store.IsEditing;
         if (statusBuilt && statusControlsSignature == signature) return;
