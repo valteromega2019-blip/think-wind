@@ -68,15 +68,16 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         catalog = apps; anchor = getAnchor; dockHasFocus = hasDockFocus; Title = "Orby Launcher — Iniciar e pesquisa";
         ShowActivated = true; Surface.Padding = new Thickness(14);
         content.Children.Add(title);
-        var queryFrame = new Border { Child = query, CornerRadius = new CornerRadius(14), Margin = new Thickness(4) }; queryFrame.SetResourceReference(Border.BackgroundProperty, "Think.Control"); content.Children.Add(queryFrame);
+        content.Children.Add(CreateSearchField());
         query.Background = Brushes.Transparent; query.Margin = new Thickness(0); query.SetResourceReference(TextBox.ForegroundProperty, "Think.Text"); query.BorderThickness = new Thickness(0);
         System.Windows.Automation.AutomationProperties.SetName(query, "Pesquisar aplicativos, arquivos, documentos e configurações");
-        var tabs = new WrapPanel();
+        var tabs = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         foreach (string name in new[] { "Fixados", "Biblioteca", "Recentes", "Todos" })
         {
             var button = ActionButton(name, () => { if (section == name && query.Text.Length == 0 && !showHiddenLibrary) return; showHiddenLibrary = false; section = name; mode = name == "Biblioteca" ? LauncherPanelMode.Library : LauncherPanelMode.Start; updating = true; query.Text = ""; updating = false; page = 0; Reload(); });
             tabButtons.Add(name, button);
-            button.Padding = new Thickness(10, 6, 10, 6); tabs.Children.Add(button);
+            button.Content = DrawerTabContent(name);
+            button.Padding = new Thickness(12, 8, 12, 8); button.Margin = new Thickness(4, 0, 4, 0); tabs.Children.Add(button);
         }
         var libraryFilter = new DockPanel();
         DockPanel.SetDock(hiddenLibraryToggle, Dock.Right); libraryFilter.Children.Add(hiddenLibraryToggle);
