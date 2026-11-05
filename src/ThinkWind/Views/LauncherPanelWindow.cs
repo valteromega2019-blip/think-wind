@@ -85,6 +85,8 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         hiddenLibraryToggle.Click += (_, _) => { showHiddenLibrary = !showHiddenLibrary; Reload(); };
         restoreHiddenLibrary.Click += (_, _) => Store.Update(p => p.HiddenLibraryApps.Clear());
         content.Children.Add(tabs); content.Children.Add(libraryFilter); content.Children.Add(new AdornerDecoratorHost(resultsGrid));
+        var libraryEditingActions = new WrapPanel(); AddLibraryEditorButtons(libraryEditingActions);
+        content.Children.Insert(content.Children.IndexOf(libraryFilter) + 1, libraryEditingActions);
         var navigation = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         previous.Click += (_, _) => { page--; RenderRows(); }; next.Click += (_, _) => { page++; RenderRows(); };
         navigation.Children.Add(previous); navigation.Children.Add(pagination); navigation.Children.Add(next); content.Children.Add(navigation); content.Children.Add(notice);
@@ -182,6 +184,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         openingForeground = Desktop.GetForegroundWindow(); foregroundClaimed = IsActive; outsideForeground = 0;
         focusSearchOnActivation = focusSearch;
         showHiddenLibrary = false;
+        CancelLibraryEditing();
         mode = requested; section = requested == LauncherPanelMode.Library ? "Biblioteca" : requested == LauncherPanelMode.Start ? "Fixados" : "Todos";
         updating = true; query.Text = text; updating = false; page = 0;
         UpdateCategories(); Reload(); ShowActivated = focusSearch;
@@ -241,6 +244,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     internal void Dismiss()
     {
         if (!IsVisible) return;
+        CancelLibraryEditing();
         searchFocusRevision++;
         focusSearchOnActivation = false;
         cancellation?.Cancel(); debounce.Stop(); visibility.Stop(); refresh.Stop(); Hide();
@@ -275,6 +279,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         string term = query.Text.Trim(); title.Text = mode == LauncherPanelMode.Library ? "Biblioteca de Aplicativos" : term.Length > 0 || mode == LauncherPanelMode.Search ? "Pesquisar no desktop" : "Iniciar";
         if (HiddenLibraryView) title.Text = "Aplicativos ocultos";
         bool librarySection = section is "Biblioteca" or "Todos";
+        RefreshLibraryEditing();
         var hidden = Store.Value.HiddenLibraryApps.ToHashSet(StringComparer.OrdinalIgnoreCase);
         hiddenLibraryToggle.Visibility = librarySection ? Visibility.Visible : Visibility.Collapsed;
         hiddenLibraryToggle.Content = HiddenLibraryView ? "Voltar à biblioteca" : $"Ocultos ({catalog.Items.Count(app => hidden.Contains(AppVisibility.LibraryKey(app)))})";
@@ -348,11 +353,13 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     }
     private void RenderRows()
     {
+        RefreshLibraryEditing();
         int pages = Math.Max(1, (results.Count + perPage - 1) / perPage); page = Math.Clamp(page, 0, pages - 1);
         var visible = results.Skip(page * perPage).Take(perPage).ToArray();
         string stamp = section + ":" + mode + ":" + page + ":" + perPage + ":" + HiddenLibraryView + ":" + Store.Value.HiddenLibraryApps.Count + ":" + query.Text + ":"
             + string.Join("|", visible.Select(entry => entry.Target + ":" + entry.Name)) + ":"
-            + string.Join("|", Store.Value.Shortcuts.Concat(Store.Value.StartPins).Select(pin => pin.Target));
+            + string.Join("|", Store.Value.Shortcuts.Concat(Store.Value.StartPins).Select(pin => pin.Target))
+            + ":edit:" + editingLibrary + ":" + string.Join("|", pendingLibraryHides.OrderBy(key => key));
         UpdateDrawerTabs();
         if (stamp == renderedStamp)
         {
@@ -386,12 +393,21 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         card.CornerRadius = new CornerRadius(14);
         card.BorderThickness = new Thickness(1);
         card.BorderBrush = Brushes.Transparent;
-        if (selected)
+        if (selected && !editingLibrary)
         {
             card.SetResourceReference(Border.BackgroundProperty, "Think.AccentSurface");
             card.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
             main.ToolTip = entry.Name + " · Enter para abrir";
             System.Windows.Automation.AutomationProperties.SetHelpText(main, "Resultado pré-selecionado. Pressione Enter na pesquisa para abrir.");
+        }
+        if (editingLibrary)
+        {
+            bool marked = pendingLibraryHides.Contains(AppVisibility.LibraryKey(entry));
+            main.Opacity = marked ? .35 : 1;
+            main.ToolTip = marked ? "Será ocultado ao salvar · clique para desmarcar" : "Clique para marcar para ocultar";
+            if (marked) card.SetResourceReference(Border.BorderBrushProperty, "Think.Accent");
+            System.Windows.Automation.AutomationProperties.SetHelpText(main, marked ? "Selecionado para ocultar ao salvar" : "Não selecionado para ocultar");
+            return card;
         }
         if (mode == LauncherPanelMode.Library)
         {
@@ -476,6 +492,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private void PinStart(AppEntry app) => Store.Update(p => { if (!p.StartPins.Any(pin => SameTarget(pin.Target, app.Target))) p.StartPins.Add(new(app.Name, app.Target)); });
     private void Launch(AppEntry entry)
     {
+        if (editingLibrary) { ToggleLibrarySelection(entry); return; }
         if (LayoutDrag.Active || LibraryShortcutDrag.SuppressLaunch) return;
         Dismiss();
         // Let WPF remove the panel before ShellExecute can wait on startup/UAC.

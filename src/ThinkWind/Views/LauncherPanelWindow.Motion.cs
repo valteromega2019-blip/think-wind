@@ -15,7 +15,7 @@ internal sealed partial class LauncherPanelWindow
     private string renderedStamp = "", renderedSection = "";
     private int renderedPage;
     private readonly Stopwatch rowsAnimationTime = new();
-    private bool DrawerAnimations => IsVisible && !LayoutDrag.Active && menus == 0
+    private bool DrawerAnimations => IsVisible && !editingLibrary && !LayoutDrag.Active && menus == 0
         && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0;
     private TimeSpan DrawerDuration => TimeSpan.FromMilliseconds(Math.Clamp(Store.Value.AnimationMilliseconds * 1.4, 220, 440));
 
