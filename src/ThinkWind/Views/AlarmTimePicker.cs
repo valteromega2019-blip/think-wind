@@ -10,6 +10,10 @@ internal sealed class AlarmTimePicker : Grid
 {
     private readonly TextBox hours = new(), minutes = new();
     private int lastHour = 7, lastMinute;
+    internal int MinimumMinute { get; set; }
+    internal int MaximumMinute { get; set; } = 1439;
+    internal bool ClampSteps { get; set; }
+    internal event Action? Changed;
     internal AlarmTimePicker()
     {
         Margin = new Thickness(0, 6, 0, 10);
@@ -29,9 +33,10 @@ internal sealed class AlarmTimePicker : Grid
     {
         set
         {
-            value = Math.Clamp(value, 0, 1439);
+            value = Math.Clamp(value, MinimumMinute, MaximumMinute);
             lastHour = value / 60; lastMinute = value % 60;
             hours.Text = lastHour.ToString("00"); minutes.Text = lastMinute.ToString("00");
+            Changed?.Invoke();
         }
     }
     internal bool TryGetMinute(out int value)
@@ -39,7 +44,9 @@ internal sealed class AlarmTimePicker : Grid
         value = 0;
         if (!int.TryParse(hours.Text, NumberStyles.None, CultureInfo.InvariantCulture, out int h) || h is < 0 or > 23
             || !int.TryParse(minutes.Text, NumberStyles.None, CultureInfo.InvariantCulture, out int m) || m is < 0 or > 59) return false;
-        lastHour = h; lastMinute = m; value = h * 60 + m;
+        value = h * 60 + m;
+        if (value < MinimumMinute || value > MaximumMinute) return false;
+        lastHour = h; lastMinute = m;
         hours.Text = h.ToString("00"); minutes.Text = m.ToString("00");
         return true;
     }
@@ -76,12 +83,13 @@ internal sealed class AlarmTimePicker : Grid
         var surface = ClockDesign.Card(stack, 8);
         surface.PreviewMouseWheel += (_, e) => { if (e.Delta == 0) return; Step(input, range, e.Delta > 0 ? 1 : -1); e.Handled = true; };
         return surface;
-    }
+            }
+            if (int.TryParse(hours.Text, out int h) && int.TryParse(minutes.Text, out int m)
+                && h is >= 0 and < 24 && m is >= 0 and < 60) MinuteOfDay = h * 60 + m;
     private void Step(TextBox input, int range, int delta)
     {
         int n = int.TryParse(input.Text, out int parsed) && parsed >= 0 && parsed < range ? parsed : range == 24 ? lastHour : lastMinute;
-        n = (n + delta + range) % range;
-        if (range == 24) lastHour = n; else lastMinute = n;
-        input.Text = n.ToString("00");
+        n = ClampSteps ? Math.Clamp(n + delta, 0, range - 1) : (n + delta + range) % range;
+        MinuteOfDay = range == 24 ? n * 60 + lastMinute : lastHour * 60 + n;
     }
 }

@@ -106,8 +106,21 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         body.Children.Add(FormLabel("\uE8D2", "Título do evento ou da nota")); body.Children.Add(title);
         var date = original?.EventDate?.Date ?? selected;
         body.Children.Add(ClockDesign.Text(date.ToString("dddd, dd/MM/yyyy"), 12, true));
-        var start = new AlarmTimePicker { MinuteOfDay = original is null ? 9 * 60 : original.Minute };
-        var end = new AlarmTimePicker { MinuteOfDay = original?.EndDate is DateTime endDate ? endDate.Hour * 60 + endDate.Minute : 10 * 60 };
+        var now = DateTime.Now;
+        int minimum = date.Date == now.Date ? now.Hour * 60 + now.Minute : 0;
+        int initial = original is null ? (date.Date == now.Date ? minimum : 9 * 60) : Math.Max(minimum, original.Minute);
+        var start = new AlarmTimePicker { ClampSteps = true, MinimumMinute = minimum, MinuteOfDay = initial };
+        var end = new AlarmTimePicker { ClampSteps = true };
+        void UpdateEnd()
+        {
+            if (!start.TryGetMinute(out int begin)) return;
+            int nextMinimum = begin == 1439 ? 0 : begin + 1;
+            bool valid = end.TryGetMinute(out int previousEnd);
+            end.MinimumMinute = nextMinimum;
+            if (!valid || previousEnd <= begin) end.MinuteOfDay = begin == 1439 ? 0 : Math.Min(1439, begin + 60);
+        }
+        end.MinuteOfDay = original?.EndDate is DateTime endDate ? endDate.Hour * 60 + endDate.Minute : initial == 1439 ? 0 : Math.Min(1439, initial + 60);
+        start.Changed += UpdateEnd; UpdateEnd();
         var times = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
         times.Children.Add(FormLabel("\uE823", "Início")); times.Children.Add(start);
         times.Children.Add(FormLabel("\uE823", "Fim")); times.Children.Add(end);
@@ -141,12 +154,12 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
             if (color.Length > 0 && AlarmService.NormalizeAgendaColor(color).Length == 0)
             { message.Text = "Use uma cor HEX no formato #RRGGBB ou deixe vazio para usar o tema."; return; }
             int begin = 0, finish = 0;
-            if (!note && (!start.TryGetMinute(out begin) || !end.TryGetMinute(out finish) || finish <= begin)) { message.Text = "O horário final deve ser depois do início."; return; }
+            if (!note && (!start.TryGetMinute(out begin) || !end.TryGetMinute(out finish) || (finish <= begin && begin != 1439))) { message.Text = "O horário final deve ser depois do início."; return; }
             var when = day.Date.AddMinutes(begin);
             int offset = note ? -1 : offsets[Math.Max(0, reminder.SelectedIndex)];
             if (offset >= 0 && when.AddMinutes(-offset) <= DateTime.Now) { message.Text = "Escolha um lembrete futuro ou Sem lembrete."; return; }
             if (!service.Items.Any(a => a.Id == original?.Id) && service.Items.Count >= 100) { message.Text = "Limite de 100 alarmes e itens da agenda atingido."; return; }
-            service.Put(new ClockAlarm { Id = original?.Id ?? Guid.NewGuid().ToString("N"), IsAgenda = true, ColorHex = color, Name = title.Text.Trim(), Notes = notes.Text, Minute = begin, EventDate = when, EndDate = note ? null : day.Date.AddMinutes(finish), Enabled = offset >= 0, ReminderMinutes = Math.Max(0, offset), Sound = sound.SelectedIndex switch { 1 => "Exclamation", 2 => "Beep", 3 => "Silent", _ => "Asterisk" } });
+            service.Put(new ClockAlarm { Id = original?.Id ?? Guid.NewGuid().ToString("N"), IsAgenda = true, ColorHex = color, Name = title.Text.Trim(), Notes = notes.Text, Minute = begin, EventDate = when, EndDate = note ? null : day.Date.AddMinutes(finish + (begin == 1439 && finish <= begin ? 1440 : 0)), Enabled = offset >= 0, ReminderMinutes = Math.Max(0, offset), Sound = sound.SelectedIndex switch { 1 => "Exclamation", 2 => "Beep", 3 => "Silent", _ => "Asterisk" } });
             if (service.Error is not null) { message.Text = service.Error; return; }
             selected = day.Date; calendar.SelectedDate = selected; calendar.DisplayDate = selected; Render();
         }));
