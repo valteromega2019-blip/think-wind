@@ -437,6 +437,9 @@ internal sealed partial class IslandWindow : FloatingWindow
                 finish.Width = 170; finish.Height = 32; finish.FontSize = 13;
                 FontSizing.LimitScale(finish, 1.15);
                 hoverQuick.Children.Add(finish);
+                var widgetsButton = ActionButton("Selecionar widgets", () => ((App)Application.Current).OpenWidgetSettings());
+                widgetsButton.Content = Glyph("\uE80A", 17 * scale);
+                StyleSecondaryControl(widgetsButton); hoverQuick.Children.Add(widgetsButton);
             }
             if (Stage == IslandStage.Full)
             {
@@ -444,8 +447,6 @@ internal sealed partial class IslandWindow : FloatingWindow
                 TutorialGuide.Mark(settingsButton, "customize");
                 settingsButton.Content = Glyph(LayoutCatalog.QuickControls.First(q => q.Id == "settings").Glyph, 17 * scale);
                 StyleSecondaryControl(settingsButton); hoverQuick.Children.Add(MarkPanelIcon(settingsButton, "settings"));
-                var widgetsButton = ActionButton("Editar widgets", () => ((App)Application.Current).OpenWidgetSettings());
-                widgetsButton.Content = Glyph("\uE80A", 17 * scale); StyleSecondaryControl(widgetsButton); hoverQuick.Children.Add(MarkPanelIcon(widgetsButton, "settings"));
                 themeToggle = ActionButton("Alternar tema do Windows e do launcher", async () =>
                     await ThemeService.SelectTheme(Store, ThemeService.IsLight(Store.Value) ? "Dark" : "Light"));
                 themeToggle.Style = (Style)FindResource("Think.IconButton");
