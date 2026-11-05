@@ -161,15 +161,11 @@ internal abstract class FloatingWindow : Window
         color.A = (byte)Math.Round(255 * (backdrop?.MaterialAvailable == true ? alpha : 1));
         Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(color);
         Typography.ApplyContrast(Surface, MaterialTint, p);
-        Surface.BorderThickness = new Thickness(CollapsedDock ? .75 : 0);
+        Surface.BorderThickness = new Thickness(CollapsedDock && SystemParameters.HighContrast ? .75 : 0);
         Surface.BorderBrush = SystemParameters.HighContrast ? SystemColors.WindowTextBrush
             : new SolidColorBrush(MaterialLight ? Color.FromArgb(110, 28, 40, 54) : Color.FromArgb(185, 215, 228, 242));
-        if (CollapsedDock && !SystemParameters.HighContrast && !MaterialLight)
-        {
-            // Subtle luminous ridge stays inside the existing handle geometry.
-            Surface.Background = new LinearGradientBrush(
-                Color.FromArgb(235, 132, 149, 168), Color.FromArgb(220, 76, 91, 110), 90);
-        }
+        // Keep the same theme tint while collapsing. Switching immediately to
+        // a pale handle gradient painted the entire shrinking bar light gray.
         if (TransparentSurface) Surface.Background = Brushes.Transparent;
         var corners = SquareTopCorners ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
         if (Surface.CornerRadius != corners) Surface.CornerRadius = corners;
