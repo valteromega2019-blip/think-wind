@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 using Windows.Devices.Radios;
+using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
@@ -29,13 +30,16 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
     private readonly TextBlock status = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6) };
     private readonly Button toggle = new() { Padding = new Thickness(10, 6, 10, 6), Content = "Consultar Bluetooth" };
     private bool active, busy, queued, disposed;
+    private readonly SettingsStore? preferences;
+    private BluetoothPairingWindow? pairingPrompt;
     private Windows.Foundation.IAsyncInfo? operation;
     private int page, generation;
     internal bool IsInteracting => busy || IsMouseCaptureWithin;
     internal int ActiveWatchers => watchers.Count(watcher => watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted);
     internal event Action? LayoutChanged;
-    internal BluetoothControl()
+    internal BluetoothControl(SettingsStore? settings = null)
     {
+        preferences = settings;
         Children.Add(toggle); Children.Add(list); Children.Add(navigation); Children.Add(status);
         toggle.Click += async (_, _) => await Toggle();
         var native = Button("Conectar/desconectar nas configurações do Windows", () => SystemActions.Run("ms-settings:bluetooth")); Children.Add(native);
@@ -57,7 +61,7 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
             foreach (var radio in available.Where(radio => radio.Kind == RadioKind.Bluetooth)) { radios.Add(radio); radio.StateChanged += RadioChanged; }
             foreach (string selector in DeviceSelectors)
             {
-                var watcher = DeviceInformation.CreateWatcher(selector, new[] { "System.Devices.Aep.IsConnected", "System.Devices.BatteryLife" }, DeviceInformationKind.AssociationEndpoint);
+                var watcher = DeviceInformation.CreateWatcher(selector, new[] { "System.Devices.Aep.IsConnected", "System.Devices.BatteryLife", "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.ProtocolId" }, DeviceInformationKind.AssociationEndpoint);
                 watcher.Added += Added; watcher.Updated += Updated; watcher.Removed += Removed; watcher.EnumerationCompleted += Completed; watcher.Stopped += Stopped;
                 watchers.Add(watcher); watcher.Start();
             }
@@ -116,7 +120,15 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
             if (device.Properties.TryGetValue("System.Devices.BatteryLife", out var charge) && (charge is byte or ushort or int or uint))
             { long amount = Convert.ToInt64(charge); if (amount is >= 0 and <= 100) battery = $" · bateria {amount}%"; }
             var row = new DockPanel { Margin = new Thickness(4) };
-            var action = Button(device.Pairing.IsPaired ? "Remover" : "Parear", async () => await Pair(device)); action.IsEnabled = !busy && (device.Pairing.IsPaired || device.Pairing.CanPair); DockPanel.SetDock(action, Dock.Right); row.Children.Add(action);
+            var actions = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            if (device.Pairing.IsPaired)
+            {
+                var connection = Button(connected && TryClassicAddress(device, out _) ? "Desconectar" : "Gerenciar conexão", async () => await Disconnect(device));
+                connection.IsEnabled = !busy; actions.Children.Add(connection);
+            }
+            var action = Button(device.Pairing.IsPaired ? "Esquecer dispositivo" : "Parear", async () => await Pair(device));
+            action.IsEnabled = !busy && (device.Pairing.IsPaired || device.Pairing.CanPair); actions.Children.Add(action);
+            DockPanel.SetDock(actions, Dock.Right); row.Children.Add(actions);
             var iconSlot = new Grid { Width = 26, Height = 24, VerticalAlignment = VerticalAlignment.Center };
             var fallback = new TextBlock { Text = "\uE702", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 18 };
             var image = new Image { Width = 22, Height = 22, Stretch = System.Windows.Media.Stretch.Uniform };
@@ -173,23 +185,113 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
         {
             if (device.Pairing.IsPaired)
             {
-                if (MessageBox.Show("Remover o pareamento de " + device.Name + "?", "Orby Launcher — Bluetooth", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+                if (!(await Prompt(device, "Esquecer este dispositivo? Será necessário parear novamente para usá-lo.")).Accepted || !active || disposed) return;
                 var unpair = device.Pairing.UnpairAsync(); operation = unpair;
                 var result = await unpair; status.Text = "Windows: " + result.Status;
             }
             else
             {
-                // The documented basic ceremony uses Windows' own confirmation
-                // and PIN dialog. Never accept a remote pairing automatically.
-                var pair = device.Pairing.PairAsync(); operation = pair;
-                var result = await pair; status.Text = "Windows: " + result.Status;
+                var custom = device.Pairing.Custom;
+                int requestGeneration = generation;
+                async void Requested(DeviceInformationCustomPairing sender, DevicePairingRequestedEventArgs request)
+                {
+                    Windows.Foundation.Deferral? deferral = null;
+                    try
+                    {
+                        deferral = request.GetDeferral();
+                        string instruction = request.PairingKind switch
+                        {
+                            DevicePairingKinds.DisplayPin => "Digite ou confirme este código no dispositivo e, depois, confirme aqui.",
+                            DevicePairingKinds.ProvidePin => "Digite o PIN mostrado ou informado pelo dispositivo.",
+                            DevicePairingKinds.ConfirmPinMatch => "Confira se este código é o mesmo mostrado no dispositivo.",
+                            DevicePairingKinds.ConfirmOnly => "Confirma o pareamento com este dispositivo? O Windows pode solicitar uma confirmação adicional.",
+                            _ => ""
+                        };
+                        if (instruction.Length == 0) return;
+                        if ((request.PairingKind is DevicePairingKinds.DisplayPin or DevicePairingKinds.ConfirmPinMatch) && string.IsNullOrWhiteSpace(request.Pin))
+                            return; // Never ask the user to confirm a missing code.
+                        var reply = await Dispatcher.InvokeAsync(() => requestGeneration == generation && active && !disposed
+                            ? Prompt(device, instruction, request.PairingKind,
+                                request.PairingKind is DevicePairingKinds.DisplayPin or DevicePairingKinds.ConfirmPinMatch ? request.Pin : "")
+                            : Task.FromResult(new BluetoothPairingReply(false))).Task.Unwrap().ConfigureAwait(false);
+                        if (!reply.Accepted || requestGeneration != generation || !active || disposed) return;
+                        if (request.PairingKind == DevicePairingKinds.ProvidePin) request.Accept(reply.Pin);
+                        else request.Accept();
+                    }
+                    catch (Exception error) when (error is UnauthorizedAccessException or System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException)
+                    { await OnUI(() => { if (active && !disposed) status.Text = "O Windows não concluiu a confirmação de pareamento."; }); }
+                    finally
+                    {
+                        try { deferral?.Complete(); }
+                        catch (Exception error) when (error is System.Runtime.InteropServices.COMException or InvalidOperationException) { }
+                    }
+                }
+                custom.PairingRequested += Requested;
+                try
+                {
+                    var kinds = DevicePairingKinds.ConfirmOnly | DevicePairingKinds.DisplayPin | DevicePairingKinds.ProvidePin | DevicePairingKinds.ConfirmPinMatch;
+                    var pair = custom.PairAsync(kinds, DevicePairingProtectionLevel.Default); operation = pair;
+                    var result = await pair;
+                    if (active && !disposed) status.Text = result.Status switch
+                    {
+                        DevicePairingResultStatus.Paired => "Dispositivo pareado. O estado da conexão é atualizado pelo Windows.",
+                        DevicePairingResultStatus.AlreadyPaired => "Este dispositivo já está pareado.",
+                        _ => "Pareamento: " + result.Status
+                    };
+                }
+                finally { custom.PairingRequested -= Requested; pairingPrompt?.Close(); pairingPrompt = null; }
             }
         }
-        catch (Exception error) when (error is UnauthorizedAccessException or System.Runtime.InteropServices.COMException or InvalidOperationException or OperationCanceledException) { if (active) status.Text = error.Message; }
+        catch (Exception error) when (error is UnauthorizedAccessException or System.Runtime.InteropServices.COMException or InvalidOperationException or OperationCanceledException or ArgumentException) { if (active) status.Text = error.Message; }
         finally { operation = null; busy = false; if (active && !disposed) Render(); }
+    }
+    private async Task<BluetoothPairingReply> Prompt(DeviceInformation device, string instruction,
+        DevicePairingKinds kind = DevicePairingKinds.ConfirmOnly, string pin = "")
+    {
+        if (disposed || !active || preferences is null || pairingPrompt is not null) return new(false);
+        var owner = Window.GetWindow(this);
+        var prompt = new BluetoothPairingWindow(preferences, device.Name, instruction, kind, pin)
+        { Owner = owner, MonitorDeviceOverride = (owner as FloatingWindow)?.MonitorDeviceOverride };
+        pairingPrompt = prompt;
+        try { prompt.Show(); prompt.Position(); prompt.Activate(); return await prompt.Completion; }
+        finally { if (prompt.IsVisible) prompt.Close(); if (ReferenceEquals(pairingPrompt, prompt)) pairingPrompt = null; }
+    }
+    private static bool TryClassicAddress(DeviceInformation device, out ulong address)
+    {
+        address = 0;
+        return device.Properties.TryGetValue("System.Devices.Aep.ProtocolId", out var protocol)
+            && Guid.TryParse(Convert.ToString(protocol), out var id) && id == new Guid("e0cbf06c-cd8b-4647-bb8a-263b43f0f974")
+            && device.Properties.TryGetValue("System.Devices.Aep.DeviceAddress", out var value)
+            && BluetoothConnection.TryAddress(Convert.ToString(value), out address);
+    }
+    private async Task Disconnect(DeviceInformation device)
+    {
+        if (busy || disposed || !active) return;
+        if (!device.Properties.TryGetValue("System.Devices.Aep.IsConnected", out var state) || state is not true
+            || !TryClassicAddress(device, out ulong address))
+        {
+            status.Text = "Este dispositivo deve ser conectado ou desconectado pelo gerenciamento do Windows, sem remover o pareamento.";
+            SystemActions.Run("ms-settings:bluetooth"); return;
+        }
+        busy = true; Render();
+        try
+        {
+            if (!(await Prompt(device, "Desconectar agora? O dispositivo continuará pareado e poderá reconectar automaticamente conforme seu funcionamento.")).Accepted || !active || disposed) return;
+            status.Text = "Solicitando desconexão ao Windows…";
+            var result = await Task.Run(() => BluetoothConnection.Disconnect(address));
+            if (active && !disposed) status.Text = result.Message;
+        }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException
+            or DllNotFoundException or EntryPointNotFoundException or NotSupportedException)
+        {
+            DiagnosticLog.Record("Desconexão Bluetooth", error);
+            if (active && !disposed) status.Text = "Desconexão não confirmada pelo Windows/driver. O pareamento foi mantido. Use as configurações de Bluetooth abaixo.";
+        }
+        finally { busy = false; if (active && !disposed) Render(); }
     }
     private void StopWatching()
     {
+        pairingPrompt?.Close(); pairingPrompt = null;
         try { operation?.Cancel(); } catch (System.Runtime.InteropServices.COMException) { }
         foreach (var radio in radios) radio.StateChanged -= RadioChanged; radios.Clear();
         foreach (var watcher in watchers)

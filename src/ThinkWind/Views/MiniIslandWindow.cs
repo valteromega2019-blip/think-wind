@@ -101,7 +101,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         }
         else if (kind == MiniIslandKind.Bluetooth)
         {
-            bluetooth = new BluetoothControl(); bluetooth.LayoutChanged += Position; panel.Children.Add(bluetooth);
+            bluetooth = new BluetoothControl(store); bluetooth.LayoutChanged += Position; panel.Children.Add(bluetooth);
         }
         else
         {
