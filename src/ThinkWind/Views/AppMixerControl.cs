@@ -55,7 +55,7 @@ internal sealed class AppMixerControl : StackPanel, IDisposable
     private readonly Dictionary<string, Row> rows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Change> changes = new(StringComparer.OrdinalIgnoreCase);
     private readonly StackPanel list = new();
-    private readonly TextBlock status = new() { Text = "Abra um aplicativo e reproduza áudio para vê-lo aqui.", FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 8, 4, 6) };
+    private readonly TextBlock status = new() { Text = "Buscando aplicativos com áudio…", FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 8, 4, 6) };
     private readonly ScrollViewer scroll;
     private readonly DispatcherTimer throttle = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private CancellationTokenSource? lifetime;
@@ -63,7 +63,17 @@ internal sealed class AppMixerControl : StackPanel, IDisposable
     private DateTime nextRead;
     internal event Action? LayoutChanged;
     internal bool IsInteracting => IsMouseCaptureWithin || writing || changes.Count > 0;
-    internal double MaximumListHeight { set => scroll.MaxHeight = value; }
+    internal double MaximumListHeight
+    {
+        set
+        {
+            // Session discovery is asynchronous. Reserve the final viewport
+            // before it completes; rows scroll inside it instead of resizing
+            // the native mini-island a second time after the tab is visible.
+            scroll.Height = scroll.MaxHeight = value;
+            status.Height = Math.Ceiling(status.FontSize * 1.5 * 3);
+        }
+    }
     internal AppMixerControl()
     {
         status.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted"); Children.Add(status);
@@ -97,7 +107,7 @@ internal sealed class AppMixerControl : StackPanel, IDisposable
                 else row.Apply(app);
                 if (index >= list.Children.Count || !ReferenceEquals(list.Children[index], row.Root)) { list.Children.Remove(row.Root); list.Children.Insert(index, row.Root); layout = true; }
             }
-            status.Text = apps.Length == 0 ? "Nenhum aplicativo com sessão ativa ou silenciada no momento." : "Volume por aplicativo · todas as saídas de áudio. Sessões silenciadas continuam disponíveis para reativar.";
+            status.Text = apps.Length == 0 ? "Nenhum aplicativo com áudio no momento." : "Volume por aplicativo · inclui sessões silenciadas.";
             if (layout) LayoutChanged?.Invoke();
         }
         catch (OperationCanceledException) { }

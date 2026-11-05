@@ -157,11 +157,12 @@ internal sealed class MiniIslandWindow : FloatingWindow
         if (Kind == MiniIslandKind.Calendar) { PositionCalendar(); return; }
         if (Kind == MiniIslandKind.Clock) { PositionClock(); return; }
         double width = Math.Min(390, Display.Width - 16);
-        if (mixer is not null) mixer.MaximumListHeight = Math.Max(100, Math.Min(340, CompactLayout.PanelHeight(Display.Height) - 160));
         viewport.Width = Math.Max(1, width - Surface.Padding.Left - Surface.Padding.Right);
         viewport.MaxHeight = Math.Max(60, CompactLayout.PanelHeight(Display.Height) - 24);
         panel.Width = viewport.Width;
         FontSizing.PrepareForMeasure(panel);
+        if (mixer is not null) mixer.MaximumListHeight = Math.Max(100, Math.Min(340, CompactLayout.PanelHeight(Display.Height) - 160));
+        panel.InvalidateMeasure();
         panel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
         PlaceAtAnchor(width, Math.Min(panel.DesiredSize.Height, viewport.MaxHeight) + 24);
     }
