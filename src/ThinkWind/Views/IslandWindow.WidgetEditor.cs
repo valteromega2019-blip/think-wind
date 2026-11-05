@@ -53,7 +53,7 @@ internal sealed partial class IslandWindow
         var button = ActionButton(Store.IsEditing ? "Concluir edição dos widgets" : "Editar tamanho e posição dos widgets", () =>
         {
             CancelCollapse();
-            Store.SetEditing(!Store.IsEditing);
+            SetWidgetEditing(!Store.IsEditing);
         });
         button.Style = (Style)FindResource("Think.IconButton");
         button.Content = Glyph("\uE70F", strip ? 13 : 17 * Store.Value.IslandScale);
@@ -62,7 +62,13 @@ internal sealed partial class IslandWindow
         button.Padding = new Thickness(3);
         button.SetResourceReference(Control.ForegroundProperty, Store.IsEditing ? "Think.Accent" : "Think.Text");
         button.SetResourceReference(Control.BackgroundProperty, Store.IsEditing ? "Think.AccentSurface" : "Think.Control");
+        TutorialGuide.Mark(button, "widget-editor");
         return button;
+    }
+    private void SetWidgetEditing(bool enabled)
+    {
+        Store.SetEditing(enabled);
+        TutorialGuide.Notify(enabled ? "widget-edit-open" : "widget-edit-finished");
     }
 
     private void AddWidgetResizeEdges(Grid content, string id)
@@ -70,6 +76,7 @@ internal sealed partial class IslandWindow
         foreach (var edge in new[] { ResizeEdge(id, false, true), ResizeEdge(id, false), ResizeEdge(id, true) })
         {
             Grid.SetRowSpan(edge, 3); Panel.SetZIndex(edge, 20); content.Children.Add(edge);
+            if (edge.Cursor == Cursors.SizeWE) TutorialGuide.Mark(edge, "widget-resize");
         }
     }
     private Thumb ResizeEdge(string id, bool vertical, bool left = false)
@@ -124,6 +131,7 @@ internal sealed partial class IslandWindow
                 else foreach (string peer in peers)
                     p.ModuleExtraHeight[peer] = Math.Clamp(p.ModuleExtraHeight.GetValueOrDefault(peer) + distance, 0, 240);
             });
+            TutorialGuide.Notify("widget-resized");
         };
         return grip;
     }

@@ -32,12 +32,13 @@ internal sealed partial class TutorialWindow
             .OrderByDescending(window => device is not null && System.Windows.Forms.Screen.FromHandle(new WindowInteropHelper(window).Handle).DeviceName == device).ToArray();
         Window? panel = null;
         if (progress.Step is 1 or 2) panel = visible.OfType<LauncherPanelWindow>().FirstOrDefault();
-        if (progress.Step >= 3 && progress.Step <= 6)
+        string? targetKey = progress.Step >= 0 && progress.Step < Steps.Length ? Steps[progress.Step].Target : null;
+        if (targetKey is "island" or "expand" or "widget-editor" or "widget-resize" or "widget-edit-finish" or "monitor" or "optimizer" or "optimizer-analyze" or "customize")
         {
             panel = visible.OfType<IslandWindow>().FirstOrDefault(window => window.Stage != IslandStage.Compact);
-            if (progress.Step >= 5) panel = visible.OfType<EmptyIslandAreaWindow>().FirstOrDefault() ?? panel;
+            if (targetKey is "monitor" or "optimizer" or "optimizer-analyze") panel = visible.OfType<EmptyIslandAreaWindow>().FirstOrDefault() ?? panel;
         }
-        if (progress.Step == 7 || (progress.Step == 6 && success)) panel = visible.OfType<SettingsWindow>().FirstOrDefault() ?? panel;
+        if (targetKey is "appearance" or "fixed-bar" || targetKey == "customize" && success) panel = visible.OfType<SettingsWindow>().FirstOrDefault() ?? panel;
         if (panel is not null && PresentationSource.FromVisual(panel) is not null) lastGuideBounds = BoundsOf(panel);
         else if (target is not null) lastGuideBounds = BoundsOf(target);
 

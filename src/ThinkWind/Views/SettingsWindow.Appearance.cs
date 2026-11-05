@@ -16,7 +16,9 @@ internal sealed partial class SettingsWindow
         AddColorSetting(colors, "Cor de fundo", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));
         Note(colors, "Para usar esta cor, ative a opção acima. Desativada, o fundo acompanha o tema ou o aplicativo, conforme suas configurações.");
         AppearanceLabel(colors, "Formato da barra inferior");
-        Check(colors, "Barra inferior fixa de ponta a ponta", store.Value.DockFixedBar, value => Change(p => p.DockFixedBar = value));
+        var fixedBar = Check(colors, "Barra inferior fixa de ponta a ponta", store.Value.DockFixedBar, value => Change(p => p.DockFixedBar = value));
+        TutorialGuide.Mark(fixedBar, "fixed-bar");
+        fixedBar.MouseEnter += (_, _) => TutorialGuide.Notify("fixed-bar-discovered");
         Note(colors, "No modo fixo, os controles ficam centralizados e os aplicativos respeitam o espaço da barra. Desative para voltar ao Dock flutuante com suas preferências anteriores.");
         AppearanceLabel(colors, "Arredondamento");
         Slider(colors, "Barra de aplicativos · cantos", 0, 48, store.Value.DockRadius, value => Change(p => p.DockRadius = value));

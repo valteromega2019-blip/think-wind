@@ -414,7 +414,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         {
             if (Store.IsEditing)
             {
-                var finish = ActionButton("✓ Concluir edição", () => Store.SetEditing(false));
+                var finish = ActionButton("✓ Concluir edição", () => SetWidgetEditing(false));
+                TutorialGuide.Mark(finish, "widget-edit-finish");
                 finish.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
                 finish.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
                 finish.Padding = new Thickness(12, 6, 12, 6);

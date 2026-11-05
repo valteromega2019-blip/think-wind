@@ -23,11 +23,15 @@ internal sealed partial class TutorialWindow : Window
         new("1 · Barra de aplicativos", "Pesquise um aplicativo", "Digite o nome de um aplicativo na pesquisa do menu ou da barra. O primeiro resultado fica selecionado: Enter abre o aplicativo. Ao sair da pesquisa, o texto é limpo.", "search", "search-typed"),
         new("2 · Central de controle", "Descubra a expansão", "Leve o mouse até a central no topo da tela. Na ilha, a primeira expansão mostra mídia e áudio. No modo barra, a seta abre os controles abaixo. Os ícones dependem da sua personalização.", "island", "island-hover"),
         new("2 · Central de controle", "Veja o painel completo", "Clique na seta de expansão. Aqui ficam os controles e widgets, como calendário, clima, notas rápidas e favoritos. Rede e áudio têm painéis próprios.", "expand", "island-full"),
+        new("2 · Central de controle", "Organize seus widgets", "No painel completo, clique no lápis de edição. Os controles internos ficam bloqueados e o fundo recebe desfoque para destacar o editor.", "widget-editor", "widget-edit-open"),
+        new("2 · Central de controle", "Ajuste pelas bordas", "Arraste uma borda lateral de um widget. A largura encaixa em três, dois ou um por linha; os outros blocos são redistribuídos. A borda inferior ajusta a altura sem cortar o conteúdo. Para manter o layout atual, use Pular etapa.", "widget-resize", "widget-resized"),
+        new("2 · Central de controle", "Conclua a edição", "Clique em Concluir edição. Seu layout é salvo automaticamente, o desfoque desaparece e os controles voltam a funcionar.", "widget-edit-finish", "widget-edit-finished"),
         new("3 · Monitoramento e personalização", "Conheça o desempenho", "Clique no ícone de monitoramento. Ele mostra as leituras disponíveis do computador. O overlay é opcional e aparece em jogos; sensores avançados podem exigir autorização.", "monitor", "monitor-open"),
         new("3 · Monitoramento e personalização", "Prepare seus jogos", "Clique na aba Otimizador. Escolha Economia, Equilibrado ou Desempenho para preparar o perfil de energia. O plano anterior retorna ao sair do jogo.", "optimizer", "optimizer-open"),
         new("3 · Monitoramento e personalização", "Revise os aplicativos", "Clique em Analisar. A primeira aba mostra aplicativos elegíveis para fechamento. Marque somente o que estiver sem uso e confirme a ação. Processos protegidos ficam fora da seleção; nada é fechado durante esta etapa do tutorial.", "optimizer-analyze", "optimizer-analyzed"),
         new("3 · Monitoramento e personalização", "Deixe com a sua cara", "Clique no pincel de personalização. As abas organizam cores, transparência, ícones, widgets e overlay. As alterações são salvas automaticamente.", "customize", "settings-open"),
-        new("3 · Monitoramento e personalização", "Explore a aparência", "Selecione a aba Aparência. Você pode mudar tema, cores e transparência em tempo real. Ao final das configurações, em Tutorial, é possível repetir este guia.", "appearance", "appearance-open")
+        new("3 · Monitoramento e personalização", "Explore a aparência", "Selecione Aparência para tema, cores e cantos. No grupo Visual, Aplicativos e Central de controle organizam cada barra; Transparência cuida dos materiais e Tipografia das fontes. As mudanças aparecem na hora.", "appearance", "appearance-open"),
+        new("3 · Monitoramento e personalização", "Dock flutuante ou barra fixa", "Em Aparência, passe o mouse sobre Barra inferior fixa de ponta a ponta. É opcional: mantém os controles centralizados e reserva espaço para os aplicativos. Desativada, volta ao Dock flutuante. Não é necessário mudar a opção para avançar. Para rever o guia, use Personalizar → Tutorial.", "fixed-bar", "fixed-bar-discovered")
     };
     public sealed class Progress
     {
@@ -130,7 +134,8 @@ internal sealed partial class TutorialWindow : Window
             if (value is not null && value.Step >= -1 && value.Step <= Steps.Length)
             {
                 if (value.Schema < 1 && value.Step >= 6) value.Step += 2;
-                value.Schema = 1;
+                if (value.Schema < 2 && value.Step >= 5) value.Step += 3;
+                value.Schema = 2;
                 return value;
             }
         }
@@ -139,7 +144,7 @@ internal sealed partial class TutorialWindow : Window
     }
     private void SaveProgress()
     {
-        progress.Schema = 1;
+        progress.Schema = 2;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(store.TutorialStatePath)!);
@@ -157,6 +162,7 @@ internal sealed partial class TutorialWindow : Window
     }
     private void Pause()
     {
+        if (progress.Step is >= 5 and <= 7 && store.IsEditing) store.SetEditing(false);
         follow.Stop(); advance.Stop(); ClearHighlight(); TutorialGuide.Active = false;
         TutorialGuide.KeepDockOpen = TutorialGuide.KeepIslandOpen = TutorialGuide.CollapseDockOnDesktop = false;
         progress.Dismissed = true; SaveProgress(); Hide();
@@ -171,13 +177,13 @@ internal sealed partial class TutorialWindow : Window
         FontSizing.Apply(this, store.Value.FontScale);
         success = false; finishing = false; lastGuideBounds = null; ClearHighlight(); actions.Children.Clear();
         TutorialGuide.KeepDockOpen = progress.Step >= 0 && progress.Step <= 2;
-        TutorialGuide.KeepIslandOpen = progress.Step >= 4 && progress.Step <= 8;
-        TutorialGuide.CollapseDockOnDesktop = progress.Step >= 3 && progress.Step <= 8;
+        TutorialGuide.KeepIslandOpen = progress.Step >= 4 && progress.Step <= 11;
+        TutorialGuide.CollapseDockOnDesktop = progress.Step >= 3 && progress.Step <= 11;
         if (progress.Step < 0)
         {
             module.Text = "Bem-vindo ao Orby Launcher"; title.Text = "Vamos conhecer seu desktop?";
             description.Text = "Três módulos rápidos. Siga os destaques e use os controles de verdade: o guia reconhece suas ações e avança automaticamente.";
-            hint.Text = "Você pode pular etapas ou sair a qualquer momento. O guia não altera suas configurações.";
+            hint.Text = "Você pode pular etapas ou sair a qualquer momento. Ajustes feitos por você durante o guia são salvos normalmente.";
             AddAction("Começar", () => { if (!blocked()) SystemToolsMenu.ShowDesktop(); progress.Step = 0; SaveProgress(); Render(); });
             AddAction("Agora não", Pause);
         }
@@ -212,6 +218,7 @@ internal sealed partial class TutorialWindow : Window
     private void AdvanceStep()
     {
         advance.Stop();
+        if (progress.Step == 7 && store.IsEditing) store.SetEditing(false);
         bool leavingSearch = progress.Step == 2;
         progress.Step++; SaveProgress(); Render();
         if (leavingSearch) ((App)Application.Current).CompleteTutorialSearch();
@@ -224,6 +231,8 @@ internal sealed partial class TutorialWindow : Window
         var target = progress.Step >= 0 && progress.Step < Steps.Length && !success ? TutorialGuide.Find(Steps[progress.Step].Target) : null;
         if (target != highlighted)
         {
+            if (target is not null && progress.Step >= 0 && progress.Step < Steps.Length && Steps[progress.Step].Target == "fixed-bar")
+                target.BringIntoView();
             ClearHighlight(); highlighted = target;
             if (target is not null && AdornerLayer.GetAdornerLayer(target) is { } layer)
             { highlightLayer = layer; highlight = new TargetAdorner(target); layer.Add(highlight); }
