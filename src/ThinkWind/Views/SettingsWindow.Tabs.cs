@@ -58,7 +58,7 @@ internal sealed partial class SettingsWindow
         {
             // Only an explicit window resize changes the navigation layout.
             // Moving the font slider must not replace the sidebar mid-edit.
-            bool compact = ActualWidth > 0 && ActualWidth < 640;
+            bool compact = ActualWidth > 0 && ActualWidth / SettingsVisualScale < 640;
             sidebar.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             compactNavigation.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
             navigationColumn.Width = new GridLength(compact ? 0 : 174);

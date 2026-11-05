@@ -12,6 +12,7 @@ using OrbyLauncher.Services;
 namespace OrbyLauncher.Views;
 internal sealed partial class SettingsWindow : FloatingWindow
 {
+    private const double SettingsVisualScale = .85;
     protected override bool AttachedTop => false;
     protected override bool HideOnClose => false;
     protected override string? MaterialOverride => "Acrylic";
@@ -44,8 +45,8 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Title = "Orby Launcher · Personalização";
         SizeToContent = SizeToContent.Manual;
         var display = OverlayChrome.GetDisplay(store.Value.MonitorIndex, store.Value.MonitorDeviceName);
-        Width = Math.Min(740, display.Width - 24); Height = Math.Min(660, display.Height - 24);
-        MinWidth = Math.Min(380, Width); MinHeight = Math.Min(360, Height);
+        Width = Math.Min(740 * SettingsVisualScale, display.Width - 24); Height = Math.Min(660 * SettingsVisualScale, display.Height - 24);
+        MinWidth = Math.Min(380 * SettingsVisualScale, Width); MinHeight = Math.Min(360 * SettingsVisualScale, Height);
         WindowStartupLocation = WindowStartupLocation.Manual;
         Topmost = true;
         SourceInitialized += (_, _) => Position();
@@ -54,7 +55,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Surface.BorderThickness = new Thickness(1);
         Surface.SetResourceReference(Border.BorderBrushProperty, "Think.Hover");
         SetResourceReference(ForegroundProperty, "Think.Text");
-        var root = new DockPanel();
+        var root = new DockPanel { LayoutTransform = new ScaleTransform(SettingsVisualScale, SettingsVisualScale) };
         DockPanel.SetDock(status, Dock.Bottom); root.Children.Add(status);
         var heading = new StackPanel { Margin = new Thickness(20, 16, 20, 10) };
         var titleBar = new DockPanel { Margin = new Thickness(0, 0, 0, 8), Background = Brushes.Transparent };
@@ -68,7 +69,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         heading.Children.Add(CreateSettingsSearch());
         var headingScroll = new ScrollViewer { Content = heading, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         headingScroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
-        SizeChanged += (_, _) => headingScroll.MaxHeight = Math.Max(100, ActualHeight * .34);
+        SizeChanged += (_, _) => headingScroll.MaxHeight = Math.Max(100, ActualHeight / SettingsVisualScale * .34);
         DockPanel.SetDock(headingScroll, Dock.Top); root.Children.Add(headingScroll);
         var scroll = settingsScroll;
         scroll.Content = content;
