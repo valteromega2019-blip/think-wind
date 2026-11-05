@@ -12,6 +12,7 @@ using Forms = System.Windows.Forms;
 namespace OrbyLauncher;
 public partial class App : Application
 {
+    private void SelectionPopupOpened(object sender, EventArgs e) => PopupBackdrop.ComboOpened(sender, e);
     private Mutex? instance;
     private Forms.NotifyIcon? tray;
     private DockWindow? dock;

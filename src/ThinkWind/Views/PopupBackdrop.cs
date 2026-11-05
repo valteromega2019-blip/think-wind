@@ -70,13 +70,20 @@ internal static class PopupBackdrop
             if (s is ComboBox combo) { combo.DropDownOpened -= ComboOpened; combo.DropDownOpened += ComboOpened; }
         }));
     }
-    private static void ComboOpened(object? sender, EventArgs args)
+    internal static void ComboOpened(object? sender, EventArgs args)
     {
         if (sender is not ComboBox combo) return;
         combo.ApplyTemplate();
         if (combo.Template.FindName("PART_Popup", combo) is not Popup popup) return;
+        popup.PlacementTarget = combo;
         Attach(popup);
         if (popup.Child is FrameworkElement child) OpenWhenReady(child);
+        combo.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
+        {
+            // Opened can run before the separate popup HWND becomes visible.
+            // Synchronize once after its first layout, not with a polling timer.
+            if (popup.IsOpen && popup.Child is FrameworkElement visible && visible.IsVisible) OpenWhenReady(visible);
+        }));
     }
     internal static void Attach(Popup popup)
     {

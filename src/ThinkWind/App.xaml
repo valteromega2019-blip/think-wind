@@ -7,6 +7,7 @@
   <SolidColorBrush x:Key="Think.GlassCard" Color="#0DFFFFFF"/>
   <SolidColorBrush x:Key="Think.Control" Color="#222832"/>
   <SolidColorBrush x:Key="Think.Popup" Color="#1A1E25"/>
+  <SolidColorBrush x:Key="Think.SelectionPopup" Color="#E61A1E25"/>
   <SolidColorBrush x:Key="Think.Text" Color="#F4F6FA"/>
   <SolidColorBrush x:Key="Think.Muted" Color="#F4F6FA"/>
   <SolidColorBrush x:Key="Think.Hover" Color="#303B48"/>
@@ -31,7 +32,7 @@
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToolTip"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="8"><ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/></Border></ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="ContextMenu"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
-   <Setter Property="Background" Value="{DynamicResource Think.Popup}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="6"/>
+   <Setter Property="Background" Value="{DynamicResource Think.SelectionPopup}"/><Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Padding" Value="6"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ContextMenu"><Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="12"><ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/></ScrollViewer></Border></ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="MenuItem">
@@ -69,6 +70,7 @@
    </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="ComboBox"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
+   <EventSetter Event="DropDownOpened" Handler="SelectionPopupOpened"/>
    <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Background" Value="{DynamicResource Think.Control}"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
     <Grid>
@@ -82,7 +84,7 @@
       </Grid>
      </Border>
      <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False">
-      <Border Background="{DynamicResource Think.Popup}" BorderThickness="0" CornerRadius="8" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+      <Border Background="{DynamicResource Think.SelectionPopup}" BorderThickness="0" CornerRadius="8" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
        <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}" CanContentScroll="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Style="{StaticResource Think.SettingsScrollViewer}"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
       </Border>
      </Popup>

@@ -85,6 +85,9 @@ internal static class ThemeService
         Layer("Think.Control", "#111318", p.InnerSurfaceOpacity);
         var background = p.UseCustomBarColor ? (Color)ColorConverter.ConvertFromString(p.BarBackgroundColor) : BaseColor;
         Layer("Think.Popup", background.ToString(), p.IslandOpacity ?? p.TintOpacity);
+        // Selection lists overlap other text. Keep a legible tint even when
+        // the user's bar opacity is very low; the native Acrylic remains behind.
+        Layer("Think.SelectionPopup", background.ToString(), Math.Max(.78, p.IslandOpacity ?? p.TintOpacity));
         var requested = (Color)ColorConverter.ConvertFromString(p.FontColor);
         var inkText = Typography.Ink(requested, background, p.AutomaticTextContrast);
         Set("Think.Text", inkText.ToString());
@@ -112,6 +115,7 @@ internal static class ThemeService
             resources["Think.GlassCard"] = SystemColors.ControlBrush;
             resources["Think.Control"] = SystemColors.ControlBrush;
             resources["Think.Popup"] = SystemColors.ControlBrush;
+            resources["Think.SelectionPopup"] = SystemColors.ControlBrush;
             resources["Think.Accent"] = SystemColors.HighlightBrush;
             resources["Think.AccentInk"] = SystemColors.HighlightBrush;
             resources["Think.OnAccent"] = SystemColors.HighlightTextBrush;
