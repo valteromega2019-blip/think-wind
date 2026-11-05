@@ -763,8 +763,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         if (Store.IsEditing && Stage == IslandStage.Full && editingWidth is double previousWidth)
             width = Math.Min(Display.Width - 16, previousWidth);
         headerViewport.Width = headerViewport.MaxWidth = Math.Max(1, width - 24);
-        headerViewport.Height = Math.Max(40, 36 * p.IslandScale);
-        double headerHeight = Math.Max(40, 36 * p.IslandScale) + Surface.Padding.Top + Surface.Padding.Bottom;
+        double mainRowHeight = Stage == IslandStage.Full ? 32 : Math.Max(40, 36 * p.IslandScale);
+        headerViewport.Height = mainRowHeight;
+        double headerHeight = mainRowHeight + Surface.Padding.Top + Surface.Padding.Bottom;
         secondaryQuickViewport.Width = secondaryQuickViewport.MaxWidth = headerViewport.Width;
         // Keep the extra controls on one independent row. The Viewbox fits it
         // to the available width instead of wrapping or changing the main row.
@@ -838,6 +839,16 @@ internal sealed partial class IslandWindow : FloatingWindow
                 stableFullPanelWidth ??= width;
                 width = Math.Min(stableFullPanelWidth.Value, Display.Width - 16);
                 inner = Math.Max(1, width - Surface.Padding.Left - Surface.Padding.Right);
+                fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
+            }
+            // Avoid centering a narrow, height-limited board inside a wider
+            // frame: distribute widgets over the available logical width.
+            for (int pass = 0; pass < 3 && fit > 0 && inner - boardWidth * fit > 1; pass++)
+            {
+                boardWidth = Math.Min(4000, inner / fit);
+                modules.Width = boardWidth;
+                modules.Measure(new Size(boardWidth, double.PositiveInfinity));
+                naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
                 fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
             }
             moduleViewport.Width = inner;
