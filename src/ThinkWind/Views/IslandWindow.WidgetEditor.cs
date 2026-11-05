@@ -14,6 +14,8 @@ internal sealed partial class IslandWindow
 {
     private bool editingPanel;
     private double? editingWidth, editingHeight;
+    private (double Width, double Height, double Limit, double Maximum, string Structure)? widgetWidthFitKey;
+    private double fittedWidgetBoardWidth, fittedWidgetInnerWidth;
     private BackdropHost? editorBackdrop;
     private void SyncEditorBackdrop()
     {

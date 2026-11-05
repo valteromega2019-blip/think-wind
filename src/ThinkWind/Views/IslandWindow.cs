@@ -110,9 +110,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         microphone = new AudioEndpointControl(audio, CoreAudio.Flow.Capture);
         output.SetCompact(true); microphone.SetCompact(true);
         output.LayoutChanged += ModuleSizeChanged; microphone.LayoutChanged += ModuleSizeChanged;
-        headerViewport = new Viewbox { Child = header, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
+        headerViewport = new Viewbox { Child = new Border { Child = header, Padding = new Thickness(8, 4, 8, 4) }, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
         DockPanel.SetDock(headerViewport, Dock.Top); root.Children.Add(headerViewport);
-        secondaryQuickViewport.Child = hoverQuick;
+        secondaryQuickViewport.Child = new Border { Child = hoverQuick, Padding = new Thickness(8, 4, 8, 4) };
         DockPanel.SetDock(secondaryQuickViewport, Dock.Top); root.Children.Add(secondaryQuickViewport);
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition());
@@ -731,13 +731,15 @@ internal sealed partial class IslandWindow : FloatingWindow
         double width = Stage == IslandStage.Compact ? compact : Stage == IslandStage.Hover ? Math.Min(Display.Width - 16, Math.Max(compact, Math.Min(540, p.IslandExpandedWidth))) : Math.Min(Display.Width - 16, p.IslandExpandedWidth);
         if (Store.IsEditing && Stage == IslandStage.Full && editingWidth is double previousWidth)
             width = Math.Min(Display.Width - 16, previousWidth);
-        headerViewport.Width = Math.Max(1, width - 24);
+        headerViewport.Width = headerViewport.MaxWidth = Math.Max(1, width - 24);
         headerViewport.Height = Math.Max(40, 36 * p.IslandScale);
         double headerHeight = Math.Max(40, 36 * p.IslandScale) + Surface.Padding.Top + Surface.Padding.Bottom;
-        secondaryQuickViewport.Width = headerViewport.Width;
+        secondaryQuickViewport.Width = secondaryQuickViewport.MaxWidth = headerViewport.Width;
         // Keep the extra controls on one independent row. The Viewbox fits it
         // to the available width instead of wrapping or changing the main row.
-        hoverQuick.Width = Math.Max(36, hoverQuick.Children.OfType<FrameworkElement>().Sum(item => item.Width + item.Margin.Left + item.Margin.Right));
+        hoverQuick.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        hoverQuick.Width = Math.Max(36, hoverQuick.Children.OfType<FrameworkElement>().Sum(item =>
+            (double.IsFinite(item.Width) ? item.Width : item.DesiredSize.Width) + item.Margin.Left + item.Margin.Right));
         secondaryQuickViewport.Measure(new Size(headerViewport.Width, double.PositiveInfinity));
         if (Stage != IslandStage.Compact && hoverQuick.Children.Count > 0) headerHeight += secondaryQuickViewport.DesiredSize.Height;
         double limit = Stage == IslandStage.Full ? Math.Max(120, Math.Min(620, Display.Height * .64)) : CompactLayout.PanelHeight(Display.Height);
@@ -757,6 +759,39 @@ internal sealed partial class IslandWindow : FloatingWindow
             modules.InvalidateMeasure();
             modules.Measure(new Size(boardWidth, double.PositiveInfinity));
             double naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
+            // Prefer a wider layout to smaller text. Widen only as far as it
+            // improves the fit, with a hard monitor bound and no preference write.
+            double availableWidth = Math.Min(Display.Width - 40, 1280);
+            double bestFit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
+            if (!Store.IsEditing)
+            {
+                var fitKey = (boardWidth, naturalHeight, contentLimit, availableWidth, moduleStructure);
+                if (widgetWidthFitKey == fitKey)
+                {
+                    boardWidth = fittedWidgetBoardWidth; inner = fittedWidgetInnerWidth;
+                }
+                else
+                {
+                for (double candidate = Math.Max(boardWidth, 800); candidate <= availableWidth; candidate += 120)
+                {
+                    modules.Width = candidate;
+                    modules.Measure(new Size(candidate, double.PositiveInfinity));
+                    double candidateHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
+                    double candidateFit = Math.Min(1, Math.Min((availableWidth - 24) / candidate, contentLimit / candidateHeight));
+                    if (candidateFit > bestFit + .01)
+                    {
+                        boardWidth = candidate; naturalHeight = candidateHeight; bestFit = candidateFit;
+                        inner = Math.Min(candidate, availableWidth - 24);
+                    }
+                    if (bestFit >= .95) break;
+                }
+                widgetWidthFitKey = fitKey;
+                fittedWidgetBoardWidth = boardWidth; fittedWidgetInnerWidth = inner;
+                }
+                modules.Width = boardWidth;
+                modules.Measure(new Size(boardWidth, double.PositiveInfinity));
+                naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
+            }
             double fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
             if (!Store.IsEditing)
             {
@@ -802,6 +837,10 @@ internal sealed partial class IslandWindow : FloatingWindow
         // Keep the destination content layout stable while the native frame
         // reveals it; do not reflow the entire module tree on every frame.
         root.Width = inner;
+        // Module fitting may have changed the final width after the first
+        // header measure. Both quick-access rows must use this final bound.
+        headerViewport.Width = headerViewport.MaxWidth = inner;
+        secondaryQuickViewport.Width = secondaryQuickViewport.MaxWidth = inner;
         root.Height = Math.Max(1, height - Surface.Padding.Top - Surface.Padding.Bottom);
         root.HorizontalAlignment = HorizontalAlignment.Center;
         root.VerticalAlignment = VerticalAlignment.Top;
