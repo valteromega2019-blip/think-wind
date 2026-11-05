@@ -16,6 +16,16 @@ internal sealed partial class IslandWindow
     private bool IsQuickVisible(string id) => !Store.Value.HiddenQuickControls.Contains(id) && !Store.Value.DisabledQuickControls.Contains(id)
         && (id != "battery" || batteryAvailable);
 
+    private Button CreateThemeToggle()
+    {
+        var button = ActionButton("Alternar tema do Windows e do launcher", async () =>
+            await ThemeService.SelectTheme(Store, ThemeService.IsLight(Store.Value) ? "Dark" : "Light"));
+        themeToggle = button;
+        StyleSecondaryControl(button);
+        RefreshThemeToggle();
+        return button;
+    }
+
     private Button WeatherButton(bool strip)
     {
         var reading = new TextBlock { FontSize = strip ? 11 : 12, VerticalAlignment = VerticalAlignment.Center };

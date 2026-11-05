@@ -383,6 +383,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             {
                 if (Store.IsEditing && id is not ("settings" or "windows-settings")) return;
                 if (id == "audio") ShowMini(MiniIslandKind.Volume);
+                else if (id == "brightness") ShowMini(MiniIslandKind.Brightness);
                 else if (id == "wifi") ShowMini(MiniIslandKind.Network); else if (id == "bluetooth") ShowMini(MiniIslandKind.Bluetooth);
                 else if (id == "tray") ShowMini(MiniIslandKind.Tray);
                 else if (id == "calendar") ShowMini(MiniIslandKind.Calendar);
@@ -422,6 +423,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         }
         if (IsQuickVisible("tools")) header.Children.Add(SystemToolsButton(false));
         if (Stage == IslandStage.Full) header.Children.Add(WidgetEditorButton(false));
+        if (Stage == IslandStage.Full) header.Children.Add(CreateThemeToggle());
         BuildSecondaryQuickControls();
         if (Stage == IslandStage.Full || Store.IsEditing)
         {
@@ -442,12 +444,6 @@ internal sealed partial class IslandWindow : FloatingWindow
                 TutorialGuide.Mark(settingsButton, "customize");
                 settingsButton.Content = Glyph(LayoutCatalog.QuickControls.First(q => q.Id == "settings").Glyph, 17 * scale);
                 StyleSecondaryControl(settingsButton); hoverQuick.Children.Add(MarkPanelIcon(settingsButton, "settings"));
-                themeToggle = ActionButton("Alternar tema do Windows e do launcher", async () =>
-                    await ThemeService.SelectTheme(Store, ThemeService.IsLight(Store.Value) ? "Dark" : "Light"));
-                themeToggle.Style = (Style)FindResource("Think.IconButton");
-                themeToggle.Width = themeToggle.Height = 32 * scale;
-                themeToggle.Margin = new Thickness(Store.Value.IslandSpacing / 2, 0, Store.Value.IslandSpacing / 2, 0);
-                RefreshThemeToggle(); hoverQuick.Children.Add(themeToggle);
             }
             var close = ActionButton(Store.IsEditing ? "Concluir edição" : "Fechar painel completo", () =>
             { if (Store.IsEditing) Store.SetEditing(false); Transition(() => interaction.CloseFull()); });

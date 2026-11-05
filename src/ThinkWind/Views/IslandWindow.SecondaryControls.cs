@@ -49,6 +49,7 @@ internal sealed partial class IslandWindow
                     case "clock": case "calendar": ShowMini(MiniIslandKind.Calendar, button); break;
                     case "wifi": ShowMini(MiniIslandKind.Network, button); break;
                     case "audio": ShowMini(MiniIslandKind.Volume, button); break;
+                    case "brightness": ShowMini(MiniIslandKind.Brightness, button); break;
                     case "bluetooth": ShowMini(MiniIslandKind.Bluetooth, button); break;
                     case "tray": ShowMini(MiniIslandKind.Tray, button); break;
                     case "notifications": Desktop.Chord(0x5B, 0x4E); break;

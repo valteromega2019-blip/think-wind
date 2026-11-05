@@ -10,7 +10,7 @@ using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
-internal enum MiniIslandKind { Volume, Network, Calendar, Tray, Bluetooth, Clock, Weather }
+internal enum MiniIslandKind { Volume, Network, Calendar, Tray, Bluetooth, Clock, Weather, Brightness }
 internal sealed class MiniIslandWindow : FloatingWindow
 {
     protected override bool AttachedTop => false;
@@ -28,6 +28,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly ClockPanel? clockPanel;
     private readonly System.Windows.Controls.Calendar? calendarView;
     private readonly WeatherWidget? weatherLocation;
+    private readonly BrightnessControl? brightness;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private DateTime nextRefresh;
     private OverlayChrome.PixelRect positionedAnchor;
@@ -36,11 +37,11 @@ internal sealed class MiniIslandWindow : FloatingWindow
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
     internal int ActiveBluetoothWatchers => bluetooth?.ActiveWatchers ?? 0;
-    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true || weatherLocation?.IsInteracting == true;
+    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true || weatherLocation?.IsInteracting == true || brightness?.IsInteracting == true;
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
-        Title = kind switch { MiniIslandKind.Clock => "Orby Launcher — Relógio", MiniIslandKind.Bluetooth => "Orby Launcher — Bluetooth", MiniIslandKind.Volume => "Orby Launcher — Mini volume", MiniIslandKind.Calendar => "Orby Launcher — Calendário", MiniIslandKind.Tray => "Orby Launcher — Bandeja", _ => "Orby Launcher — Mini rede" };
+        Title = kind switch { MiniIslandKind.Brightness => "Orby Launcher — Brilho da tela", MiniIslandKind.Clock => "Orby Launcher — Relógio", MiniIslandKind.Bluetooth => "Orby Launcher — Bluetooth", MiniIslandKind.Volume => "Orby Launcher — Mini volume", MiniIslandKind.Calendar => "Orby Launcher — Calendário", MiniIslandKind.Tray => "Orby Launcher — Bandeja", _ => "Orby Launcher — Mini rede" };
         ShowActivated = true;
         var heading = new DockPanel();
         var close = ActionButton("Fechar este painel", Dismiss);
@@ -48,7 +49,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         close.Content = Glyph("\uE711", 13); close.Width = close.Height = 28;
         close.Padding = new Thickness(4);
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
-        heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Clock => "Relógio", MiniIslandKind.Bluetooth => "Bluetooth", MiniIslandKind.Volume => "Áudio e microfone", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
+        heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Brightness => "Brilho da tela", MiniIslandKind.Clock => "Relógio", MiniIslandKind.Bluetooth => "Bluetooth", MiniIslandKind.Volume => "Áudio e microfone", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
         panel.Children.Add(heading);
         if (kind == MiniIslandKind.Weather)
         {
@@ -79,6 +80,13 @@ internal sealed class MiniIslandWindow : FloatingWindow
             audio.LayoutChanged += Position;
             microphone.LayoutChanged += Position;
             panel.Children.Add(ActionButton("Configurações de som", () => SystemActions.Run("ms-settings:sound")));
+        }
+        else if (kind == MiniIslandKind.Brightness)
+        {
+            brightness = new BrightnessControl(() => Display.Bounds, showStatusWhenUnavailable: true);
+            brightness.LayoutChanged += Position;
+            panel.Children.Add(new Border { Child = brightness, MinHeight = 160 * Math.Clamp(store.Value.FontScale, .8, 1.4) });
+            panel.Children.Add(ActionButton("Configurações de Tela", () => SystemActions.Run("ms-settings:display")));
         }
         else if (kind == MiniIslandKind.Tray)
         {
@@ -151,6 +159,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         if (refresh) nextRefresh = DateTime.UtcNow.AddSeconds(5);
         if (audio is not null) { if (mixerSelected) mixer?.Poll(); else { audio.Poll(refresh); microphone?.Poll(refresh); } }
         else if (tray is not null) tray.Refresh();
+        brightness?.Refresh();
         weatherLocation?.Configure();
         // Data polling must not remeasure an unchanged calendar/network tree.
         // Keep following the anchor and still resize whenever content is dirty.

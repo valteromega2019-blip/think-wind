@@ -152,7 +152,7 @@ internal sealed partial class IslandWindow
             var button = ActionButton(label, () => { }); button.Style = (Style)FindResource("Think.IconButton");
             button.Content = Glyph(glyph, 13); button.Width = 28; button.Height = 24; button.Padding = new Thickness(3);
             button.Click += (_, _) => ShowMini(kind, button);
-            controls.Children.Add(MarkPanelIcon(button, kind switch { MiniIslandKind.Volume => "audio", MiniIslandKind.Network => "wifi", MiniIslandKind.Bluetooth => "bluetooth", MiniIslandKind.Calendar => "calendar", MiniIslandKind.Tray => "tray", _ => "clock" }));
+            controls.Children.Add(MarkPanelIcon(button, kind switch { MiniIslandKind.Brightness => "brightness", MiniIslandKind.Volume => "audio", MiniIslandKind.Network => "wifi", MiniIslandKind.Bluetooth => "bluetooth", MiniIslandKind.Calendar => "calendar", MiniIslandKind.Tray => "tray", _ => "clock" }));
         }
         foreach (var id in OrderBatteryBefore(Store.Value.QuickOrder.Where(id => id is not ("clock" or "monitor" or "tools" or "settings") && IsQuickVisible(id)), "wifi"))
         {
@@ -162,6 +162,7 @@ internal sealed partial class IslandWindow
                 case "battery": stripBattery = BatteryButton(true); controls.Children.Add(stripBattery); break;
                 case "wifi": AddMini(control.Name, control.Glyph, MiniIslandKind.Network); break;
                 case "audio": AddMini(control.Name, control.Glyph, MiniIslandKind.Volume); break;
+                case "brightness": AddMini(control.Name, control.Glyph, MiniIslandKind.Brightness); break;
                 case "bluetooth": AddMini(control.Name, control.Glyph, MiniIslandKind.Bluetooth); break;
                 case "calendar": AddMini(control.Name, control.Glyph, MiniIslandKind.Calendar); break;
                 case "tray": AddMini(control.Name, control.Glyph, MiniIslandKind.Tray); break;

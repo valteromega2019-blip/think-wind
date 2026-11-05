@@ -14,7 +14,7 @@ internal sealed partial class IslandWindow
     private bool PanelIconActive(string id)
     {
         MiniIslandKind? kind = id switch { "clock" => MiniIslandKind.Clock, "calendar" => MiniIslandKind.Calendar, "weather" => MiniIslandKind.Weather,
-            "audio" => MiniIslandKind.Volume, "wifi" => MiniIslandKind.Network, "bluetooth" => MiniIslandKind.Bluetooth, "tray" => MiniIslandKind.Tray, _ => null };
+            "audio" => MiniIslandKind.Volume, "brightness" => MiniIslandKind.Brightness, "wifi" => MiniIslandKind.Network, "bluetooth" => MiniIslandKind.Bluetooth, "tray" => MiniIslandKind.Tray, _ => null };
         if (kind is { } mini) return minis.TryGetValue(mini, out var window) && window.IsVisible;
         return id switch
         {

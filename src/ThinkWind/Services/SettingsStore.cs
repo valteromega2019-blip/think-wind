@@ -119,8 +119,8 @@ public sealed class Preferences
     public double IslandCollapseSeconds { get; set; } = .45;
     public double AnimationMilliseconds { get; set; } = 220;
     public List<string> DockOrder { get; set; } = new();
-    public List<string> QuickOrder { get; set; } = new() { "clock", "battery", "wifi", "bluetooth", "audio", "tray", "notifications", "calendar", "airplane", "settings" };
-    public List<string> HiddenQuickControls { get; set; } = new() { "calendar", "airplane", "settings", "keyboard" };
+    public List<string> QuickOrder { get; set; } = new() { "clock", "battery", "wifi", "bluetooth", "audio", "brightness", "tray", "notifications", "calendar", "airplane", "settings" };
+    public List<string> HiddenQuickControls { get; set; } = new() { "calendar", "airplane", "settings", "keyboard", "brightness" };
     public List<string> DisabledQuickControls { get; set; } = new();
     public List<string> ModuleOrder { get; set; } = new() { "connections", "media", "audio", "metrics", "calendar" };
     public Dictionary<string, int> ModuleColumns { get; set; } = new();
@@ -300,6 +300,11 @@ public sealed class SettingsStore
         // Introduce the battery beside the clock once. Visibility follows real
         // battery presence at runtime; later user placement/disable choices win.
         p.QuickOrder ??= new();
+        if (!p.QuickOrder.Contains("brightness"))
+        {
+            p.HiddenQuickControls ??= new();
+            if (!p.HiddenQuickControls.Contains("brightness")) p.HiddenQuickControls.Add("brightness");
+        }
         if (!p.QuickOrder.Contains("battery")) p.QuickOrder.Insert(Math.Max(0, p.QuickOrder.IndexOf("clock") + 1), "battery");
         p.QuickOrder = LayoutCatalog.Complete(p.QuickOrder, quickIds);
         if (!p.UnifiedWidgetLayout)
