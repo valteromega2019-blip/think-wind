@@ -97,7 +97,7 @@ internal sealed partial class IslandWindow
     private void BuildStatusRow()
     {
         string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls) + ":" + string.Join('|', Store.Value.DisabledQuickControls)
-            + ":" + batteryAvailable + ":" + Store.Value.ShowBatteryPercentage;
+            + ":" + batteryAvailable + ":" + Store.Value.ShowBatteryPercentage + ":" + Store.Value.IslandPanelSide;
         if (statusBuilt && statusControlsSignature == signature) return;
         if (statusBuilt) { DismissMinis(); systemTools?.Close(); }
         statusControlsSignature = signature;
@@ -105,6 +105,8 @@ internal sealed partial class IslandWindow
         foreach (var old in statusRow.Children.OfType<Button>())
             if (ReferenceEquals(old.Content, statusClock)) old.Content = null;
         statusRow.Children.Clear();
+        bool mirrored = Store.Value.IslandPanelSide == "Left";
+        Dock informationSide = mirrored ? Dock.Right : Dock.Left;
         stripBattery = null;
         var controls = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         statusClock.Margin = new Thickness(0, 0, 8, 0);
@@ -115,23 +117,23 @@ internal sealed partial class IslandWindow
         clockButton.Content = statusClock;
         clockButton.Style = (Style)FindResource("Think.IconButton");
         clockButton.Visibility = statusClock.Visibility;
-        DockPanel.SetDock(clockButton, Dock.Left); statusRow.Children.Add(MarkPanelIcon(clockButton, "clock"));
+        DockPanel.SetDock(clockButton, informationSide); statusRow.Children.Add(MarkPanelIcon(clockButton, "clock"));
         var dateButton = DateButton(true);
         dateButton.Visibility = statusClock.Visibility;
-        DockPanel.SetDock(dateButton, Dock.Left); statusRow.Children.Add(dateButton);
+        DockPanel.SetDock(dateButton, informationSide); statusRow.Children.Add(dateButton);
         var statusWeather = WeatherButton(true);
         statusWeather.Visibility = Store.Value.ShowWeatherInHeader ? Visibility.Visible : Visibility.Collapsed;
-        DockPanel.SetDock(statusWeather, Dock.Left); statusRow.Children.Add(statusWeather);
+        DockPanel.SetDock(statusWeather, informationSide); statusRow.Children.Add(statusWeather);
         var extraArea = ActionButton("Abrir área 2 à esquerda", ToggleLeftArea);
         TutorialGuide.Mark(extraArea, "monitor");
         extraArea.Style = (Style)FindResource("Think.IconButton"); extraArea.Content = Glyph("\uE9D9", 13);
         extraArea.Width = 28; extraArea.Height = 24; extraArea.Padding = new Thickness(3);
         extraArea.Margin = new Thickness(0, 0, 8, 0);
         extraArea.Visibility = IsQuickVisible("monitor") ? Visibility.Visible : Visibility.Collapsed;
-        DockPanel.SetDock(extraArea, Dock.Left); statusRow.Children.Add(MarkPanelIcon(extraArea, "monitor"));
+        DockPanel.SetDock(extraArea, informationSide); statusRow.Children.Add(MarkPanelIcon(extraArea, "monitor"));
         var tools = SystemToolsButton(true);
         tools.Visibility = IsQuickVisible("tools") ? Visibility.Visible : Visibility.Collapsed;
-        DockPanel.SetDock(tools, Dock.Left); statusRow.Children.Add(tools);
+        DockPanel.SetDock(tools, informationSide); statusRow.Children.Add(tools);
         void Add(string label, string glyph, Action action, string panelId = "")
         {
             var button = ActionButton(label, action); button.Style = (Style)FindResource("Think.IconButton");
@@ -162,7 +164,12 @@ internal sealed partial class IslandWindow
             }
         }
         Add("Expandir central de controle", "\uE70D", OpenFull, "expand");
-        DockPanel.SetDock(controls, Dock.Right); statusRow.Children.Add(controls);
+        if (mirrored)
+        {
+            var reversed = controls.Children.Cast<UIElement>().Reverse().ToArray();
+            controls.Children.Clear(); foreach (var control in reversed) controls.Children.Add(control);
+        }
+        DockPanel.SetDock(controls, mirrored ? Dock.Left : Dock.Right); statusRow.Children.Add(controls);
     }
     private bool AdaptiveCollapse => fullscreenReveal || Store.Value.IslandAutoCollapse
         || (Store.Value.IslandReduceOverMaximized && maximizedOnDisplay);

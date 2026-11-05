@@ -196,11 +196,19 @@ internal sealed partial class IslandWindow : FloatingWindow
         };
     }
     private void DragCompleted() { RefreshSettings(); ScheduleCollapse(); }
+    private readonly List<Border> hoverCards = new();
+    private double WidgetRadius => Math.Clamp(Store.Value.IslandRadius, 0, 32);
+    private void RefreshWidgetCorners()
+    {
+        foreach (var card in cards.Values.Concat(hoverCards)) card.CornerRadius = new CornerRadius(WidgetRadius);
+        secondArea.CornerRadius = new CornerRadius(WidgetRadius);
+        if (leftArea?.IsVisible == true) leftArea.RefreshSettings();
+    }
     private Border HoverCard(string title, UIElement child, bool fullBleed = false)
     {
         var card = new Border { Child = child, Padding = new Thickness(fullBleed ? 0 : 10), Margin = new Thickness(4), CornerRadius = new CornerRadius(20) };
         System.Windows.Automation.AutomationProperties.SetName(card, title);
-        card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard"); return card;
+        card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard"); hoverCards.Add(card); return card;
     }
     private void BuildBodies()
     {
@@ -319,9 +327,10 @@ internal sealed partial class IslandWindow : FloatingWindow
             var card = cards[ordered[i]];
             card.SetValue(IslandModuleBoard.ColumnsProperty, Store.Value.ModuleColumns.GetValueOrDefault(ordered[i]));
             card.Margin = new Thickness(0); card.Padding = new Thickness(ordered[i] is "media" or "notes" ? 0 : 10);
-            card.CornerRadius = new CornerRadius(20);
+            card.CornerRadius = new CornerRadius(WidgetRadius);
         }
         modules.Gap = Math.Max(6, Store.Value.IslandSpacing + 2);
+        RefreshWidgetCorners();
         modules.SetCards(ordered.Select(id => cards[id]));
         if (Store.IsEditing) interaction.OpenFull();
         TutorialGuide.Mark(header, "island");
@@ -356,7 +365,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         }
         var standard = OrderBatteryBefore(Store.Value.QuickOrder.Where(id => id is not ("settings" or "monitor" or "tools") && IsQuickVisible(id)), "windows-settings");
         var headerIds = Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing ? Array.Empty<string>() : standard;
-        header.HorizontalAlignment = Stage == IslandStage.Full && maximizedOnDisplay ? HorizontalAlignment.Right : HorizontalAlignment.Center;
+        header.HorizontalAlignment = Stage == IslandStage.Full && maximizedOnDisplay
+            ? Store.Value.IslandPanelSide == "Left" ? HorizontalAlignment.Left : HorizontalAlignment.Right
+            : HorizontalAlignment.Center;
         foreach (var id in headerIds)
         {
             var control = LayoutCatalog.QuickControls.First(q => q.Id == id);
@@ -582,6 +593,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     public override void RefreshAppearance()
     {
         base.RefreshAppearance();
+        RefreshWidgetCorners();
         RefreshThemeToggle();
         RefreshCollapsePolicy();
         RefreshForegroundLayout();

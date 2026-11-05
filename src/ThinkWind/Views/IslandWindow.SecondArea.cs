@@ -84,7 +84,7 @@ internal sealed class EmptyIslandAreaWindow : FloatingWindow
     };
     protected override bool AttachedTop => true;
     protected override bool SquareTopCorners => false;
-    protected override string? TopPanelSide => "Left";
+    protected override string? TopPanelSide => Store.Value.IslandPanelSide == "Left" ? "Right" : "Left";
     protected override double TopEdgeOffset => 36;
     internal EmptyIslandAreaWindow(SettingsStore store, HardwareTelemetry telemetry) : base(store)
     {
