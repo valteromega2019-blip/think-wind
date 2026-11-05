@@ -56,7 +56,8 @@ internal static class LibraryShortcutDrag
                 {
                 shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!);
                 shortcut = ((dynamic)shell!).CreateShortcut(path);
-                if (app.Target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase))
+                if (app.Target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase)
+                    || app.Target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase))
                 {
                     ((dynamic)shortcut).TargetPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
                     ((dynamic)shortcut).Arguments = app.Target;

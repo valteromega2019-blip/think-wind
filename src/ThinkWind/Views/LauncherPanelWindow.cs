@@ -421,8 +421,10 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
             try { await AppUninstall.Open(entry.Name, entry.Target); }
             finally { modal = false; Dismiss(); }
         });
-        LayoutDrag.Attach(card, "start-pins", entry.Target, () => mode == LauncherPanelMode.Start && section == "Fixados" && query.Text.Length == 0, ReorderPins);
-        LibraryShortcutDrag.Attach(card, entry, () => mode == LauncherPanelMode.Library && !Store.IsEditing);
+        LayoutDrag.Attach(card, "start-pins", entry.Target, () => Store.IsEditing && mode == LauncherPanelMode.Start && section == "Fixados" && query.Text.Length == 0, ReorderPins);
+        // Every drawer section exposes the same shortcut drag. Restricting it
+        // to Library prevented pinned/recent/search tiles from exporting links.
+        LibraryShortcutDrag.Attach(card, entry, () => !Store.IsEditing);
         return card;
     }
     private HashSet<string> HiddenLibraryTargets(HashSet<string> hidden)
