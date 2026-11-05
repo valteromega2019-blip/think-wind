@@ -26,9 +26,6 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private int searchFocusRevision;
     private bool focusSearchOnActivation;
     protected override bool AttachedTop => false;
-    // Broad panels need more tint over bright windows, while still following
-    // the dock opacity preference rather than introducing a separate setting.
-    protected override double MaterialOpacity => Math.Clamp(base.MaterialOpacity + (1 - base.MaterialOpacity) * .5, 0, 1);
     private readonly ApplicationCatalog catalog;
     private readonly LauncherSearch search = new();
     private readonly ShellIcons icons = new();
