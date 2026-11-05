@@ -41,7 +41,7 @@ internal sealed class AudioEndpointControl : Border
         Margin = new Thickness(0, 4, 0, 4); Padding = new Thickness(12);
         CornerRadius = new CornerRadius(18);
         SetResourceReference(BackgroundProperty, "Think.GlassCard");
-        var panel = new StackPanel();
+        var panel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         var name = direction == CoreAudio.Flow.Render ? "SAÍDA DE ÁUDIO" : "MICROFONE";
         var heading = new DockPanel(); DockPanel.SetDock(devicePicker, Dock.Right); heading.Children.Add(devicePicker);
         heading.Children.Add(new TextBlock { Text = name, FontSize = 12, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }); panel.Children.Add(heading);

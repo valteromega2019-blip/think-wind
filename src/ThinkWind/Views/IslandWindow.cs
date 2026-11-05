@@ -115,7 +115,10 @@ internal sealed partial class IslandWindow : FloatingWindow
         DockPanel.SetDock(secondaryQuickViewport, Dock.Top); root.Children.Add(secondaryQuickViewport);
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
         hoverModules.ColumnDefinitions.Add(new ColumnDefinition());
-        var hoverAudio = new StackPanel(); hoverAudio.Children.Add(hoverOutputSlot); hoverAudio.Children.Add(hoverMicrophoneSlot);
+        var hoverAudio = new Grid();
+        hoverAudio.RowDefinitions.Add(new RowDefinition()); hoverAudio.RowDefinitions.Add(new RowDefinition());
+        Grid.SetRow(hoverMicrophoneSlot, 1);
+        hoverAudio.Children.Add(hoverOutputSlot); hoverAudio.Children.Add(hoverMicrophoneSlot);
         var hoverMedia = HoverCard("Reprodução", hoverMediaSlot, true); var hoverVolume = HoverCard("Áudio e microfone", hoverAudio);
         Grid.SetColumn(hoverVolume, 1); hoverModules.Children.Add(hoverMedia); hoverModules.Children.Add(hoverVolume);
         hoverPanel.Children.Add(hoverModules);
@@ -236,13 +239,13 @@ internal sealed partial class IslandWindow : FloatingWindow
         audio.RowDefinitions.Add(new RowDefinition());
         audio.RowDefinitions.Add(new RowDefinition());
         audio.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        // Each endpoint gets a proportional region instead of leaving all extra
-        // row height below a top-aligned StackPanel. Keep the hover hosts separate.
-        outputSlot.Width = microphoneSlot.Width = 280;
-        var outputView = new Viewbox { Child = outputSlot, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.Both, Margin = new Thickness(0, 2, 0, 4) };
-        var inputView = new Viewbox { Child = microphoneSlot, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.Both, Margin = new Thickness(0, 4, 0, 2) };
-        Grid.SetRow(inputView, 1);
-        audio.Children.Add(outputView); audio.Children.Add(inputView);
+        // Stretch the real controls across each row. Uniform Viewboxes with a
+        // fixed 280-DIP child letterboxed them whenever row height limited scale.
+        outputSlot.HorizontalAlignment = microphoneSlot.HorizontalAlignment = HorizontalAlignment.Stretch;
+        outputSlot.Margin = new Thickness(0, 2, 0, 4);
+        microphoneSlot.Margin = new Thickness(0, 4, 0, 2);
+        Grid.SetRow(microphoneSlot, 1);
+        audio.Children.Add(outputSlot); audio.Children.Add(microphoneSlot);
         var audioSettings = new WrapPanel();
         var sound = ActionButton("Som", () => SystemActions.Run("ms-settings:sound")); sound.Padding = new Thickness(6, 3, 6, 3); sound.FontSize = 12; audioSettings.Children.Add(sound);
         var privacy = ActionButton("Microfone", () => SystemActions.Run("ms-settings:privacy-microphone")); privacy.Padding = sound.Padding; privacy.FontSize = 12; audioSettings.Children.Add(privacy);
