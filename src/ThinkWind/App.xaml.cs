@@ -12,7 +12,12 @@ using Forms = System.Windows.Forms;
 namespace OrbyLauncher;
 public partial class App : Application
 {
-    private void SelectionPopupOpened(object sender, EventArgs e) => PopupBackdrop.ComboOpened(sender, e);
+    private void SelectionControlLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.ComboBox combo) return;
+        combo.DropDownOpened -= PopupBackdrop.ComboOpened;
+        combo.DropDownOpened += PopupBackdrop.ComboOpened;
+    }
     private Mutex? instance;
     private Forms.NotifyIcon? tray;
     private DockWindow? dock;

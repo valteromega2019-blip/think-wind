@@ -70,7 +70,7 @@
    </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="ComboBox"><Setter Property="FontFamily" Value="{DynamicResource Think.FontFamily}"/>
-   <EventSetter Event="DropDownOpened" Handler="SelectionPopupOpened"/>
+   <EventSetter Event="Loaded" Handler="SelectionControlLoaded"/>
    <Setter Property="Foreground" Value="{DynamicResource Think.Text}"/><Setter Property="Background" Value="{DynamicResource Think.Control}"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
     <Grid>
