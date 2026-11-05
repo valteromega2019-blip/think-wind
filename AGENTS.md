@@ -9,3 +9,7 @@ Quando não solicitados, informar que testes e type check não foram executados 
 Não gerar novos instaladores durante o desenvolvimento. Gerar o instalador final somente quando o usuário pedir explicitamente.
 
 Quando uma atualização trouxer funcionalidades muito novas ou mudanças importantes de uso, criar um mini tutorial das novidades, separado do tutorial completo. Permitir pular/dispensar e rever pelas configurações, preservar o progresso anterior e evitar avisos durante jogos ou tela cheia. Não criar guias para toda correção pequena.
+
+## Bloqueio de entrega por falha em testes
+
+Se qualquer teste executado apresentar falha, interromper imediatamente a geração do instalador e a publicação. Informar a falha e consultar o usuário antes de prosseguir. Corrigir a causa e repetir os testes pertinentes somente com autorização explícita, conforme a regra de testes acima. Não continuar o empacotamento ou publicar apenas documentando a falha como limitação. Retomar a entrega somente após a correção e a confirmação de que os testes pertinentes passaram.
