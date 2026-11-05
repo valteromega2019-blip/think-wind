@@ -93,6 +93,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
             outsideClicks.Start();
         };
         Closed += (_, _) => outsideClicks?.Dispose();
+        Closed += (_, _) => { diagnosticWindowClosed = true; diagnosticViewRevision++; };
         Closed += (_, _) => { weatherSettings.Dispose(); store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };
         Build();
         EnableManualResize();
@@ -310,6 +311,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         tutorialSection.Children.Add(Button("Repetir tutorial", () => ((App)Application.Current).RepeatTutorial()));
         tutorialSection.Children.Add(Button("Continuar tutorial interrompido", () => ((App)Application.Current).ContinueTutorial()));
         tutorialSection.Children.Add(Button("Ver novidades desta atualização", () => ((App)Application.Current).RepeatUpdateTour()));
+        AddDiagnosticsPage();
         building = false; FinishSettingsTabs(); StoreChanged(this, EventArgs.Empty);
     }
     private void RebuildLayoutRows()

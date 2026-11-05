@@ -26,3 +26,4 @@ Adicionar serviço em Services, página parcial SettingsWindow e entrada na nave
 
 ## Validação e entrega
 Nesta etapa, somente revisão de código e diff; nenhum teste, type check, build ou instalador sem pedido explícito. Quando testes forem solicitados, validar sanitização, limites/rotação, título e URL, ausência de envio automático, falha de I/O e persistência do texto. Qualquer teste com falha bloqueia instalador e publicação. Nenhuma publicação automática de issue durante o desenvolvimento.
+Decisão de implementação: auxiliares elevados não escrevem no histórico controlado pelo usuário. Falhas da comunicação com os coletores são registradas pela interface normal. O título da issue é fixo por versão e não reaproveita texto privado removido da prévia.

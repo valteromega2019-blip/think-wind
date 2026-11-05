@@ -42,7 +42,8 @@ internal sealed partial class TutorialWindow : Window
         new("Novidades · Widgets e barras", "Salve e volte a usar", "Clique em Concluir edição. O layout já fica salvo e os controles são liberados novamente.", "widget-edit-finish", "widget-edit-finished"),
         new("Novidades · Widgets e barras", "Personalização organizada", "Abra Personalizar para conhecer a nova organização das opções visuais.", "customize", "settings-open"),
         new("Novidades · Widgets e barras", "Aparência em um só lugar", "Selecione Aparência. Cores e arredondamento ficam aqui; as abas Aplicativos, Central, Transparência e Tipografia ficam juntas no grupo Visual.", "appearance", "appearance-open"),
-        new("Novidades · Widgets e barras", "Nova barra inferior fixa", "Passe o mouse sobre a opção Barra inferior fixa de ponta a ponta. Ela é opcional, centraliza os controles e reserva espaço para os aplicativos. Não é preciso ativar para concluir.", "fixed-bar", "fixed-bar-discovered")
+        new("Novidades · Widgets e barras", "Nova barra inferior fixa", "Passe o mouse sobre a opção Barra inferior fixa de ponta a ponta. Ela é opcional, centraliza os controles e reserva espaço para os aplicativos. Não é preciso ativar para concluir.", "fixed-bar", "fixed-bar-discovered"),
+        new("Novidades · Diagnóstico e suporte", "Relate um problema", "No grupo Aplicativo de Personalizar, clique em Diagnóstico e suporte. Ali você pode consultar erros locais, descrever um problema e revisar um relatório. Abrir relato no GitHub prepara um rascunho no navegador; só você confirma a publicação. Nada é enviado durante o tutorial.", "diagnostics", "diagnostics-open")
     };
     private bool updateTour;
     private Step[] Steps => updateTour ? UpdateSteps : MainSteps;
@@ -219,7 +220,7 @@ internal sealed partial class TutorialWindow : Window
             if (updateTour)
             {
                 module.Text = "Novidades desta atualização"; title.Text = "Conheça o novo editor";
-                description.Text = "Um guia curto para edição pelas bordas, encaixe dos widgets, personalização organizada e barra inferior fixa. Comece quando quiser.";
+                description.Text = "Um guia curto para edição pelas bordas, encaixe dos widgets, personalização organizada, barra inferior fixa e diagnóstico de problemas. Comece quando quiser.";
             }
             hint.Text = "Você pode pular etapas ou sair a qualquer momento. Ajustes feitos por você durante o guia são salvos normalmente.";
             AddAction("Começar", () => { if (!blocked()) SystemToolsMenu.ShowDesktop(); progress.Step = 0; SaveProgress(); Render(); });
@@ -270,7 +271,7 @@ internal sealed partial class TutorialWindow : Window
         var target = progress.Step >= 0 && progress.Step < Steps.Length && !success ? TutorialGuide.Find(Steps[progress.Step].Target) : null;
         if (target != highlighted)
         {
-            if (target is not null && progress.Step >= 0 && progress.Step < Steps.Length && Steps[progress.Step].Target == "fixed-bar")
+            if (target is not null && progress.Step >= 0 && progress.Step < Steps.Length && (Steps[progress.Step].Target is "fixed-bar" or "diagnostics"))
                 target.BringIntoView();
             ClearHighlight(); highlighted = target;
             if (target is not null && AdornerLayer.GetAdornerLayer(target) is { } layer)

@@ -68,7 +68,10 @@ internal sealed class UpdateController : IDisposable
             nextCheck = DateTime.UtcNow.AddHours(6);
         }
         catch (Exception e) when (e is System.Net.Http.HttpRequestException or IOException or InvalidDataException or JsonException or OperationCanceledException or InvalidOperationException or System.Collections.Generic.KeyNotFoundException or FormatException or ArgumentException)
-        { Status = "Não foi possível verificar: " + e.Message; nextCheck = DateTime.UtcNow.AddMinutes(15); }
+        {
+            if (e is not OperationCanceledException) DiagnosticLog.Record("Consulta de atualizações", e);
+            Status = "Não foi possível verificar: " + e.Message; nextCheck = DateTime.UtcNow.AddMinutes(15);
+        }
         finally { Busy = false; Changed?.Invoke(); }
     }
     internal void Cancel() => operation?.Cancel();
@@ -97,7 +100,7 @@ internal sealed class UpdateController : IDisposable
         }
         catch (OperationCanceledException) { Status = "Operação cancelada ou tempo de espera excedido. Nenhuma instalação iniciada."; }
         catch (Exception e) when (e is IOException or InvalidDataException or System.Net.Http.HttpRequestException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException or System.Security.Cryptography.CryptographicException)
-        { Status = e.Message; RecordInstallationFailure(e.Message); }
+        { DiagnosticLog.Record("Download ou instalação de atualização", e); Status = e.Message; RecordInstallationFailure(e.Message); }
         finally
         {
             if (!installing && helper is not null)

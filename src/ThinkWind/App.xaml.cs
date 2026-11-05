@@ -85,6 +85,7 @@ public partial class App : Application
     internal double AnimationDuration => store?.Value.AnimationMilliseconds ?? 220;
     protected override void OnStartup(StartupEventArgs e)
     {
+        AttachDiagnostics();
         base.OnStartup(e);
         if (StartupRegistration.Run(e.Args, out int startupRegistrationCode)) { Shutdown(startupRegistrationCode); return; }
         if (ShellInputBridge.Run(e.Args)) { Shutdown(); return; }
@@ -111,6 +112,7 @@ public partial class App : Application
             try { if (DesktopUserLauncher.RelaunchIfElevated(e.Args)) { Shutdown(); return; } }
             catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException or UnauthorizedAccessException or System.Security.SecurityException)
             {
+                DiagnosticLog.Record("Inicialização da interface", error);
                 try
                 {
                     string log = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher");
@@ -307,6 +309,7 @@ public partial class App : Application
         try { result = await AdvancedSensorWorker.Run(Dispatcher, captureFrames); }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException)
         {
+            DiagnosticLog.Record(captureFrames ? "Coletor de FPS" : "Coletor de sensores", error);
             try { System.IO.File.WriteAllText(System.IO.Path.Combine(AdvancedSensorSetup.DirectoryPath, "sensor-worker-error.log"), DateTime.UtcNow.ToString("O") + Environment.NewLine + error); }
             catch (Exception logError) when (logError is System.IO.IOException or UnauthorizedAccessException) { }
         }
@@ -339,6 +342,7 @@ public partial class App : Application
         if (tray is not null) { tray.Visible = false; tray.Icon?.Dispose(); tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
         BackdropComposition.Shutdown();
         instance?.Dispose();
+        DetachDiagnostics();
         base.OnExit(e);
     }
     private void WriteDiagnosticReport()

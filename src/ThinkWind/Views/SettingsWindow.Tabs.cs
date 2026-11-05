@@ -39,7 +39,7 @@ internal sealed partial class SettingsWindow
         ("Visual", new[] { "Aparência", "Barra de aplicativos", "Central de controle", "Transparência", "Tipografia", "Animações" }),
         ("Seu desktop", new[] { "Ícones da central de controle", "Widgets", "Clima", "Teclado", "Editor de layout" }),
         ("Desempenho", new[] { "Overlay", "Overlay e sensores", "Jogos", "Monitores" }),
-        ("Aplicativo", new[] { "Sistema", "Atualizações", "Tutorial", "Sobre e segurança" })
+        ("Aplicativo", new[] { "Sistema", "Atualizações", "Diagnóstico e suporte", "Tutorial", "Sobre e segurança" })
     };
     private FrameworkElement CreateSettingsNavigation(FrameworkElement body)
     {
@@ -92,6 +92,7 @@ internal sealed partial class SettingsWindow
         tab.FontSize = 12; tab.ToolTip = name;
         AutomationProperties.SetName(tab, "Configurações: " + name);
         if (name == "Aparência") TutorialGuide.Mark(tab, "appearance");
+        if (name == "Diagnóstico e suporte") TutorialGuide.Mark(tab, "diagnostics");
         page.Visibility = Visibility.Collapsed;
         settingsPages[name] = (page, tab);
     }
@@ -122,6 +123,7 @@ internal sealed partial class SettingsWindow
         compactNavigation.SelectedItem = (compactNavigation.ItemsSource as IEnumerable<Choice>)?.FirstOrDefault(choice => choice.Id == name);
         changingNavigation = false;
         if (name == "Aparência") TutorialGuide.Notify("appearance-open");
+        if (name == "Diagnóstico e suporte") TutorialGuide.Notify("diagnostics-open");
         bool changedTab = selectedSettingsTab != name;
         if (!searching && settingsPages.TryGetValue(selectedSettingsTab, out var old) && old.Page.Visibility == Visibility.Visible)
             tabOffsets[selectedSettingsTab] = settingsScroll.VerticalOffset;

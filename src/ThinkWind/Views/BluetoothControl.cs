@@ -65,7 +65,10 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
             });
         }
         catch (Exception error) when (error is UnauthorizedAccessException or System.Runtime.InteropServices.COMException or ArgumentException or InvalidOperationException)
-        { await OnUI(() => { if (active) { status.Text = "Não foi possível consultar o Bluetooth. Reabra o painel para tentar novamente."; LayoutChanged?.Invoke(); } }); }
+        {
+            DiagnosticLog.Record("Descoberta Bluetooth", error);
+            await OnUI(() => { if (active) { status.Text = "Não foi possível consultar o Bluetooth. Reabra o painel para tentar novamente."; LayoutChanged?.Invoke(); } });
+        }
     }
     private Task OnUI(Action action)
     { if (Dispatcher.HasShutdownStarted) return Task.CompletedTask; if (Dispatcher.CheckAccess()) { action(); return Task.CompletedTask; } return Dispatcher.InvokeAsync(action).Task; }

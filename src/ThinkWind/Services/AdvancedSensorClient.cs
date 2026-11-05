@@ -87,7 +87,11 @@ internal sealed class AdvancedSensorClient
         catch (OperationCanceledException) when (!stop.IsCancellationRequested)
         { LastError = "Coletor administrativo: aguardando leituras; reconectando automaticamente."; Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(2); return null; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or COMException or System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException)
-        { LastError = "Coletor administrativo: falha ao " + stage + " (0x" + error.HResult.ToString("X8") + ")."; Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(15); return null; }
+        {
+            DiagnosticLog.Record((frames ? "FPS: " : "Sensores: ") + stage, error);
+            LastError = "Coletor administrativo: falha ao " + stage + " (0x" + error.HResult.ToString("X8") + ").";
+            Disconnect(); retryAfter = DateTime.UtcNow.AddSeconds(15); return null;
+        }
     }
     private static bool Trusted(NamedPipeClientStream pipe)
     {
