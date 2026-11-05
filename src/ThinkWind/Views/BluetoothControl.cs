@@ -19,12 +19,13 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
         "System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\""
     };
     private readonly Dictionary<string, DeviceInformation> devices = new();
+    private readonly HashSet<string> seenDuringScan = new();
     private readonly List<DeviceWatcher> watchers = new();
     private readonly List<Radio> radios = new();
     private readonly Dictionary<string, System.Windows.Media.ImageSource> glyphs = new();
     private readonly HashSet<string> loadingGlyphs = new();
     private readonly HashSet<string> unavailableGlyphs = new();
-    private readonly StackPanel list = new(), navigation = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly StackPanel list = new() { MinHeight = 232 }, navigation = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock status = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6) };
     private readonly Button toggle = new() { Padding = new Thickness(10, 6, 10, 6), Content = "Consultar Bluetooth" };
     private bool active, busy, queued, disposed;
@@ -45,7 +46,8 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
     {
         active = value; int request = ++generation; StopWatching();
         if (!value || disposed) return;
-        status.Text = "Consultando adaptadores e dispositivos…";
+        seenDuringScan.Clear(); Render();
+        status.Text = "Atualizando adaptador, pareados e dispositivos disponíveis…";
         try
         {
             var available = await Radio.GetRadiosAsync().AsTask().ConfigureAwait(false);
@@ -55,7 +57,7 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
             foreach (var radio in available.Where(radio => radio.Kind == RadioKind.Bluetooth)) { radios.Add(radio); radio.StateChanged += RadioChanged; }
             foreach (string selector in DeviceSelectors)
             {
-                var watcher = DeviceInformation.CreateWatcher(selector, new[] { "System.Devices.Aep.IsConnected", "System.Devices.Aep.BatteryLife" }, DeviceInformationKind.AssociationEndpoint);
+                var watcher = DeviceInformation.CreateWatcher(selector, new[] { "System.Devices.Aep.IsConnected", "System.Devices.BatteryLife" }, DeviceInformationKind.AssociationEndpoint);
                 watcher.Added += Added; watcher.Updated += Updated; watcher.Removed += Removed; watcher.EnumerationCompleted += Completed; watcher.Stopped += Stopped;
                 watchers.Add(watcher); watcher.Start();
             }
@@ -63,16 +65,24 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
             });
         }
         catch (Exception error) when (error is UnauthorizedAccessException or System.Runtime.InteropServices.COMException or ArgumentException or InvalidOperationException)
-        { await OnUI(() => { if (active) { status.Text = error.Message; LayoutChanged?.Invoke(); } }); }
+        { await OnUI(() => { if (active) { status.Text = "Não foi possível consultar o Bluetooth. Reabra o painel para tentar novamente."; LayoutChanged?.Invoke(); } }); }
     }
     private Task OnUI(Action action)
     { if (Dispatcher.HasShutdownStarted) return Task.CompletedTask; if (Dispatcher.CheckAccess()) { action(); return Task.CompletedTask; } return Dispatcher.InvokeAsync(action).Task; }
     private void Dispatch(Action action)
     { if (!disposed && !Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(() => { if (active && !disposed) action(); })); }
-    private void Added(DeviceWatcher sender, DeviceInformation info) => Dispatch(() => { if (!watchers.Contains(sender)) return; devices[info.Id] = info; QueueRender(); });
+    private void Added(DeviceWatcher sender, DeviceInformation info) => Dispatch(() => { if (!watchers.Contains(sender)) return; seenDuringScan.Add(info.Id); devices[info.Id] = info; QueueRender(); });
     private void Updated(DeviceWatcher sender, DeviceInformationUpdate info) => Dispatch(() => { if (!watchers.Contains(sender)) return; if (devices.TryGetValue(info.Id, out var device)) device.Update(info); QueueRender(); });
     private void Removed(DeviceWatcher sender, DeviceInformationUpdate info) => Dispatch(() => { if (watchers.Contains(sender)) { devices.Remove(info.Id); QueueRender(); } });
-    private void Completed(DeviceWatcher sender, object args) => Dispatch(() => { if (watchers.Contains(sender)) { status.Text = devices.Count == 0 ? "Nenhum dispositivo disponibilizado pelo Windows." : "Selecione um dispositivo para parear ou remover o pareamento."; QueueRender(); } });
+    private void Completed(DeviceWatcher sender, object args) => Dispatch(() =>
+    {
+        if (!watchers.Contains(sender)) return;
+        if (watchers.Count == DeviceSelectors.Length && watchers.All(w => w.Status == DeviceWatcherStatus.EnumerationCompleted))
+            foreach (string id in devices.Keys.Where(id => !seenDuringScan.Contains(id)).ToArray()) devices.Remove(id);
+        status.Text = devices.Count == 0 ? "Nenhum dispositivo encontrado. Ative o modo de pareamento do dispositivo."
+            : "Pareados e disponíveis · selecione Parear para adicionar um dispositivo.";
+        QueueRender();
+    });
     private void Stopped(DeviceWatcher sender, object args) => Dispatch(() => { if (watchers.Contains(sender) && sender.Status == DeviceWatcherStatus.Aborted) { status.Text = "Descoberta interrompida pelo Windows. Confira permissões e estado do adaptador."; QueueRender(); } });
     private void RadioChanged(Radio sender, object args) => Dispatch(QueueRender);
     private void QueueRender()
@@ -88,11 +98,19 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
         list.Children.Clear(); navigation.Children.Clear();
         var ordered = devices.Values.Where(device => !string.IsNullOrWhiteSpace(device.Name)).OrderByDescending(device => device.Pairing.IsPaired).ThenBy(device => device.Name).ToArray();
         int pages = Math.Max(1, (ordered.Length + 3) / 4); page = Math.Clamp(page, 0, pages - 1);
+        bool? previousGroup = null;
         foreach (var device in ordered.Skip(page * 4).Take(4))
         {
+            if (previousGroup != device.Pairing.IsPaired)
+            {
+                var group = new TextBlock { Text = device.Pairing.IsPaired ? "Pareados" : "Disponíveis para parear",
+                    FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 8, 6, 4) };
+                group.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); list.Children.Add(group);
+                previousGroup = device.Pairing.IsPaired;
+            }
             bool connected = device.Properties.TryGetValue("System.Devices.Aep.IsConnected", out var state) && state is true;
             string battery = "";
-            if (device.Properties.TryGetValue("System.Devices.Aep.BatteryLife", out var charge) && (charge is byte or ushort or int or uint))
+            if (device.Properties.TryGetValue("System.Devices.BatteryLife", out var charge) && (charge is byte or ushort or int or uint))
             { long amount = Convert.ToInt64(charge); if (amount is >= 0 and <= 100) battery = $" · bateria {amount}%"; }
             var row = new DockPanel { Margin = new Thickness(4) };
             var action = Button(device.Pairing.IsPaired ? "Remover" : "Parear", async () => await Pair(device)); action.IsEnabled = !busy && (device.Pairing.IsPaired || device.Pairing.CanPair); DockPanel.SetDock(action, Dock.Right); row.Children.Add(action);
@@ -176,7 +194,7 @@ internal sealed class BluetoothControl : StackPanel, IDisposable
             watcher.Added -= Added; watcher.Updated -= Updated; watcher.Removed -= Removed; watcher.EnumerationCompleted -= Completed; watcher.Stopped -= Stopped;
             if (watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted) watcher.Stop();
         }
-        watchers.Clear(); devices.Clear(); unavailableGlyphs.Clear();
+        watchers.Clear(); unavailableGlyphs.Clear();
     }
-    public void Dispose() { disposed = true; active = false; generation++; StopWatching(); }
+    public void Dispose() { disposed = true; active = false; generation++; StopWatching(); devices.Clear(); seenDuringScan.Clear(); glyphs.Clear(); }
 }
