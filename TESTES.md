@@ -111,3 +111,12 @@ O argumento `--inspect` expõe as janelas na barra nativa para ferramentas de in
 - Execução sem instalação: `artifacts/publish/ThinkWind.exe`.
 
 Abra somente uma instância. Para personalizar ou sair, use o ícone Think Wind na bandeja do Windows. A primeira inicialização do executável independente pode levar mais tempo devido à extração do runtime.
+
+## Ajustes de layout — 05/11/2026
+
+Pedido explícito do usuário: testar margens, limites de fonte e brilho indisponível.
+Build Release dos checks com warnings como erros: 0 erros e 0 avisos.
+Rodada final: 61 checks gerais, 10 do atualizador e 10 de revisão aprovados (81 no total, nenhuma falha).
+Novos checks verificam limite geral de 175%, limite compacto de 135%, mudanças repetidas sem crescimento acumulado, padding dos cartões e alternância entre brilho suportado/indisponível sem espaço residual. A suíte de aparência verifica fontes e cores nos dois temas respeitando os novos limites.
+A primeira execução do novo check de brilho falhou por reflexão ambígua no próprio teste; foi restringida ao método declarado na classe e a rodada final passou.
+Logs locais em artifacts/checks-layout-20261105. Não houve validação visual completa em todos os DPI/monitores nem instalação/publicação nesta rodada. Os limites não comprovam ausência de todo corte em painéis reais.

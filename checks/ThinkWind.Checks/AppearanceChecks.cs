@@ -49,7 +49,7 @@ internal static class AppearanceChecks
                 var window = new Window { Content = border };
                 FontSizing.Apply(window, scale); Typography.ApplyContrast(border, Colors.White, p);
                 border.Measure(new Size(280, double.PositiveInfinity)); border.Arrange(new Rect(new Point(), border.DesiredSize));
-                Require(text.FontFamily.Source.StartsWith(family) && text.FontSize == 14 * scale, "Fonte ou escala não aplicada.");
+                Require(text.FontFamily.Source.StartsWith(family) && text.FontSize == 14 * Math.Min(scale, 1.75), "Fonte ou limite de escala não aplicado.");
                 Require(text.DesiredSize.Height <= border.ActualHeight && text.DesiredSize.Width <= border.ActualWidth, "Texto ultrapassa o bloco.");
                 var ink = ((SolidColorBrush)border.Resources["Think.Text"]).Color;
                 Require(Typography.Contrast(ink, Typography.Blend(Color.FromRgb(17, 19, 24), Colors.White, 200 / 255d)) >= 4.5, "Bloco não recebeu contraste local.");

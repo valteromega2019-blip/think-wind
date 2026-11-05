@@ -133,6 +133,37 @@ internal static class RevisionPerformanceChecks
             Require(!loaded.StartWithWindows && loaded.StartupDefaultsInitialized && loaded.StartupRegistrationVersion == 1,
                 "Preferência de inicialização não persistiu.");
         });
+        Check("Fontes: limites gerais e compactos sem crescimento acumulado", () =>
+        {
+            var normal = new TextBlock { FontSize = 14, Text = "Texto" };
+            var compact = new TextBlock { FontSize = 14, Text = "Texto" };
+            var compactRoot = new StackPanel(); compactRoot.Children.Add(compact);
+            FontSizing.LimitScale(compactRoot, 1.35);
+            var panel = new StackPanel(); panel.Children.Add(normal); panel.Children.Add(compactRoot);
+            var window = new Window { Content = panel };
+            foreach (double scale in new[] { 2.5, 1d, 1.5, 2.5 })
+            {
+                FontSizing.Apply(window, scale); FontSizing.PrepareForMeasure(panel);
+                Require(Math.Abs(normal.FontSize - 14 * Math.Min(scale, 1.75)) < .001, "Limite geral incorreto.");
+                Require(Math.Abs(compact.FontSize - 14 * Math.Min(scale, 1.35)) < .001, "Limite compacto incorreto.");
+            }
+            var card = new HardwareSummaryCard("cpu", compact: true);
+            Require(card.Padding.Left >= 12 && card.Padding.Top >= 12, "Cartão sem margem interna segura.");
+        });
+        Check("Brilho: indisponível sem bloco vazio e suporte recuperável", () =>
+        {
+            var control = new BrightnessControl(() => new System.Drawing.Rectangle(0, 0, 1920, 1080));
+            var content = (StackPanel)control.Child;
+            Require(content.Visibility == Visibility.Collapsed && control.Padding == new Thickness(0), "Bloco aparece antes da detecção.");
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            var render = typeof(BrightnessControl).GetMethod("Render", flags)!;
+            var state = typeof(BrightnessControl).GetField("state", flags)!;
+            state.SetValue(control, new BrightnessState("Tela", 0, 100, 50)); render.Invoke(control, null);
+            Require(content.Visibility == Visibility.Visible && control.Padding.Left == 12, "Controle suportado não reapareceu.");
+            state.SetValue(control, null); render.Invoke(control, null);
+            Require(content.Visibility == Visibility.Collapsed && control.Padding == new Thickness(0)
+                && control.Margin == new Thickness(0) && control.Visibility == Visibility.Visible, "Bloco indisponível ocupa espaço ou impede nova consulta.");
+        });
         Console.WriteLine($"Revisão: {passed} aprovados, {failed} falhas. Nenhuma tarefa/registro de inicialização alterado.");
         return failed == 0 ? 0 : 1;
     }
