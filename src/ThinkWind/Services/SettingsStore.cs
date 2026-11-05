@@ -259,7 +259,7 @@ public sealed class SettingsStore
             .ToDictionary(item => item.Key, item => item.Value with { Count = Math.Clamp(item.Value.Count, 0, 1_000_000) }, StringComparer.Ordinal);
         p.DockOpacity = Limit(p.DockOpacity ?? p.TintOpacity, .05, 1, .72);
         p.IslandOpacity = Limit(p.IslandOpacity ?? p.TintOpacity, .05, 1, .72);
-        p.DockRadius = Limit(p.DockRadius, 0, 48, 22); p.IslandRadius = Limit(p.IslandRadius, 0, 48, 24);
+        p.DockRadius = Limit(p.DockRadius, 0, 48, 22); p.IslandRadius = Limit(p.IslandRadius, 0, 28, 24);
         p.DockSpacing = Limit(p.DockSpacing, 0, 24, 6); p.IslandSpacing = Limit(p.IslandSpacing, 0, 20, 6);
         p.IconSize = Limit(p.IconSize, 20, 48, 28); p.DockBottomOffset = Limit(p.DockBottomOffset, 4, 80, 12);
         p.DockHorizontalOffset = Limit(p.DockHorizontalOffset, -4000, 4000, 0);

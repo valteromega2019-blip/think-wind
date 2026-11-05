@@ -197,7 +197,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     private void DragCompleted() { RefreshSettings(); ScheduleCollapse(); }
     private readonly List<Border> hoverCards = new();
-    private double WidgetRadius => Math.Clamp(Store.Value.IslandRadius, 0, 32);
+    private double WidgetRadius => Math.Clamp(Store.Value.IslandRadius, 0, 28);
     private void RefreshWidgetCorners()
     {
         foreach (var card in cards.Values.Concat(hoverCards)) card.CornerRadius = new CornerRadius(WidgetRadius);
