@@ -26,7 +26,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly WifiControl? wifi;
     private readonly BluetoothControl? bluetooth;
     private readonly ClockPanel? clockPanel;
-    private readonly System.Windows.Controls.Calendar? calendarView;
+    private readonly AgendaPanel? calendarView;
     private readonly WeatherWidget? weatherLocation;
     private readonly BrightnessControl? brightness;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -103,9 +103,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
         }
         else if (kind == MiniIslandKind.Calendar)
         {
-            calendarView = new System.Windows.Controls.Calendar { HorizontalAlignment = HorizontalAlignment.Center };
-            calendarView.SetResourceReference(StyleProperty, "Think.Calendar");
-            calendarView.DisplayModeChanged += (_, _) => Position(); panel.Children.Add(calendarView);
+            calendarView = new AgendaPanel(((App)Application.Current).Alarms);
+            calendarView.LayoutChanged += Position; panel.Children.Add(calendarView);
         }
         else if (kind == MiniIslandKind.Bluetooth)
         {
@@ -134,11 +133,13 @@ internal sealed class MiniIslandWindow : FloatingWindow
         IsVisibleChanged += (_, _) => weatherLocation?.SetActive(IsVisible);
         Closed += (_, _) => weatherLocation?.Dispose();
         Closed += (_, _) => clockPanel?.Dispose();
+        Closed += (_, _) => calendarView?.Dispose();
         Closed += (_, _) => { timer.Stop(); wifi?.Dispose(); bluetooth?.Dispose(); mixer?.Dispose(); };
     }
     internal void Present()
     {
         ++presentationRevision;
+        calendarView?.Refresh();
         nextRefresh = DateTime.MinValue;
         // Establish the reserved content geometry before the first visible frame.
         RefreshSettings(); RefreshContent(true); Show(); Position(); timer.Start(); Activate();
@@ -190,10 +191,12 @@ internal sealed class MiniIslandWindow : FloatingWindow
     {
         if (calendarView is null) return;
         FontSizing.PrepareForMeasure(panel);
-        calendarView.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        // Keep the two-column agenda readable; the outer viewport handles small screens.
+        calendarView.Width = 680;
+        calendarView.Measure(new Size(calendarView.Width, double.PositiveInfinity));
         // Size the host around the calendar instead of reserving 390 DIP while
         // its intrinsic 280-DIP month grid remains aligned to the left.
-        double contentWidth = Math.Max(280, calendarView.DesiredSize.Width);
+        double contentWidth = calendarView.Width;
         panel.Width = contentWidth;
         panel.Measure(new Size(contentWidth, double.PositiveInfinity));
         double contentHeight = Math.Max(1, panel.DesiredSize.Height);

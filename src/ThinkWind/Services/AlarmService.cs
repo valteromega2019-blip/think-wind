@@ -16,6 +16,11 @@ internal sealed class ClockAlarm
     public List<DayOfWeek> Days { get; set; } = new();
     public string Sound { get; set; } = "Asterisk";
     public DateTime? LastDate { get; set; }
+    public bool IsAgenda { get; set; }
+    public DateTime? EventDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string Notes { get; set; } = "";
+    public int ReminderMinutes { get; set; }
 }
 
 // One scheduler per app, independent of the visibility/lifetime of clock panels.
@@ -45,6 +50,9 @@ internal sealed class AlarmService : IDisposable
                 alarm.Days = (alarm.Days ?? new()).Where(d => (int)d is >= 0 and <= 6).Distinct().ToList();
                 alarm.Name = string.IsNullOrWhiteSpace(alarm.Name) ? "Alarme" : alarm.Name[..Math.Min(80, alarm.Name.Length)];
                 alarm.Sound = NormalizeSound(alarm.Sound);
+                alarm.Notes = (alarm.Notes ?? "")[..Math.Min(4000, (alarm.Notes ?? "").Length)];
+                alarm.ReminderMinutes = Math.Clamp(alarm.ReminderMinutes, 0, 10080);
+                if (alarm.IsAgenda && alarm.EventDate is null) alarm.Enabled = false;
             }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
@@ -78,6 +86,17 @@ internal sealed class AlarmService : IDisposable
             if (snoozes.TryGetValue(alarm.Id, out var delayed) && now >= delayed)
             { snoozes.Remove(alarm.Id); Ring?.Invoke(alarm); }
             if (!alarm.Enabled) continue;
+            if (alarm.IsAgenda)
+            {
+                if (alarm.EventDate is not DateTime start) continue;
+                var due = start.AddMinutes(-alarm.ReminderMinutes);
+                if (due > from && due <= now && alarm.LastDate is null)
+                {
+                    alarm.LastDate = now; alarm.Enabled = false;
+                    Save(); Changed?.Invoke(); Ring?.Invoke(alarm);
+                }
+                continue;
+            }
             for (var day = from.Date; day <= now.Date; day = day.AddDays(1))
             {
                 var due = day.AddMinutes(alarm.Minute);

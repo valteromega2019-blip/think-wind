@@ -19,6 +19,12 @@ internal sealed class AlarmNotice : FloatingWindow
         var content = new StackPanel { Margin = new Thickness(8) };
         content.Children.Add(new TextBlock { Text = "⏰ " + alarm.Name, FontSize = 20, TextWrapping = TextWrapping.Wrap });
         content.Children.Add(new TextBlock { Text = $"{alarm.Minute / 60:00}:{alarm.Minute % 60:00}", FontSize = 28 });
+        if (alarm.IsAgenda && alarm.EventDate is DateTime date)
+        {
+            content.Children.Add(ClockDesign.Text(date.ToString("dd/MM/yyyy · HH:mm"), 14));
+            if (!string.IsNullOrWhiteSpace(alarm.Notes))
+                content.Children.Add(ClockDesign.Text(alarm.Notes.Length > 240 ? alarm.Notes[..240] + "…" : alarm.Notes, 12));
+        }
         var buttons = new WrapPanel();
         buttons.Children.Add(ActionButton("Adiar 5 min", () => { alarms.Snooze(alarm); Close(); }));
         buttons.Children.Add(ActionButton("Dispensar", Close)); content.Children.Add(buttons); Surface.Child = content;

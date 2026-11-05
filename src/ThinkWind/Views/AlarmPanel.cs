@@ -68,7 +68,7 @@ internal sealed class AlarmPanel : StackPanel
     }
     private void Render()
     {
-        var items = service.Items.OrderBy(a => a.Minute).ToArray(); page = Math.Clamp(page, 0, Math.Max(0, (items.Length - 1) / PageSize));
+        var items = service.Items.Where(a => !a.IsAgenda).OrderBy(a => a.Minute).ToArray(); page = Math.Clamp(page, 0, Math.Max(0, (items.Length - 1) / PageSize));
         string next = page + "|" + System.Text.Json.JsonSerializer.Serialize(items.Select(a => new { a.Id, a.Name, a.Minute, a.Days, a.Sound }));
         status.Text = service.Error ?? "";
         if (next == signature)
