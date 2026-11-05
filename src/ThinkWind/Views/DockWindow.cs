@@ -546,7 +546,6 @@ internal sealed partial class DockWindow : FloatingWindow
         if (item.Target is string uninstallTarget && item.Action is null && AppUninstall.CanOffer(uninstallTarget))
             Menu(menu, "Desinstalar…", async () => await AppUninstall.Open(item.Name, uninstallTarget));
         Menu(menu, "Mover para a direita", () => MoveOne(item.Key, 1));
-        Menu(menu, Store.IsEditing ? "Concluir edição" : "Editar layout", () => Store.SetEditing(!Store.IsEditing));
         button.ContextMenu = menu;
         button.ContextMenuOpening += (_, _) =>
         {
