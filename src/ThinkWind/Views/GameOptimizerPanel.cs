@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Threading;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ internal sealed class GameOptimizerPanel : StackPanel
     private readonly GameOptimizer optimizer;
     private readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 5, 0, 5), FontSize = 11 };
     private readonly TextBlock description = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 12), FontSize = 11 };
+    internal event Action? LayoutChanged;
     private string selected;
     private CancellationTokenSource? analysis;
     internal GameOptimizerPanel(SettingsStore settings)
@@ -45,9 +46,11 @@ internal sealed class GameOptimizerPanel : StackPanel
             status.Text = optimizer.GameForeground ? optimizer.Status : "Pronto · " + ModeName() + " será aplicado ao entrar em um jogo. O plano anterior será restaurado ao sair.";
         };
         Children.Add(modes);
-        Children.Add(new ScrollViewer { Content = description, Height = 42, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        Children.Add(description);
+        description.SizeChanged += (_, _) => LayoutChanged?.Invoke();
         var actions = new WrapPanel(); actions.Children.Add(optimize); Children.Add(actions);
-        Children.Add(new ScrollViewer { Content = status, Height = 42, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        Children.Add(status);
+        status.SizeChanged += (_, _) => LayoutChanged?.Invoke();
         var stop = new Button { Content = "Voltar ao normal", Margin = new Thickness(0, 4, 0, 4) };
         stop.Click += (_, _) => { store.Update(p => p.OptimizerEnabled = false); optimizer.Restore(); status.Text = optimizer.Status; };
         actions.Children.Add(stop);

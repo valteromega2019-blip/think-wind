@@ -62,6 +62,11 @@ internal sealed class HardwareMonitorPanel : UserControl
     {
         store = settings; telemetry = source;
         optimizerPanel = new GameOptimizerPanel(store);
+        optimizerPanel.LayoutChanged += () =>
+        {
+            boardLayoutDirty = true;
+            if (optimizing && IsVisible) LayoutChanged?.Invoke();
+        };
         overlay = new OverlayToggleButton(store);
         MonitoringDesign.Install(Resources, store.Value);
         var root = new StackPanel();
