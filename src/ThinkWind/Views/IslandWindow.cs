@@ -100,6 +100,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         brightness = new BrightnessControl(() => Display.Bounds);
         calendar.SetResourceReference(StyleProperty, "Think.Calendar");
         calendar.FontSize = 14;
+        InitializeCalendarAgenda();
         calendar.Loaded += (_, _) => ModuleSizeChanged();
         calendar.DisplayDateChanged += (_, _) => ModuleSizeChanged();
         calendar.SizeChanged += (_, _) => FitCalendarWidth();
@@ -255,7 +256,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         bodies["metrics"] = metrics;
         var calendarPanel = new StackPanel();
         calendarPanel.Children.Add(calendarDate);
-        calendarPanel.Children.Add(calendar); bodies["calendar"] = calendarPanel;
+        calendarPanel.Children.Add(calendar);
+        calendarPanel.Children.Add(ClockDesign.Button("\uE787", "Ver agenda", () => OpenWidgetAgenda(false)));
+        bodies["calendar"] = calendarPanel;
         bodies["calculator"] = new CalculatorWidget();
         bodies["weather"] = weather;
         bodies["notes"] = widgetArea.Notes;
@@ -652,7 +655,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             return false;
         }
     }
-    private bool ControlsBusy => SystemToolsOpen || IsMouseCaptureWithin || widgetArea.IsInteracting || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || brightness.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
+    private bool ControlsBusy => widgetAgenda?.IsVisible == true || SystemToolsOpen || IsMouseCaptureWithin || widgetArea.IsInteracting || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || brightness.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
     private bool InteractionInProgress => TutorialGuide.KeepIslandOpen || Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
     private void CancelCollapse() { hoverLeave.Stop(); outsideSince = null; }
     private void WaitForBridge() { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(50); hoverLeave.Start(); }

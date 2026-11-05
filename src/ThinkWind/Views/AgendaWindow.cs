@@ -37,6 +37,11 @@ internal sealed class AgendaWindow : FloatingWindow
     {
         agenda.SelectDay(day, add); Show(); RefreshSettings(); Position(); Activate();
     }
+    internal void SelectDay(DateTime day)
+    {
+        agenda.SelectDay(day, false);
+        if (IsVisible) Position();
+    }
     public override void Position()
     {
         double width = Math.Min(460, Display.Width - 32);
