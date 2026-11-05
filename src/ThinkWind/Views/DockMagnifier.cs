@@ -37,6 +37,14 @@ internal sealed class DockMagnifier : IDisposable
     private double previous, intensity, speed, reserve;
     private int neighbors;
     private bool enabled;
+    internal event Action<double>? WidthChanged;
+    private double lastWidth;
+    private void PublishWidth(double value)
+    {
+        if (Math.Abs(lastWidth - value) < .02 && value != 0) return;
+        if (lastWidth == value) return;
+        lastWidth = value; WidthChanged?.Invoke(value);
+    }
     internal DockMagnifier(Panel panel, Func<bool> canAnimate)
     {
         row = panel; permitted = canAnimate; clock.Tick += Frame;
@@ -116,12 +124,14 @@ internal sealed class DockMagnifier : IDisposable
             item.Move.X = shift + extra / 2;
             shift += extra;
         }
+        PublishWidth(Math.Min(total, reserve));
         if (settled) clock.Stop();
     }
     internal void Reset()
     {
         clock.Stop();
         foreach (var item in items) { item.Growth = item.Velocity = 0; item.Scale.ScaleX = item.Scale.ScaleY = 1; item.Move.X = 0; }
+        PublishWidth(0);
     }
     public void Dispose()
     {

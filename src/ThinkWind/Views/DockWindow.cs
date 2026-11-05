@@ -30,6 +30,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private readonly DockItemsPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly DockMagnifier magnifier;
     private double magnificationReserve;
+    private double magnifiedBackgroundWidth;
     private double magnificationHeadroom;
     private readonly AdornerDecoratorHost iconLayer;
     protected override Thickness TransparentInsets
@@ -42,8 +43,8 @@ internal sealed partial class DockWindow : FloatingWindow
                 var bounds = Bounds;
                 progress = Math.Clamp(((bounds.Bottom - bounds.Top) / Display.Scale - 6) / Math.Max(1, ExpandedHeight - 6), 0, 1);
             }
-            return new Thickness(Store.Value.DockFixedBar ? 0 : magnificationReserve / 2 * progress,
-                magnificationHeadroom * progress, Store.Value.DockFixedBar ? 0 : magnificationReserve / 2 * progress, 0);
+            double side = Store.Value.DockFixedBar ? 0 : Math.Max(0, magnificationReserve - magnifiedBackgroundWidth) / 2 * progress;
+            return new Thickness(side, magnificationHeadroom * progress, side, 0);
         }
     }
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
@@ -83,6 +84,13 @@ internal sealed partial class DockWindow : FloatingWindow
         items.Background = Brushes.Transparent;
         PageWheel.Attach(items, () => fit.Pages(entries.Count), () => page, value => { page = value; RenderPage(); Position(); }, () => fileDragging || MenuOpen || LayoutDrag.Active || Store.IsEditing || dockSearch.IsMouseOver);
         magnifier = new DockMagnifier(items, () => !hidden && !IsPositionAnimating && !Store.IsEditing && !LayoutDrag.Active && !fileDragging && !MenuOpen);
+        magnifier.WidthChanged += width =>
+        {
+            magnifiedBackgroundWidth = Math.Clamp(width, 0, magnificationReserve);
+            // The native foreground canvas keeps its maximum reserved size.
+            // Only the Acrylic surface's side insets follow the icon spring.
+            if (IsVisible && !hidden && !IsPositionAnimating && !Store.Value.DockFixedBar) UpdateClip();
+        };
         catalog = ((App)Application.Current).Catalog;
         catalog.Changed += CatalogChanged;
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
