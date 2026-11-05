@@ -34,6 +34,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly Dictionary<MiniIslandKind, MiniIslandWindow> minis = new();
     private readonly StackPanel fullPanel = new();
     private readonly Viewbox moduleViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
+    private readonly ScrollViewer editorScroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, CanContentScroll = false };
     private readonly Viewbox headerViewport;
     private readonly Border hoverViewport = new();
     private readonly BrightnessControl brightness;
@@ -123,7 +125,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         hoverViewport.Child = hoverPanel;
         DockPanel.SetDock(hoverViewport, Dock.Top); root.Children.Add(hoverViewport);
         moduleViewport.Child = modules;
-        fullPanel.Children.Add(new AdornerDecoratorHost(moduleViewport));
+        editorScroll.Content = moduleViewport;
+        editorScroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
+        fullPanel.Children.Add(new AdornerDecoratorHost(editorScroll));
         root.Children.Add(fullPanel); Surface.Child = stableLayout;
         InitializeSecondArea();
         BuildBodies();
@@ -744,28 +748,31 @@ internal sealed partial class IslandWindow : FloatingWindow
         // Preserve the compact three-column layout before scaling. Reflowing
         // this board into narrow columns made it tall, then the Viewbox shrank
         // it again and left large empty margins on both sides.
-        double boardWidth = Store.IsEditing || p.ModuleColumns.Count > 0 ? Math.Max(220, inner) : Math.Max(760, inner);
+        bool readableWidgets = Store.IsEditing || p.ModuleColumns.Count > 0 || p.ModuleExtraHeight.Count > 0;
+        double boardWidth = readableWidgets ? Math.Max(190, inner - 18) : Math.Max(760, inner);
         modules.Width = boardWidth;
         double indicatorsHeight = SecondAreaAvailable ? 14 : 0;
         double contentLimit = Math.Max(24, limit - headerHeight - indicatorsHeight - 16);
-        moduleViewport.MaxHeight = contentLimit;
+        moduleViewport.MaxHeight = readableWidgets ? double.PositiveInfinity : contentLimit;
+        editorScroll.VerticalScrollBarVisibility = readableWidgets ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+        editorScroll.MaxHeight = contentLimit;
         if (Stage == IslandStage.Full && !secondAreaSelected)
         {
             modules.InvalidateMeasure();
             modules.Measure(new Size(boardWidth, double.PositiveInfinity));
             double naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
-            double fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
-            if (!Store.IsEditing)
+            double fit = readableWidgets ? 1 : Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
+            if (!readableWidgets)
             {
                 inner = Math.Max(1, boardWidth * fit);
                 width = inner + Surface.Padding.Left + Surface.Padding.Right;
             }
-            moduleViewport.Width = inner;
+            moduleViewport.Width = readableWidgets ? boardWidth : inner;
             moduleViewport.Height = naturalHeight * fit;
             headerViewport.Width = inner;
         }
         else { moduleViewport.Width = inner; moduleViewport.Height = double.NaN; }
-        moduleViewport.Measure(new Size(inner, contentLimit));
+        moduleViewport.Measure(new Size(inner, readableWidgets ? double.PositiveInfinity : contentLimit));
         hoverModules.InvalidateMeasure(); hoverPanel.InvalidateMeasure();
         hoverPanel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
         hoverViewport.Height = Math.Max(1, hoverPanel.DesiredSize.Height);
@@ -791,8 +798,10 @@ internal sealed partial class IslandWindow : FloatingWindow
             headerViewport.Width = inner;
         }
         double fullContentHeight = secondAreaSelected ? secondArea.Height : moduleViewport.DesiredSize.Height;
-        moduleViewport.Measure(new Size(inner, contentLimit));
-        if (!secondAreaSelected) fullContentHeight = moduleViewport.DesiredSize.Height;
+        moduleViewport.Measure(new Size(inner, readableWidgets ? double.PositiveInfinity : contentLimit));
+        if (!secondAreaSelected) fullContentHeight = Math.Min(contentLimit, moduleViewport.DesiredSize.Height);
+        editorScroll.Width = inner;
+        editorScroll.Height = Math.Min(contentLimit, moduleViewport.DesiredSize.Height);
         double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height + 12 : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
         if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
             height = Math.Min(Display.Height - 48, Math.Max(height, previousHeight));
