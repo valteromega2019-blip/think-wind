@@ -14,12 +14,15 @@ internal sealed class AgendaBackup
     private string? pending;
     private string? lastQueued;
     private Task? worker;
+    private readonly bool configuration;
+    private volatile bool successful;
     internal string Folder { get; }
     internal bool InOneDrive { get; }
     internal string Status { get; private set; } = "Backup ainda não atualizado.";
     internal event Action? Changed;
-    internal AgendaBackup()
+    internal AgendaBackup(bool settings = false)
     {
+        configuration = settings;
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var roots = new[] { Environment.GetEnvironmentVariable("OneDrive"), Environment.GetEnvironmentVariable("OneDriveConsumer"), Environment.GetEnvironmentVariable("OneDriveCommercial") }
             .Where(p => !string.IsNullOrWhiteSpace(p) && Directory.Exists(p)).Select(p => Path.GetFullPath(p!)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -33,10 +36,17 @@ internal sealed class AgendaBackup
     {
         // Immutable snapshot: never enumerate mutable UI-owned models on the worker.
         string json = JsonSerializer.Serialize(entries.Where(a => a.IsAgenda), new JsonSerializerOptions { WriteIndented = true });
+        QueueJson(json);
+    }
+    internal void QueueSettings(Preferences preferences) => QueueJson(JsonSerializer.Serialize(
+        new SettingsBackupDocument { Format = "Orby.Settings", Version = 1, Preferences = preferences }, new JsonSerializerOptions { WriteIndented = true }));
+    private void QueueJson(string json)
+    {
         lock (gate)
         {
             if (lastQueued == json) return;
             lastQueued = json;
+            successful = false;
             pending = json;
             if (worker is null || worker.IsCompleted) worker = Task.Run(WritePending);
         }
@@ -53,16 +63,29 @@ internal sealed class AgendaBackup
             }
             try
             {
+                if (configuration)
+                {
+                    Directory.CreateDirectory(Folder);
+                    string current = Path.Combine(Folder, "configuracoes.json");
+                    if (File.Exists(current) && File.ReadAllText(current) != json)
+                        File.Copy(current, Path.Combine(Folder, "configuracoes-anteriores.json"), true);
+                    Write("configuracoes.json", json);
+                    Status = "Configurações salvas em " + current;
+                    successful = true;
+                    Changed?.Invoke(); continue;
+                }
                 var items = (JsonSerializer.Deserialize<ClockAlarm[]>(json) ?? Array.Empty<ClockAlarm>()).OrderBy(a => a.EventDate).ToArray();
                 Directory.CreateDirectory(Folder);
                 string data = Path.Combine(Folder, "agenda.json");
                 if (File.Exists(data) && File.ReadAllText(data) != json) File.Copy(data, Path.Combine(Folder, "agenda-anterior.json"), true);
                 Write("agenda.json", json); Write("agenda.html", Html(items)); Write("agenda.ics", Calendar(items));
                 Status = "Backup atualizado: " + Folder + (InOneDrive ? " · pasta do OneDrive (sincronização depende do cliente)" : " · cópia local, sem OneDrive detectado");
+                successful = true;
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
             {
                 lock (gate) lastQueued = null;
+                successful = false;
                 Status = "Não foi possível atualizar o backup. Os dados locais da agenda foram mantidos. Pasta: " + Folder;
             }
             Changed?.Invoke();
@@ -127,10 +150,10 @@ internal sealed class AgendaBackup
         }
         Line("END:VCALENDAR"); return text.ToString();
     }
-    internal void Flush()
+    internal bool Flush()
     {
         Task? task; lock (gate) task = worker;
-        try { task?.Wait(TimeSpan.FromSeconds(2)); }
-        catch (AggregateException) { Status = "O backup não terminou. Os dados originais da agenda foram mantidos."; }
+        try { return (task is null || task.Wait(TimeSpan.FromSeconds(2))) && successful; }
+        catch (AggregateException) { Status = "O backup não terminou. Os dados originais da agenda foram mantidos."; return false; }
     }
 }

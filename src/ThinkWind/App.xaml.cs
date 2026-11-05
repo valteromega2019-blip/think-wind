@@ -338,7 +338,7 @@ public partial class App : Application
         TrayService.RegisterLocal(null);
         SystemEvents.UserPreferenceChanged -= WindowsPreferencesChanged;
         SystemEvents.DisplaySettingsChanged -= DisplaySettingsChanged;
-        if (store is not null) { store.Changed -= PreferencesChanged; store.Flush(); }
+        if (store is not null) { store.Changed -= PreferencesChanged; store.Flush(); store.FlushBackup(); }
         if (tray is not null) { tray.Visible = false; tray.Icon?.Dispose(); tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
         BackdropComposition.Shutdown();
         instance?.Dispose();

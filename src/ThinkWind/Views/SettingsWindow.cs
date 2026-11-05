@@ -312,6 +312,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         tutorialSection.Children.Add(Button("Continuar tutorial interrompido", () => ((App)Application.Current).ContinueTutorial()));
         tutorialSection.Children.Add(Button("Ver novidades desta atualização", () => ((App)Application.Current).RepeatUpdateTour()));
         AddDiagnosticsPage();
+        AddBackupPage();
         building = false; FinishSettingsTabs(); StoreChanged(this, EventArgs.Empty);
     }
     private void RebuildLayoutRows()

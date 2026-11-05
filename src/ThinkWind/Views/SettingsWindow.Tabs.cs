@@ -39,7 +39,7 @@ internal sealed partial class SettingsWindow
         ("Visual", new[] { "Aparência", "Barra de aplicativos", "Central de controle", "Transparência", "Tipografia", "Animações" }),
         ("Seu desktop", new[] { "Ícones da central de controle", "Widgets", "Clima", "Teclado", "Editor de layout" }),
         ("Desempenho", new[] { "Overlay", "Overlay e sensores", "Jogos", "Monitores" }),
-        ("Aplicativo", new[] { "Sistema", "Atualizações", "Diagnóstico e suporte", "Tutorial", "Sobre e segurança" })
+        ("Aplicativo", new[] { "Sistema", "Backup", "Atualizações", "Diagnóstico e suporte", "Tutorial", "Sobre e segurança" })
     };
     private FrameworkElement CreateSettingsNavigation(FrameworkElement body)
     {

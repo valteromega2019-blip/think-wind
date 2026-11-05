@@ -33,6 +33,7 @@ internal sealed class AlarmService : IDisposable
     private readonly List<ClockAlarm> alarms = new();
     private readonly AgendaBackup backup = new();
     private bool disposed;
+    private readonly bool backupEnabled;
     internal string BackupFolder => backup.Folder;
     internal string BackupStatus => backup.Status;
     private readonly Dictionary<string, DateTime> snoozes = new();
@@ -45,6 +46,7 @@ internal sealed class AlarmService : IDisposable
     internal AlarmService(string file)
     {
         path = file;
+        backupEnabled = string.Equals(Path.GetFullPath(file), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher", "alarms.json"), StringComparison.OrdinalIgnoreCase);
         try
         {
             if (File.Exists(path)) alarms.AddRange((JsonSerializer.Deserialize<List<ClockAlarm>>(File.ReadAllText(path)) ?? new())
@@ -64,7 +66,7 @@ internal sealed class AlarmService : IDisposable
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         { Error = "Não foi possível ler os alarmes. O arquivo original foi preservado."; }
         backup.Changed += BackupChanged;
-        if (Error is null && File.Exists(path)) backup.Queue(alarms.ToArray());
+        if (backupEnabled && Error is null && File.Exists(path)) backup.Queue(alarms.ToArray());
         timer.Tick += (_, _) => Check(); UpdateTimer();
     }
     private void BackupChanged()
@@ -133,9 +135,23 @@ internal sealed class AlarmService : IDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(alarms, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(path + ".tmp", path, true); Error = null;
-            backup.Queue(alarms.ToArray());
+            if (backupEnabled) backup.Queue(alarms.ToArray());
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Error = "Não foi possível salvar os alarmes: " + e.Message; }
     }
     public void Dispose() { disposed = true; backup.Changed -= BackupChanged; timer.Stop(); snoozes.Clear(); backup.Flush(); }
+    internal void ExportBackup() { backup.Queue(alarms.ToArray()); if (!backup.Flush()) throw new IOException(backup.Status); }
+    internal void RestoreAgenda(ClockAlarm[] imported)
+    {
+        var before = alarms.ToArray();
+        var retained = before.Where(a => !a.IsAgenda).ToArray();
+        if (retained.Length + imported.Length > 100 || retained.Any(a => imported.Any(b => b.Id == a.Id)))
+            throw new InvalidDataException("A agenda não cabe no limite de 100 itens com os alarmes atuais, ou contém identificadores em conflito.");
+        if (File.Exists(path)) File.Copy(path, path + ".before-restore", true);
+        alarms.Clear(); alarms.AddRange(retained); alarms.AddRange(imported);
+        Save();
+        if (Error is not null) { alarms.Clear(); alarms.AddRange(before); throw new IOException(Error); }
+        foreach (var item in before.Where(a => a.IsAgenda)) snoozes.Remove(item.Id);
+        previous = DateTime.Now; UpdateTimer(); Changed?.Invoke();
+    }
 }

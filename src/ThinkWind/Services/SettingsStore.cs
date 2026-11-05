@@ -131,6 +131,8 @@ public sealed class Preferences
 public sealed class SettingsStore
 {
     private readonly string path;
+    private AgendaBackup? configurationBackup;
+    internal string BackupFolder => (configurationBackup ??= new AgendaBackup(settings: true)).Folder;
     private readonly DispatcherTimer saveTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private bool pending;
     public event EventHandler? Changed;
@@ -163,6 +165,9 @@ public sealed class SettingsStore
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(Value, new JsonSerializerOptions { WriteIndented = true }));
         File.Move(path + ".tmp", path, true);
+        // Isolated profiles used by checks must never overwrite the user's backup.
+        if (string.Equals(path, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbyLauncher", "settings.json"), StringComparison.OrdinalIgnoreCase))
+            (configurationBackup ??= new AgendaBackup(settings: true)).QueueSettings(Value);
         pending = false;
         SaveError = null;
     }
@@ -172,6 +177,28 @@ public sealed class SettingsStore
         saveTimer.Stop(); saveTimer.Start();
         Changed?.Invoke(this, EventArgs.Empty);
         PersistenceChanged?.Invoke(this, EventArgs.Empty);
+    }
+    internal void ExportBackup()
+    {
+        Flush();
+        var backup = configurationBackup ??= new AgendaBackup(settings: true);
+        backup.QueueSettings(Value);
+        if (!backup.Flush()) throw new IOException(backup.Status);
+    }
+    internal void FlushBackup() => configurationBackup?.Flush();
+    internal void RestoreBackup(Preferences imported)
+    {
+        Flush();
+        if (SaveError is not null) throw new IOException(SaveError);
+        var before = Value;
+        try
+        {
+            Value = imported; Normalize();
+            if (File.Exists(path)) File.Copy(path, path + ".before-restore", true);
+            Save(); DockLayoutRevision++;
+        }
+        catch { Value = before; throw; }
+        Changed?.Invoke(this, EventArgs.Empty); PersistenceChanged?.Invoke(this, EventArgs.Empty);
     }
     public bool HasPendingChanges => pending;
     public void Flush()
