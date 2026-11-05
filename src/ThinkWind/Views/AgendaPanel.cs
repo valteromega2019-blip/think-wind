@@ -95,7 +95,7 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         var type = TypeSwitch(note);
         body.Children.Add(FormLabel("\uE8A5", "Tipo de registro")); body.Children.Add(type);
         var title = new TextBox { Text = original?.Name ?? "", MaxLength = 80 };
-        StyleAgendaInput(title);
+        StyleAgendaInput(title, "Digite o título do evento ou da nota…");
         body.Children.Add(FormLabel("\uE8D2", "Título do evento ou da nota")); body.Children.Add(title);
         var date = original?.EventDate?.Date ?? selected;
         body.Children.Add(ClockDesign.Text(date.ToString("dddd, dd/MM/yyyy"), 12, true));
@@ -119,7 +119,7 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         times.Children.Add(FormLabel("\uE823", "Fim")); times.Children.Add(end);
         body.Children.Add(times);
         var notes = new TextBox { Text = original?.Notes ?? "", MaxLength = 4000, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 80, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        StyleAgendaInput(notes);
+        StyleAgendaInput(notes, "Escreva os detalhes, o local ou suas anotações…");
         body.Children.Add(FormLabel("\uE70F", "Descrição / anotações")); body.Children.Add(notes);
         var colorField = AddColorPicker(original?.ColorHex ?? "");
         int[] offsets = { -1, 0, 5, 10, 15, 30, 60, 1440 };

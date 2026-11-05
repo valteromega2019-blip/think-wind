@@ -14,8 +14,10 @@ namespace OrbyLauncher.Views;
 internal sealed partial class AgendaPanel
 {
     private bool markersQueued;
-    private static void StyleAgendaInput(TextBox input)
+    private static void StyleAgendaInput(TextBox input, string hint = "")
     {
+        input.Tag = hint;
+        if (hint.Length > 0) System.Windows.Automation.AutomationProperties.SetName(input, hint);
         input.SetResourceReference(Control.ForegroundProperty, "Think.Text");
         input.SetResourceReference(Control.BackgroundProperty, "Think.Control");
         input.SetResourceReference(Control.BorderBrushProperty, "Think.Accent");
@@ -26,10 +28,14 @@ internal sealed partial class AgendaPanel
         input.Template = (ControlTemplate)XamlReader.Parse("""
 <ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" TargetType="TextBox">
  <Border x:Name="Field" Background="{TemplateBinding Background}" CornerRadius="10" BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
-  <ScrollViewer x:Name="PART_ContentHost"/>
+  <Grid>
+   <TextBlock x:Name="Hint" Text="{TemplateBinding Tag}" Foreground="{DynamicResource Think.Text}" Opacity="0.55" IsHitTestVisible="False" Visibility="Collapsed" TextWrapping="Wrap" VerticalAlignment="Top" Margin="2,0,0,0"/>
+   <ScrollViewer x:Name="PART_ContentHost"/>
+  </Grid>
  </Border>
  <ControlTemplate.Triggers>
   <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Field" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/></Trigger>
+  <Trigger Property="Text" Value=""><Setter TargetName="Hint" Property="Visibility" Value="Visible"/></Trigger>
  </ControlTemplate.Triggers>
 </ControlTemplate>
 """);
