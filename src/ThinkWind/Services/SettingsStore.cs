@@ -105,6 +105,7 @@ public sealed class Preferences
     public double IslandHorizontalOffset { get; set; }
     public double IslandScale { get; set; } = 1;
     public double IslandExpandedWidth { get; set; } = 780;
+    public double IslandExpandedHeight { get; set; } // Zero keeps the existing content-based height.
     public string IslandPanelSide { get; set; } = "Right";
     public double IslandSpacing { get; set; } = 6;
     public bool IslandAutoCollapse { get; set; } = true;
@@ -214,7 +215,7 @@ public sealed class SettingsStore
             p.QuickOrder = defaults.QuickOrder; p.HiddenQuickControls = defaults.HiddenQuickControls; p.DisabledQuickControls.Clear();
             p.ShowWeatherInHeader = defaults.ShowWeatherInHeader;
             p.ShowBatteryPercentage = defaults.ShowBatteryPercentage;
-            p.IslandScale = 1; p.IslandExpandedWidth = defaults.IslandExpandedWidth; p.IslandSpacing = defaults.IslandSpacing;
+            p.IslandScale = 1; p.IslandExpandedWidth = defaults.IslandExpandedWidth; p.IslandExpandedHeight = defaults.IslandExpandedHeight; p.IslandSpacing = defaults.IslandSpacing;
             p.IslandRadius = defaults.IslandRadius; p.IslandHorizontalOffset = 0;
             p.IslandPanelSide = defaults.IslandPanelSide;
             p.IslandReserveTop = defaults.IslandReserveTop; p.HideOverFullscreen = defaults.HideOverFullscreen;
@@ -268,6 +269,7 @@ public sealed class SettingsStore
         p.IconSize = Limit(p.IconSize, 20, 48, 28); p.DockBottomOffset = Limit(p.DockBottomOffset, 4, 80, 12);
         p.DockHorizontalOffset = Limit(p.DockHorizontalOffset, -4000, 4000, 0);
         p.IslandHorizontalOffset = Limit(p.IslandHorizontalOffset, -4000, 4000, 0);
+        p.IslandExpandedHeight = p.IslandExpandedHeight == 0 ? 0 : Limit(p.IslandExpandedHeight, 120, 4320, 620);
         p.IslandScale = Limit(p.IslandScale, .8, 1.4, 1); p.IslandExpandedWidth = Limit(p.IslandExpandedWidth, 400, 900, 780);
         p.IslandCollapseSeconds = Limit(p.IslandCollapseSeconds, 0, 10, .45);
         p.IslandPanelSide = p.IslandPanelSide is "Left" or "Right" ? p.IslandPanelSide : "Right";

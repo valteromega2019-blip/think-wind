@@ -772,7 +772,8 @@ internal sealed partial class IslandWindow : FloatingWindow
             (double.IsFinite(item.Width) ? item.Width : item.DesiredSize.Width) + item.Margin.Left + item.Margin.Right));
         secondaryQuickViewport.Measure(new Size(headerViewport.Width, double.PositiveInfinity));
         if (Stage != IslandStage.Compact && hoverQuick.Children.Count > 0) headerHeight += secondaryQuickViewport.DesiredSize.Height;
-        double limit = Stage == IslandStage.Full ? Math.Max(120, Math.Min(620, Display.Height * .64)) : CompactLayout.PanelHeight(Display.Height);
+        double maximumHeight = ExpandedHeightLimit(Display);
+        double limit = Stage == IslandStage.Full ? Math.Min(maximumHeight, p.IslandExpandedHeight > 0 ? p.IslandExpandedHeight : Math.Max(120, Math.Min(620, Display.Height * .64))) : CompactLayout.PanelHeight(Display.Height);
         double inner = Math.Max(1, width - 24);
         hoverViewport.Width = inner; hoverPanel.Width = inner;
         hoverViewport.MaxHeight = double.PositiveInfinity;
@@ -782,7 +783,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         double boardWidth = Store.IsEditing && editingWidth.HasValue ? editingBoardWidth : Math.Max(760, inner);
         modules.Width = boardWidth;
         double indicatorsHeight = SecondAreaAvailable ? 14 : 0;
-        double panelLimit = Store.IsEditing && editingHeight is double savedHeight ? savedHeight : stableFullPanelHeight ?? limit;
+        double panelLimit = Store.IsEditing && editingHeight is double savedHeight ? savedHeight : Math.Min(stableFullPanelHeight ?? limit, limit);
         double contentLimit = Math.Max(24, panelLimit - headerHeight - indicatorsHeight - 16);
         moduleViewport.MaxHeight = contentLimit;
         if (Stage == IslandStage.Full && !secondAreaSelected)
@@ -874,10 +875,11 @@ internal sealed partial class IslandWindow : FloatingWindow
         double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
         if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
             height = previousHeight;
+        if (Stage == IslandStage.Full && !Store.IsEditing && p.IslandExpandedHeight > 0) height = limit;
         if (Stage == IslandStage.Full && !Store.IsEditing && !preparingFullReveal)
         {
-            stableFullPanelHeight ??= height;
-            height = stableFullPanelHeight.Value;
+            stableFullPanelHeight ??= p.IslandExpandedHeight > 0 ? limit : height;
+            height = Math.Min(limit, stableFullPanelHeight.Value);
         }
         // Keep the destination content layout stable while the native frame
         // reveals it; do not reflow the entire module tree on every frame.

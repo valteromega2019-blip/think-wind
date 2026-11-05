@@ -70,6 +70,8 @@ internal sealed partial class DockWindow : FloatingWindow
     private int page;
     private nint activeWindow;
     private double TotalWidth => contentWidth + 20 + magnificationReserve;
+    internal System.Drawing.Rectangle MonitorBounds => Display.Bounds;
+    internal int ExpandedSurfaceTop => ReservedBottomTop ?? Display.Bounds.Bottom - (int)Math.Ceiling((Math.Max(44, contentHeight + 20) + Store.Value.DockBottomOffset) * Display.Scale);
     private double ExpandedHeight => Math.Max(44, contentHeight + 20) + magnificationHeadroom;
     private DateTime lastHover = DateTime.UtcNow;
     private sealed record Item(string Key, string Name, string? Target, string? Glyph, List<Desktop.RunningWindow> Windows, Shortcut? Pin, Action? Action);

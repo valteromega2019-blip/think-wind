@@ -13,6 +13,13 @@ namespace OrbyLauncher.Views;
 
 internal sealed partial class IslandWindow
 {
+    internal static double ExpandedHeightLimit(OverlayChrome.Display display)
+    {
+        int bottom = Math.Min(display.Work.Bottom, display.Bounds.Bottom);
+        foreach (var dock in Application.Current.Windows.OfType<DockWindow>())
+            if (dock.MonitorBounds == display.Bounds) bottom = Math.Min(bottom, dock.ExpandedSurfaceTop);
+        return Math.Max(120, (bottom - display.Bounds.Top) / display.Scale - 48);
+    }
     private bool editingPanel;
     private double? editingWidth, editingHeight;
     private double editingBoardWidth;

@@ -171,6 +171,8 @@ internal sealed partial class SettingsWindow : FloatingWindow
 
         Slider(island, "Escala dos acessos rápidos", .8, 1.4, store.Value.IslandScale, v => Change(p => p.IslandScale = v), "P0");
         Slider(island, "Largura expandida", 400, 900, store.Value.IslandExpandedWidth, v => Change(p => p.IslandExpandedWidth = v));
+        double heightLimit = IslandWindow.ExpandedHeightLimit(Display);
+        Slider(island, "Altura expandida", 120, heightLimit, Math.Min(heightLimit, store.Value.IslandExpandedHeight > 0 ? store.Value.IslandExpandedHeight : 620), v => Change(p => p.IslandExpandedHeight = v));
         Select(island, "Lado da expansão com apps maximizados ou em tela dividida", store.Value.IslandPanelSide, new[] { new Choice("Right", "Direita"), new Choice("Left", "Esquerda") }, v => Change(p => p.IslandPanelSide = v));
         Note(island, "No desktop e com janelas restauradas, a expansão fica centralizada. Com aplicativo maximizado ou encaixado pelo Windows Snap, abre no lado escolhido (direita por padrão).");
         Note(island, "Sobre aplicativos, o painel abre abaixo da barra de status. O recolhimento segue o tempo configurado, preservando controles em uso e a passagem entre os painéis.");
