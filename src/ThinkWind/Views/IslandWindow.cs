@@ -262,6 +262,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     {
         // Secondary displays keep their applied layout until editing is completed.
         if (Store.IsEditing && !IsPrimaryEditor) return;
+        if (!Store.IsEditing) stableFullPanelWidth = null;
         RememberEditingPanel();
         if (LayoutDrag.Active) return;
         ApplyAppearance();
@@ -733,6 +734,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             return;
         }
         var p = Store.Value;
+        if (Stage != IslandStage.Full) stableFullPanelWidth = null;
         FontSizing.LimitScale(modules, 1.25);
         FontSizing.LimitScale(hoverPanel, 1.25);
         System.Windows.Documents.TextElement.SetFontSize(modules,
@@ -811,6 +813,15 @@ internal sealed partial class IslandWindow : FloatingWindow
             {
                 inner = Math.Max(1, boardWidth * fit);
                 width = inner + Surface.Padding.Left + Surface.Padding.Right;
+            }
+            if (!Store.IsEditing)
+            {
+                // Sensor/media updates may change natural height, but must not
+                // move the sides of a panel the user is already interacting with.
+                stableFullPanelWidth ??= width;
+                width = Math.Min(stableFullPanelWidth.Value, Display.Width - 16);
+                inner = Math.Max(1, width - Surface.Padding.Left - Surface.Padding.Right);
+                fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
             }
             moduleViewport.Width = inner;
             moduleViewport.Height = naturalHeight * fit;

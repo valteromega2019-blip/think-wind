@@ -16,6 +16,7 @@ internal sealed partial class IslandWindow
     private bool editingPanel;
     private double? editingWidth, editingHeight;
     private double editingBoardWidth;
+    private double? stableFullPanelWidth;
     private bool IsPrimaryEditor => System.Windows.Forms.Screen.AllScreens.Any(screen => screen.Primary && screen.Bounds == Display.Bounds);
     private (double Width, double Height, double Limit, double Maximum, string Structure)? widgetWidthFitKey;
     private double fittedWidgetBoardWidth, fittedWidgetInnerWidth;
