@@ -176,6 +176,13 @@ internal sealed class HardwareMonitorPanel : UserControl
         var text = new TextBlock { Text = value, FontSize = size, TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily(mono ? "Cascadia Mono, Consolas" : "Segoe UI Variable Text") };
         text.SetResourceReference(TextBlock.ForegroundProperty, resource); return text;
     }
+    private TextBlock MetricHeadline(string value)
+    {
+        var text = Text(value, 25);
+        text.FontWeight = FontWeights.SemiBold;
+        text.SetResourceReference(TextBlock.FontFamilyProperty, "Think.FontFamily");
+        return text;
+    }
     private Border Card(UIElement child)
     {
         var card = new Border { Child = child, Margin = new Thickness(3), Padding = new Thickness(10) };
@@ -225,7 +232,7 @@ internal sealed class HardwareMonitorPanel : UserControl
     {
         var panel=new StackPanel(); panel.Children.Add(Text("CPU · "+chartMetric.ToUpperInvariant(),10,"Muted"));
         Func<HardwareSample,DeviceReading,double?> metric = (_,device)=>chartMetric=="Temperatura"?device.Temperature:chartMetric=="Carga"?device.Load:device.Power;
-        var hero=Text(Number(latest is null?null:metric(latest,latest.Cpu),chartMetric=="Temperatura"?" °C":chartMetric=="Carga"?"%":" W","0.0"),24,"Fg",true); hero.Margin=new Thickness(0,5,0,7); panel.Children.Add(hero);
+        var hero=MetricHeadline(Number(latest is null?null:metric(latest,latest.Cpu),chartMetric=="Temperatura"?" °C":chartMetric=="Carga"?"%":" W","0.0")); hero.Margin=new Thickness(0,5,0,7); panel.Children.Add(hero);
         string unit=chartMetric=="Temperatura"?" °C":chartMetric=="Carga"?"%":" W";
         var first=telemetry.History.FirstOrDefault(sample=>sample.Time>=DateTime.Now.AddMinutes(-minutes));
         double? delta=latest is not null && first is not null ? metric(latest,latest.Cpu)-metric(first,first.Cpu) : null;
@@ -253,7 +260,7 @@ internal sealed class HardwareMonitorPanel : UserControl
     }
     private UIElement Rings()
     {
-        var panel=new StackPanel();panel.Children.Add(Text("MEMÓRIA E DISCO",10,"Muted"));panel.Children.Add(Text(Number(latest?.RamUsed," GB","0.0"),24,"Fg",true));panel.Children.Add(Text("de RAM em uso · "+Number(latest?.RamTotal," GB")+" instalados",10,"Faint"));
+        var panel=new StackPanel();panel.Children.Add(Text("MEMÓRIA E DISCO",10,"Muted"));panel.Children.Add(MetricHeadline(Number(latest?.RamUsed," GB","0.0")));panel.Children.Add(Text("de RAM em uso · "+Number(latest?.RamTotal," GB")+" instalados",10,"Faint"));
         var canvas=new Canvas {Width=160,Height=160,HorizontalAlignment=HorizontalAlignment.Center,Margin=new Thickness(0,6,0,6)};
         double?[] ratios={latest?.RamTotal>0?latest.RamUsed/latest.RamTotal:null,latest?.Gpu.MemoryTotal>0?latest.Gpu.MemoryUsed/latest.Gpu.MemoryTotal:null,latest?.DiskTotal>0?1-latest.DiskFree/latest.DiskTotal:null};
         string[] colors={"Fg","Muted","Faint"};
