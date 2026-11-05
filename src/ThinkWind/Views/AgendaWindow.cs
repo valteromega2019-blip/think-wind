@@ -12,6 +12,8 @@ internal sealed class AgendaWindow : FloatingWindow
     internal static AgendaWindow[] DockItems => minimized.ToArray();
     internal bool MinimizedToDock { get; private set; }
     internal string DockKey { get; } = Guid.NewGuid().ToString("N");
+    internal OrbyLauncher.Native.Desktop.RunningWindow DockWindow => new(
+        new System.Windows.Interop.WindowInteropHelper(this).Handle, "Agenda · eventos e notas", null, true);
     internal void RestoreFromDock()
     {
         MinimizedToDock = false; minimized.Remove(this);
@@ -21,7 +23,7 @@ internal sealed class AgendaWindow : FloatingWindow
     {
         MinimizedToDock = true;
         if (!minimized.Contains(this)) minimized.Add(this);
-        Hide();
+        WindowState = WindowState.Minimized;
     }
     protected override bool AttachedTop => false;
     protected override bool UsesIslandAppearance => true;
@@ -80,6 +82,11 @@ internal sealed class AgendaWindow : FloatingWindow
         agenda.Loaded += (_, _) => QueuePosition();
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
         Closed += (_, _) => { closed = true; minimized.Remove(this); agenda.Dispose(); };
+        StateChanged += (_, _) =>
+        {
+            if (WindowState == WindowState.Normal && MinimizedToDock)
+            { MinimizedToDock = false; minimized.Remove(this); QueuePosition(); }
+        };
     }
     internal void Present(DateTime day, bool add)
     {

@@ -368,7 +368,7 @@ internal sealed partial class DockWindow : FloatingWindow
                 entries.Add(new("app:" + group.Key, first.Title, first.Executable, null, groupWindows, null, null));
             }
             foreach (var agenda in AgendaWindow.DockItems)
-                entries.Add(new("system:agenda:" + agenda.DockKey, "Agenda · eventos e notas", null, "\uE787", new(), null, agenda.RestoreFromDock));
+                entries.Add(new("system:agenda:" + agenda.DockKey, "Agenda · eventos e notas", null, "\uE787", new() { agenda.DockWindow }, null, agenda.RestoreFromDock));
             entries.Add(new("system:add", "Biblioteca de Aplicativos", null, "\uE710", new(), null, () => ShowPanel(LauncherPanelMode.Library)));
             var present = entries.Select(i => i.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var order = Store.Value.DockOrder.Concat(visibleOrder).Where(present.Contains).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -440,7 +440,7 @@ internal sealed partial class DockWindow : FloatingWindow
         foreach (var entry in entries.Skip(page * fit.PerPage).Take(fit.PerPage))
         {
             var button = CreateButton(entry, activeWindow); items.Children.Add(button);
-            if (!entry.Key.StartsWith("system:", StringComparison.Ordinal)) magnified.Add(button);
+            if (!entry.Key.StartsWith("system:", StringComparison.Ordinal) || entry.Key.StartsWith("system:agenda:", StringComparison.Ordinal)) magnified.Add(button);
         }
         if (pages > 1) items.Children.Add(PageButton(1, pages));
         items.Children.Add(ShowDesktopButton());
@@ -546,7 +546,7 @@ internal sealed partial class DockWindow : FloatingWindow
         {
             if (LayoutDrag.SuppressClick) return;
             if (Store.IsEditing && item.Key != "system:add") return;
-            if (item.Action is not null && item.Windows.Count == 0) item.Action();
+            if (item.Action is not null && (item.Windows.Count == 0 || item.Key.StartsWith("system:agenda:", StringComparison.Ordinal))) item.Action();
             else
             {
                 var current = item.Windows.FirstOrDefault(window => Desktop.IsActiveWindow(window.Handle, foregroundBeforeClick)) ?? selected;
