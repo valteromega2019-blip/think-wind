@@ -31,7 +31,15 @@ internal sealed class HardwareMonitorPanel : UserControl
         set { if (wideLayout == value) return; wideLayout = value; Render(); }
     }
     private readonly ComboBox gpuPicker = new() { DisplayMemberPath = nameof(GpuChoice.Label), MinHeight = 32, Margin = new Thickness(4, 0, 4, 10) };
-    private readonly TextBlock sensorNotice = new() { FontSize = 11, Height = 28, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(4, 0, 4, 8), Visibility = Visibility.Hidden };
+    private readonly TextBlock sensorNotice = new() { FontSize = 11, Height = 28, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(4, 0, 4, 8), Visibility = Visibility.Collapsed };
+    private void SetSensorNoticeVisible(bool visible)
+    {
+        var next = visible ? Visibility.Visible : Visibility.Collapsed;
+        if (sensorNotice.Visibility == next) return;
+        sensorNotice.Visibility = next;
+        boardLayoutDirty = true;
+        if (IsVisible) LayoutChanged?.Invoke();
+    }
     private bool syncingGpu;
     private string gpuChoiceSignature = "";
     private string diskChoiceSignature = "";
@@ -124,7 +132,7 @@ internal sealed class HardwareMonitorPanel : UserControl
         {
             latest = telemetry.Latest;
             sensorNotice.Text = "Leituras desativadas. Ligue o interruptor acima para ativar o monitoramento.";
-            sensorNotice.Visibility = Visibility.Hidden;
+            SetSensorNoticeVisible(false);
         }
         syncingMonitoring = false;
         MonitoringDesign.Install(Resources, store.Value); UpdateGpuPicker(); Render();
@@ -140,7 +148,7 @@ internal sealed class HardwareMonitorPanel : UserControl
             ? "Leituras desativadas. Ligue o interruptor acima para ativar o monitoramento."
             : errorAt >= 0 ? sample.Status[errorAt..] : "";
         sensorNotice.ToolTip = sensorNotice.Text;
-        sensorNotice.Visibility = errorAt >= 0 && store.Value.HardwareMonitoringEnabled ? Visibility.Visible : Visibility.Hidden;
+        SetSensorNoticeVisible(errorAt >= 0 && store.Value.HardwareMonitoringEnabled);
         if (IsVisible) { UpdateGpuPicker(); Render(diskLayoutChanged); }
     }
     private void UpdateGpuPicker()
