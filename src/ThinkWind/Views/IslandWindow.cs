@@ -429,14 +429,6 @@ internal sealed partial class IslandWindow : FloatingWindow
                 var positionGrip = Glyph("\uE784", 15);
                 positionGrip.Width = 22; positionGrip.Height = 32;
                 AttachPositionGrip(positionGrip); hoverQuick.Children.Add(positionGrip);
-                var finish = ActionButton("✓ Concluir edição", () => SetWidgetEditing(false));
-                TutorialGuide.Mark(finish, "widget-edit-finish");
-                finish.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
-                finish.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
-                finish.Padding = new Thickness(12, 6, 12, 6);
-                finish.Width = 170; finish.Height = 32; finish.FontSize = 13;
-                FontSizing.LimitScale(finish, 1.15);
-                hoverQuick.Children.Add(finish);
                 var widgetsButton = ActionButton("Selecionar widgets", () => ((App)Application.Current).OpenWidgetSettings());
                 widgetsButton.Content = Glyph("\uE80A", 17 * scale);
                 StyleSecondaryControl(widgetsButton); hoverQuick.Children.Add(widgetsButton);

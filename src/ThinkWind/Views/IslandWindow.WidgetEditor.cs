@@ -26,12 +26,21 @@ internal sealed partial class IslandWindow
     private double? stableFullPanelWidth, stableFullPanelHeight;
     private bool IsPrimaryEditor => System.Windows.Forms.Screen.AllScreens.Any(screen => screen.Primary && screen.Bounds == Display.Bounds);
     private BackdropHost? editorBackdrop;
+    private WidgetEditFinishWindow? editorFinish;
     private void SyncEditorBackdrop()
     {
         if (!IsPrimaryEditor || !Store.IsEditing || !IsVisible || Stage != IslandStage.Full)
         {
+            editorFinish?.Close(); editorFinish = null;
             editorBackdrop?.Dispose(); editorBackdrop = null; return;
         }
+        if (editorFinish is null)
+        {
+            editorFinish = new WidgetEditFinishWindow(Store, () => SetWidgetEditing(false))
+            { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
+            editorFinish.Show();
+        }
+        editorFinish.RefreshSettings();
         var handle = BackdropHandle != 0 ? BackdropHandle : new WindowInteropHelper(this).Handle;
         if (handle == 0) return;
         try
@@ -166,4 +175,29 @@ internal sealed partial class IslandWindow
         if (double.IsNaN(month.Width) || Math.Abs(month.Width - width) > .5) month.Width = width;
         viewport.HorizontalAlignment = HorizontalAlignment.Stretch;
     }
+}
+
+internal sealed class WidgetEditFinishWindow : FloatingWindow
+{
+    protected override bool AttachedTop => true;
+    protected override bool SquareTopCorners => false;
+    protected override bool HideOnClose => false;
+    protected override string? MaterialOverride => "Acrylic";
+    protected override string? TopPanelSide => "Center";
+    protected override double TopEdgeOffset => Math.Max(0, (Display.Work.Bottom - Display.Bounds.Top) / Display.Scale - 80);
+    internal WidgetEditFinishWindow(SettingsStore store, Action finish) : base(store)
+    {
+        Title = "Concluir edição dos widgets";
+        ShowActivated = false;
+        var button = ActionButton("✓  Concluir edição", finish);
+        button.FontSize = 18; button.FontWeight = FontWeights.SemiBold;
+        button.Padding = new Thickness(20, 10, 20, 10);
+        button.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
+        button.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
+        TutorialGuide.Mark(button, "widget-edit-finish");
+        FontSizing.LimitScale(button, 1.15);
+        Surface.Child = button;
+        Surface.Padding = new Thickness(4);
+    }
+    public override void Position() => Place(300, 56);
 }
