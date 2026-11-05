@@ -31,6 +31,7 @@ internal abstract class FloatingWindow : Window
     protected virtual Thickness TransparentInsets => new();
     protected virtual bool HideOnClose => true;
     protected virtual string? MaterialOverride => null;
+    protected virtual double TextScale => Store.Value.FontScale;
     internal string? MonitorDeviceOverride { get; set; }
     private bool retiring;
     internal void Retire() { retiring = true; Close(); }
@@ -144,7 +145,7 @@ internal abstract class FloatingWindow : Window
     }
     protected void ApplyAppearance()
     {
-        FontSizing.Apply(this, Store.Value.FontScale);
+        FontSizing.Apply(this, TextScale);
         var p = Store.Value;
         radius = CollapsedDock ? 3 : FullWidthTop ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
         var material = MaterialOverride ?? (UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial);

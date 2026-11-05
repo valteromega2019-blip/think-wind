@@ -56,7 +56,9 @@ internal sealed partial class SettingsWindow
         compactNavigation.SelectionChanged += (_, _) => { if (!changingNavigation && compactNavigation.SelectedItem is Choice choice) SelectSettingsTab(choice.Id); };
         void Adapt()
         {
-            bool compact = ActualWidth > 0 && ActualWidth / Math.Max(1, store.Value.FontScale) < 640;
+            // Only an explicit window resize changes the navigation layout.
+            // Moving the font slider must not replace the sidebar mid-edit.
+            bool compact = ActualWidth > 0 && ActualWidth < 640;
             sidebar.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             compactNavigation.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
             navigationColumn.Width = new GridLength(compact ? 0 : 174);

@@ -15,6 +15,9 @@ internal sealed partial class SettingsWindow : FloatingWindow
     protected override bool AttachedTop => false;
     protected override bool HideOnClose => false;
     protected override string? MaterialOverride => "Acrylic";
+    // Keep the editor usable while previewing larger text in the launcher.
+    // This does not rewrite the user's global typography preference.
+    protected override double TextScale => Math.Clamp(Store.Value.FontScale, .8, 1.25);
     private sealed record Choice(string Id, string Name) { public override string ToString() => Name; }
     private readonly SettingsStore store;
     private readonly WeatherWidget weatherSettings;
