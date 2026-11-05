@@ -75,6 +75,8 @@ internal sealed class AlarmTimePicker : Grid
         {
             if (int.TryParse(input.Text, out int n) && n >= 0 && n < range)
             { if (range == 24) lastHour = n; else lastMinute = n; input.Text = n.ToString("00"); }
+            if (int.TryParse(hours.Text, out int h) && int.TryParse(minutes.Text, out int m)
+                && h is >= 0 and < 24 && m is >= 0 and < 60) MinuteOfDay = h * 60 + m;
         };
         row.Children.Add(input);
         var down = ClockDesign.Button("\uE70D", "Diminuir " + label.ToLowerInvariant(), () => Step(input, range, -1), true);
@@ -83,9 +85,7 @@ internal sealed class AlarmTimePicker : Grid
         var surface = ClockDesign.Card(stack, 8);
         surface.PreviewMouseWheel += (_, e) => { if (e.Delta == 0) return; Step(input, range, e.Delta > 0 ? 1 : -1); e.Handled = true; };
         return surface;
-            }
-            if (int.TryParse(hours.Text, out int h) && int.TryParse(minutes.Text, out int m)
-                && h is >= 0 and < 24 && m is >= 0 and < 60) MinuteOfDay = h * 60 + m;
+    }
     private void Step(TextBox input, int range, int delta)
     {
         int n = int.TryParse(input.Text, out int parsed) && parsed >= 0 && parsed < range ? parsed : range == 24 ? lastHour : lastMinute;
