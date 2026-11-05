@@ -305,10 +305,11 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         }
         if (section is "Todos" or "Biblioteca" || term.Length > 0) source = OrderApplications(source, term);
         results = source.DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList();
-        notice.Text = catalog.Warning ?? (HiddenLibraryView ? "Botão direito: mostrar novamente na biblioteca. Os fixados não são removidos."
-            : results.Count == 0 ? "Nenhum item nesta seção. Confira também Ocultos na Biblioteca."
-            : librarySection ? "Botão direito: fixar, ocultar da biblioteca ou remover atalho." : "Botão direito: fixar, remover atalho e reorganizar.");
+        notice.Text = catalog.Warning ?? (results.Count == 0
+            ? HiddenLibraryView ? "Nenhum aplicativo oculto disponível." : "Nenhum item nesta seção. Confira também Ocultos na Biblioteca."
+            : "");
         if (term.Length >= 2 && mode != LauncherPanelMode.Library && !HiddenLibraryView) { notice.Text = "Consultando também o índice de arquivos do Windows…"; debounce.Start(); }
+        notice.Visibility = string.IsNullOrWhiteSpace(notice.Text) ? Visibility.Collapsed : Visibility.Visible;
         RenderRows();
     }
     private async Task ReadFiles()
@@ -326,6 +327,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
                 files = files.Where(app => !IsLibraryHidden(app, hidden, hiddenTargets));
             }
             results = OrderApplications(results.Concat(files), term).DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList(); notice.Text = batch.Notice ?? notice.Text; RenderRows();
+            notice.Visibility = string.IsNullOrWhiteSpace(notice.Text) ? Visibility.Collapsed : Visibility.Visible;
         }
         catch (OperationCanceledException) { }
     }
