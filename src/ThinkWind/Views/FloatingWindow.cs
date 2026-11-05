@@ -160,6 +160,7 @@ internal abstract class FloatingWindow : Window
         Resources["Think.Text"] = SystemParameters.HighContrast ? SystemColors.WindowTextBrush : textBrush;
         Resources["Think.Muted"] = Resources["Think.Text"];
         color.A = (byte)Math.Round(255 * (backdrop?.MaterialAvailable == true ? alpha : 1));
+        collapsedHandleHighlighted = false;
         Surface.Background = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(color);
         Typography.ApplyContrast(Surface, MaterialTint, p);
         Surface.BorderThickness = new Thickness(CollapsedDock && SystemParameters.HighContrast ? .75 : 0);
@@ -174,6 +175,7 @@ internal abstract class FloatingWindow : Window
         centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;
         UpdateClip();
     }
+    private bool collapsedHandleHighlighted;
     protected void UpdateClip() => UpdateClip(null);
     private void UpdateClip(OverlayChrome.PixelRect? destination)
     {
@@ -197,6 +199,18 @@ internal abstract class FloatingWindow : Window
         var scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1;
         var next = (rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top, (int)Math.Round(radius * scale), SquareTopCorners, scale);
         if (next.Item1 < 1 || next.Item2 < 1) return;
+        // Reveal the light handle only at its final compact dimensions, so the
+        // expanded Acrylic does not flash pale during the shrinking animation.
+        bool highlightHandle = CollapsedDock && next.Item1 / scale <= 100 && next.Item2 / scale <= 8;
+        if (highlightHandle != collapsedHandleHighlighted)
+        {
+            collapsedHandleHighlighted = highlightHandle;
+            if (highlightHandle && !SystemParameters.HighContrast)
+            {
+                Surface.Background = new SolidColorBrush(Color.FromArgb(205, 210, 224, 237));
+                Surface.BorderThickness = new Thickness(.5);
+            }
+        }
         var inset = TransparentInsets;
         if (Surface.Margin != inset) Surface.Margin = inset;
         if (inset != new Thickness())
