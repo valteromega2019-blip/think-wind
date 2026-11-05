@@ -30,7 +30,8 @@ internal sealed partial class WindowPreview
                     dockBounds.Top -= 24; dockBounds.Bottom += 24;
                     protectedDock = dockBounds;
                 }
-                desktopPeek.Show(peekTarget, color.R | color.G << 8 | color.B << 16, protectedDock);
+                desktopPeek.Show(peekTarget, color.R | color.G << 8 | color.B << 16, protectedDock,
+                    BackdropHandle != 0 ? BackdropHandle : new System.Windows.Interop.WindowInteropHelper(this).Handle);
             }
             else EndWindowPeek();
         };
