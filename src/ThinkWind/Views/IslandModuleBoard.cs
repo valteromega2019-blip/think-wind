@@ -9,6 +9,8 @@ internal sealed class IslandModuleBoard : Panel
 {
     private readonly Dictionary<UIElement, Rect> slots = new();
     private double gap = 8;
+    internal static readonly DependencyProperty ColumnsProperty = DependencyProperty.RegisterAttached(
+        "Columns", typeof(int), typeof(IslandModuleBoard), new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsParentMeasure));
     internal double Gap { get => gap; set { if (gap == value) return; gap = value; InvalidateMeasure(); } }
     internal void SetCards(IEnumerable<Border> cards)
     {
@@ -21,8 +23,40 @@ internal sealed class IslandModuleBoard : Panel
         slots.Clear(); var all = Children.Cast<UIElement>().ToArray();
         // Every item is an independent widget, with equal columns and natural
         // row heights. No narrow side column or nested Widgets container.
-        double y = Group(all, width, width >= 640 ? 3 : width >= 420 ? 2 : 1, 96, 0);
+        double y = all.Any(item => (int)item.GetValue(ColumnsProperty) != 0)
+            ? Customized(all, width) : Group(all, width, width >= 640 ? 3 : width >= 420 ? 2 : 1, 96, 0);
         return new Size(width, Math.Max(0, y - (all.Length > 0 ? Gap : 0)));
+    }
+    private double Customized(UIElement[] items, double width)
+    {
+        double y = 0;
+        int offset = 0;
+        while (offset < items.Length)
+        {
+            var row = new List<(UIElement Item, int Span)>();
+            int used = 0;
+            double height = 96;
+            while (offset < items.Length)
+            {
+                int columns = (int)items[offset].GetValue(ColumnsProperty);
+                if (columns == 0) columns = width >= 640 ? 3 : 2;
+                int span = width < 420 ? 6 : columns == 2 ? 3 : 2;
+                if (used + span > 6) break;
+                var item = items[offset++];
+                double cell = Math.Max(1, (width + Gap) * span / 6 - Gap);
+                item.Measure(new Size(cell, double.PositiveInfinity));
+                height = Math.Max(height, item.DesiredSize.Height);
+                row.Add((item, span)); used += span;
+            }
+            double x = 0;
+            foreach (var entry in row)
+            {
+                double cell = Math.Max(1, (width + Gap) * entry.Span / 6 - Gap);
+                slots[entry.Item] = new Rect(x, y, cell, height); x += cell + Gap;
+            }
+            y += height + Gap;
+        }
+        return y;
     }
     private double Group(UIElement[] items, double width, int columns, double minimum, double y)
     {

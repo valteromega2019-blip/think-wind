@@ -245,7 +245,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         var before = motion.Capture(MotionElements());
         updatingLayout = true;
         // Reuse audio controls so live styling never resets the selected device.
-        string structure = Store.IsEditing + ":" + Store.Value.ShowAudio + ":" + string.Join("|", Store.Value.HiddenModules.OrderBy(id => id));
+        string structure = Store.IsEditing + ":" + Store.Value.ShowAudio + ":" + string.Join("|", Store.Value.HiddenModules.OrderBy(id => id))
+            + ":" + string.Join("|", Store.Value.ModuleColumns.OrderBy(pair => pair.Key).Select(pair => pair.Key + "=" + pair.Value));
         if (moduleStructure != structure)
         {
             modules.Children.Clear();
@@ -259,6 +260,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 var content = new Grid();
                 content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                 content.RowDefinitions.Add(new RowDefinition());
+                content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                 var title = new DockPanel { Margin = new Thickness(4, 0, 4, 8) };
                 var grip = new TextBlock { Text = Store.IsEditing ? "⋮⋮  " + LayoutCatalog.ModuleName(id) : LayoutCatalog.ModuleName(id), FontSize = 14, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(4), Opacity = .9, Cursor = Store.IsEditing ? Cursors.SizeAll : Cursors.Arrow };
                 grip.SetResourceReference(TextBlock.ForegroundProperty, Store.IsEditing ? "Think.Accent" : "Think.Text");
@@ -270,6 +272,39 @@ internal sealed partial class IslandWindow : FloatingWindow
                 title.Children.Add(grip);
                 if (Store.IsEditing) content.Children.Add(title);
                 Grid.SetRow(body, 1); content.Children.Add(body);
+                if (Store.IsEditing)
+                {
+                    var sizing = new DockPanel { Margin = new Thickness(4, 8, 4, 0) };
+                    int columns = Store.Value.ModuleColumns.GetValueOrDefault(id, 3);
+                    var sizeButton = ActionButton($"↔ {columns} por linha", () => Store.Update(p => p.ModuleColumns[id] = p.ModuleColumns.GetValueOrDefault(id, 3) == 3 ? 2 : 3));
+                    sizeButton.FontSize = 11; sizeButton.Padding = new Thickness(6, 4, 6, 4);
+                    var resize = new System.Windows.Controls.Primitives.Thumb
+                    {
+                        Width = 24, Height = 26, Cursor = Cursors.SizeWE,
+                        ToolTip = "Arraste para a direita: 2 por linha; para a esquerda: 3 por linha"
+                    };
+                    resize.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
+                    var gripSurface = new FrameworkElementFactory(typeof(Border));
+                    gripSurface.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
+                    gripSurface.SetValue(Border.BackgroundProperty, new DynamicResourceExtension("Think.AccentSurface"));
+                    var gripText = new FrameworkElementFactory(typeof(TextBlock));
+                    gripText.SetValue(TextBlock.TextProperty, "↔");
+                    gripText.SetValue(TextBlock.ForegroundProperty, new DynamicResourceExtension("Think.Accent"));
+                    gripText.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+                    gripText.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+                    gripSurface.AppendChild(gripText);
+                    resize.Template = new ControlTemplate(typeof(System.Windows.Controls.Primitives.Thumb)) { VisualTree = gripSurface };
+                    double distance = 0;
+                    resize.DragStarted += (_, _) => distance = 0;
+                    resize.DragDelta += (_, e) => { distance += e.HorizontalChange; e.Handled = true; };
+                    resize.DragCompleted += (_, e) =>
+                    {
+                        if (!e.Canceled && Math.Abs(distance) >= 12)
+                            Store.Update(p => p.ModuleColumns[id] = distance > 0 ? 2 : 3);
+                    };
+                    DockPanel.SetDock(resize, Dock.Right); sizing.Children.Add(resize); sizing.Children.Add(sizeButton);
+                    Grid.SetRow(sizing, 2); content.Children.Add(sizing);
+                }
                 var card = new Border { Child = content, Tag = id, CornerRadius = new CornerRadius(20), Padding = new Thickness(10), VerticalAlignment = VerticalAlignment.Stretch, HorizontalAlignment = HorizontalAlignment.Stretch, UseLayoutRounding = true };
                 card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
                 System.Windows.Automation.AutomationProperties.SetName(card, LayoutCatalog.ModuleName(id));
@@ -282,6 +317,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         for (int i = 0; i < ordered.Length; i++)
         {
             var card = cards[ordered[i]];
+            card.SetValue(IslandModuleBoard.ColumnsProperty, Store.Value.ModuleColumns.GetValueOrDefault(ordered[i]));
             card.Margin = new Thickness(0); card.Padding = new Thickness(ordered[i] is "media" or "notes" ? 0 : 10);
             card.CornerRadius = new CornerRadius(20);
         }
