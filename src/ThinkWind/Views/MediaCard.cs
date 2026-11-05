@@ -18,9 +18,9 @@ internal sealed partial class MediaCard : Grid, IDisposable
     private readonly ImageBrush artworkBackground = new() { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };
     private readonly Border backgroundCover, backgroundShade;
     private readonly Image artwork = new() { Width = 64, Height = 64, Stretch = Stretch.UniformToFill };
-    private readonly TextBlock title = new() { FontSize = 16, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock artist = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock player = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock title = new() { FontSize = 21, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock artist = new() { FontSize = 16, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock player = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock time = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Right };
     private readonly Slider progress = new() { Minimum = 0, Margin = new Thickness(0, 8, 0, 0), IsMoveToPointEnabled = true };
     private readonly Button previous, toggle, next;
@@ -165,13 +165,18 @@ internal sealed partial class MediaCard : Grid, IDisposable
         transport.VerticalAlignment = VerticalAlignment.Center;
         metadataRow.VerticalAlignment = VerticalAlignment.Center;
         if (dockPreview) return;
+        foreach (var button in new[] { previous, toggle, next })
+        {
+            button.Width = button.Height = 42;
+            if (button.Content is TextBlock glyph) glyph.FontSize = 24;
+        }
         // Bound metadata at each breakpoint; long names remain available in
         // tooltips instead of pushing transport/progress outside the widget.
         title.MaxHeight = Math.Ceiling(title.FontSize * 2.8);
         artist.MaxHeight = Math.Ceiling(artist.FontSize * 1.5);
         title.TextTrimming = artist.TextTrimming = TextTrimming.CharacterEllipsis;
         player.TextWrapping = TextWrapping.NoWrap; player.TextTrimming = TextTrimming.CharacterEllipsis;
-        double size = wide ? Math.Clamp(Math.Round(ActualWidth * .12), 44, 72) : 44;
+        double size = wide ? Math.Clamp(Math.Round(ActualWidth * .15), 64, 88) : 64;
         if (cover.Width != size)
         {
             cover.Width = cover.Height = artwork.Width = artwork.Height = size;
