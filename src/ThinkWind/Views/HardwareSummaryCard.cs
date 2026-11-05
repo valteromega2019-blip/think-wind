@@ -13,7 +13,7 @@ internal sealed class HardwareSummaryCard : Border
 {
     private readonly string id;
     private readonly TextBlock value = new(), detail = new();
-    private readonly ProgressBar progress = new() { Maximum = 100, Height = 3, BorderThickness = new Thickness(0) };
+    private readonly ProgressBar progress = new() { Maximum = 100, Height = 14, BorderThickness = new Thickness(0) };
     private readonly System.Windows.Controls.Primitives.UniformGrid diskPicker = new() { Rows = 1, Margin = new Thickness(0, 0, 0, 8), Visibility = Visibility.Collapsed };
     private readonly Dictionary<string, Button> diskButtons = new();
     private readonly SettingsStore? settings;
@@ -35,10 +35,24 @@ internal sealed class HardwareSummaryCard : Border
         detail.FontSize = compact ? 12 : 10; detail.TextWrapping = TextWrapping.NoWrap; detail.TextTrimming = TextTrimming.CharacterEllipsis;
         detail.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         progress.Margin = new Thickness(0, compact ? 4 : 8, 0, 0);
-        progress.SetResourceReference(Control.ForegroundProperty, "Think.Accent"); progress.SetResourceReference(Control.BackgroundProperty, "Think.Hover");
+        progress.Template = CapsuleProgressTemplate();
+        progress.SetResourceReference(Control.ForegroundProperty, "Think.Accent"); progress.SetResourceReference(Control.BackgroundProperty, "Think.Control");
         if (metric == "disk") panel.Children.Add(diskPicker);
         panel.Children.Add(heading); panel.Children.Add(value); panel.Children.Add(detail); panel.Children.Add(progress); Child = panel;
         Present(null);
+    }
+    private static ControlTemplate CapsuleProgressTemplate()
+    {
+        var surface = new FrameworkElementFactory(typeof(Border));
+        surface.SetValue(Border.CornerRadiusProperty, new CornerRadius(7));
+        surface.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+        var track = new FrameworkElementFactory(typeof(Grid), "PART_Track");
+        var fill = new FrameworkElementFactory(typeof(Border), "PART_Indicator");
+        fill.SetValue(Border.CornerRadiusProperty, new CornerRadius(7));
+        fill.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.ForegroundProperty));
+        fill.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Left);
+        track.AppendChild(fill); surface.AppendChild(track);
+        return new ControlTemplate(typeof(ProgressBar)) { VisualTree = surface };
     }
     internal static string Label(string id) => id switch { "cpu" => "Processador", "gpu" => "Placa de vídeo", "ram" => "Memória RAM", _ => "Armazenamento" };
     internal void Present(HardwareSample? s)
