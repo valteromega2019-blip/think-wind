@@ -4,6 +4,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
+using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
 namespace OrbyLauncher.Views;
@@ -12,6 +14,28 @@ internal sealed partial class IslandWindow
 {
     private bool editingPanel;
     private double? editingWidth, editingHeight;
+    private BackdropHost? editorBackdrop;
+    private void SyncEditorBackdrop()
+    {
+        if (!Store.IsEditing || !IsVisible || Stage != IslandStage.Full)
+        {
+            editorBackdrop?.Dispose(); editorBackdrop = null; return;
+        }
+        var handle = BackdropHandle != 0 ? BackdropHandle : new WindowInteropHelper(this).Handle;
+        if (handle == 0) return;
+        try
+        {
+            // A passive composition surface below the editor: no keyboard or
+            // mouse hook, focus change, screenshot loop or persistent service.
+            editorBackdrop ??= new BackdropHost(handle, false, 0, "Edição dos widgets");
+            editorBackdrop.SetMaterial(SystemParameters.HighContrast ? "Solid" : "Acrylic", ThemeService.Light);
+            var bounds = Display.Bounds;
+            editorBackdrop.Synchronize(new OverlayChrome.PixelRect
+            { Left = bounds.Left, Top = bounds.Top, Right = bounds.Right, Bottom = bounds.Bottom }, 0, false, true);
+        }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or System.Runtime.InteropServices.ExternalException or InvalidOperationException)
+        { editorBackdrop?.Dispose(); editorBackdrop = null; }
+    }
     private void RememberEditingPanel()
     {
         if (Store.IsEditing == editingPanel) return;

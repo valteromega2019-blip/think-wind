@@ -87,6 +87,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     private MiniIslandKind? lastMiniKind;
     public IslandWindow(SettingsStore store, Action settings) : base(store)
     {
+        IsVisibleChanged += (_, _) => SyncEditorBackdrop();
+        Closed += (_, _) => { editorBackdrop?.Dispose(); editorBackdrop = null; };
         PreserveKeyboardTarget();
         metrics = new CompactMonitoringWidget(store, ((App)Application.Current).Telemetry);
         metrics.LayoutChanged += ModuleSizeChanged;
@@ -266,6 +268,11 @@ internal sealed partial class IslandWindow : FloatingWindow
             {
                 if (!Store.ModuleVisible(id)) continue;
                 var body = bodies[id];
+                // Disable the real controls, not the card: dragging, resizing,
+                // hide actions and the editor's finish button remain available.
+                if (Store.IsEditing && body.IsKeyboardFocusWithin) Keyboard.ClearFocus();
+                body.IsEnabled = !Store.IsEditing;
+                body.IsHitTestVisible = !Store.IsEditing;
                 if (body is FrameworkElement element && element.Parent is Panel parent) parent.Children.Remove(element);
                 var content = new Grid();
                 content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -307,6 +314,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         TutorialGuide.Mark(header, "island");
         BuildHeader(); UpdateStageVisibility();
         UpdateClock(); Position(); RefreshAudio();
+        SyncEditorBackdrop();
         updatingLayout = false;
         motion.Arrange(this, before, MotionElements(), Store.Value.AnimationMilliseconds);
         foreach (var mini in minis.Values) if (mini.IsVisible) mini.RefreshSettings();
@@ -404,6 +412,16 @@ internal sealed partial class IslandWindow : FloatingWindow
         BuildSecondaryQuickControls();
         if (Stage == IslandStage.Full || Store.IsEditing)
         {
+            if (Store.IsEditing)
+            {
+                var finish = ActionButton("✓ Concluir edição", () => Store.SetEditing(false));
+                finish.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
+                finish.SetResourceReference(Control.ForegroundProperty, "Think.Accent");
+                finish.Padding = new Thickness(12, 6, 12, 6);
+                finish.Width = 170; finish.Height = 32; finish.FontSize = 13;
+                FontSizing.LimitScale(finish, 1.15);
+                hoverQuick.Children.Add(finish);
+            }
             if (Stage == IslandStage.Full)
             {
                 var settingsButton = ActionButton("Personalizar launcher", openSettings);
@@ -566,6 +584,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     {
         base.RefreshAppearance();
         RefreshWidgetCorners();
+        SyncEditorBackdrop();
         RefreshThemeToggle();
         RefreshCollapsePolicy();
         RefreshForegroundLayout();
