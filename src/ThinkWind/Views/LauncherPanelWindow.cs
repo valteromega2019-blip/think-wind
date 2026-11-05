@@ -394,9 +394,9 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         if (mode == LauncherPanelMode.Library)
         {
             card.Child = null; var tile = new Grid(); tile.Children.Add(main); card.Child = tile;
-            bool pinned = Store.Value.Shortcuts.Any(pin => SameTarget(pin.Target, entry.Target));
-            var add = ActionButton(HiddenLibraryView ? "Mostrar novamente na biblioteca" : pinned ? "Já está na barra" : "Adicionar à barra",
-                () => { if (HiddenLibraryView) SetLibraryHidden(entry, false); else PinDock(entry); });
+            bool pinned = Store.Value.StartPins.Any(pin => SameTarget(pin.Target, entry.Target));
+            var add = ActionButton(HiddenLibraryView ? "Mostrar novamente na biblioteca" : pinned ? "Já está nos Fixados" : "Adicionar aos Fixados do Iniciar",
+                () => { if (HiddenLibraryView) SetLibraryHidden(entry, false); else PinStart(entry); });
             add.Style = (Style)FindResource("Think.IconButton"); add.Content = Glyph(HiddenLibraryView ? "\uE777" : pinned ? "\uE73E" : "\uE710", 13);
             add.IsEnabled = HiddenLibraryView || !pinned; add.Padding = new Thickness(2); add.Width = add.Height = 22;
             add.HorizontalAlignment = HorizontalAlignment.Right; add.VerticalAlignment = VerticalAlignment.Top;
@@ -468,6 +468,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         finally { pendingIcons.Remove(key); }
     }
     private void PinDock(AppEntry app) => Store.Update(p => { if (!p.Shortcuts.Any(pin => SameTarget(pin.Target, app.Target))) p.Shortcuts.Add(new(app.Name, app.Target)); });
+    private void PinStart(AppEntry app) => Store.Update(p => { if (!p.StartPins.Any(pin => SameTarget(pin.Target, app.Target))) p.StartPins.Add(new(app.Name, app.Target)); });
     private void Launch(AppEntry entry)
     {
         if (LayoutDrag.Active) return;
