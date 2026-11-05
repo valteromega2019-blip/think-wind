@@ -86,14 +86,6 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         status.Text = service.Error ?? "Salvo neste PC · lembretes enquanto o Orby estiver aberto";
         status.Margin = new Thickness(0, 12, 0, 0);
         body.Children.Add(status);
-        var backupInfo = ClockDesign.Text(service.BackupStatus, 11, true);
-        backupInfo.Margin = new Thickness(0, 8, 0, 0); body.Children.Add(backupInfo);
-        body.Children.Add(ClockDesign.Button("\uE8B7", "Abrir pasta do backup", () =>
-        {
-            try { System.IO.Directory.CreateDirectory(service.BackupFolder); SystemActions.Run(service.BackupFolder); }
-            catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
-            { status.Text = "Não foi possível abrir a pasta do backup."; }
-        }));
         QueueDayMarkers(); LayoutChanged?.Invoke();
     }
     private void Edit(ClockAlarm? original, bool note)
