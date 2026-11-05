@@ -17,6 +17,8 @@ namespace OrbyLauncher.Views;
 internal sealed class WindowEnvelopeAnimation : Window
 {
     [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint handle);
+    [DllImport("user32.dll", SetLastError = true)] private static extern nint SendMessageTimeoutW(nint window,
+        uint message, nint wParam, nint lParam, uint flags, uint timeout, out nuint result);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(nint window, int index);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongW")] private static extern int SetWindowLong(nint window, int index, int value);
     private readonly MeshGeometry3D mesh = new();
@@ -33,15 +35,16 @@ internal sealed class WindowEnvelopeAnimation : Window
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = true;
         Background = Brushes.Transparent; ShowInTaskbar = false; ShowActivated = false; Topmost = true;
         IsHitTestVisible = false;
-        Left = area.Left; Top = area.Top; Width = area.Width; Height = Math.Max(area.Height, dockIcon.Bottom - area.Top);
+        Rect canvas = Rect.Union(area, dockIcon);
+        Left = canvas.Left; Top = canvas.Top; Width = canvas.Width; Height = canvas.Height;
         var view = new Viewport3D { IsHitTestVisible = false, ClipToBounds = true };
         view.Camera = new OrthographicCamera(new Point3D(Width / 2, Height / 2, 10), new Vector3D(0, 0, -1), new Vector3D(0, 1, 0), Width);
-        for (int row = 0; row <= 32; row++)
+        for (int row = 0; row <= 64; row++)
         {
-            double y = row / 32d;
+            double y = row / 64d;
             mesh.TextureCoordinates.Add(new Point(0, y)); mesh.TextureCoordinates.Add(new Point(1, y));
             mesh.Positions.Add(new Point3D()); mesh.Positions.Add(new Point3D());
-            if (row == 32) continue;
+            if (row == 64) continue;
             int i = row * 2;
             foreach (int index in new[] { i, i + 2, i + 1, i + 1, i + 2, i + 3 }) mesh.TriangleIndices.Add(index);
         }
@@ -66,20 +69,24 @@ internal sealed class WindowEnvelopeAnimation : Window
     }
     private void Update(double p)
     {
-        // Top unfolds first; the base follows with a delay, creating curved sides.
-        double rise = 1 - Math.Pow(1 - p, 3);
-        double top = icon.Top + (target.Top - icon.Top) * rise;
-        double bottom = icon.Bottom + (target.Bottom - icon.Bottom) * rise;
-        for (int row = 0; row <= 32; row++)
+        // The same normalized geometry is traversed backwards on minimize.
+        // Start at the icon's center, rather than its top-left or window center.
+        double ease = p * p * p * (p * (p * 6 - 15) + 10);
+        double centerX = icon.Left + icon.Width / 2;
+        double centerY = icon.Top + icon.Height / 2;
+        double top = centerY + (target.Top - centerY) * ease;
+        double bottom = centerY + (target.Bottom - centerY) * ease;
+        for (int row = 0; row <= 64; row++)
         {
-            double y = row / 32d;
-            double phase = Math.Clamp((p - .3 * y) / (1 - .3 * y), 0, 1);
+            double y = row / 64d;
+            double phase = Math.Clamp((p - .24 * y) / (1 - .24 * y), 0, 1);
             double unfold = phase * phase * (3 - 2 * phase);
-            double left = icon.Left + (target.Left - icon.Left) * unfold;
-            double right = icon.Right + (target.Right - icon.Right) * unfold;
+            double seedWidth = icon.Width * Math.Clamp(p * 10, 0, 1);
+            double left = centerX - seedWidth / 2 + (target.Left - centerX + seedWidth / 2) * unfold;
+            double right = centerX + seedWidth / 2 + (target.Right - centerX - seedWidth / 2) * unfold;
             double screenY = top + (bottom - top) * y;
-            mesh.Positions[row * 2] = new Point3D(left - target.Left, Height - (screenY - target.Top), 0);
-            mesh.Positions[row * 2 + 1] = new Point3D(right - target.Left, Height - (screenY - target.Top), 0);
+            mesh.Positions[row * 2] = new Point3D(left - Left, Height - (screenY - Top), 0);
+            mesh.Positions[row * 2 + 1] = new Point3D(right - Left, Height - (screenY - Top), 0);
         }
         Opacity = Math.Clamp(p * 8, 0, 1);
     }
@@ -97,8 +104,30 @@ internal sealed class WindowEnvelopeAnimation : Window
             current?.Close();
             double scale = VisualTreeHelper.GetDpi(source).DpiScaleX;
             var point = source.PointToScreen(new Point());
-            using var capture = new Drawing.Bitmap(width, height, Drawing.Imaging.PixelFormat.Format32bppPArgb);
-            using (var graphics = Drawing.Graphics.FromImage(capture)) graphics.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, new Drawing.Size(width, height));
+            // Ask only this HWND to render itself. Never copy desktop pixels or
+            // substitute another foreground window when the app cannot render.
+            using var capture = new Drawing.Bitmap(width, height, Drawing.Imaging.PixelFormat.Format32bppRgb);
+            using (var graphics = Drawing.Graphics.FromImage(capture))
+            {
+                graphics.Clear(Drawing.Color.Magenta);
+                nint dc = graphics.GetHdc();
+                try
+                {
+                    // WM_PRINT: nonclient, client, background and children.
+                    // Bounded wait; protected/GPU-only apps may not implement it.
+                    if (SendMessageTimeoutW(window, 0x0317, dc, (nint)0x1E, 0x22, 80, out _) == 0) return;
+                }
+                finally { graphics.ReleaseHdc(dc); }
+            }
+            int usable = 0;
+            for (int y = 1; y < 8; y++)
+                for (int x = 1; x < 8; x++)
+                {
+                    var pixel = capture.GetPixel(width * x / 8, height * y / 8);
+                    if (pixel.ToArgb() == Drawing.Color.Magenta.ToArgb()) return;
+                    if (pixel.R > 3 || pixel.G > 3 || pixel.B > 3) usable++;
+                }
+            if (usable < 8) return; // No desktop screenshot fallback.
             nint bitmap = capture.GetHbitmap(); BitmapSource image;
             try { image = Imaging.CreateBitmapSourceFromHBitmap(bitmap, 0, Int32Rect.Empty, BitmapSizeOptions.FromWidthAndHeight(Math.Min(1280, width), Math.Min(720, height))); image.Freeze(); }
             finally { DeleteObject(bitmap); }
