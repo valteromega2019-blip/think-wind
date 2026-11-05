@@ -54,7 +54,7 @@ internal sealed partial class IslandWindow
                 widgetAgenda.SelectDay(calendar.SelectedDate ?? DateTime.Today);
         };
         Closed += (_, _) => widgetAgenda?.Close();
-        IsVisibleChanged += (_, _) => { if (!IsVisible) widgetAgenda?.Close(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible && widgetAgenda?.MinimizedToDock != true) widgetAgenda?.Close(); };
     }
     private void OpenWidgetAgenda(bool add)
     {
@@ -68,6 +68,8 @@ internal sealed partial class IslandWindow
                 var bottom = calendar.PointToScreen(new Point(calendar.ActualWidth, calendar.ActualHeight));
                 return new OverlayChrome.PixelRect { Left = (int)top.X, Top = (int)top.Y, Right = (int)bottom.X, Bottom = (int)bottom.Y };
             }) { Owner = this };
+            widgetAgenda.MinimizedTogether += () => Transition(() => interaction.Compact());
+            widgetAgenda.RestoringTogether += () => { if (!IsVisible) Show(); OpenFull(); };
             widgetAgenda.Closed += (_, _) => { widgetAgenda = null; ScheduleCollapse(); };
         }
         widgetAgenda.Present(calendar.SelectedDate ?? DateTime.Today, add);

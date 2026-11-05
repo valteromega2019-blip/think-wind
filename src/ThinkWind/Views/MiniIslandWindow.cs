@@ -121,6 +121,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
                 {
                     agendaWindow = new AgendaWindow(Store, () => OverlayChrome.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(this).Handle, out var bounds) ? bounds : anchor());
                     agendaWindow.Owner = this;
+                    agendaWindow.MinimizedTogether += Hide;
+                    agendaWindow.RestoringTogether += () => { Show(); RefreshSettings(); timer.Start(); };
                     agendaWindow.Closed += (_, _) => agendaWindow = null;
                 }
                 agendaWindow.Present(day, add);
