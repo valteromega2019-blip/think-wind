@@ -74,7 +74,7 @@ internal static class ThemeService
     {
         var light = IsLight(p);
         var next = string.Join('|', p.Theme, p.AccentColor, light, SystemParameters.HighContrast, p.InnerSurfaceOpacity,
-            p.FontFamily, p.FontColor, p.AutomaticTextContrast, p.UseCustomBarColor, p.BarBackgroundColor, p.DockOpacity, p.IslandOpacity);
+            p.FontFamily, p.FontColor, p.AutomaticTextContrast, p.UseCustomBarColor, p.BarBackgroundColor, p.DockOpacity, p.IslandOpacity, p.TintOpacity);
         if (current == next && !refreshSystem) return;
         current = next; Light = light;
         var resources = Application.Current.Resources;

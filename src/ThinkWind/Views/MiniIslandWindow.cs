@@ -30,6 +30,8 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private readonly WeatherWidget? weatherLocation;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private DateTime nextRefresh;
+    private OverlayChrome.PixelRect positionedAnchor;
+    private bool hasPositionedAnchor;
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
     internal int ActiveBluetoothWatchers => bluetooth?.ActiveWatchers ?? 0;
@@ -139,7 +141,16 @@ internal sealed class MiniIslandWindow : FloatingWindow
         if (audio is not null) { if (mixerSelected) mixer?.Poll(); else { audio.Poll(refresh); microphone?.Poll(refresh); } }
         else if (tray is not null) tray.Refresh();
         weatherLocation?.Configure();
-        Position();
+        // Data polling must not remeasure an unchanged calendar/network tree.
+        // Keep following the anchor and still resize whenever content is dirty.
+        // Weather search has async result rows and no LayoutChanged contract.
+        // Keep its existing sizing cadence even if WPF measured between ticks.
+        if (force || weatherLocation is not null || !panel.IsMeasureValid || !hasPositionedAnchor || !positionedAnchor.Equals(anchor())) Position();
+    }
+    private void PlaceAtAnchor(double width, double height)
+    {
+        positionedAnchor = anchor(); hasPositionedAnchor = true;
+        PlaceNear(width, height, positionedAnchor, false);
     }
     public override void Position()
     {
@@ -152,7 +163,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
         panel.Width = viewport.Width;
         FontSizing.PrepareForMeasure(panel);
         panel.Measure(new Size(Math.Max(1, width - 24), double.PositiveInfinity));
-        PlaceNear(width, Math.Min(panel.DesiredSize.Height, viewport.MaxHeight) + 24, anchor(), false);
+        PlaceAtAnchor(width, Math.Min(panel.DesiredSize.Height, viewport.MaxHeight) + 24);
     }
     private void PositionCalendar()
     {
@@ -171,7 +182,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
             Math.Max(1, CompactLayout.PanelHeight(Display.Height) - vertical) / contentHeight));
         viewport.Width = contentWidth * fit; viewport.Height = contentHeight * fit;
         viewport.MaxHeight = double.PositiveInfinity;
-        PlaceNear(viewport.Width + horizontal, viewport.Height + vertical, anchor(), false);
+        PlaceAtAnchor(viewport.Width + horizontal, viewport.Height + vertical);
     }
     private void PositionClock()
     {
@@ -194,6 +205,6 @@ internal sealed class MiniIslandWindow : FloatingWindow
         viewport.Width = inner; viewport.MaxHeight = double.PositiveInfinity;
         viewport.Height = Math.Ceiling(natural * fit);
         viewport.VerticalAlignment = VerticalAlignment.Top;
-        PlaceNear(width, viewport.Height + edge * 2 + sideGutter, anchor(), false);
+        PlaceAtAnchor(width, viewport.Height + edge * 2 + sideGutter);
     }
 }

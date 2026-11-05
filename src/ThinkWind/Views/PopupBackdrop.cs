@@ -20,6 +20,8 @@ internal static class PopupBackdrop
         private readonly HwndSource source;
         private readonly BackdropHost host;
         internal bool Available => host.MaterialAvailable;
+        internal bool UsesSource(HwndSource candidate) => ReferenceEquals(source, candidate);
+        internal void Refresh() => Sync();
         internal Lease(FrameworkElement element)
         {
             content = element;
@@ -37,11 +39,13 @@ internal static class PopupBackdrop
             if (OverlayChrome.GetWindowRect(source.Handle, out var rect))
                 host.Synchronize(rect, Corner(content) * (source.CompositionTarget?.TransformToDevice.M11 ?? 1), false, content.IsVisible);
             if (!host.MaterialAvailable) Fallback(content);
+            else RestoreBackground(content);
         }
         public void Dispose() { source.RemoveHook(Message); content.SizeChanged -= SizeChanged; host.Dispose(); }
     }
     private static readonly ConditionalWeakTable<FrameworkElement, Lease> leases = new();
     private static readonly DependencyProperty AttachedProperty = DependencyProperty.RegisterAttached("Attached", typeof(bool), typeof(PopupBackdrop), new PropertyMetadata(false));
+    private static readonly DependencyProperty FallbackAppliedProperty = DependencyProperty.RegisterAttached("FallbackApplied", typeof(bool), typeof(PopupBackdrop), new PropertyMetadata(false));
     internal static bool HasMaterial(FrameworkElement content) => leases.TryGetValue(content, out var lease) && lease.Available;
     internal static void Initialize()
     {
@@ -80,8 +84,13 @@ internal static class PopupBackdrop
     }
     private static void Open(FrameworkElement content)
     {
+        if (PresentationSource.FromVisual(content) is not HwndSource source) return;
+        if (leases.TryGetValue(content, out var existing) && existing.UsesSource(source))
+        {
+            existing.Refresh();
+            return;
+        }
         Close(content);
-        if (PresentationSource.FromVisual(content) is not HwndSource) return;
         try { leases.Add(content, new Lease(content)); }
         catch (Exception error) when (error is System.Runtime.InteropServices.COMException or InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
         {
@@ -97,10 +106,27 @@ internal static class PopupBackdrop
         }));
     }
     private static void Close(FrameworkElement content)
-    { if (leases.TryGetValue(content, out var lease)) { leases.Remove(content); lease.Dispose(); } }
+    {
+        try { if (leases.TryGetValue(content, out var lease)) { leases.Remove(content); lease.Dispose(); } }
+        finally { RestoreBackground(content); }
+    }
+    private static DependencyProperty? BackgroundProperty(FrameworkElement content) => content switch
+    {
+        Control => Control.BackgroundProperty,
+        Border => Border.BackgroundProperty,
+        _ => null
+    };
     private static void Fallback(FrameworkElement content)
     {
-        if (content is Control control) control.SetResourceReference(Control.BackgroundProperty, "Think.Background");
-        else if (content is Border border) border.SetResourceReference(Border.BackgroundProperty, "Think.Background");
+        if (BackgroundProperty(content) is not { } property) return;
+        // Keep the original value source (including bindings and dynamic resources).
+        content.SetCurrentValue(property, content.FindResource("Think.Background"));
+        content.SetValue(FallbackAppliedProperty, true);
+    }
+    private static void RestoreBackground(FrameworkElement content)
+    {
+        if (!(bool)content.GetValue(FallbackAppliedProperty)) return;
+        content.ClearValue(FallbackAppliedProperty);
+        if (BackgroundProperty(content) is { } property) content.InvalidateProperty(property);
     }
 }
