@@ -15,21 +15,24 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
     private DateTime selected = DateTime.Today;
     private int page;
     private bool editing;
+    private readonly bool compact;
+    internal DateTime SelectedDay => selected;
+    internal event Action<DateTime>? AddRequested;
     internal event Action? LayoutChanged;
-    internal AgendaPanel(AlarmService alarms)
+    internal AgendaPanel(AlarmService alarms, bool calendarOnly = false)
     {
-        service = alarms;
+        service = alarms; compact = calendarOnly;
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
-        ColumnDefinitions.Add(new ColumnDefinition());
+        if (!compact) ColumnDefinitions.Add(new ColumnDefinition());
         calendar.SetResourceReference(StyleProperty, "Think.Calendar");
         ConfigureCalendarDays();
         calendar.SelectedDate = selected; calendar.VerticalAlignment = VerticalAlignment.Top;
         var month = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
         month.Children.Add(calendar);
         month.Children.Add(ClockDesign.Button("\uE787", "Hoje", () => { calendar.DisplayDate = DateTime.Today; calendar.SelectedDate = DateTime.Today; }));
-        month.Children.Add(ClockDesign.Text("Dois cliques no dia para adicionar. Um clique para consultar a agenda.", 12, true));
+        if (!compact) month.Children.Add(ClockDesign.Text("Dois cliques no dia para adicionar. Um clique para consultar a agenda.", 12, true));
         Children.Add(month);
-        var right = ClockDesign.Card(body); SetColumn(right, 1); Children.Add(right);
+        if (!compact) { var right = ClockDesign.Card(body); SetColumn(right, 1); Children.Add(right); }
         calendar.SelectedDatesChanged += (_, _) => { selected = calendar.SelectedDate ?? DateTime.Today; page = 0; Render(); };
         service.Changed += Changed;
         Render();
@@ -37,6 +40,7 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
     private void Changed() { if (IsVisible && !editing) Render(); }
     private void Render()
     {
+        if (compact) { QueueDayMarkers(); return; }
         editing = false;
         body.Children.Clear();
         var title = ClockDesign.Text(selected.ToString("dddd, dd MMMM"), 16); title.FontWeight = FontWeights.SemiBold;
@@ -94,9 +98,10 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         (note ? noteTab : eventTab).SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
         types.Children.Add(eventTab); types.Children.Add(noteTab); body.Children.Add(types);
         var title = new TextBox { Text = original?.Name ?? "", MaxLength = 80 };
+        StyleAgendaInput(title);
         body.Children.Add(ClockDesign.Text("Título", 12)); body.Children.Add(title);
-        var date = new DatePicker { SelectedDate = original?.EventDate?.Date ?? selected };
-        body.Children.Add(ClockDesign.Text("Data", 12)); body.Children.Add(date);
+        var date = original?.EventDate?.Date ?? selected;
+        body.Children.Add(ClockDesign.Text(date.ToString("dddd, dd/MM/yyyy"), 12, true));
         var start = new AlarmTimePicker { MinuteOfDay = original is null ? 9 * 60 : original.Minute };
         var end = new AlarmTimePicker { MinuteOfDay = original?.EndDate is DateTime endDate ? endDate.Hour * 60 + endDate.Minute : 10 * 60 };
         if (!note)
@@ -110,6 +115,7 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
             Grid.SetColumn(last, 1); times.Children.Add(first); times.Children.Add(last); body.Children.Add(times);
         }
         var notes = new TextBox { Text = original?.Notes ?? "", MaxLength = 4000, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 80, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        StyleAgendaInput(notes);
         body.Children.Add(ClockDesign.Text("Notas", 12)); body.Children.Add(notes);
         var colorField = AddColorPicker(original?.ColorHex ?? "");
         int[] offsets = { -1, 0, 5, 10, 15, 30, 60, 1440 };
@@ -119,7 +125,7 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         {
             if (toNote == note) return;
             start.TryGetMinute(out int minute); end.TryGetMinute(out int until);
-            var day = date.SelectedDate ?? selected;
+            var day = date;
             var draft = new ClockAlarm
             {
                 Id = original?.Id ?? Guid.NewGuid().ToString("N"), IsAgenda = true,
@@ -139,7 +145,8 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         actions.Children.Add(ClockDesign.Button("\uE711", "Cancelar", Render));
         actions.Children.Add(ClockDesign.Button("\uE74E", "Salvar", () =>
         {
-            if (string.IsNullOrWhiteSpace(title.Text) || date.SelectedDate is not DateTime day) { message.Text = "Informe um título e uma data."; return; }
+            var day = date;
+            if (string.IsNullOrWhiteSpace(title.Text)) { message.Text = "Informe um título."; return; }
             string color = colorField.Text.Trim();
             if (color.Length > 0 && AlarmService.NormalizeAgendaColor(color).Length == 0)
             { message.Text = "Use uma cor HEX no formato #RRGGBB ou deixe vazio para usar o tema."; return; }
@@ -157,4 +164,9 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
     }
     public void Dispose() => service.Changed -= Changed;
     internal void Refresh() { if (!editing) Render(); }
+    internal void SelectDay(DateTime day, bool add)
+    {
+        selected = day.Date; calendar.SelectedDate = selected; calendar.DisplayDate = selected;
+        if (add) Edit(null, false); else Render();
+    }
 }

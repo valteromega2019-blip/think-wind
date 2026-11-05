@@ -14,6 +14,26 @@ namespace OrbyLauncher.Views;
 internal sealed partial class AgendaPanel
 {
     private bool markersQueued;
+    private static void StyleAgendaInput(TextBox input)
+    {
+        input.SetResourceReference(Control.ForegroundProperty, "Think.Text");
+        input.SetResourceReference(Control.BackgroundProperty, "Think.Control");
+        input.SetResourceReference(Control.BorderBrushProperty, "Think.Accent");
+        input.SetResourceReference(TextBox.CaretBrushProperty, "Think.Text");
+        input.SetResourceReference(TextBox.SelectionBrushProperty, "Think.AccentSurface");
+        input.FontSize = 14; input.MinHeight = 38;
+        input.Padding = new Thickness(10, 7, 10, 7); input.Margin = new Thickness(0, 4, 0, 8);
+        input.Template = (ControlTemplate)XamlReader.Parse("""
+<ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" TargetType="TextBox">
+ <Border x:Name="Field" Background="{TemplateBinding Background}" CornerRadius="10" BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+  <ScrollViewer x:Name="PART_ContentHost"/>
+ </Border>
+ <ControlTemplate.Triggers>
+  <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Field" Property="BorderBrush" Value="{DynamicResource Think.Accent}"/></Trigger>
+ </ControlTemplate.Triggers>
+</ControlTemplate>
+""");
+    }
     private Brush AgendaBrush(string? hex)
     {
         string color = Services.AlarmService.NormalizeAgendaColor(hex);
@@ -23,6 +43,7 @@ internal sealed partial class AgendaPanel
     {
         body.Children.Add(ClockDesign.Text("Cor no calendário", 12));
         var field = new TextBox { Text = initial, MaxLength = 7, ToolTip = "#RRGGBB · vazio usa a cor de destaque do Orby", Margin = new Thickness(0, 4, 0, 6) };
+        StyleAgendaInput(field);
         var choices = new WrapPanel();
         foreach (var color in new[] { "", "#66CDAA", "#60A5FA", "#A78BFA", "#F59E0B", "#F472B6", "#F87171" })
         {
@@ -63,7 +84,8 @@ internal sealed partial class AgendaPanel
             if (node is not CalendarDayButton { DataContext: DateTime day, IsBlackedOut: false }) return;
             selected = day.Date; calendar.SelectedDate = selected;
             if (Mouse.Captured is UIElement captured) captured.ReleaseMouseCapture();
-            Edit(null, false); e.Handled = true;
+            if (compact) AddRequested?.Invoke(selected); else Edit(null, false);
+            e.Handled = true;
         }), true);
         calendar.Loaded += (_, _) => QueueDayMarkers();
         calendar.DisplayDateChanged += (_, _) => QueueDayMarkers();
