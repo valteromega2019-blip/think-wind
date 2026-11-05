@@ -61,7 +61,6 @@ internal abstract class FloatingWindow : Window
     private double radius;
     private double animationDuration;
     private UIElement? openingContent;
-    private readonly Border centerGuide = new() { Width = 1, Opacity = .35, IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Center, Visibility = Visibility.Collapsed };
     private (int Width, int Height, int Radius, bool Top, double Scale) lastClip;
     private readonly RectangleGeometry roundedClip = new();
     private readonly RectangleGeometry topClip = new();
@@ -87,8 +86,7 @@ internal abstract class FloatingWindow : Window
         SetResourceReference(FontFamilyProperty, "Think.FontFamily");
         Surface = new Border { BorderThickness = new Thickness(0), Padding = new Thickness(10), SnapsToDevicePixels = true };
         var frame = new Grid(); frame.Children.Add(Surface);
-        centerGuide.SetResourceReference(Border.BackgroundProperty, "Think.Accent");
-        frame.Children.Add(centerGuide); Content = frame;
+        Content = frame;
         SourceInitialized += (_, _) =>
         {
             var source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
@@ -172,7 +170,6 @@ internal abstract class FloatingWindow : Window
         var corners = SquareTopCorners ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
         if (Surface.CornerRadius != corners) Surface.CornerRadius = corners;
         Surface.Margin = TransparentInsets;
-        centerGuide.Visibility = Store.IsEditing ? Visibility.Visible : Visibility.Collapsed;
         UpdateClip();
     }
     private bool collapsedHandleHighlighted;
