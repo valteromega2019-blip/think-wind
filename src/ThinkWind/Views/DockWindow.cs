@@ -332,6 +332,7 @@ internal sealed partial class DockWindow : FloatingWindow
         RefreshUnreadMetadata();
         var next = string.Join("|", windows.Select(w => $"{w.Handle}:{w.Title}:{w.Minimized}:{w.AppId}:{w.Executable}")) + active
             + string.Join("|", pins.Select(pin => $"{pin.Target}:{pinIdentities[pin.Target].Path}:{pinIdentities[pin.Target].AppId}"));
+        next += ":agenda:" + string.Join("|", AgendaWindow.DockItems.Select(a => a.DockKey));
         if (next == signature) return;
         rebuilding = true;
         try
@@ -366,6 +367,8 @@ internal sealed partial class DockWindow : FloatingWindow
                 var first = groupWindows[0];
                 entries.Add(new("app:" + group.Key, first.Title, first.Executable, null, groupWindows, null, null));
             }
+            foreach (var agenda in AgendaWindow.DockItems)
+                entries.Add(new("system:agenda:" + agenda.DockKey, "Agenda · eventos e notas", null, "\uE787", new(), null, agenda.RestoreFromDock));
             entries.Add(new("system:add", "Biblioteca de Aplicativos", null, "\uE710", new(), null, () => ShowPanel(LauncherPanelMode.Library)));
             var present = entries.Select(i => i.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var order = Store.Value.DockOrder.Concat(visibleOrder).Where(present.Contains).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -522,6 +525,15 @@ internal sealed partial class DockWindow : FloatingWindow
             Opacity = item.Windows.Count == 0 ? 0 : 1,
             IsHitTestVisible = false
         };
+        if (item.Key.StartsWith("system:agenda:", StringComparison.Ordinal) && fallback is not null)
+        {
+            panel.Children.Remove(fallback);
+            var tile = new Border { Child = fallback, CornerRadius = new CornerRadius(10), Width = size, Height = size, Padding = new Thickness(7) };
+            fallback.Width = fallback.Height = double.NaN;
+            tile.SetResourceReference(Border.BackgroundProperty, "Think.Accent");
+            tile.SetResourceReference(Control.ForegroundProperty, "Think.AccentInk");
+            Grid.SetRow(tile, 1); panel.Children.Add(tile);
+        }
         Grid.SetRow(indicator, 3);
         if (focused is not null) indicator.SetResourceReference(Border.BackgroundProperty, "Think.Accent");
         else indicator.Background = SystemParameters.HighContrast ? SystemColors.WindowTextBrush : Brushes.WhiteSmoke;

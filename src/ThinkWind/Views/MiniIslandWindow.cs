@@ -38,7 +38,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
     internal int ActiveBluetoothWatchers => bluetooth?.ActiveWatchers ?? 0;
-    internal bool IsInteracting => agendaWindow?.IsVisible == true || IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true || weatherLocation?.IsInteracting == true || brightness?.IsInteracting == true;
+    internal bool IsInteracting => (agendaWindow?.IsVisible == true || agendaWindow?.MinimizedToDock == true) || IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true || weatherLocation?.IsInteracting == true || brightness?.IsInteracting == true;
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;

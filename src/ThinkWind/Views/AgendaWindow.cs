@@ -8,6 +8,21 @@ namespace OrbyLauncher.Views;
 
 internal sealed class AgendaWindow : FloatingWindow
 {
+    private static readonly System.Collections.Generic.List<AgendaWindow> minimized = new();
+    internal static AgendaWindow[] DockItems => minimized.ToArray();
+    internal bool MinimizedToDock { get; private set; }
+    internal string DockKey { get; } = Guid.NewGuid().ToString("N");
+    internal void RestoreFromDock()
+    {
+        MinimizedToDock = false; minimized.Remove(this);
+        WindowState = WindowState.Normal; Show(); RefreshSettings(); Activate();
+    }
+    private void MinimizeToDock()
+    {
+        MinimizedToDock = true;
+        if (!minimized.Contains(this)) minimized.Add(this);
+        Hide();
+    }
     protected override bool AttachedTop => false;
     protected override bool UsesIslandAppearance => true;
     protected override bool HideOnClose => false;
@@ -30,14 +45,14 @@ internal sealed class AgendaWindow : FloatingWindow
     internal AgendaWindow(SettingsStore store, Func<OrbyLauncher.Native.OverlayChrome.PixelRect> calendarBounds) : base(store)
     {
         getCalendarBounds = calendarBounds;
-        Title = "Orby · Agenda"; ShowActivated = true; ShowInTaskbar = true;
+        Title = "Orby · Agenda"; ShowActivated = true; ShowInTaskbar = false;
         Surface.Padding = new Thickness(16);
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.RowDefinitions.Add(new RowDefinition());
         var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 12), Background = System.Windows.Media.Brushes.Transparent };
         var close = ClockDesign.Button("\uE711", "Fechar agenda", Close, true);
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
-        var minimize = ClockDesign.Button("\uE921", "Minimizar agenda", () => WindowState = WindowState.Minimized, true);
+        var minimize = ClockDesign.Button("\uE921", "Minimizar agenda na barra", MinimizeToDock, true);
         DockPanel.SetDock(minimize, Dock.Right); heading.Children.Add(minimize);
         heading.MouseLeftButtonDown += (_, e) =>
         {
@@ -64,11 +79,11 @@ internal sealed class AgendaWindow : FloatingWindow
         agenda.LayoutChanged += () => { scroll.ScrollToTop(); QueuePosition(); };
         agenda.Loaded += (_, _) => QueuePosition();
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
-        Closed += (_, _) => { closed = true; agenda.Dispose(); };
+        Closed += (_, _) => { closed = true; minimized.Remove(this); agenda.Dispose(); };
     }
     internal void Present(DateTime day, bool add)
     {
-        agenda.SelectDay(day, add); WindowState = WindowState.Normal; Show(); RefreshSettings(); Position(); Activate();
+        agenda.SelectDay(day, add); MinimizedToDock = false; minimized.Remove(this); WindowState = WindowState.Normal; Show(); RefreshSettings(); Position(); Activate();
     }
     internal void SelectDay(DateTime day)
     {

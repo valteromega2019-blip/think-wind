@@ -655,7 +655,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             return false;
         }
     }
-    private bool ControlsBusy => widgetAgenda?.IsVisible == true || SystemToolsOpen || IsMouseCaptureWithin || widgetArea.IsInteracting || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || brightness.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
+    private bool ControlsBusy => (widgetAgenda?.IsVisible == true || widgetAgenda?.MinimizedToDock == true) || SystemToolsOpen || IsMouseCaptureWithin || widgetArea.IsInteracting || media.IsInteracting || output.IsInteracting || microphone.IsInteracting || brightness.IsInteracting || weather.IsInteracting || minis.Values.Any(mini => mini.IsVisible && mini.IsInteracting);
     private bool InteractionInProgress => TutorialGuide.KeepIslandOpen || Store.IsEditing || Store.IsCustomizing || LayoutDrag.Active || ControlsBusy || DateTime.UtcNow < keyboardBusyUntil;
     private void CancelCollapse() { hoverLeave.Stop(); outsideSince = null; }
     private void WaitForBridge() { outsideSince = null; hoverLeave.Interval = TimeSpan.FromMilliseconds(50); hoverLeave.Start(); }
