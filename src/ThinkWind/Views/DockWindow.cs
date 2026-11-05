@@ -23,7 +23,9 @@ internal sealed partial class DockWindow : FloatingWindow
         screen.Primary && screen.Bounds == Display.Bounds);
     protected override bool AttachedTop => false;
     protected override bool FullWidthBottom => Store.Value.DockFixedBar;
+    protected override int? ReservedBottomTop => Store.Value.DockFixedBar ? bottomReservation?.ReservedBounds?.Top : null;
     private StatusBarReservation? bottomReservation;
+    private bool bottomPositionQueued;
     protected override bool CollapsedDock => hidden;
     private readonly DockItemsPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly DockMagnifier magnifier;
@@ -155,8 +157,8 @@ internal sealed partial class DockWindow : FloatingWindow
     {
         if (MenuOpen) return;
         if (Store.Value.DockFixedBar) hidden = false;
-        SyncBottomReservation();
         if (!rebuilding && Math.Abs(fittedWidth - Display.Width) > .5 && entries.Count > 0) RenderPage();
+        SyncBottomReservation();
         Place(TotalWidth, hidden ? 6 : ExpandedHeight, IsVisible && !hidden);
         if (launcher?.IsVisible == true) launcher.Position();
     }
@@ -255,8 +257,23 @@ internal sealed partial class DockWindow : FloatingWindow
         }
         var handle = new WindowInteropHelper(this).Handle;
         if (handle == 0) return;
-        bottomReservation ??= new StatusBarReservation(HwndSource.FromHwnd(handle), bottom: true);
-        bottomReservation.Set(Display, (int)Math.Ceiling((ExpandedHeight - magnificationHeadroom) * Display.Scale));
+        if (bottomReservation is null)
+        {
+            bottomReservation = new StatusBarReservation(HwndSource.FromHwnd(handle), bottom: true);
+            bottomReservation.Changed += () =>
+            {
+                if (bottomPositionQueued) return;
+                bottomPositionQueued = true;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    bottomPositionQueued = false;
+                    if (IsVisible && Store.Value.DockFixedBar) Position();
+                }));
+            };
+        }
+        var display = Display;
+        int surfacePixels = (int)Math.Round(ExpandedHeight * display.Scale) - (int)Math.Round(magnificationHeadroom * display.Scale);
+        bottomReservation.Set(display, surfacePixels);
     }
     private async void RefreshApps()
     {

@@ -22,6 +22,7 @@ internal abstract class FloatingWindow : Window
     protected virtual bool CollapsedDock => false;
     protected virtual bool FullWidthTop => false;
     protected virtual bool FullWidthBottom => false;
+    protected virtual int? ReservedBottomTop => null;
     protected virtual string? TopPanelSide => null;
     protected virtual double TopEdgeOffset => 0;
     protected virtual bool SuppressMaterial => false;
@@ -263,7 +264,17 @@ internal abstract class FloatingWindow : Window
         else if (AttachedTop && TopPanelSide == "Center")
             x = display.Work.Left + (display.Work.Width - w) / 2;
         if (AttachedTop && FullWidthTop) { x = display.Bounds.Left; w = display.Bounds.Width; }
-        if (FullWidthBottom) { x = display.Bounds.Left; w = display.Bounds.Width; y = display.Bounds.Bottom - h; }
+        if (FullWidthBottom)
+        {
+            x = display.Bounds.Left; w = display.Bounds.Width; y = display.Bounds.Bottom - h;
+            if (ReservedBottomTop is int surfaceTop)
+            {
+                // Match the actual shell reservation, including auto-hide edge
+                // strips and per-monitor pixel rounding. Headroom stays clear.
+                y = surfaceTop - (int)Math.Round(TransparentInsets.Top * display.Scale);
+                h = Math.Max(6, display.Bounds.Bottom - y);
+            }
+        }
         if (CollapsedDock)
         {
             w = Math.Min(display.Bounds.Width, (int)Math.Round(96 * display.Scale));

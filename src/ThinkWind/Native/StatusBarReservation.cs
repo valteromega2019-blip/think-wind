@@ -26,6 +26,8 @@ internal sealed class StatusBarReservation : IDisposable
     private bool registered, updating, disposed;
     private OverlayChrome.PixelRect reservedRect;
     private bool hasReservedRect;
+    internal OverlayChrome.PixelRect? ReservedBounds => registered && hasReservedRect ? reservedRect : null;
+    internal event Action? Changed;
     internal StatusBarReservation(HwndSource owner, bool bottom = false)
     { source = owner; this.bottom = bottom; data.Size = (uint)Marshal.SizeOf<AppBarData>(); data.Window = source.Handle; data.Callback = Callback; data.Edge = bottom ? 3u : 1u; source.AddHook(Message); }
     internal void Set(OverlayChrome.Display screen, int pixels)
@@ -62,6 +64,7 @@ internal sealed class StatusBarReservation : IDisposable
                 && reservedRect.Right == data.Rect.Right && reservedRect.Bottom == data.Rect.Bottom) return;
             SHAppBarMessage(3, ref data);
             reservedRect = data.Rect; hasReservedRect = true;
+            Changed?.Invoke();
         }
         finally { updating = false; }
     }
