@@ -21,6 +21,18 @@ internal sealed partial class DockWindow
     private Border? dropMark;
     private void InitializeFileDrop()
     {
+        desktopDragDelay.Tick += (_, _) =>
+        {
+            desktopDragDelay.Stop();
+            if (!fileDragging || desktopShownForDrag || !Desktop.LeftButtonDown || desktopDragButton is not { IsVisible: true } button) return;
+            var point = System.Windows.Input.Mouse.GetPosition(button);
+            if (point.X < 0 || point.Y < 0 || point.X >= button.ActualWidth || point.Y >= button.ActualHeight) return;
+            desktopShownForDrag = true;
+            StopPreviews(); startTools?.Close();
+            // Keep the source drawer alive until OLE completes its shortcut drag.
+            if (!LibraryShortcutDrag.Active) launcher?.Dismiss();
+            SystemToolsMenu.ShowDesktop();
+        };
         AllowDrop = true;
         PreviewDragOver += (_, e) =>
         {
@@ -29,6 +41,8 @@ internal sealed partial class DockWindow
         };
         PreviewDrop += (_, e) =>
         {
+            if (OverDesktopDragTarget(e) && HasDragContent(e))
+            { e.Effects = DragDropEffects.None; e.Handled = true; FinishFileDrag(); return; }
             if (!LibraryShortcutDrag.IsShortcut(e.Data)) return;
             e.Effects = LibraryShortcutDrag.Pin(e.Data, Store) ? DragDropEffects.Link : DragDropEffects.None;
             e.Handled = true; FinishFileDrag();
@@ -167,11 +181,11 @@ internal sealed partial class DockWindow
         button.PreviewDragEnter += (_, e) => { if (!HasDragContent(e)) return; BeginFileDrag(); ClearFileTarget(); dropPageDirection = direction; pageDrop.Stop(); pageDrop.Start(); e.Effects = DragDropEffects.None; e.Handled = true; };
         button.PreviewDragLeave += (_, _) => pageDrop.Stop();
     }
-    private void FinishFileDrag() { fileDragging = false; pageDrop.Stop(); ClearFileTarget(); lastHover = DateTime.UtcNow; signature = ""; }
+    private void FinishFileDrag() { fileDragging = false; desktopDragDelay.Stop(); desktopShownForDrag = false; pageDrop.Stop(); ClearFileTarget(); lastHover = DateTime.UtcNow; signature = ""; }
     private void PollFileDrag()
     {
         if (!fileDragging) return;
         if (!Desktop.LeftButtonDown || Desktop.EscapeDown) FinishFileDrag();
     }
-    private void DisposeFileDrop() { activateDrop.Stop(); pageDrop.Stop(); ClearFileTarget(); }
+    private void DisposeFileDrop() { desktopDragDelay.Stop(); activateDrop.Stop(); pageDrop.Stop(); ClearFileTarget(); }
 }
