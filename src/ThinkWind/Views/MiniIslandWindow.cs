@@ -38,7 +38,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
     internal int ActiveBluetoothWatchers => bluetooth?.ActiveWatchers ?? 0;
-    internal bool IsInteracting => IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true || weatherLocation?.IsInteracting == true || brightness?.IsInteracting == true;
+    internal bool IsInteracting => agendaWindow?.IsVisible == true || IsMouseCaptureWithin || audio?.IsInteracting == true || microphone?.IsInteracting == true || mixer?.IsInteracting == true || tray?.IsInteracting == true || wifi?.IsInteracting == true || bluetooth?.IsInteracting == true || weatherLocation?.IsInteracting == true || brightness?.IsInteracting == true;
     internal MiniIslandWindow(SettingsStore store, MiniIslandKind kind, Func<OverlayChrome.PixelRect> getAnchor) : base(store)
     {
         Kind = kind; anchor = getAnchor;
@@ -109,10 +109,10 @@ internal sealed class MiniIslandWindow : FloatingWindow
             void OpenAgenda(bool add)
             {
                 var day = calendarView.SelectedDay;
-                Dismiss();
                 if (agendaWindow is null)
                 {
-                    agendaWindow = new AgendaWindow(Store);
+                    agendaWindow = new AgendaWindow(Store, () => OverlayChrome.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(this).Handle, out var bounds) ? bounds : anchor());
+                    agendaWindow.Owner = this;
                     agendaWindow.Closed += (_, _) => agendaWindow = null;
                 }
                 agendaWindow.Present(day, add);
@@ -165,6 +165,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     }
     internal void Dismiss()
     {
+        agendaWindow?.Close();
         if (!IsVisible) return;
         ++presentationRevision; Hide(); timer.Stop();
     }

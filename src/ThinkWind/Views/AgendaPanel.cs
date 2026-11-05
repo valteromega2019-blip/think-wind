@@ -22,8 +22,8 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
     internal AgendaPanel(AlarmService alarms, bool calendarOnly = false)
     {
         service = alarms; compact = calendarOnly;
-        ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
-        if (!compact) ColumnDefinitions.Add(new ColumnDefinition());
+        ColumnDefinitions.Add(new ColumnDefinition { Width = compact ? new GridLength(300) : new GridLength(1, GridUnitType.Star) });
+        VerticalAlignment = VerticalAlignment.Top;
         calendar.SetResourceReference(StyleProperty, "Think.Calendar");
         ConfigureCalendarDays();
         calendar.SelectedDate = selected; calendar.VerticalAlignment = VerticalAlignment.Top;
@@ -31,8 +31,8 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         month.Children.Add(calendar);
         month.Children.Add(ClockDesign.Button("\uE787", "Hoje", () => { calendar.DisplayDate = DateTime.Today; calendar.SelectedDate = DateTime.Today; }));
         if (!compact) month.Children.Add(ClockDesign.Text("Dois cliques no dia para adicionar. Um clique para consultar a agenda.", 12, true));
-        Children.Add(month);
-        if (!compact) { var right = ClockDesign.Card(body); SetColumn(right, 1); Children.Add(right); }
+        if (compact) Children.Add(month);
+        else Children.Add(ClockDesign.Card(body, 12));
         calendar.SelectedDatesChanged += (_, _) => { selected = calendar.SelectedDate ?? DateTime.Today; page = 0; Render(); };
         service.Changed += Changed;
         Render();
