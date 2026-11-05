@@ -681,7 +681,18 @@ internal sealed partial class IslandWindow : FloatingWindow
         hoverEnter.Stop(); CancelCollapse();
         if (lastMiniKind == kind && DateTime.UtcNow - lastMiniDismissed < TimeSpan.FromMilliseconds(200)) return;
         if (minis.TryGetValue(kind, out var existing) && existing.IsVisible) { existing.Dismiss(); return; }
+        if (Store.IsEditing) return;
         DismissMinis(); interaction.OpenMini();
+        if (Stage != IslandStage.Compact)
+        {
+            // The popup replaces the expanded contents. Keep fullscreen reveal
+            // ownership alive until the popup closes instead of hiding its owner.
+            ++expansionRevision; preparingFullReveal = false;
+            interaction.Compact();
+            stableFullPanelWidth = stableFullPanelHeight = null;
+            UpdateAdaptiveState(); BuildHeader(); UpdateStageVisibility();
+            Resize(true); SyncEditorBackdrop();
+        }
         miniTrigger = trigger;
         if (!minis.TryGetValue(kind, out var mini))
         {
@@ -694,7 +705,13 @@ internal sealed partial class IslandWindow : FloatingWindow
                 RefreshPanelIcons();
                 lastMiniKind = kind; lastMiniDismissed = DateTime.UtcNow;
                 if (minis.Values.Any(m => m.IsVisible)) return;
-                interaction.CloseMini(); ScheduleCollapse();
+                interaction.CloseMini();
+                if (!dismissingMinis && fullscreenReveal && Stage == IslandStage.Compact)
+                {
+                    Hide(); fullscreenReveal = false;
+                    FullscreenRevealClosed?.Invoke();
+                }
+                else ScheduleCollapse();
             };
             minis[kind] = mini;
         }
