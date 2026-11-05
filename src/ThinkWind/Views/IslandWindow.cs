@@ -232,10 +232,21 @@ internal sealed partial class IslandWindow : FloatingWindow
         connectionPanel.Children.Add(displaySettings);
         bodies["connections"] = connectionPanel;
         bodies["media"] = mediaSlot;
-        var audio = new StackPanel(); audio.Children.Add(outputSlot); audio.Children.Add(microphoneSlot);
+        var audio = new Grid();
+        audio.RowDefinitions.Add(new RowDefinition());
+        audio.RowDefinitions.Add(new RowDefinition());
+        audio.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        // Each endpoint gets a proportional region instead of leaving all extra
+        // row height below a top-aligned StackPanel. Keep the hover hosts separate.
+        outputSlot.Width = microphoneSlot.Width = 280;
+        var outputView = new Viewbox { Child = outputSlot, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.Both, Margin = new Thickness(0, 2, 0, 4) };
+        var inputView = new Viewbox { Child = microphoneSlot, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.Both, Margin = new Thickness(0, 4, 0, 2) };
+        Grid.SetRow(inputView, 1);
+        audio.Children.Add(outputView); audio.Children.Add(inputView);
         var audioSettings = new WrapPanel();
         var sound = ActionButton("Som", () => SystemActions.Run("ms-settings:sound")); sound.Padding = new Thickness(6, 3, 6, 3); sound.FontSize = 12; audioSettings.Children.Add(sound);
         var privacy = ActionButton("Microfone", () => SystemActions.Run("ms-settings:privacy-microphone")); privacy.Padding = sound.Padding; privacy.FontSize = 12; audioSettings.Children.Add(privacy);
+        Grid.SetRow(audioSettings, 2);
         audio.Children.Add(audioSettings);
         bodies["audio"] = audio;
         bodies["metrics"] = metrics;
