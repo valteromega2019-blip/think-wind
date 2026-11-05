@@ -16,6 +16,7 @@ internal sealed class AgendaWindow : FloatingWindow
     private readonly ScrollViewer scroll;
     private readonly Func<OrbyLauncher.Native.OverlayChrome.PixelRect> getCalendarBounds;
     private bool positionQueued, positioning, closed;
+    private OrbyLauncher.Native.OverlayChrome.PixelRect? movedBounds;
     private void QueuePosition()
     {
         if (positionQueued || closed) return;
@@ -29,13 +30,31 @@ internal sealed class AgendaWindow : FloatingWindow
     internal AgendaWindow(SettingsStore store, Func<OrbyLauncher.Native.OverlayChrome.PixelRect> calendarBounds) : base(store)
     {
         getCalendarBounds = calendarBounds;
-        Title = "Orby · Agenda"; ShowActivated = true;
+        Title = "Orby · Agenda"; ShowActivated = true; ShowInTaskbar = true;
         Surface.Padding = new Thickness(16);
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.RowDefinitions.Add(new RowDefinition());
-        var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
+        var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 12), Background = System.Windows.Media.Brushes.Transparent };
         var close = ClockDesign.Button("\uE711", "Fechar agenda", Close, true);
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
+        var minimize = ClockDesign.Button("\uE921", "Minimizar agenda", () => WindowState = WindowState.Minimized, true);
+        DockPanel.SetDock(minimize, Dock.Right); heading.Children.Add(minimize);
+        heading.MouseLeftButtonDown += (_, e) =>
+        {
+            var source = e.OriginalSource as DependencyObject;
+            while (source is not null && source is not System.Windows.Controls.Primitives.ButtonBase)
+            {
+                if (ReferenceEquals(source, heading)) break;
+                source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+            }
+            if (source is System.Windows.Controls.Primitives.ButtonBase || e.ClickCount != 1) return;
+            try
+            {
+                DragMove();
+                if (OrbyLauncher.Native.OverlayChrome.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(this).Handle, out var bounds)) movedBounds = bounds;
+            }
+            catch (InvalidOperationException) { }
+        };
         var title = ClockDesign.Text("Eventos e notas", 18); title.FontWeight = FontWeights.SemiBold; heading.Children.Add(title);
         layout.Children.Add(heading);
         agenda = new AgendaPanel(((App)Application.Current).Alarms);
@@ -49,7 +68,7 @@ internal sealed class AgendaWindow : FloatingWindow
     }
     internal void Present(DateTime day, bool add)
     {
-        agenda.SelectDay(day, add); Show(); RefreshSettings(); Position(); Activate();
+        agenda.SelectDay(day, add); WindowState = WindowState.Normal; Show(); RefreshSettings(); Position(); Activate();
     }
     internal void SelectDay(DateTime day)
     {
@@ -58,7 +77,7 @@ internal sealed class AgendaWindow : FloatingWindow
     }
     public override void Position()
     {
-        if (positioning || closed) return;
+        if (positioning || closed || WindowState == WindowState.Minimized) return;
         positioning = true;
         try
         {
@@ -82,6 +101,7 @@ internal sealed class AgendaWindow : FloatingWindow
         int gap = (int)Math.Round(10 * Display.Scale);
         int x = bounds.Right + gap;
         if (x + pixelWidth > Display.Work.Right - 8) x = bounds.Left - gap - pixelWidth;
+        if (movedBounds is { } moved) { x = moved.Left; bounds.Top = moved.Top; }
         PlaceNear(width, height,
             new OrbyLauncher.Native.OverlayChrome.PixelRect { Left = x, Right = x + pixelWidth, Top = bounds.Top, Bottom = bounds.Top - (int)(8 * Display.Scale) }, false);
         }
