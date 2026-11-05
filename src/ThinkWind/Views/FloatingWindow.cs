@@ -30,6 +30,7 @@ internal abstract class FloatingWindow : Window
     protected virtual Color MaterialTint => Store.Value.UseCustomBarColor
         ? (Color)ColorConverter.ConvertFromString(Store.Value.BarBackgroundColor) : ThemeService.BaseColor;
     protected virtual bool MaterialLight => ThemeService.Light;
+    protected virtual double MaterialOpacity => (UsesIslandAppearance ? Store.Value.IslandOpacity : Store.Value.DockOpacity) ?? Store.Value.TintOpacity;
     protected virtual Thickness TransparentInsets => new();
     protected virtual bool HideOnClose => true;
     protected virtual string? MaterialOverride => null;
@@ -149,7 +150,7 @@ internal abstract class FloatingWindow : Window
         var p = Store.Value;
         radius = CollapsedDock ? 3 : FullWidthTop || FullWidthBottom ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
         var material = MaterialOverride ?? (UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial);
-        var alpha = (UsesIslandAppearance ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
+        var alpha = MaterialOpacity;
         // Both themes use the same backdrop and user opacity, without a light-only opaque veil.
         backdrop?.SetMaterial(SystemParameters.HighContrast ? "Solid" : material, MaterialLight);
         var color = MaterialTint;
@@ -318,7 +319,7 @@ internal abstract class FloatingWindow : Window
         int pixels = (int)Math.Round(verticalOffset * Display.Scale);
         start.Top += pixels; start.Bottom += pixels;
         Move(start);
-        animationDuration = Math.Clamp(milliseconds, 160, 500);
+        animationDuration = Math.Clamp(milliseconds, 160, 650);
         elapsed.Restart(); animation.Start();
     }
     private void Move(OverlayChrome.PixelRect rectangle)

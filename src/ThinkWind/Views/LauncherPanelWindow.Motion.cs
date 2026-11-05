@@ -17,7 +17,7 @@ internal sealed partial class LauncherPanelWindow
     private readonly Stopwatch rowsAnimationTime = new();
     private bool DrawerAnimations => IsVisible && !LayoutDrag.Active && menus == 0
         && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0;
-    private TimeSpan DrawerDuration => TimeSpan.FromMilliseconds(Math.Clamp(Store.Value.AnimationMilliseconds * 1.6, 260, 480));
+    private TimeSpan DrawerDuration => TimeSpan.FromMilliseconds(Math.Clamp(Store.Value.AnimationMilliseconds * 2, 320, 650));
 
     private int DrawerDirection()
     {
