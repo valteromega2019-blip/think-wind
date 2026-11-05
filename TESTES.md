@@ -1,3 +1,14 @@
+## Revisão de desempenho — validação solicitada em 05/11/2026
+
+- Build Release com avisos tratados como erros: zero erros e zero avisos.
+- Suíte geral: 61 aprovados, zero falhas e zero ignorados.
+- Atualizador: 10 aprovados, zero falhas; nenhum instalador executado.
+- Oito regressões novas da revisão: cancelamento/descarte de worker e catálogo, cache de opacidade, restauração de Background com bindings/recursos, definição do logon sem elevação e persistência da escolha de inicialização.
+- Total final: **79 aprovados, zero falhas, zero ignorados**.
+- Sem medição de desempenho em jogos, reinício do Windows ou instalação. Autorização restrita a este pedido.
+
+[Comandos, resultados e limites](VALIDACAO-REVISAO-2026-11-05.md).
+
 ## 0.28.0 Beta — validação solicitada em 02/11/2026
 
 - Build Release: zero erros e zero avisos.

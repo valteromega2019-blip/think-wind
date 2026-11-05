@@ -34,3 +34,4 @@
 - Ampliação justificada pela auditoria: busca de abas sem percorrer Document, decode de ícones dimensionado por DPI e lista reutilizada na magnificação. Mesmas funções; nenhum serviço/hook novo.
 - Resultado detalhado: `REVISAO-DESEMPENHO-2026-11-05.md`. Nenhuma medição, teste ou compilação nesta etapa.
 - Implementação registrada em commits separados de inicialização/segundo plano, runtime/mídia e aparência. Nenhuma alteração preexistente foi incluída.
+- Validação posterior pedida explicitamente: Release com zero avisos/erros, 61 checks gerais, 10 do atualizador e 8 regressões novas aprovados. Definição do logon extraída para método puro para validar sem registrar tarefa. Relatório: `VALIDACAO-REVISAO-2026-11-05.md`. Sem instalador/publicação/reinicialização ou benchmarks; autorização não se estende a trabalhos futuros.

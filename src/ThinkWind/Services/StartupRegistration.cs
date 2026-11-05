@@ -66,23 +66,10 @@ internal static class StartupRegistration
                 scheduled = WithScheduler(folder =>
                 {
                     string sid = UserSid;
-                    XNamespace ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
-                    XElement E(string name, object value) => new(ns + name, value);
-                    var xml = new XElement(ns + "Task", new XAttribute("version", "1.2"),
-                        E("RegistrationInfo", E("Description", "Inicia o Orby Launcher no logon, sem atraso adicional e sem elevação.")),
-                        E("Triggers", E("LogonTrigger", new object[] { E("Enabled", true), E("UserId", sid), E("Delay", "PT0S") })),
-                        E("Principals", new XElement(ns + "Principal", new XAttribute("id", "OrbyUser"),
-                            E("UserId", sid), E("LogonType", "InteractiveToken"), E("RunLevel", "LeastPrivilege"))),
-                        E("Settings", new object[] { E("MultipleInstancesPolicy", "IgnoreNew"),
-                            E("DisallowStartIfOnBatteries", false), E("StopIfGoingOnBatteries", false),
-                            E("AllowHardTerminate", false), E("StartWhenAvailable", true),
-                            E("Enabled", true), E("ExecutionTimeLimit", "PT0S"), E("Priority", 4) }),
-                        new XElement(ns + "Actions", new XAttribute("Context", "OrbyUser"),
-                            E("Exec", new object[] { E("Command", executable), E("Arguments", "--startup"), E("WorkingDirectory", Path.GetDirectoryName(executable)!) })));
                     object? registered = null;
                     try
                     {
-                        registered = ((dynamic)folder).RegisterTask(TaskName, xml.ToString(), 6, sid, null, 3, null);
+                        registered = ((dynamic)folder).RegisterTask(TaskName, Definition(executable, sid), 6, sid, null, 3, null);
                         return registered is not null;
                     }
                     finally { CoreAudio.Release(registered); }
@@ -105,6 +92,25 @@ internal static class StartupRegistration
             finally { key.DeleteValue("OrbyLauncher", false); cachedEnabled = null; }
         }
         Remember(enabled);
+    }
+
+    // Pure definition: startup policy can be validated without registering or
+    // running a task, altering HKCU, or requesting elevated permissions.
+    internal static string Definition(string executable, string sid)
+    {
+        XNamespace ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
+        XElement E(string name, object value) => new(ns + name, value);
+        return new XElement(ns + "Task", new XAttribute("version", "1.2"),
+            E("RegistrationInfo", E("Description", "Inicia o Orby Launcher no logon, sem atraso adicional e sem elevação.")),
+            E("Triggers", E("LogonTrigger", new object[] { E("Enabled", true), E("UserId", sid), E("Delay", "PT0S") })),
+            E("Principals", new XElement(ns + "Principal", new XAttribute("id", "OrbyUser"),
+                E("UserId", sid), E("LogonType", "InteractiveToken"), E("RunLevel", "LeastPrivilege"))),
+            E("Settings", new object[] { E("MultipleInstancesPolicy", "IgnoreNew"),
+                E("DisallowStartIfOnBatteries", false), E("StopIfGoingOnBatteries", false),
+                E("AllowHardTerminate", false), E("StartWhenAvailable", true),
+                E("Enabled", true), E("ExecutionTimeLimit", "PT0S"), E("Priority", 4) }),
+            new XElement(ns + "Actions", new XAttribute("Context", "OrbyUser"),
+                E("Exec", new object[] { E("Command", executable), E("Arguments", "--startup"), E("WorkingDirectory", Path.GetDirectoryName(executable)!) }))).ToString();
     }
 
     private static T WithScheduler<T>(Func<object, T> operation)

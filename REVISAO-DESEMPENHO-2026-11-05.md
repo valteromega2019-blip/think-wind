@@ -2,6 +2,8 @@
 
 Base: Orby 0.29.1 Beta (`b14d793`). Branch: `perf/revisao-geral-orby`.
 
+**Validação posterior autorizada:** após o pedido “faças os testes”, a compilação Release final terminou com zero erros/avisos e 79 verificações passaram. [Relatório da rodada](VALIDACAO-REVISAO-2026-11-05.md). A seção de limites abaixo registra a etapa original de revisão; medições de desempenho e validação interativa completa continuam pendentes.
+
 ## Alterações implementadas
 
 ### Inicialização

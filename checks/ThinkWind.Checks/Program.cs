@@ -12,6 +12,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         if (args.Contains("--updates")) return UpdateChecks.Run();
+        if (args.Contains("--revision")) return RevisionPerformanceChecks.Run();
         if (args.Contains("--visual-background")) return VisualBackground.Run();
         if (args.Contains("--performance-comparison")) return PerformanceComparison.Run();
         // Own a minimal WPF application, never the launcher's App (its startup
