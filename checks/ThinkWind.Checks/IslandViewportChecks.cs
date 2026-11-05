@@ -50,6 +50,8 @@ internal static class IslandViewportChecks
         Arrange();
         if (viewport.RenderSize.Height > viewport.Height + .1)
             throw new Exception($"Viewport draws {viewport.RenderSize.Height:F2} above explicit height {viewport.Height:F2}");
+        var right = cards[4].TransformToAncestor(root).Transform(new Point(cards[4].ActualWidth, 0)).X;
+        if (root.Width - right > 1) throw new Exception($"Empty right strip {root.Width - right:F2} DIP after content grows");
         Validate("late content", root, board, cards[4]);
         host.Measure(new Size(root.Width, 6)); host.Arrange(new Rect(0, 0, root.Width, 6));
         Arrange();
@@ -58,7 +60,9 @@ internal static class IslandViewportChecks
     private static void Validate(string phase, FrameworkElement root, FrameworkElement board, FrameworkElement last)
     {
         var bottom = last.TransformToAncestor(root).Transform(new Point(0, last.ActualHeight)).Y;
-        if (bottom > root.Height + 1) throw new Exception($"{phase}: last bottom {bottom:F2} exceeds {root.Height:F2}");
+        if (Math.Abs(bottom - root.Height) > 1) throw new Exception($"{phase}: last bottom {bottom:F2} differs from {root.Height:F2}");
+        var right = last.TransformToAncestor(root).Transform(new Point(last.ActualWidth, 0)).X;
+        if (Math.Abs(root.Width - right) > 1) throw new Exception($"{phase}: right margin {root.Width - right:F2} DIP");
         if (last.ActualHeight < 300) throw new Exception($"{phase}: row truncated to {last.ActualHeight}");
     }
 }
