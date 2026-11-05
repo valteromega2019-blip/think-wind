@@ -70,9 +70,10 @@ internal sealed class BrowserTabFan : Canvas, IDisposable
             int index = CardAt(PointFromScreen(screen));
             if (index < 0) { ClearHover(); return; }
             BringCardForward(index);
-            // Peek represents the real browser window, not the cached tab image.
-            // Background-tab cards still belong to that same live HWND.
-            WindowHovered?.Invoke(cardImages[index].Window, cards[index]);
+            // Only the active tab represents the HWND's actual content.
+            // Background tabs keep their cached miniature without desktop peek.
+            if (cardImages[index].Live) WindowHovered?.Invoke(cardImages[index].Window, cards[index]);
+            else WindowHoverEnded?.Invoke();
         };
         MouseLeave += (_, _) =>
         {

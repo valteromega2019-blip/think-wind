@@ -11,6 +11,9 @@ internal static class LayoutDrag
 {
     private sealed record Payload(string Scope, string Key);
     internal static bool Active { get; private set; }
+    private static Payload? activePayload;
+    private static DateTime suppressClickUntil;
+    internal static bool SuppressClick => Active || DateTime.UtcNow < suppressClickUntil;
     internal static event Action? Completed;
     internal static void Attach(FrameworkElement element, string scope, string key, Func<bool> enabled, Action<string, string, bool> move, bool vertical = false, FrameworkElement? handle = null)
     {
@@ -32,11 +35,14 @@ internal static class LayoutDrag
             var distance = e.GetPosition(grip) - origin.Value;
             if (Math.Abs(distance.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(distance.Y) < SystemParameters.MinimumVerticalDragDistance) return;
             origin = null; started = true; Active = true;
-            if (handle is not null) grip.ReleaseMouseCapture();
-            try { DragDrop.DoDragDrop(grip, new DataObject(typeof(Payload), new Payload(scope, key)), DragDropEffects.Move); }
+            activePayload = new Payload(scope, key);
+            if (Mouse.Captured is UIElement captured) captured.ReleaseMouseCapture();
+            // Reordering is in-process; never serialize a private managed type
+            // into an OLE object offered to Explorer or another application.
+            try { DragDrop.DoDragDrop(grip, new DataObject("Orby.LayoutReorder", scope), DragDropEffects.Move); }
             catch (Exception error) when (error is COMException or InvalidOperationException)
             { MessageBox.Show("Não foi possível concluir o arraste. Use os botões de reordenação em Personalizar.\n" + error.Message, "Orby Launcher"); }
-            finally { Active = false; Clear(); Completed?.Invoke(); }
+            finally { Active = false; activePayload = null; suppressClickUntil = DateTime.UtcNow.AddMilliseconds(300); Clear(); Completed?.Invoke(); }
             e.Handled = true;
         };
         grip.PreviewMouseLeftButtonUp += (_, e) =>
@@ -47,8 +53,9 @@ internal static class LayoutDrag
         element.AllowDrop = true;
         element.DragOver += (_, e) =>
         {
-            var payload = e.Data.GetData(typeof(Payload)) as Payload;
-            if (!enabled() || payload?.Scope != scope) { e.Effects = DragDropEffects.None; e.Handled = true; return; }
+            var payload = Active ? activePayload : null;
+            if (payload is null) return; // Preserve external file/app drags.
+            if (!enabled() || payload.Scope != scope) { e.Effects = DragDropEffects.None; e.Handled = true; return; }
             e.Effects = DragDropEffects.Move; e.Handled = true;
             var point = e.GetPosition(element);
             bool after = vertical ? point.Y > element.ActualHeight / 2 : point.X > element.ActualWidth / 2;
@@ -62,7 +69,7 @@ internal static class LayoutDrag
         element.DragLeave += (_, _) => Clear();
         element.Drop += (_, e) =>
         {
-            var payload = e.Data.GetData(typeof(Payload)) as Payload;
+            var payload = Active ? activePayload : null;
             Clear();
             if (!enabled() || payload?.Scope != scope) return;
             var point = e.GetPosition(element);

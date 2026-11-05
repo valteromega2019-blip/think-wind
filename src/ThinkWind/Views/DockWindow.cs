@@ -477,7 +477,7 @@ internal sealed partial class DockWindow : FloatingWindow
         if (button.IsEnabled)
         {
             int target = direction < 0 ? page * fit.PerPage - 1 : (page + 1) * fit.PerPage;
-            LayoutDrag.Attach(button, "dock", entries[target].Key, () => Store.IsEditing, Reorder);
+            LayoutDrag.Attach(button, "dock", entries[target].Key, () => !fileDragging, Reorder);
             AttachFilePageTarget(button, direction);
         }
         return button;
@@ -532,6 +532,7 @@ internal sealed partial class DockWindow : FloatingWindow
         nint foregroundBeforeClick = 0;
         var button = ActionButton(item.Name, () =>
         {
+            if (LayoutDrag.SuppressClick) return;
             if (Store.IsEditing && item.Key != "system:add") return;
             if (item.Action is not null && item.Windows.Count == 0) item.Action();
             else
@@ -573,7 +574,7 @@ internal sealed partial class DockWindow : FloatingWindow
             Activate();
         };
         menu.Closed += (_, _) => FinishContextMenu(menu);
-        LayoutDrag.Attach(button, "dock", item.Key, () => Store.IsEditing, Reorder);
+        LayoutDrag.Attach(button, "dock", item.Key, () => !fileDragging && item.Key != "system:add", Reorder);
         AttachFileTarget(button, item, dropIndicator);
         AttachPreview(button, item);
         if (item.Key == "system:add") Menu(menu, "Adicionar executável manualmente…", AddShortcut);
