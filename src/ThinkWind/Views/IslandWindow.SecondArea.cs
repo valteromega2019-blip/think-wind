@@ -119,7 +119,13 @@ internal sealed class EmptyIslandAreaWindow : FloatingWindow
         panel.Measure(new Size(520, double.PositiveInfinity));
         double naturalHeight = panel is HardwareMonitorPanel board
             ? board.MeasureBoard(520).Height : System.Math.Max(1, panel.DesiredSize.Height);
-        double scale = System.Math.Min(1, System.Math.Min(System.Math.Max(1, Display.Width - 48) / 520, System.Math.Max(1, Display.Height - 72) / naturalHeight));
+        // Keep diagnostics only modestly taller than the main control panel,
+        // rather than stretching it almost to the bottom of the monitor.
+        double controlHeight = Store.Value.IslandExpandedHeight > 0 ? Store.Value.IslandExpandedHeight
+            : System.Math.Max(120, System.Math.Min(620, Display.Height * .64));
+        double maximumHeight = System.Math.Min(IslandWindow.ExpandedHeightLimit(Display), controlHeight * 1.12);
+        double scale = System.Math.Min(1, System.Math.Min(System.Math.Max(1, Display.Width - 48) / 520,
+            System.Math.Max(1, maximumHeight - 24) / naturalHeight));
         monitorViewport.Width = 520 * scale; monitorViewport.Height = naturalHeight * scale;
         Place(monitorViewport.Width + 24, monitorViewport.Height + 24, false);
     }
