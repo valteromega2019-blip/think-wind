@@ -101,6 +101,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         calendar.FontSize = 14;
         calendar.Loaded += (_, _) => ModuleSizeChanged();
         calendar.DisplayDateChanged += (_, _) => ModuleSizeChanged();
+        calendar.SizeChanged += (_, _) => FitCalendarWidth();
         calendar.Language = System.Windows.Markup.XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag);
         var audio = new AudioService();
         output = new AudioEndpointControl(audio, CoreAudio.Flow.Render);
@@ -281,43 +282,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 title.Children.Add(grip);
                 if (Store.IsEditing) content.Children.Add(title);
                 Grid.SetRow(body, 1); content.Children.Add(body);
-                if (Store.IsEditing)
-                {
-                    var sizing = new DockPanel { Margin = new Thickness(4, 8, 4, 0) };
-                    int columns = Store.Value.ModuleColumns.GetValueOrDefault(id, 3);
-                    var sizeButton = ActionButton($"↔ {columns} por linha", () => Store.Update(p => p.ModuleColumns[id] = p.ModuleColumns.GetValueOrDefault(id, 3) == 3 ? 2 : 3));
-                    sizeButton.FontSize = 11; sizeButton.Padding = new Thickness(6, 4, 6, 4);
-                    var resize = new System.Windows.Controls.Primitives.Thumb
-                    {
-                        Width = 32, Height = 28, Cursor = Cursors.SizeWE,
-                        ToolTip = "Arraste para a direita: 2 por linha; para a esquerda: 3 por linha"
-                    };
-                    resize.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
-                    var gripSurface = new FrameworkElementFactory(typeof(Border));
-                    gripSurface.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
-                    gripSurface.SetValue(Border.BackgroundProperty, new DynamicResourceExtension("Think.AccentSurface"));
-                    gripSurface.SetValue(Border.BorderBrushProperty, new DynamicResourceExtension("Think.Accent"));
-                    gripSurface.SetValue(Border.BorderThicknessProperty, new Thickness(1));
-                    var gripText = new FrameworkElementFactory(typeof(TextBlock));
-                    gripText.SetValue(TextBlock.TextProperty, "↔");
-                    gripText.SetValue(TextBlock.ForegroundProperty, new DynamicResourceExtension("Think.Accent"));
-                    gripText.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-                    gripText.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-                    gripSurface.AppendChild(gripText);
-                    resize.Template = new ControlTemplate(typeof(System.Windows.Controls.Primitives.Thumb)) { VisualTree = gripSurface };
-                    double distance = 0;
-                    resize.DragStarted += (_, _) => distance = 0;
-                    resize.DragDelta += (_, e) => { distance += e.HorizontalChange; e.Handled = true; };
-                    resize.DragCompleted += (_, e) =>
-                    {
-                        if (!e.Canceled && Math.Abs(distance) >= 12)
-                            Store.Update(p => p.ModuleColumns[id] = distance > 0 ? 2 : 3);
-                    };
-                    var heightGrip = HeightGrip(id);
-                    DockPanel.SetDock(heightGrip, Dock.Right); sizing.Children.Add(heightGrip);
-                    DockPanel.SetDock(resize, Dock.Right); sizing.Children.Add(resize); sizing.Children.Add(sizeButton);
-                    Grid.SetRow(sizing, 2); content.Children.Add(sizing);
-                }
+                if (Store.IsEditing) AddWidgetResizeEdges(content, id);
                 var card = new Border { Child = content, Tag = id, CornerRadius = new CornerRadius(20), Padding = new Thickness(10), VerticalAlignment = VerticalAlignment.Stretch, HorizontalAlignment = HorizontalAlignment.Stretch, UseLayoutRounding = true };
                 card.SetResourceReference(Border.BackgroundProperty, "Think.GlassCard");
                 System.Windows.Automation.AutomationProperties.SetName(card, LayoutCatalog.ModuleName(id));
@@ -758,7 +723,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         // Preserve the compact three-column layout before scaling. Reflowing
         // this board into narrow columns made it tall, then the Viewbox shrank
         // it again and left large empty margins on both sides.
-        double boardWidth = Math.Max(760, inner);
+        double boardWidth = Store.IsEditing || p.ModuleColumns.Count > 0 ? Math.Max(220, inner) : Math.Max(760, inner);
         modules.Width = boardWidth;
         double indicatorsHeight = SecondAreaAvailable ? 14 : 0;
         double contentLimit = Math.Max(24, limit - headerHeight - indicatorsHeight - 16);

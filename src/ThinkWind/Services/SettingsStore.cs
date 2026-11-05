@@ -308,7 +308,7 @@ public sealed class SettingsStore
         // Replace the old shortcuts-only notification card in place. The
         // independent notification quick control is intentionally unchanged.
         p.ModuleOrder = LayoutCatalog.Complete((p.ModuleOrder ?? new()).Select(id => id == "notifications" ? "calculator" : id), LayoutCatalog.Modules);
-        p.ModuleColumns = (p.ModuleColumns ?? new()).Where(pair => LayoutCatalog.Modules.Contains(pair.Key) && pair.Value is 2 or 3)
+        p.ModuleColumns = (p.ModuleColumns ?? new()).Where(pair => LayoutCatalog.Modules.Contains(pair.Key) && pair.Value is 1 or 2 or 3)
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         p.ModuleExtraHeight = (p.ModuleExtraHeight ?? new()).Where(pair => LayoutCatalog.Modules.Contains(pair.Key) && double.IsFinite(pair.Value))
             .ToDictionary(pair => pair.Key, pair => Math.Clamp(pair.Value, 0, 240));

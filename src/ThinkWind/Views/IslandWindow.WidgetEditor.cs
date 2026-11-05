@@ -41,36 +41,83 @@ internal sealed partial class IslandWindow
         return button;
     }
 
-    private Thumb HeightGrip(string id)
+    private void AddWidgetResizeEdges(Grid content, string id)
     {
-        var grip = new Thumb { Width = 32, Height = 28, Cursor = Cursors.SizeNS,
-            ToolTip = "Arraste para ajustar a altura da linha. O conteúdo define a altura mínima.", Margin = new Thickness(4, 0, 0, 0) };
+        foreach (var edge in new[] { ResizeEdge(id, false, true), ResizeEdge(id, false), ResizeEdge(id, true) })
+        {
+            Grid.SetRowSpan(edge, 3); Panel.SetZIndex(edge, 20); content.Children.Add(edge);
+        }
+    }
+    private Thumb ResizeEdge(string id, bool vertical, bool left = false)
+    {
+        var grip = new Thumb
+        {
+            Width = vertical ? double.NaN : 10, Height = vertical ? 10 : double.NaN,
+            HorizontalAlignment = vertical ? HorizontalAlignment.Stretch : left ? HorizontalAlignment.Left : HorizontalAlignment.Right,
+            VerticalAlignment = vertical ? VerticalAlignment.Bottom : VerticalAlignment.Stretch,
+            Cursor = vertical ? Cursors.SizeNS : Cursors.SizeWE,
+            ToolTip = vertical ? "Arraste a borda para ajustar a altura da linha, respeitando o conteúdo."
+                : "Arraste a borda para encaixar 3, 2 ou 1 widget por linha.",
+            Margin = vertical ? new Thickness(18, 0, 18, -3) : left ? new Thickness(-3, 12, 0, 12) : new Thickness(0, 12, -3, 12)
+        };
         var surface = new FrameworkElementFactory(typeof(Border));
-        surface.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
+        surface.SetValue(Border.CornerRadiusProperty, new CornerRadius(5));
         surface.SetValue(Border.BackgroundProperty, new DynamicResourceExtension("Think.AccentSurface"));
         surface.SetValue(Border.BorderBrushProperty, new DynamicResourceExtension("Think.Accent"));
         surface.SetValue(Border.BorderThicknessProperty, new Thickness(1));
-        var text = new FrameworkElementFactory(typeof(TextBlock));
-        text.SetValue(TextBlock.TextProperty, "↕");
-        text.SetValue(TextBlock.ForegroundProperty, new DynamicResourceExtension("Think.Accent"));
-        text.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        text.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-        surface.AppendChild(text); grip.Template = new ControlTemplate(typeof(Thumb)) { VisualTree = surface };
+        grip.Template = new ControlTemplate(typeof(Thumb)) { VisualTree = surface };
         double distance = 0;
-        grip.DragStarted += (_, _) => distance = 0;
-        grip.DragDelta += (_, e) => { distance += e.VerticalChange; e.Handled = true; };
-        grip.DragCompleted += (_, e) =>
+        double startWidth = 0, unitsPerPixel = 1;
+        System.Drawing.Point start = default;
+        string[] peers = Array.Empty<string>();
+        grip.DragStarted += (_, _) =>
         {
-            if (e.Canceled || Math.Abs(distance) < 2) return;
-            // A line shares one height: shrink/expand its peers together rather
-            // than allowing an older minimum on a neighbor to block the change.
-            var peers = cards.TryGetValue(id, out var card) ? modules.RowPeers(card) : Array.Empty<string>();
-            Store.Update(p =>
+            distance = 0; start = System.Windows.Forms.Cursor.Position;
+            if (!cards.TryGetValue(id, out var card)) return;
+            startWidth = card.ActualWidth; peers = modules.RowPeers(card);
+            double pixels = card.PointToScreen(new Point(card.ActualWidth, 0)).X - card.PointToScreen(new Point()).X;
+            unitsPerPixel = pixels > 0 ? card.ActualWidth / pixels : 1;
+        };
+        grip.DragDelta += (_, e) =>
+        {
+            var cursor = System.Windows.Forms.Cursor.Position;
+            distance = (vertical ? cursor.Y - start.Y : (cursor.X - start.X) * (left ? -1 : 1)) * unitsPerPixel;
+            if (vertical)
             {
                 foreach (string peer in peers)
+                    if (cards.TryGetValue(peer, out var peerCard)) peerCard.SetValue(IslandModuleBoard.ExtraHeightProperty,
+                        Math.Clamp(Store.Value.ModuleExtraHeight.GetValueOrDefault(peer) + distance, 0, 240));
+            }
+            else if (cards.TryGetValue(id, out var resizedCard)) resizedCard.SetValue(IslandModuleBoard.ColumnsProperty, ColumnsForWidth(startWidth + distance));
+            ModuleSizeChanged(); e.Handled = true;
+        };
+        grip.DragCompleted += (_, e) =>
+        {
+            if (e.Canceled || Math.Abs(distance) < 2) { RefreshSettings(); return; }
+            Store.Update(p =>
+            {
+                if (!vertical) p.ModuleColumns[id] = ColumnsForWidth(startWidth + distance);
+                else foreach (string peer in peers)
                     p.ModuleExtraHeight[peer] = Math.Clamp(p.ModuleExtraHeight.GetValueOrDefault(peer) + distance, 0, 240);
             });
         };
         return grip;
+    }
+    private int ColumnsForWidth(double width)
+    {
+        double available = Math.Max(1, modules.ActualWidth);
+        return width >= available * .75 ? 1 : width >= available * .42 ? 2 : 3;
+    }
+    private void FitCalendarWidth()
+    {
+        if (calendar.ActualWidth <= 0 || calendar.Template is null) return;
+        if (calendar.Template.FindName("PART_Root", calendar) is not Viewbox viewport
+            || viewport.Child is not FrameworkElement month) return;
+        // The native calendar template needs 280 DIP for seven readable days.
+        // Its Viewbox scales down below that size and distributes columns when
+        // a wider widget is available, instead of leaving content at the left.
+        double width = Math.Max(280, Math.Round(calendar.ActualWidth));
+        if (double.IsNaN(month.Width) || Math.Abs(month.Width - width) > .5) month.Width = width;
+        viewport.HorizontalAlignment = HorizontalAlignment.Stretch;
     }
 }

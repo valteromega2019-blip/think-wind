@@ -44,7 +44,9 @@ internal sealed class IslandModuleBoard : Panel
             {
                 int columns = (int)items[offset].GetValue(ColumnsProperty);
                 if (columns == 0) columns = width >= 640 ? 3 : 2;
-                int span = width < 420 ? 6 : columns == 2 ? 3 : 2;
+                int maximumColumns = Math.Clamp((int)((width + Gap) / (220 + Gap)), 1, 3);
+                columns = Math.Clamp(columns, 1, maximumColumns);
+                int span = columns == 1 ? 6 : columns == 2 ? 3 : 2;
                 if (used + span > 6) break;
                 var item = items[offset++];
                 row.Add((item, span)); used += span;
