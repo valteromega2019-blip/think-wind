@@ -32,7 +32,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly DispatcherTimer activation = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private readonly Dictionary<MiniIslandKind, MiniIslandWindow> minis = new();
     private readonly StackPanel fullPanel = new();
-    private readonly Viewbox moduleViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
+    private readonly IslandModuleViewport moduleViewport = new();
     private readonly Viewbox headerViewport;
     private readonly Border hoverViewport = new();
     private readonly BrightnessControl brightness;
@@ -809,6 +809,7 @@ internal sealed partial class IslandWindow : FloatingWindow
                 inner = renderedWidth;
                 width = inner + Surface.Padding.Left + Surface.Padding.Right;
             }
+            moduleViewport.Configure(boardWidth, naturalHeight, fit);
             moduleViewport.Width = renderedWidth;
             moduleViewport.Height = naturalHeight * fit;
             headerViewport.Width = inner;
