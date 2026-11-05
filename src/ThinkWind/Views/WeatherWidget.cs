@@ -102,7 +102,17 @@ internal sealed class WeatherWidget : Grid, IDisposable
             var label = new TextBlock { Text = labels[i], FontSize = 14, Margin = new Thickness(0, 0, 0, 6), TextWrapping = TextWrapping.Wrap };
             values[i].FontSize = 26;
             label.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
-            cell.Children.Add(label); cell.Children.Add(values[i]); Grid.SetColumn(cell, i); metrics.Children.Add(cell);
+            var heading = new DockPanel { LastChildFill = true };
+            var icon = new TextBlock
+            {
+                Text = i == 0 ? "\uE9CA" : i == 1 ? "\uE74B" : "\uE74A",
+                FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+                FontSize = 14, Margin = new Thickness(0, 1, 5, 6), VerticalAlignment = VerticalAlignment.Top,
+                ToolTip = labels[i]
+            };
+            icon.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent");
+            DockPanel.SetDock(icon, Dock.Left); heading.Children.Add(icon); heading.Children.Add(label);
+            cell.Children.Add(heading); cell.Children.Add(values[i]); Grid.SetColumn(cell, i); metrics.Children.Add(cell);
         }
         Grid.SetRow(metrics, 3); Children.Add(metrics);
         var footer = new DockPanel { Margin = new Thickness(2, 0, 2, 0) };
