@@ -205,6 +205,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     {
         foreach (var card in cards.Values.Concat(hoverCards)) card.CornerRadius = new CornerRadius(WidgetRadius);
         secondArea.CornerRadius = new CornerRadius(WidgetRadius);
+        media.ConfigureWidgetCorners(WidgetRadius);
         if (leftArea?.IsVisible == true) leftArea.RefreshSettings();
     }
     private Border HoverCard(string title, UIElement child, bool fullBleed = false)

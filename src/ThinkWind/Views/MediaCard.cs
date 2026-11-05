@@ -12,7 +12,7 @@ namespace OrbyLauncher.Views;
 internal sealed partial class MediaCard : Grid, IDisposable
 {
     private readonly MediaService service;
-    private readonly StackPanel body = new() { Margin = new Thickness(12) };
+    private readonly Grid body = new() { Margin = new Thickness(12) };
     private readonly Grid metadataRow = new();
     private FrameworkElement? windowActions;
     private readonly ImageBrush artworkBackground = new() { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };
@@ -61,6 +61,10 @@ internal sealed partial class MediaCard : Grid, IDisposable
     internal event Action? AvailabilityChanged;
     internal event Action? LayoutChanged;
     internal event Action? PreviewPlaybackStopped;
+    internal void ConfigureWidgetCorners(double radius)
+    {
+        backgroundCover.CornerRadius = backgroundShade.CornerRadius = new CornerRadius(Math.Clamp(radius, 0, 28));
+    }
     internal void SetWindowActions(FrameworkElement actions)
     {
         if (windowActions is not null) Children.Remove(windowActions);
@@ -87,6 +91,10 @@ internal sealed partial class MediaCard : Grid, IDisposable
             Background = new LinearGradientBrush(Color.FromArgb(155, 8, 12, 18), Color.FromArgb(220, 8, 12, 18), 90) };
         RenderOptions.SetBitmapScalingMode(backgroundCover, BitmapScalingMode.HighQuality);
         Children.Add(backgroundCover); Children.Add(backgroundShade); Children.Add(body);
+        body.ColumnDefinitions.Add(new ColumnDefinition());
+        body.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        body.RowDefinitions.Add(new RowDefinition());
+        for (int i = 0; i < 3; i++) body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var row = metadataRow; row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); row.ColumnDefinitions.Add(new ColumnDefinition());
         cover = new Border { Width = 44, Height = 44, CornerRadius = new CornerRadius(12), ClipToBounds = true, Child = artwork, Margin = new Thickness(0, 0, 8, 0) };
         artwork.Width = artwork.Height = 44;
@@ -99,6 +107,9 @@ internal sealed partial class MediaCard : Grid, IDisposable
         transport = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         previous = Transport("Anterior", "\uE892", MediaCommand.Previous); toggle = Transport("Reproduzir / pausar", "\uE768", MediaCommand.Toggle); next = Transport("Próxima", "\uE893", MediaCommand.Next);
         transport.Children.Add(previous); transport.Children.Add(toggle); transport.Children.Add(next); body.Children.Add(transport); body.Children.Add(progress); body.Children.Add(time);
+        Grid.SetRow(transport, 1); Grid.SetRow(progress, 2); Grid.SetRow(time, 3);
+        foreach (var element in new FrameworkElement[] { metadataRow, transport, progress, time }) Grid.SetColumnSpan(element, 2);
+        SizeChanged += (_, _) => FitWidgetLayout();
         System.Windows.Automation.AutomationProperties.SetName(progress, "Posição da reprodução");
         progress.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => { seeking = true; dragging = true; }));
         progress.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(async (_, e) => { dragging = seeking = false; if (!e.Canceled) await Seek(); }));
@@ -139,10 +150,32 @@ internal sealed partial class MediaCard : Grid, IDisposable
         artist.Visibility = string.IsNullOrWhiteSpace(nextArtist) ? Visibility.Collapsed : Visibility.Visible;
         toggle.Content = Icon(state?.Playing == true ? "\uE769" : "\uE768");
         title.ToolTip = title.Text; artist.ToolTip = artist.Text; player.ToolTip = player.Text;
-        RenderButtons(); UpdateProgress();
+        RenderButtons(); UpdateProgress(); FitWidgetLayout();
         if (dockPreview && IsVisible && state?.Playing != true && (!keepIdlePreview || state is null)) PreviewPlaybackStopped?.Invoke();
         if (wasAvailable != Available) AvailabilityChanged?.Invoke();
         if (wasAvailable != Available || metadataChanged) { InvalidateMeasure(); LayoutChanged?.Invoke(); }
+    }
+    private void FitWidgetLayout()
+    {
+        bool wide = !dockPreview && ActualWidth >= 480;
+        Grid.SetColumnSpan(metadataRow, wide ? 1 : 2);
+        Grid.SetColumn(transport, wide ? 1 : 0);
+        Grid.SetColumnSpan(transport, wide ? 1 : 2);
+        Grid.SetRow(transport, wide ? 0 : 1);
+        transport.VerticalAlignment = VerticalAlignment.Center;
+        metadataRow.VerticalAlignment = VerticalAlignment.Center;
+        if (dockPreview) return;
+        // Bound metadata at each breakpoint; long names remain available in
+        // tooltips instead of pushing transport/progress outside the widget.
+        title.MaxHeight = Math.Ceiling(title.FontSize * 2.8);
+        artist.MaxHeight = Math.Ceiling(artist.FontSize * 1.5);
+        title.TextTrimming = artist.TextTrimming = TextTrimming.CharacterEllipsis;
+        player.TextWrapping = TextWrapping.NoWrap; player.TextTrimming = TextTrimming.CharacterEllipsis;
+        double size = wide ? Math.Clamp(Math.Round(ActualWidth * .12), 44, 72) : 44;
+        cover.Width = cover.Height = artwork.Width = artwork.Height = size;
+        artwork.Clip = new RectangleGeometry(new Rect(0, 0, size, size), 12, 12);
+        progress.Width = double.NaN;
+        progress.HorizontalAlignment = HorizontalAlignment.Stretch;
     }
     private void UpdateArtworkBackground(ImageSource? source)
     {
