@@ -146,7 +146,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
         visibility.Tick += (_, _) =>
         {
-            if (!IsVisible || menus > 0 || modal) return;
+            if (!IsVisible || menus > 0 || modal || LibraryShortcutDrag.Active) return;
             // A brief activation during Show is not enough: only consider the
             // focus acquired after observing the visible menu in its normal tick.
             if (Desktop.ForegroundIsOurs() || dockHasFocus())
@@ -166,7 +166,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         {
             if (IsVisible)
             {
-                outsideClicks ??= new OutsideClickObserver(this, () => { if (menus == 0 && !modal) Dismiss(); }, () => IsMouseOver || dockHasFocus());
+                outsideClicks ??= new OutsideClickObserver(this, () => { if (menus == 0 && !modal && !LibraryShortcutDrag.Active) Dismiss(); }, () => LibraryShortcutDrag.Active || IsMouseOver || dockHasFocus());
                 outsideClicks.Start();
             }
             else outsideClicks?.Stop();
@@ -474,7 +474,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private void PinStart(AppEntry app) => Store.Update(p => { if (!p.StartPins.Any(pin => SameTarget(pin.Target, app.Target))) p.StartPins.Add(new(app.Name, app.Target)); });
     private void Launch(AppEntry entry)
     {
-        if (LayoutDrag.Active || LibraryShortcutDrag.Active) return;
+        if (LayoutDrag.Active || LibraryShortcutDrag.SuppressLaunch) return;
         Dismiss();
         // Let WPF remove the panel before ShellExecute can wait on startup/UAC.
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>

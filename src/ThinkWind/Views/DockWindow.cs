@@ -142,8 +142,6 @@ internal sealed partial class DockWindow : FloatingWindow
     private void DragCompleted() { signature = ""; RefreshApps(); }
     internal void SuspendForGame(bool active)
     {
-        windowEffectsSuspended = active;
-        if (active) WindowEnvelopeAnimation.Cancel();
         if (!active) temporaryFullscreenStart = false;
         if (active) { StopPreviews(); magnifier.Reset(); timer.Stop(); launcher?.Dismiss(); FinishFileDrag(); }
     }
@@ -521,7 +519,7 @@ internal sealed partial class DockWindow : FloatingWindow
             else
             {
                 var current = item.Windows.FirstOrDefault(window => Desktop.IsActiveWindow(window.Handle, foregroundBeforeClick)) ?? selected;
-                OpenDockItem(item, current, true, foregroundBeforeClick, image);
+                OpenDockItem(item, current, true, foregroundBeforeClick);
             }
             foregroundBeforeClick = 0;
         }, item.Name + (minimized ? " · minimizado" : focused is not null ? " · ativo" : item.Windows.Count > 0 ? " · em execução" : ""));
@@ -564,7 +562,6 @@ internal sealed partial class DockWindow : FloatingWindow
         return button;
     }
     private bool openingDockItem;
-    private bool windowEffectsSuspended;
     private nint lastApplicationForeground;
     private void RememberApplicationForeground()
     {
@@ -578,7 +575,7 @@ internal sealed partial class DockWindow : FloatingWindow
         return Desktop.ForegroundIsOurs() && Desktop.IsVisibleAndRestored(lastApplicationForeground)
             ? lastApplicationForeground : foreground;
     }
-    private async void OpenDockItem(Item item, Desktop.RunningWindow? selected, bool minimizeIfActive, nint foregroundBeforeClick = 0, FrameworkElement? animationOrigin = null)
+    private async void OpenDockItem(Item item, Desktop.RunningWindow? selected, bool minimizeIfActive, nint foregroundBeforeClick = 0)
     {
         if (openingDockItem) return;
         openingDockItem = true;
@@ -590,8 +587,6 @@ internal sealed partial class DockWindow : FloatingWindow
                 && Desktop.IsVisibleAndRestored(selected.Handle)
                 && Desktop.IsActiveWindow(selected.Handle, foregroundAtClick);
             StopPreviews();
-            if (!windowEffectsSuspended && shouldMinimize && selected is not null && animationOrigin is not null)
-                WindowEnvelopeAnimation.Play(selected.Handle, animationOrigin, true, Store.Value.AnimationMilliseconds);
             if (shouldMinimize && item.Windows.Count > 1)
             {
                 // A repeated click applies to this dock group, including its
@@ -616,12 +611,7 @@ internal sealed partial class DockWindow : FloatingWindow
             }
             if (selected is not null && Desktop.WindowExists(selected.Handle))
             {
-                if (await Desktop.ActivateFromDock(selected.Handle, shouldMinimize))
-                {
-                    if (!windowEffectsSuspended && !shouldMinimize && animationOrigin is not null)
-                        WindowEnvelopeAnimation.Play(selected.Handle, animationOrigin, false, Store.Value.AnimationMilliseconds);
-                    return;
-                }
+                if (await Desktop.ActivateFromDock(selected.Handle, shouldMinimize)) return;
                 // A denied foreground request must not start another instance.
                 if (Desktop.WindowExists(selected.Handle))
                 {
@@ -637,22 +627,7 @@ internal sealed partial class DockWindow : FloatingWindow
             }
             // The HWND captured by the previous refresh may already be gone.
             // In that case use the original pinned shortcut, not a stale handle.
-            if (item.Target is not null)
-            {
-                if (!SystemActions.Launch(item.Target) || animationOrigin is null || windowEffectsSuspended) return;
-                string resolvedTarget = icons.Resolve(item.Target);
-                // Bounded observation, only after this explicit launch. Never
-                // keep a window-monitor timer running for this experiment.
-                for (int attempt = 0; attempt < 10 && IsVisible && !windowEffectsSuspended; attempt++)
-                {
-                    await System.Threading.Tasks.Task.Delay(100);
-                    var opened = Desktop.Windows().FirstOrDefault(window => window.Executable is not null
-                        && (window.Executable.Equals(item.Target, StringComparison.OrdinalIgnoreCase)
-                            || window.Executable.Equals(resolvedTarget, StringComparison.OrdinalIgnoreCase)));
-                    if (opened is null) continue;
-                    WindowEnvelopeAnimation.Play(opened.Handle, animationOrigin, false, Store.Value.AnimationMilliseconds); break;
-                }
-            }
+            if (item.Target is not null) SystemActions.Run(item.Target);
         }
         finally { openingDockItem = false; }
     }
