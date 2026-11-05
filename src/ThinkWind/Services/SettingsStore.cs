@@ -34,6 +34,7 @@ public sealed class Preferences
     public string GameModeInclude { get; set; } = "";
     public string GameModeExclude { get; set; } = "msedge;chrome;firefox;Code;steam;steamwebhelper";
     public bool AutoHide { get; set; } = true;
+    public bool DockFixedBar { get; set; }
     public bool DockVisibleOnDesktop { get; set; } = false;
     public bool HideOverFullscreen { get; set; } = true;
     public bool IslandReserveTop { get; set; } = true;
@@ -191,6 +192,7 @@ public sealed class SettingsStore
             var defaults = new Preferences();
             p.Shortcuts = defaults.Shortcuts; p.DockOrder.Clear(); p.DockScale = 1;
             p.DockRadius = defaults.DockRadius; p.DockSpacing = defaults.DockSpacing; p.IconSize = defaults.IconSize;
+            p.DockFixedBar = defaults.DockFixedBar;
             p.DockHorizontalOffset = 0; p.DockBottomOffset = defaults.DockBottomOffset;
             p.DockMaterial = defaults.DockMaterial; p.DockOpacity = .72; p.AutoHide = defaults.AutoHide;
             p.DockCollapseSeconds = defaults.DockCollapseSeconds; p.DockSearchMode = defaults.DockSearchMode;

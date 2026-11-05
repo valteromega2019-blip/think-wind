@@ -19,14 +19,15 @@ internal sealed class StatusBarReservation : IDisposable
     [DllImport("shell32.dll")] private static extern nuint SHAppBarMessage(uint message, ref AppBarData data);
     private const int Callback = 0x8037;
     private readonly HwndSource source;
+    private readonly bool bottom;
     private AppBarData data;
     private OverlayChrome.Display? display;
     private int height;
     private bool registered, updating, disposed;
     private OverlayChrome.PixelRect reservedRect;
     private bool hasReservedRect;
-    internal StatusBarReservation(HwndSource owner)
-    { source = owner; data.Size = (uint)Marshal.SizeOf<AppBarData>(); data.Window = source.Handle; data.Callback = Callback; data.Edge = 1; source.AddHook(Message); }
+    internal StatusBarReservation(HwndSource owner, bool bottom = false)
+    { source = owner; this.bottom = bottom; data.Size = (uint)Marshal.SizeOf<AppBarData>(); data.Window = source.Handle; data.Callback = Callback; data.Edge = bottom ? 3u : 1u; source.AddHook(Message); }
     internal void Set(OverlayChrome.Display screen, int pixels)
     {
         if (disposed) return;
@@ -49,9 +50,11 @@ internal sealed class StatusBarReservation : IDisposable
         try
         {
             var bounds = display.Bounds;
-            data.Rect = new OverlayChrome.PixelRect { Left = bounds.Left, Right = bounds.Right, Top = bounds.Top, Bottom = bounds.Top + height };
+            data.Rect = new OverlayChrome.PixelRect { Left = bounds.Left, Right = bounds.Right,
+                Top = bottom ? bounds.Bottom - height : bounds.Top, Bottom = bottom ? bounds.Bottom : bounds.Top + height };
             SHAppBarMessage(2, ref data);
-            data.Rect.Bottom = data.Rect.Top + height;
+            if (bottom) data.Rect.Top = data.Rect.Bottom - height;
+            else data.Rect.Bottom = data.Rect.Top + height;
             // ABN_POSCHANGED can be caused by another overlay reacting to our
             // reservation. Do not broadcast another work-area change when
             // the negotiated rectangle is already the one we reserved.

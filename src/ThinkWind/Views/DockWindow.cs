@@ -22,6 +22,8 @@ internal sealed partial class DockWindow : FloatingWindow
     internal bool HasPrimaryControls => System.Windows.Forms.Screen.AllScreens.Any(screen =>
         screen.Primary && screen.Bounds == Display.Bounds);
     protected override bool AttachedTop => false;
+    protected override bool FullWidthBottom => Store.Value.DockFixedBar;
+    private StatusBarReservation? bottomReservation;
     protected override bool CollapsedDock => hidden;
     private readonly DockItemsPanel items = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly DockMagnifier magnifier;
@@ -38,7 +40,8 @@ internal sealed partial class DockWindow : FloatingWindow
                 var bounds = Bounds;
                 progress = Math.Clamp(((bounds.Bottom - bounds.Top) / Display.Scale - 6) / Math.Max(1, ExpandedHeight - 6), 0, 1);
             }
-            return new Thickness(magnificationReserve / 2 * progress, magnificationHeadroom * progress, magnificationReserve / 2 * progress, 0);
+            return new Thickness(Store.Value.DockFixedBar ? 0 : magnificationReserve / 2 * progress,
+                magnificationHeadroom * progress, Store.Value.DockFixedBar ? 0 : magnificationReserve / 2 * progress, 0);
         }
     }
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
@@ -112,7 +115,8 @@ internal sealed partial class DockWindow : FloatingWindow
         };
         ((Grid)Content).Children.Add(iconLayer);
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
-        IsVisibleChanged += (_, _) => { if (IsVisible) timer.Start(); else { timer.Stop(); magnifier.Reset(); launcher?.Dismiss(); } };
+        IsVisibleChanged += (_, _) => { if (IsVisible) timer.Start(); else { timer.Stop(); magnifier.Reset(); launcher?.Dismiss(); } SyncBottomReservation(); };
+        Closed += (_, _) => { bottomReservation?.Dispose(); bottomReservation = null; };
         timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
         MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); TutorialGuide.Notify("dock-hover"); };
         MouseLeave += (_, _) => lastHover = DateTime.UtcNow;
@@ -150,6 +154,8 @@ internal sealed partial class DockWindow : FloatingWindow
     public override void Position()
     {
         if (MenuOpen) return;
+        if (Store.Value.DockFixedBar) hidden = false;
+        SyncBottomReservation();
         if (!rebuilding && Math.Abs(fittedWidth - Display.Width) > .5 && entries.Count > 0) RenderPage();
         Place(TotalWidth, hidden ? 6 : ExpandedHeight, IsVisible && !hidden);
         if (launcher?.IsVisible == true) launcher.Position();
@@ -160,9 +166,9 @@ internal sealed partial class DockWindow : FloatingWindow
         if (LayoutDrag.Active || rebuilding) return;
         if (layoutRevision != Store.DockLayoutRevision) { layoutRevision = Store.DockLayoutRevision; visibleOrder.Clear(); }
         signature = "";
-        if (!Store.Value.AutoHide || Store.IsEditing) hidden = false;
+        if (!Store.Value.AutoHide || Store.IsEditing || Store.Value.DockFixedBar) hidden = false;
         items.Visibility = hidden ? Visibility.Hidden : Visibility.Visible;
-        ApplyAppearance(); RefreshApps();
+        ApplyAppearance(); RefreshApps(); Position();
         launcher?.RefreshSettings();
         preview?.RefreshSettings();
     }
@@ -234,11 +240,23 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private void SetHidden(bool value, bool animate = true)
     {
+        if (Store.Value.DockFixedBar) value = false;
         if (value && MenuOpen) return;
         if (hidden == value) return;
         hidden = value; items.Visibility = value ? Visibility.Hidden : Visibility.Visible;
         if (value) magnifier.Reset(); else magnifier.Wake();
         ApplyAppearance(); Place(TotalWidth, hidden ? 6 : ExpandedHeight, animate);
+    }
+    private void SyncBottomReservation()
+    {
+        if (!Store.Value.DockFixedBar || !IsVisible)
+        {
+            bottomReservation?.Dispose(); bottomReservation = null; return;
+        }
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == 0) return;
+        bottomReservation ??= new StatusBarReservation(HwndSource.FromHwnd(handle), bottom: true);
+        bottomReservation.Set(Display, (int)Math.Ceiling((ExpandedHeight - magnificationHeadroom) * Display.Scale));
     }
     private async void RefreshApps()
     {
@@ -360,6 +378,7 @@ internal sealed partial class DockWindow : FloatingWindow
         // The independent transparent canvas encloses every enlarged icon.
         magnificationHeadroom = magnify ? (fit.Icon + 26) * p.DockMagnificationAmount * 1.08 : 0;
         Surface.Padding = new Thickness(10); Surface.Margin = TransparentInsets;
+        iconLayer.HorizontalAlignment = Store.Value.DockFixedBar ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         iconLayer.Margin = new Thickness(10 + magnificationReserve / 2, 0, 10 + magnificationReserve / 2, 10);
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Width = double.NaN;

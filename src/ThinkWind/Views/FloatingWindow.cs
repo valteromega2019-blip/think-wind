@@ -21,6 +21,7 @@ internal abstract class FloatingWindow : Window
     protected virtual bool UsesIslandAppearance => AttachedTop;
     protected virtual bool CollapsedDock => false;
     protected virtual bool FullWidthTop => false;
+    protected virtual bool FullWidthBottom => false;
     protected virtual string? TopPanelSide => null;
     protected virtual double TopEdgeOffset => 0;
     protected virtual bool SuppressMaterial => false;
@@ -147,7 +148,7 @@ internal abstract class FloatingWindow : Window
     {
         FontSizing.Apply(this, TextScale);
         var p = Store.Value;
-        radius = CollapsedDock ? 3 : FullWidthTop ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
+        radius = CollapsedDock ? 3 : FullWidthTop || FullWidthBottom ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
         var material = MaterialOverride ?? (UsesIslandAppearance ? p.IslandMaterial : p.DockMaterial);
         var alpha = (UsesIslandAppearance ? p.IslandOpacity : p.DockOpacity) ?? p.TintOpacity;
         // Both themes use the same backdrop and user opacity, without a light-only opaque veil.
@@ -266,6 +267,7 @@ internal abstract class FloatingWindow : Window
         else if (AttachedTop && TopPanelSide == "Center")
             x = display.Work.Left + (display.Work.Width - w) / 2;
         if (AttachedTop && FullWidthTop) { x = display.Bounds.Left; w = display.Bounds.Width; }
+        if (FullWidthBottom) { x = display.Bounds.Left; w = display.Bounds.Width; y = display.Bounds.Bottom - h; }
         if (CollapsedDock)
         {
             w = Math.Min(display.Bounds.Width, (int)Math.Round(96 * display.Scale));
