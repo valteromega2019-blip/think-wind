@@ -22,8 +22,19 @@ internal sealed partial class DockWindow
     private void InitializeFileDrop()
     {
         AllowDrop = true;
+        PreviewDragOver += (_, e) =>
+        {
+            if (!LibraryShortcutDrag.IsShortcut(e.Data)) return;
+            BeginFileDrag(); e.Effects = DragDropEffects.Link; e.Handled = true;
+        };
+        PreviewDrop += (_, e) =>
+        {
+            if (!LibraryShortcutDrag.IsShortcut(e.Data)) return;
+            e.Effects = LibraryShortcutDrag.Pin(e.Data, Store) ? DragDropEffects.Link : DragDropEffects.None;
+            e.Handled = true; FinishFileDrag();
+        };
         PreviewDragEnter += (_, e) => { if (HasDragContent(e)) BeginFileDrag(); };
-        PreviewDragOver += (_, e) => { if (HasDragContent(e)) { BeginFileDrag(); e.Effects = DragDropEffects.None; } };
+        PreviewDragOver += (_, e) => { if (!e.Handled && HasDragContent(e)) { BeginFileDrag(); e.Effects = DragDropEffects.None; } };
         Drop += (_, e) => { if (HasDragContent(e) && !e.Handled) { e.Effects = DragDropEffects.None; e.Handled = true; FinishFileDrag(); } };
         activateDrop.Tick += async (_, _) =>
         {

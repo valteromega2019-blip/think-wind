@@ -373,6 +373,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private FrameworkElement ResultRow(AppEntry entry, bool selected = false)
     {
         var main = ActionButton(entry.Name, () => Launch(entry)); main.Style = (Style)FindResource("Think.IconButton"); main.Padding = new Thickness(6); main.ToolTip = entry.Name;
+        LibraryShortcutDrag.Attach(main, entry, () => mode == LauncherPanelMode.Library && !Store.IsEditing);
         var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         var icon = entry.Icon ?? icons.Get(entry.Target);
         var image = new Image { Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
@@ -473,7 +474,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private void PinStart(AppEntry app) => Store.Update(p => { if (!p.StartPins.Any(pin => SameTarget(pin.Target, app.Target))) p.StartPins.Add(new(app.Name, app.Target)); });
     private void Launch(AppEntry entry)
     {
-        if (LayoutDrag.Active) return;
+        if (LayoutDrag.Active || LibraryShortcutDrag.Active) return;
         Dismiss();
         // Let WPF remove the panel before ShellExecute can wait on startup/UAC.
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
