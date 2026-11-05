@@ -132,7 +132,7 @@ internal static class LayoutChecks
         if (count == 0) return;
         foreach (var selector in BluetoothControl.DeviceSelectors)
         {
-            var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(selector, new[] { "System.Devices.Aep.IsConnected" }, Windows.Devices.Enumeration.DeviceInformationKind.AssociationEndpoint).AsTask(timeout.Token).ConfigureAwait(false);
+            var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync("(" + selector + ") AND System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True", new[] { "System.Devices.Aep.IsConnected" }, Windows.Devices.Enumeration.DeviceInformationKind.AssociationEndpoint).AsTask(timeout.Token).ConfigureAwait(false);
             Console.WriteLine("  Endpoints Bluetooth expostos: " + devices.Count);
             Require(devices.All(device => !string.IsNullOrEmpty(device.Id)));
         }

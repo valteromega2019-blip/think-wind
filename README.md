@@ -2,9 +2,9 @@
 
 Desenvolvido pela **Think**. Novo nome e identidade do Think Wind, com atualização compatível das instalações anteriores.
 
-## 0.29.1 Beta
+## 0.30.0 Beta
 
-[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.29.1-beta/OrbyLauncher-Setup-0.29.1-beta.exe) · [Notas e limitações](RELEASE-0.29.1-BETA.md) · [Site](https://thinkdeveloper-br.github.io/orby-launcher/)
+[Baixar instalador](https://github.com/valteromega2019-blip/think-wind/releases/download/v0.30.0-beta/OrbyLauncher-Setup-0.30.0-beta.exe) · [Notas e limitações](RELEASE-0.30.0-BETA.md) · [Site](https://thinkdeveloper-br.github.io/orby-launcher/)
 
 Bateria dinâmica com carregamento, porcentagem opcional desligada por padrão e detecção automática em computadores com bateria. Ícone à esquerda do Wi-Fi no modo barra e de Configurações do Windows no modo ilha, com ampliação e destaque no hover. Compilação e empacotamento sem testes ou type check separados; validação em notebook e diferentes DPI permanece pendente.
 

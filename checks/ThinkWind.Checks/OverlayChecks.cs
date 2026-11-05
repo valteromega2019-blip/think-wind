@@ -88,6 +88,12 @@ internal static class OverlayChecks
         {
             mini.Present(); Require(mini.IsVisible, "Mini de rede deve abrir.");
             other.Show(); other.Activate();
+            // Dismissal is queued after the next icon's Click can finish.
+            var frame = new System.Windows.Threading.DispatcherFrame();
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle,
+                new Action(() => frame.Continue = false));
+            System.Windows.Threading.Dispatcher.PushFrame(frame);
             Require(!mini.IsVisible, "Ativar outra janela deve fechar a mini de rede.");
         }
         finally { other.Close(); mini.Close(); }

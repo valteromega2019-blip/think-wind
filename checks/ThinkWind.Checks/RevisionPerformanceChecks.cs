@@ -144,7 +144,7 @@ internal static class RevisionPerformanceChecks
             foreach (double scale in new[] { 2.5, 1d, 1.5, 2.5 })
             {
                 FontSizing.Apply(window, scale); FontSizing.PrepareForMeasure(panel);
-                Require(Math.Abs(normal.FontSize - 14 * Math.Min(scale, 1.75)) < .001, "Limite geral incorreto.");
+                Require(Math.Abs(normal.FontSize - 14 * Math.Min(scale, 1.4)) < .001, "Limite geral incorreto.");
                 Require(Math.Abs(compact.FontSize - 14 * Math.Min(scale, 1.35)) < .001, "Limite compacto incorreto.");
             }
             var card = new HardwareSummaryCard("cpu", compact: true);
