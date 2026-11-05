@@ -29,7 +29,6 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         calendar.SelectedDate = selected; calendar.VerticalAlignment = VerticalAlignment.Top;
         var month = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
         month.Children.Add(calendar);
-        month.Children.Add(ClockDesign.Button("\uE787", "Hoje", () => { calendar.DisplayDate = DateTime.Today; calendar.SelectedDate = DateTime.Today; }));
         if (!compact) month.Children.Add(ClockDesign.Text("Dois cliques no dia para adicionar. Um clique para consultar a agenda.", 12, true));
         if (compact) Children.Add(month);
         else Children.Add(ClockDesign.Card(body, 12));
@@ -155,6 +154,7 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
     }
     public void Dispose() => service.Changed -= Changed;
     internal void Refresh() { if (!editing) Render(); }
+    internal void GoToToday() => SelectDay(DateTime.Today, false);
     internal void SelectDay(DateTime day, bool add)
     {
         selected = day.Date; calendar.SelectedDate = selected; calendar.DisplayDate = selected;

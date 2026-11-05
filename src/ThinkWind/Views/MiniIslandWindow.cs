@@ -50,6 +50,14 @@ internal sealed class MiniIslandWindow : FloatingWindow
         close.Content = Glyph("\uE711", 13); close.Width = close.Height = 28;
         close.Padding = new Thickness(4);
         DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
+        if (kind == MiniIslandKind.Calendar)
+        {
+            var today = ActionButton("Voltar para hoje", () => calendarView?.GoToToday());
+            today.Style = (Style)FindResource("Think.IconButton");
+            today.Content = Glyph("\uE787", 15); today.Width = today.Height = 28;
+            today.Padding = new Thickness(4); today.Margin = new Thickness(0, 0, 4, 0);
+            DockPanel.SetDock(today, Dock.Right); heading.Children.Add(today);
+        }
         heading.Children.Add(new TextBlock { Text = kind switch { MiniIslandKind.Brightness => "Brilho da tela", MiniIslandKind.Clock => "Relógio", MiniIslandKind.Bluetooth => "Bluetooth", MiniIslandKind.Volume => "Áudio e microfone", MiniIslandKind.Calendar => "Calendário", MiniIslandKind.Tray => "Aplicativos em segundo plano", _ => "Conexão de rede" }, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6) });
         panel.Children.Add(heading);
         if (kind == MiniIslandKind.Weather)
