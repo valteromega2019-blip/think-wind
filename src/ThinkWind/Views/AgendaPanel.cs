@@ -18,6 +18,7 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
     private readonly bool compact;
     internal DateTime SelectedDay => selected;
     internal event Action<DateTime>? AddRequested;
+    internal event Action<DateTime>? DayRequested;
     internal event Action? LayoutChanged;
     internal AgendaPanel(AlarmService alarms, bool calendarOnly = false)
     {

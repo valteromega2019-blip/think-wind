@@ -86,11 +86,16 @@ internal sealed partial class AgendaPanel
     {
         calendar.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) =>
         {
-            if (e.ClickCount != 2 || calendar.DisplayMode != CalendarMode.Month) return;
+            if (calendar.DisplayMode != CalendarMode.Month) return;
             var node = e.OriginalSource as DependencyObject;
             while (node is not null && node is not CalendarDayButton) node = VisualTreeHelper.GetParent(node);
             if (node is not CalendarDayButton { DataContext: DateTime day, IsBlackedOut: false }) return;
             selected = day.Date; calendar.SelectedDate = selected;
+            if (e.ClickCount != 2)
+            {
+                if (compact) Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() => DayRequested?.Invoke(day.Date)));
+                return;
+            }
             if (Mouse.Captured is UIElement captured) captured.ReleaseMouseCapture();
             if (compact) AddRequested?.Invoke(selected); else Edit(null, false);
             e.Handled = true;

@@ -35,11 +35,16 @@ internal sealed partial class IslandWindow
         Closed += (_, _) => { agendaMarkersDisposed = true; alarms.Changed -= QueueWidgetAgendaMarkers; };
         calendar.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) =>
         {
-            if (Store.IsEditing || e.ClickCount != 2 || calendar.DisplayMode != CalendarMode.Month) return;
+            if (Store.IsEditing || calendar.DisplayMode != CalendarMode.Month) return;
             var node = e.OriginalSource as DependencyObject;
             while (node is not null && node is not CalendarDayButton) node = VisualTreeHelper.GetParent(node);
             if (node is not CalendarDayButton { DataContext: DateTime day, IsBlackedOut: false }) return;
             calendar.SelectedDate = day;
+            if (e.ClickCount != 2)
+            {
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() => OpenWidgetAgenda(false)));
+                return;
+            }
             if (Mouse.Captured is UIElement captured) captured.ReleaseMouseCapture();
             OpenWidgetAgenda(true); e.Handled = true;
         }), true);

@@ -127,6 +127,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
             }
             panel.Children.Add(ClockDesign.Button("\uE787", "Ver agenda", () => OpenAgenda(false)));
             calendarView.AddRequested += _ => OpenAgenda(true);
+            calendarView.DayRequested += _ => OpenAgenda(false);
         }
         else if (kind == MiniIslandKind.Bluetooth)
         {
