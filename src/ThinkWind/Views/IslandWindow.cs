@@ -676,6 +676,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         if (changed || (outsideSince is null && !PointerInsideGroup)) ScheduleCollapse();
     }
     private FrameworkElement? miniTrigger;
+    private int miniPresentationRevision;
     private void ShowMini(MiniIslandKind kind, FrameworkElement? trigger = null)
     {
         hoverEnter.Stop(); CancelCollapse();
@@ -718,7 +719,15 @@ internal sealed partial class IslandWindow : FloatingWindow
             };
             minis[kind] = mini;
         }
-        mini.Present(); RefreshPanelIcons();
+        int presentation = ++miniPresentationRevision;
+        keyboardBusyUntil = DateTime.UtcNow.AddMilliseconds(350);
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+        {
+            if (presentation != miniPresentationRevision || !IsVisible || !interaction.MiniOpen) return;
+            // Let the originating button finish mouse-up/capture and the owner
+            // finish its reparenting before activating the independent popup.
+            mini.Present(); RefreshPanelIcons();
+        }));
     }
     private OverlayChrome.PixelRect MiniAnchor()
     {
@@ -734,6 +743,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     private void DismissMinis()
     {
+        ++miniPresentationRevision;
         dismissingMinis = true;
         try { foreach (var mini in minis.Values) mini.Dismiss(); interaction.CloseMini(); }
         finally { dismissingMinis = false; }
