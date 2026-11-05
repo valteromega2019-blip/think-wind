@@ -85,6 +85,19 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         var power = ActionButton("Energia", () => { }); power.Content = Glyph("\uE7E8", 18); power.Width = 38; power.Height = 34; power.Padding = new Thickness(4);
         var powerMenu = new ContextMenu();
         foreach (string action in new[] { "Suspender", "Reiniciar", "Desligar" }) AddMenu(powerMenu, action, () => { modal = true; try { Store.Flush(); SystemActions.Power(action, confirm: action != "Desligar"); } finally { modal = false; } });
+        var updateAndShutdown = new MenuItem { Header = "Atualizar e desligar", Visibility = Visibility.Collapsed };
+        updateAndShutdown.Click += (_, _) =>
+        {
+            modal = true;
+            try { Store.Flush(); SystemActions.Power("Atualizar e desligar", confirm: false); }
+            finally { modal = false; }
+        };
+        powerMenu.Items.Add(updateAndShutdown);
+        powerMenu.Opened += async (_, _) =>
+        {
+            bool ready = await WindowsUpdatePower.PendingAsync();
+            updateAndShutdown.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
+        };
         TrackMenu(powerMenu); power.Click += (_, _) => { powerMenu.PlacementTarget = power; powerMenu.IsOpen = true; };
         DockPanel.SetDock(power, Dock.Right); footer.Children.Add(power);
         var manual = ActionButton("Executável manual…", ManualShortcut); manual.FontSize = 10; manual.Padding = new Thickness(6, 4, 6, 4); DockPanel.SetDock(manual, Dock.Right); footer.Children.Add(manual);

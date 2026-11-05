@@ -78,8 +78,15 @@ internal static class SystemActions
     }
     internal static void Power(string action, bool confirm = true)
     {
-        if (action is not ("Desligar" or "Reiniciar" or "Suspender")) return;
+        if (action is not ("Desligar" or "Reiniciar" or "Suspender" or "Atualizar e desligar")) return;
         if (confirm && MessageBox.Show(action + " o computador agora?", "Orby Launcher", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (action == "Atualizar e desligar")
+        {
+            try { WindowsUpdatePower.UpdateAndShutdown(); }
+            catch (System.ComponentModel.Win32Exception error)
+            { MessageBox.Show("O Windows não aceitou atualizar e desligar.\n" + error.Message, "Orby Launcher"); }
+            return;
+        }
         if (action == "Suspender")
         {
             if (!System.Windows.Forms.Application.SetSuspendState(System.Windows.Forms.PowerState.Suspend, false, false)) MessageBox.Show("O Windows não permitiu suspender o computador.", "Orby Launcher");
