@@ -100,55 +100,37 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
     {
         editing = true;
         body.Children.Clear();
-        body.Children.Add(ClockDesign.Text(note ? "Nota do dia" : "Evento da agenda", 16));
-        var types = new WrapPanel();
-        var eventTab = ClockDesign.Button("\uE787", "Evento", () => { });
-        var noteTab = ClockDesign.Button("\uE70F", "Nota", () => { });
-        (note ? noteTab : eventTab).SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
-        types.Children.Add(eventTab); types.Children.Add(noteTab); body.Children.Add(types);
+        var type = new ComboBox { ItemsSource = new[] { "Evento", "Nota" }, SelectedIndex = note ? 1 : 0, MinHeight = 36, Margin = new Thickness(0, 4, 0, 10) };
+        body.Children.Add(ClockDesign.Label("\uE8A5", "Tipo de registro")); body.Children.Add(type);
         var title = new TextBox { Text = original?.Name ?? "", MaxLength = 80 };
         StyleAgendaInput(title);
-        body.Children.Add(ClockDesign.Text("Título", 12)); body.Children.Add(title);
+        body.Children.Add(ClockDesign.Label("\uE8D2", "Título do evento ou da nota")); body.Children.Add(title);
         var date = original?.EventDate?.Date ?? selected;
         body.Children.Add(ClockDesign.Text(date.ToString("dddd, dd/MM/yyyy"), 12, true));
         var start = new AlarmTimePicker { MinuteOfDay = original is null ? 9 * 60 : original.Minute };
         var end = new AlarmTimePicker { MinuteOfDay = original?.EndDate is DateTime endDate ? endDate.Hour * 60 + endDate.Minute : 10 * 60 };
-        if (!note)
-        {
-            var times = new Grid { Margin = new Thickness(0, 8, 0, 0) };
-            times.ColumnDefinitions.Add(new ColumnDefinition()); times.ColumnDefinitions.Add(new ColumnDefinition());
-            var first = new StackPanel { Margin = new Thickness(0, 0, 6, 0) };
-            first.Children.Add(ClockDesign.Text("Início", 12)); first.Children.Add(start);
-            var last = new StackPanel { Margin = new Thickness(6, 0, 0, 0) };
-            last.Children.Add(ClockDesign.Text("Fim", 12)); last.Children.Add(end);
-            Grid.SetColumn(last, 1); times.Children.Add(first); times.Children.Add(last); body.Children.Add(times);
-        }
+        var times = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+        times.Children.Add(ClockDesign.Label("\uE823", "Início")); times.Children.Add(start);
+        times.Children.Add(ClockDesign.Label("\uE823", "Fim")); times.Children.Add(end);
+        body.Children.Add(times);
         var notes = new TextBox { Text = original?.Notes ?? "", MaxLength = 4000, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 80, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         StyleAgendaInput(notes);
-        body.Children.Add(ClockDesign.Text("Notas", 12)); body.Children.Add(notes);
+        body.Children.Add(ClockDesign.Label("\uE70F", "Descrição / anotações")); body.Children.Add(notes);
         var colorField = AddColorPicker(original?.ColorHex ?? "");
         int[] offsets = { -1, 0, 5, 10, 15, 30, 60, 1440 };
         var reminder = new ComboBox { ItemsSource = new[] { "Sem lembrete", "Na hora", "5 min antes", "10 min antes", "15 min antes", "30 min antes", "1 hora antes", "1 dia antes" }, SelectedIndex = original?.Enabled == true ? Math.Max(1, Array.IndexOf(offsets, original.ReminderMinutes)) : 0 };
         var sound = new ComboBox { ItemsSource = new[] { "Padrão", "Aviso", "Bipe", "Sem som" }, SelectedIndex = original?.Sound switch { "Exclamation" => 1, "Beep" => 2, "Silent" => 3, _ => 0 } };
-        void SwitchType(bool toNote)
+        var alerts = new StackPanel();
+        alerts.Children.Add(ClockDesign.Label("\uE823", "Lembrete")); alerts.Children.Add(reminder);
+        alerts.Children.Add(ClockDesign.Label("\uE767", "Som do lembrete")); alerts.Children.Add(sound);
+        body.Children.Add(alerts);
+        void UpdateType()
         {
-            if (toNote == note) return;
-            start.TryGetMinute(out int minute); end.TryGetMinute(out int until);
-            var day = date;
-            var draft = new ClockAlarm
-            {
-                Id = original?.Id ?? Guid.NewGuid().ToString("N"), IsAgenda = true,
-                Name = title.Text, Notes = notes.Text, ColorHex = colorField.Text,
-                Minute = minute, EventDate = day.Date.AddMinutes(minute),
-                EndDate = day.Date.AddMinutes(until), Enabled = reminder.SelectedIndex > 0,
-                ReminderMinutes = Math.Max(0, offsets[Math.Max(0, reminder.SelectedIndex)]),
-                Sound = sound.SelectedIndex switch { 1 => "Exclamation", 2 => "Beep", 3 => "Silent", _ => "Asterisk" }
-            };
-            Edit(draft, toNote);
+            note = type.SelectedIndex == 1;
+            times.Visibility = alerts.Visibility = note ? Visibility.Collapsed : Visibility.Visible;
+            LayoutChanged?.Invoke();
         }
-        eventTab.Click += (_, _) => SwitchType(false);
-        noteTab.Click += (_, _) => SwitchType(true);
-        if (!note) { body.Children.Add(reminder); body.Children.Add(sound); }
+        type.SelectionChanged += (_, _) => UpdateType(); UpdateType();
         var message = ClockDesign.Text("", 12); body.Children.Add(message);
         var actions = new WrapPanel();
         actions.Children.Add(ClockDesign.Button("\uE711", "Cancelar", Render));

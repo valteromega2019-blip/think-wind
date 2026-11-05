@@ -53,7 +53,9 @@ internal sealed partial class AgendaPanel
             pick.Click += (_, _) => field.Text = color;
             choices.Children.Add(pick);
         }
-        body.Children.Add(choices); body.Children.Add(field); return field;
+        body.Children.Add(choices);
+        body.Children.Add(ClockDesign.Text("Cor personalizada · HEX #RRGGBB (opcional)", 11, true));
+        body.Children.Add(field); return field;
     }
     private void ConfigureCalendarDays()
     {

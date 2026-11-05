@@ -46,7 +46,8 @@ internal sealed class AgendaWindow : FloatingWindow
     {
         double width = Math.Min(460, Display.Width - 32);
         layout.Width = Math.Max(280, width - 32);
-        scroll.MaxHeight = Math.Max(180, Display.Height - 160);
+        // Reserve the actual header and padding before measuring the editor.
+        scroll.MaxHeight = Math.Max(180, Display.Height - 120);
         layout.Measure(new Size(layout.Width, double.PositiveInfinity));
         var bounds = getCalendarBounds();
         int pixelWidth = (int)Math.Round(width * Display.Scale);
