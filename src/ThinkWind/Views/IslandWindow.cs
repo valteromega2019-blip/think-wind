@@ -840,9 +840,9 @@ internal sealed partial class IslandWindow : FloatingWindow
             secondArea.Width = inner; secondArea.Height = monitorViewport.Height;
             headerViewport.Width = inner;
         }
-        double fullContentHeight = secondAreaSelected ? secondArea.Height : moduleViewport.DesiredSize.Height;
+        double fullContentHeight = secondAreaSelected ? secondArea.Height : moduleViewport.Height;
         moduleViewport.Measure(new Size(inner, contentLimit));
-        if (!secondAreaSelected) fullContentHeight = Math.Min(contentLimit, moduleViewport.DesiredSize.Height);
+        if (!secondAreaSelected) fullContentHeight = Math.Min(contentLimit, moduleViewport.Height);
         double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
         if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
             height = previousHeight;

@@ -23,7 +23,8 @@ internal sealed class IslandModuleViewport : Decorator
     protected override Size MeasureOverride(Size constraint)
     {
         if (Child is null) return new Size();
-        Child.Measure(logicalSize);
+        // Keep natural content height unconstrained during measurement.
+        Child.Measure(new Size(logicalSize.Width, double.PositiveInfinity));
         return new Size(logicalSize.Width * scale.ScaleX, logicalSize.Height * scale.ScaleY);
     }
     protected override Size ArrangeOverride(Size finalSize)
