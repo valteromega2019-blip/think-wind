@@ -94,21 +94,12 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         };
         powerMenu.Items.Add(updateAndShutdown);
         TrackMenu(powerMenu);
-        power.Click += async (_, _) =>
+        power.Click += (_, _) =>
         {
-            if (!power.IsEnabled) return;
-            power.IsEnabled = false;
-            try
-            {
-                // Populate before opening: a native popup can keep its first
-                // measured bounds when an item is revealed asynchronously.
-                bool ready = await WindowsUpdatePower.PendingAsync();
-                updateAndShutdown.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
-                if (!IsVisible) return;
-                powerMenu.PlacementTarget = power;
-                powerMenu.IsOpen = true;
-            }
-            finally { power.IsEnabled = true; }
+            // The startup/hourly worker owns the query; clicking never waits for WUA.
+            updateAndShutdown.Visibility = WindowsUpdatePower.UpdatePending ? Visibility.Visible : Visibility.Collapsed;
+            powerMenu.PlacementTarget = power;
+            powerMenu.IsOpen = true;
         };
         DockPanel.SetDock(power, Dock.Right); footer.Children.Add(power);
         var manual = ActionButton("Executável manual…", ManualShortcut); manual.FontSize = 10; manual.Padding = new Thickness(6, 4, 6, 4); DockPanel.SetDock(manual, Dock.Right); footer.Children.Add(manual);

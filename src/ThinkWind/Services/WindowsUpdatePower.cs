@@ -1,23 +1,43 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace OrbyLauncher.Services;
 
 internal static class WindowsUpdatePower
 {
     private static readonly object gate = new();
-    private static Task<bool>? pending;
-    private static DateTime checkedAt;
-    internal static Task<bool> PendingAsync()
+    private static Timer? refreshTimer;
+    private static bool reading, stopped = true, updatePending;
+    internal static bool UpdatePending { get { lock (gate) return updatePending; } }
+    internal static void StartMonitoring()
     {
         lock (gate)
         {
-            if (pending is not null && (!pending.IsCompleted || DateTime.UtcNow - checkedAt < TimeSpan.FromMinutes(1))) return pending;
-            checkedAt = DateTime.UtcNow;
-            return pending = Task.Run(ReadPending);
+            if (refreshTimer is not null) return;
+            stopped = false;
+            // Shared by all monitors. One background callback at startup, then hourly.
+            refreshTimer = new Timer(_ => Refresh(), null, TimeSpan.Zero, TimeSpan.FromHours(1));
         }
+    }
+    internal static void StopMonitoring()
+    {
+        lock (gate)
+        {
+            stopped = true;
+            refreshTimer?.Dispose(); refreshTimer = null;
+        }
+    }
+    private static void Refresh()
+    {
+        lock (gate) { if (stopped || reading) return; reading = true; }
+        try
+        {
+            bool ready = ReadPending();
+            lock (gate) { if (!stopped) updatePending = ready; }
+        }
+        finally { lock (gate) reading = false; }
     }
     private static bool ReadPending()
     {
@@ -40,7 +60,8 @@ internal static class WindowsUpdatePower
             }
         }
         catch (Exception error) when (error is COMException or InvalidCastException or TypeLoadException
-            or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or UnauthorizedAccessException)
+            or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or UnauthorizedAccessException
+            or InvalidOperationException or ArgumentException or System.Security.SecurityException)
         { return false; }
         finally { Release(updates); Release(result); Release(searcher); Release(session); Release(information); }
         return false;

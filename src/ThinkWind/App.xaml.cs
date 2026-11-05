@@ -194,6 +194,7 @@ public partial class App : Application
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
         {
             if (IsExiting) return;
+            if (!diagnosing && !batteryPreview) WindowsUpdatePower.StartMonitoring();
             Optimizer.Recover();
             startupServicesReady = true;
             ApplyHardwareOverlay();
@@ -306,6 +307,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         IsExiting = true;
+        WindowsUpdatePower.StopMonitoring();
         if (Alarms is not null) { Alarms.Ring -= ShowAlarm; Alarms.Dispose(); }
         alarmQueue.Clear(); alarmNotice?.Close();
         Optimizer.Restore();
