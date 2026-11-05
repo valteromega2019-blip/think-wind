@@ -755,6 +755,14 @@ internal sealed partial class IslandWindow : FloatingWindow
             Place(Display.Bounds.Width / Display.Scale, 28, animate);
             return;
         }
+        if (Stage == IslandStage.Full && !Store.IsEditing && !preparingFullReveal
+            && stableFullPanelWidth is double readyWidth && stableFullPanelHeight is double readyHeight)
+        {
+            // Reposition the completed snapshot for monitor/app mode changes,
+            // but never remeasure live content after its visible reveal.
+            Place(readyWidth, readyHeight, animate);
+            return;
+        }
         var p = Store.Value;
         if (Stage != IslandStage.Full) stableFullPanelWidth = stableFullPanelHeight = null;
         FontSizing.LimitScale(modules, 1.25);
@@ -799,65 +807,17 @@ internal sealed partial class IslandWindow : FloatingWindow
             modules.InvalidateMeasure();
             modules.Measure(new Size(boardWidth, double.PositiveInfinity));
             double naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
-            // Prefer a wider layout to smaller text. Widen only as far as it
-            // improves the fit, with a hard monitor bound and no preference write.
-            double availableWidth = Math.Min(Display.Width - 40, 1280);
-            double bestFit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
-            if (!Store.IsEditing)
-            {
-                var fitKey = (boardWidth, naturalHeight, contentLimit, availableWidth, moduleStructure);
-                if (widgetWidthFitKey == fitKey)
-                {
-                    boardWidth = fittedWidgetBoardWidth; inner = fittedWidgetInnerWidth;
-                }
-                else
-                {
-                for (double candidate = Math.Max(boardWidth, 800); candidate <= availableWidth; candidate += 120)
-                {
-                    modules.Width = candidate;
-                    modules.Measure(new Size(candidate, double.PositiveInfinity));
-                    double candidateHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
-                    double candidateFit = Math.Min(1, Math.Min((availableWidth - 24) / candidate, contentLimit / candidateHeight));
-                    if (candidateFit > bestFit + .01)
-                    {
-                        boardWidth = candidate; naturalHeight = candidateHeight; bestFit = candidateFit;
-                        inner = Math.Min(candidate, availableWidth - 24);
-                    }
-                    if (bestFit >= .95) break;
-                }
-                widgetWidthFitKey = fitKey;
-                fittedWidgetBoardWidth = boardWidth; fittedWidgetInnerWidth = inner;
-                }
-                modules.Width = boardWidth;
-                modules.Measure(new Size(boardWidth, double.PositiveInfinity));
-                naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
-            }
+            // Fit content once, then size the frame to the exact rendered board.
+            // No width search or compensating widening: uniform scaling keeps
+            // icons proportional, while the frame always adds 12 DIP per side.
             double fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
+            double renderedWidth = Math.Max(1, boardWidth * fit);
             if (!Store.IsEditing)
             {
-                inner = Math.Max(1, boardWidth * fit);
+                inner = renderedWidth;
                 width = inner + Surface.Padding.Left + Surface.Padding.Right;
             }
-            if (!Store.IsEditing)
-            {
-                // Sensor/media updates may change natural height, but must not
-                // move the sides of a panel the user is already interacting with.
-                stableFullPanelWidth ??= width;
-                width = Math.Min(stableFullPanelWidth.Value, Display.Width - 16);
-                inner = Math.Max(1, width - Surface.Padding.Left - Surface.Padding.Right);
-                fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
-            }
-            // Avoid centering a narrow, height-limited board inside a wider
-            // frame: distribute widgets over the available logical width.
-            for (int pass = 0; pass < 3 && fit > 0 && inner - boardWidth * fit > 1; pass++)
-            {
-                boardWidth = Math.Min(4000, inner / fit);
-                modules.Width = boardWidth;
-                modules.Measure(new Size(boardWidth, double.PositiveInfinity));
-                naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
-                fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
-            }
-            moduleViewport.Width = inner;
+            moduleViewport.Width = renderedWidth;
             moduleViewport.Height = naturalHeight * fit;
             headerViewport.Width = inner;
         }

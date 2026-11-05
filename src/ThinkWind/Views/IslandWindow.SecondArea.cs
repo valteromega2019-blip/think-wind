@@ -38,6 +38,7 @@ internal sealed partial class IslandWindow
     private void SelectSecondArea(bool selected)
     {
         if (!SecondAreaAvailable) return;
+        stableFullPanelWidth = stableFullPanelHeight = null;
         secondAreaSelected = selected;
         moduleViewport.Visibility = selected ? Visibility.Collapsed : Visibility.Visible;
         fullPanel.Children[0].Visibility = moduleViewport.Visibility;
