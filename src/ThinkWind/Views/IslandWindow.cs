@@ -27,7 +27,6 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly Border mediaSlot = new(), outputSlot = new(), microphoneSlot = new(), hoverMediaSlot = new(), hoverOutputSlot = new(), hoverMicrophoneSlot = new();
     private readonly WrapPanel hoverQuick = new() { HorizontalAlignment = HorizontalAlignment.Center };
     private readonly Viewbox secondaryQuickViewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, HorizontalAlignment = HorizontalAlignment.Center };
-    private readonly TextBlock hoverStatus = new() { FontSize = 11, Margin = new Thickness(8), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
     private readonly DispatcherTimer hoverEnter = new() { Interval = TimeSpan.FromMilliseconds(80) };
     private readonly DispatcherTimer hoverLeave = new() { Interval = TimeSpan.FromMilliseconds(450) };
     private readonly DispatcherTimer activation = new() { Interval = TimeSpan.FromMilliseconds(100) };
@@ -119,7 +118,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         var hoverAudio = new StackPanel(); hoverAudio.Children.Add(hoverOutputSlot); hoverAudio.Children.Add(hoverMicrophoneSlot);
         var hoverMedia = HoverCard("Reprodução", hoverMediaSlot, true); var hoverVolume = HoverCard("Áudio e microfone", hoverAudio);
         Grid.SetColumn(hoverVolume, 1); hoverModules.Children.Add(hoverMedia); hoverModules.Children.Add(hoverVolume);
-        hoverPanel.Children.Add(hoverModules); hoverPanel.Children.Add(hoverStatus);
+        hoverPanel.Children.Add(hoverModules);
         hoverViewport.Child = hoverPanel;
         DockPanel.SetDock(hoverViewport, Dock.Top); root.Children.Add(hoverViewport);
         moduleViewport.Child = modules;
@@ -701,11 +700,10 @@ internal sealed partial class IslandWindow : FloatingWindow
             var network = await Task.Run(NetworkService.Read);
             if (!IsVisible || Stage == IslandStage.Compact) return;
             string text = (network.Connected ? network.Kind + " · " + network.Name : "Sem rede ativa") + (Store.Value.ShowMemory ? $"    RAM {Desktop.MemoryPercent()}%" : "");
-            if (hoverStatus.Text != text) { hoverStatus.Text = text; ModuleSizeChanged(); }
-            connectionStatus.Text = text;
+            if (connectionStatus.Text != text) { connectionStatus.Text = text; ModuleSizeChanged(); }
         }
         catch (System.Net.NetworkInformation.NetworkInformationException)
-        { if (IsVisible && Stage == IslandStage.Hover) { hoverStatus.Text = "Rede · abra o acesso rápido para conferir a conexão"; ModuleSizeChanged(); } }
+        { /* Preserve the last connection state until the next successful refresh. */ }
         finally { readingNetwork = false; }
     }
     public override void Position() => Resize(false);
@@ -832,7 +830,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         double fullContentHeight = secondAreaSelected ? secondArea.Height : moduleViewport.DesiredSize.Height;
         moduleViewport.Measure(new Size(inner, contentLimit));
         if (!secondAreaSelected) fullContentHeight = Math.Min(contentLimit, moduleViewport.DesiredSize.Height);
-        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height + 12 : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
+        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
         if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
             height = Math.Min(Display.Height - 48, Math.Max(height, previousHeight));
         // Keep the destination content layout stable while the native frame
