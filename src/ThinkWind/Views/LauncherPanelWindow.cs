@@ -168,6 +168,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     }
     internal async void Present(LauncherPanelMode requested, string text = "", bool focusSearch = true)
     {
+        bool openingSurface = !IsVisible;
         openingForeground = Desktop.GetForegroundWindow(); foregroundClaimed = IsActive; outsideForeground = 0;
         focusSearchOnActivation = focusSearch;
         mode = requested; section = requested == LauncherPanelMode.Library ? "Biblioteca" : requested == LauncherPanelMode.Start ? "Fixados" : "Todos";
@@ -175,7 +176,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         UpdateCategories(); Reload(); ShowActivated = focusSearch;
         Show(); RefreshSettings(); visibility.Start(); refresh.Start();
         if (focusSearch) FocusSearch();
-        AnimateDrawerOpening();
+        AnimateDrawerOpening(openingSurface);
         await catalog.RefreshAsync();
         try { var items = await search.RecentAsync(); if (!disposed) { recent = items; if (IsVisible) Reload(false); } }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or COMException or TaskCanceledException) { }

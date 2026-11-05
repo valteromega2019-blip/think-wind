@@ -310,6 +310,17 @@ internal abstract class FloatingWindow : Window
         else Move(target);
         placed = true;
     }
+    protected void AnimateOpeningFromOffset(double verticalOffset, double milliseconds)
+    {
+        if (!placed || !IsVisible || !SystemParameters.ClientAreaAnimation || Store.Value.AnimationMilliseconds <= 0) return;
+        animation.Stop();
+        start = target;
+        int pixels = (int)Math.Round(verticalOffset * Display.Scale);
+        start.Top += pixels; start.Bottom += pixels;
+        Move(start);
+        animationDuration = Math.Clamp(milliseconds, 160, 500);
+        elapsed.Restart(); animation.Start();
+    }
     private void Move(OverlayChrome.PixelRect rectangle)
     {
         positioning = true;

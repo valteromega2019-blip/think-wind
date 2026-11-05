@@ -17,7 +17,7 @@ internal sealed partial class LauncherPanelWindow
     private readonly Stopwatch rowsAnimationTime = new();
     private bool DrawerAnimations => IsVisible && !LayoutDrag.Active && menus == 0
         && SystemParameters.ClientAreaAnimation && Store.Value.AnimationMilliseconds > 0;
-    private TimeSpan DrawerDuration => TimeSpan.FromMilliseconds(Math.Clamp(Store.Value.AnimationMilliseconds, 100, 320));
+    private TimeSpan DrawerDuration => TimeSpan.FromMilliseconds(Math.Clamp(Store.Value.AnimationMilliseconds * 1.6, 260, 480));
 
     private int DrawerDirection()
     {
@@ -61,15 +61,16 @@ internal sealed partial class LauncherPanelWindow
         resultsGrid.BeginAnimation(OpacityProperty, Enter(continuing ? previousOpacity : hadRows ? .86 : .8, 1), HandoffBehavior.SnapshotAndReplace);
     }
 
-    private void AnimateDrawerOpening()
+    private void AnimateDrawerOpening(bool openingSurface)
     {
         content.RenderTransform = openingMotion;
         content.BeginAnimation(OpacityProperty, null); openingMotion.BeginAnimation(TranslateTransform.YProperty, null);
         content.Opacity = 1; openingMotion.Y = 0;
         if (!DrawerAnimations) return;
+        if (openingSurface) AnimateOpeningFromOffset(18, DrawerDuration.TotalMilliseconds);
         AnimateDrawerRows(0, false);
-        content.BeginAnimation(OpacityProperty, Enter(.9, 1), HandoffBehavior.SnapshotAndReplace);
-        openingMotion.BeginAnimation(TranslateTransform.YProperty, Enter(6, 0), HandoffBehavior.SnapshotAndReplace);
+        content.BeginAnimation(OpacityProperty, Enter(.65, 1), HandoffBehavior.SnapshotAndReplace);
+        openingMotion.BeginAnimation(TranslateTransform.YProperty, Enter(10, 0), HandoffBehavior.SnapshotAndReplace);
     }
 
     private void CancelDrawerMotion()
