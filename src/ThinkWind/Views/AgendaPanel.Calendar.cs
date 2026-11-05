@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -59,8 +59,12 @@ internal sealed partial class AgendaPanel
     }
     private void ConfigureCalendarDays()
     {
-        // Scoped to this agenda: preserve the regular calendar throughout the launcher.
-        var style = new Style(typeof(CalendarDayButton), (Style)FindResource("Think.CalendarDay"));
+        ApplyDayStyle(calendar);
+        ConfigureDayInteraction();
+    }
+    internal static void ApplyDayStyle(Calendar calendar)
+    {
+        var style = new Style(typeof(CalendarDayButton), (Style)calendar.FindResource("Think.CalendarDay"));
         style.Setters.Add(new Setter(Control.TemplateProperty, (ControlTemplate)XamlReader.Parse("""
 <ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:p="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework" TargetType="p:CalendarDayButton">
  <Border x:Name="Day" Background="Transparent" CornerRadius="7" BorderThickness="1" BorderBrush="Transparent" Padding="3">
@@ -78,6 +82,9 @@ internal sealed partial class AgendaPanel
 </ControlTemplate>
 """)));
         calendar.CalendarDayButtonStyle = style;
+    }
+    private void ConfigureDayInteraction()
+    {
         calendar.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) =>
         {
             if (e.ClickCount != 2 || calendar.DisplayMode != CalendarMode.Month) return;
@@ -100,12 +107,17 @@ internal sealed partial class AgendaPanel
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
         {
             markersQueued = false;
+            ApplyDayMarkers(calendar, service);
+        }));
+    }
+    internal static void ApplyDayMarkers(Calendar calendar, Services.AlarmService service)
+    {
             var groups = service.Items.Where(a => a.IsAgenda && a.EventDate.HasValue).GroupBy(a => a.EventDate!.Value.Date).ToDictionary(g => g.Key, g => g.ToArray());
             foreach (var day in DayButtons(calendar))
             {
-                day.Tag = null; day.ClearValue(ToolTipProperty);
+                day.Tag = null; day.ClearValue(FrameworkElement.ToolTipProperty);
                 if (day.DataContext is not DateTime date || !groups.TryGetValue(date.Date, out var entries)) continue;
-                var colors = entries.Select(a => (AgendaBrush(a.ColorHex) as SolidColorBrush)?.Color ?? SystemColors.HighlightColor).Distinct().Take(4).ToArray();
+                var colors = entries.Select(a => (MarkerBrush(calendar, a.ColorHex) as SolidColorBrush)?.Color ?? SystemColors.HighlightColor).Distinct().Take(4).ToArray();
                 var marker = new LinearGradientBrush { StartPoint = new Point(0, .5), EndPoint = new Point(1, .5) };
                 for (int i = 0; i < colors.Length; i++)
                 {
@@ -115,7 +127,11 @@ internal sealed partial class AgendaPanel
                 marker.Freeze(); day.Tag = marker;
                 day.ToolTip = string.Join("\n", entries.Take(5).Select(a => a.Name)) + (entries.Length > 5 ? $"\n+{entries.Length - 5}" : "");
             }
-        }));
+    }
+    private static Brush MarkerBrush(Calendar calendar, string hex)
+    {
+        string color = Services.AlarmService.NormalizeAgendaColor(hex);
+        return color.Length == 0 ? (Brush)calendar.FindResource("Think.Accent") : new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
     }
     private static IEnumerable<CalendarDayButton> DayButtons(DependencyObject parent)
     {

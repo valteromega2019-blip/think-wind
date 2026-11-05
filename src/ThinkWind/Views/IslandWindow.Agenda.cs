@@ -11,8 +11,28 @@ namespace OrbyLauncher.Views;
 internal sealed partial class IslandWindow
 {
     private AgendaWindow? widgetAgenda;
+    private bool agendaMarkersQueued, agendaMarkersDisposed;
+    private void QueueWidgetAgendaMarkers()
+    {
+        if (agendaMarkersQueued || agendaMarkersDisposed) return;
+        agendaMarkersQueued = true;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            agendaMarkersQueued = false;
+            if (!agendaMarkersDisposed && calendar.IsVisible)
+                AgendaPanel.ApplyDayMarkers(calendar, ((App)Application.Current).Alarms);
+        }));
+    }
     private void InitializeCalendarAgenda()
     {
+        AgendaPanel.ApplyDayStyle(calendar);
+        var alarms = ((App)Application.Current).Alarms;
+        alarms.Changed += QueueWidgetAgendaMarkers;
+        calendar.Loaded += (_, _) => QueueWidgetAgendaMarkers();
+        calendar.IsVisibleChanged += (_, _) => { if (calendar.IsVisible) QueueWidgetAgendaMarkers(); };
+        calendar.DisplayDateChanged += (_, _) => QueueWidgetAgendaMarkers();
+        calendar.DisplayModeChanged += (_, _) => QueueWidgetAgendaMarkers();
+        Closed += (_, _) => { agendaMarkersDisposed = true; alarms.Changed -= QueueWidgetAgendaMarkers; };
         calendar.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) =>
         {
             if (Store.IsEditing || e.ClickCount != 2 || calendar.DisplayMode != CalendarMode.Month) return;
