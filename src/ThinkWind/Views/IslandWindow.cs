@@ -683,15 +683,15 @@ internal sealed partial class IslandWindow : FloatingWindow
         if (minis.TryGetValue(kind, out var existing) && existing.IsVisible) { existing.Dismiss(); return; }
         if (Store.IsEditing) return;
         bool secondaryTrigger = trigger is not null && hoverQuick.IsAncestorOf(trigger);
-        DismissMinis(); interaction.OpenMini();
+        var previousStage = Stage;
+        DismissMinis(); interaction.OpenMini(collapseExpanded: !secondaryTrigger);
         // Secondary icons exist only in the expanded area. Keep their host
         // and anchor alive, otherwise collapsing removes the button mid-click.
-        if (Stage != IslandStage.Compact && !secondaryTrigger)
+        if (previousStage != Stage)
         {
             // The popup replaces the expanded contents. Keep fullscreen reveal
             // ownership alive until the popup closes instead of hiding its owner.
             ++expansionRevision; preparingFullReveal = false;
-            interaction.Compact();
             stableFullPanelWidth = stableFullPanelHeight = null;
             UpdateAdaptiveState(); BuildHeader(); UpdateStageVisibility();
             Resize(true); SyncEditorBackdrop();

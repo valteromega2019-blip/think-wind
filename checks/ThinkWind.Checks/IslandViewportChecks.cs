@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using OrbyLauncher.Views;
+using OrbyLauncher.Services;
 
 internal static class IslandViewportChecks
 {
@@ -15,6 +16,25 @@ internal static class IslandViewportChecks
         {
             try { Check(width, height); passed++; Console.WriteLine($"PASS {width}x{height}"); }
             catch (Exception error) { failed++; Console.WriteLine($"FAIL {width}x{height}: {error.Message}"); }
+        }
+        foreach (var stage in new[] { IslandStage.Compact, IslandStage.Hover, IslandStage.Full })
+        foreach (bool secondary in new[] { false, true })
+        {
+            try
+            {
+                var state = new IslandInteraction();
+                if (stage != IslandStage.Compact) state.Enter();
+                if (stage == IslandStage.Full) state.OpenFull();
+                state.OpenMini(collapseExpanded: !secondary);
+                var expected = secondary ? stage : IslandStage.Compact;
+                if (!state.MiniOpen || state.Stage != expected) throw new Exception("Popup changed the wrong host state");
+                state.Enter(); state.Leave();
+                if (!state.MiniOpen || state.Stage != expected) throw new Exception("Hover interrupted popup");
+                state.CloseMini();
+                if (state.MiniOpen || state.Stage != expected) throw new Exception("Dismiss changed the host unexpectedly");
+                passed++; Console.WriteLine($"PASS popup {stage} / secondary={secondary}");
+            }
+            catch (Exception error) { failed++; Console.WriteLine($"FAIL popup {stage} / secondary={secondary}: {error.Message}"); }
         }
         Console.WriteLine($"Layout: {passed} passed, {failed} failed");
         return failed == 0 ? 0 : 1;

@@ -16,6 +16,10 @@ internal sealed class IslandInteraction
     }
     internal void CloseFull() { if (Stage == IslandStage.Full) Stage = BeforeFull; }
     internal void Compact() { Stage = IslandStage.Compact; }
-    internal void OpenMini() { MiniOpen = true; }
+    internal void OpenMini(bool collapseExpanded = false)
+    {
+        MiniOpen = true;
+        if (collapseExpanded) Stage = IslandStage.Compact;
+    }
     internal void CloseMini() { MiniOpen = false; }
 }
