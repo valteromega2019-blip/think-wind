@@ -18,6 +18,7 @@ internal sealed class BrightnessControl : Border
     private readonly TextBlock status = new() { Text = "Verificando suporte da tela…", FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
     private readonly DispatcherTimer throttle = new() { Interval = TimeSpan.FromMilliseconds(160) };
     private readonly Border capsule;
+    private readonly StackPanel content;
     private BrightnessState? state;
     private bool busy, dragging, updating, writing;
     private double? pending;
@@ -27,9 +28,9 @@ internal sealed class BrightnessControl : Border
     internal bool IsInteracting => dragging || writing || pending.HasValue || IsMouseCaptureWithin;
     internal BrightnessControl(Func<System.Drawing.Rectangle> getDisplay)
     {
-        display = getDisplay; CornerRadius = new CornerRadius(18); Padding = new Thickness(12); Margin = new Thickness(4, 8, 4, 0);
+        display = getDisplay; CornerRadius = new CornerRadius(18);
         SetResourceReference(BackgroundProperty, "Think.GlassCard");
-        var panel = new StackPanel(); panel.Children.Add(label);
+        var panel = content = new StackPanel { Visibility = Visibility.Collapsed }; panel.Children.Add(label);
         var row = new DockPanel();
         var icon = new TextBlock { Text = "\uE706", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 18, Margin = new Thickness(4, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
         DockPanel.SetDock(icon, Dock.Left); row.Children.Add(icon); DockPanel.SetDock(percent, Dock.Right); row.Children.Add(percent); row.Children.Add(level);
@@ -92,7 +93,12 @@ internal sealed class BrightnessControl : Border
     {
         bool available = state is not null;
         ToolTip = state?.Monitor;
-        bool layoutChanged = (capsule.Visibility == Visibility.Visible) != available;
+        bool layoutChanged = (content.Visibility == Visibility.Visible) != available;
+        // Keep the host visible so the existing refresh cadence can discover a
+        // newly supported monitor. Collapse its contents and spacing instead.
+        content.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        Padding = available ? new Thickness(12) : new Thickness(0);
+        Margin = available ? new Thickness(4, 8, 4, 0) : new Thickness(0);
         capsule.Visibility = available ? Visibility.Visible : Visibility.Collapsed; level.IsEnabled = available;
         if (state is null) { percent.Text = "—"; status.Text = "Esta tela não expõe controle de brilho ao Windows (painel interno ou DDC/CI)."; }
         else

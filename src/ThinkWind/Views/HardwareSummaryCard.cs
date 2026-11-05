@@ -22,7 +22,8 @@ internal sealed class HardwareSummaryCard : Border
     internal HardwareSummaryCard(string metric, bool compact = false, SettingsStore? store = null)
     {
         settings = store;
-        id = metric; CornerRadius = new CornerRadius(20); Padding = new Thickness(compact ? 6 : 10); Margin = new Thickness(compact ? 0 : 3);
+        id = metric; CornerRadius = new CornerRadius(20); Padding = new Thickness(12); Margin = new Thickness(compact ? 0 : 3);
+        if (compact) FontSizing.LimitScale(this, 1.35);
         SetResourceReference(BackgroundProperty, "Think.GlassCard");
         var panel = new StackPanel(); var heading = new DockPanel();
         var icon = new TextBlock { Text = metric switch { "cpu" => "\uE950", "gpu" => "\uE7F4", "ram" => "\uE964", _ => "\uEDA2" }, FontSize = compact ? 16 : 13, FontFamily = new FontFamily("Segoe Fluent Icons"), Margin = new Thickness(0, 0, 8, 0) };

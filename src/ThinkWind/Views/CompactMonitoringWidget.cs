@@ -19,6 +19,8 @@ internal sealed class CompactMonitoringWidget : StackPanel
     internal CompactMonitoringWidget(SettingsStore settings, HardwareTelemetry source)
     {
         store = settings; telemetry = source;
+        FontSizing.LimitScale(this, 1.35);
+        Margin = new Thickness(4);
         battery.SetResourceReference(TextBlock.ForegroundProperty, "Think.Muted");
         Loaded += (_, _) => { store.Changed += Configure; telemetry.Changed += Present; Configure(null, EventArgs.Empty); Active(); };
         Unloaded += (_, _) => { store.Changed -= Configure; telemetry.Changed -= Present; telemetry.SetActive(this, false); };

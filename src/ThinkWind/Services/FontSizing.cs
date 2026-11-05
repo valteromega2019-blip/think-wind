@@ -16,6 +16,9 @@ internal static class FontSizing
     private static readonly ConditionalWeakTable<DependencyObject, Metrics> originals = new();
     private static readonly DependencyProperty ScaleProperty = DependencyProperty.RegisterAttached(
         "Scale", typeof(double), typeof(FontSizing), new FrameworkPropertyMetadata(1d, FrameworkPropertyMetadataOptions.Inherits));
+    private static readonly DependencyProperty MaximumScaleProperty = DependencyProperty.RegisterAttached(
+        "MaximumScale", typeof(double), typeof(FontSizing), new FrameworkPropertyMetadata(1.75d, FrameworkPropertyMetadataOptions.Inherits));
+    internal static void LimitScale(DependencyObject root, double maximum) => root.SetValue(MaximumScaleProperty, maximum);
     static FontSizing()
     {
         // Newly created cards and template text also receive the current scale.
@@ -30,7 +33,7 @@ internal static class FontSizing
     {
         if (window.ReadLocalValue(ScaleProperty) is double previous && previous == scale) return;
         window.SetValue(ScaleProperty, scale);
-        window.FontSize = SystemFonts.MessageFontSize * scale;
+        window.FontSize = SystemFonts.MessageFontSize * Math.Clamp(scale, .8, 1.75);
         PrepareForMeasure(window);
     }
     internal static void PrepareForMeasure(DependencyObject root) => Walk(root, new HashSet<DependencyObject>());
@@ -63,6 +66,7 @@ internal static class FontSizing
         // unboxing null as double would terminate the dispatcher.
         double scale = element.GetValue(ScaleProperty) is double inherited && double.IsFinite(inherited) && inherited > 0
             ? inherited : 1d;
+        scale = Math.Min(scale, (double)element.GetValue(MaximumScaleProperty));
         // Symbol fonts are icons, not user text. Inherited font sizes already
         // follow the window; scale only explicit numeric sizes once.
         // A dynamic font resource may be unresolved while a preview is being
