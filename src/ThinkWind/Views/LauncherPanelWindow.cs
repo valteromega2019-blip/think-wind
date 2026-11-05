@@ -373,7 +373,6 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private FrameworkElement ResultRow(AppEntry entry, bool selected = false)
     {
         var main = ActionButton(entry.Name, () => Launch(entry)); main.Style = (Style)FindResource("Think.IconButton"); main.Padding = new Thickness(6); main.ToolTip = entry.Name;
-        LibraryShortcutDrag.Attach(main, entry, () => mode == LauncherPanelMode.Library && !Store.IsEditing);
         var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         var icon = entry.Icon ?? icons.Get(entry.Target);
         var image = new Image { Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
@@ -423,6 +422,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
             finally { modal = false; Dismiss(); }
         });
         LayoutDrag.Attach(card, "start-pins", entry.Target, () => mode == LauncherPanelMode.Start && section == "Fixados" && query.Text.Length == 0, ReorderPins);
+        LibraryShortcutDrag.Attach(card, entry, () => mode == LauncherPanelMode.Library && !Store.IsEditing);
         return card;
     }
     private HashSet<string> HiddenLibraryTargets(HashSet<string> hidden)

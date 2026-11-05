@@ -13,6 +13,13 @@ internal static class LibraryShortcutDrag
     internal static bool Active { get; private set; }
     private static DateTime suppressLaunchUntil;
     internal static bool SuppressLaunch => Active || DateTime.UtcNow < suppressLaunchUntil;
+    internal static DataObject CreateFileData(string path)
+    {
+        if (!File.Exists(path)) throw new FileNotFoundException("O atalho precisa existir antes de iniciar o arraste.", path);
+        var data = new DataObject(DataFormats.FileDrop, new[] { path });
+        data.SetData("Preferred DropEffect", new MemoryStream(BitConverter.GetBytes((int)DragDropEffects.Copy)));
+        return data;
+    }
     internal static bool IsShortcut(IDataObject data) => Active && draggedApp is not null;
     internal static bool Pin(IDataObject data, SettingsStore store)
     {
@@ -26,9 +33,9 @@ internal static class LibraryShortcutDrag
         bool suppressClick = false;
         element.AddHandler(System.Windows.Controls.Primitives.ButtonBase.ClickEvent, new RoutedEventHandler((_, e) =>
         { if (suppressClick) e.Handled = true; }), true);
-        element.PreviewMouseLeftButtonDown += (_, e) => { if (enabled()) origin = e.GetPosition(element); };
+        element.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) => { if (enabled()) origin = e.GetPosition(element); }), true);
         element.PreviewMouseLeftButtonUp += (_, _) => origin = null;
-        element.PreviewMouseMove += (_, e) =>
+        element.AddHandler(UIElement.PreviewMouseMoveEvent, new MouseEventHandler((_, e) =>
         {
             if (!enabled() || origin is null || e.LeftButton != MouseButtonState.Pressed) return;
             Vector delta = e.GetPosition(element) - origin.Value;
@@ -60,10 +67,9 @@ internal static class LibraryShortcutDrag
                 }
                 // CF_HDROP must contain real files and standard Shell formats,
                 // not a managed payload that an external process must deserialize.
-                var data = new DataObject(DataFormats.FileDrop, new[] { path });
-                data.SetData("Preferred DropEffect", new MemoryStream(BitConverter.GetBytes((int)DragDropEffects.Copy)));
+                var data = CreateFileData(path);
                 draggedApp = app; Active = true;
-                if (element.IsMouseCaptured) element.ReleaseMouseCapture();
+                if (Mouse.Captured is UIElement captured) captured.ReleaseMouseCapture();
                 DragDrop.DoDragDrop(element, data, DragDropEffects.Copy | DragDropEffects.Link | DragDropEffects.Move);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or COMException or InvalidOperationException)
@@ -78,6 +84,6 @@ internal static class LibraryShortcutDrag
                 // the link in the Windows temporary folder for that operation.
             }
             e.Handled = true;
-        };
+        }), true);
     }
 }
