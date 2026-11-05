@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Collections.Specialized;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -44,6 +43,10 @@ internal static class LibraryShortcutDrag
                 if (name.Length == 0) name = "Aplicativo";
                 if (name.Length > 80) name = name[..80];
                 string path = Path.Combine(directory, name + ".lnk");
+                if (Path.GetExtension(app.Target).Equals(".lnk", StringComparison.OrdinalIgnoreCase) && File.Exists(app.Target))
+                    File.Copy(app.Target, path);
+                else
+                {
                 shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!);
                 shortcut = ((dynamic)shell!).CreateShortcut(path);
                 if (app.Target.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase))
@@ -54,11 +57,14 @@ internal static class LibraryShortcutDrag
                 else ((dynamic)shortcut).TargetPath = app.Target;
                 ((dynamic)shortcut).Description = app.Name;
                 ((dynamic)shortcut).Save();
-                var data = new DataObject();
-                data.SetFileDropList(new StringCollection { path });
+                }
+                // CF_HDROP must contain real files and standard Shell formats,
+                // not a managed payload that an external process must deserialize.
+                var data = new DataObject(DataFormats.FileDrop, new[] { path });
+                data.SetData("Preferred DropEffect", new MemoryStream(BitConverter.GetBytes((int)DragDropEffects.Copy)));
                 draggedApp = app; Active = true;
                 if (element.IsMouseCaptured) element.ReleaseMouseCapture();
-                DragDrop.DoDragDrop(element, data, DragDropEffects.Copy | DragDropEffects.Link);
+                DragDrop.DoDragDrop(element, data, DragDropEffects.Copy | DragDropEffects.Link | DragDropEffects.Move);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or COMException or InvalidOperationException)
             { DiagnosticLog.Record("Arrastar atalho", error); MessageBox.Show("Não foi possível criar o atalho.", "Orby Launcher"); }
@@ -68,13 +74,8 @@ internal static class LibraryShortcutDrag
                 CoreAudio.Release(shortcut); CoreAudio.Release(shell);
                 element.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
                     new Action(() => suppressClick = false));
-                // Delete only the one temporary link and its now-empty folder.
-                try
-                {
-                    foreach (string file in Directory.Exists(directory) ? Directory.GetFiles(directory, "*.lnk", SearchOption.TopDirectoryOnly) : Array.Empty<string>()) File.Delete(file);
-                    if (Directory.Exists(directory)) Directory.Delete(directory, false);
-                }
-                catch (IOException) { } catch (UnauthorizedAccessException) { }
+                // Explorer can finish copying after DoDragDrop returns. Keep
+                // the link in the Windows temporary folder for that operation.
             }
             e.Handled = true;
         };

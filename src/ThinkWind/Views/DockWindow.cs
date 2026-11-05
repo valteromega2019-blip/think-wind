@@ -345,12 +345,17 @@ internal sealed partial class DockWindow : FloatingWindow
                 var launch = pinIdentities[pin.Target];
                 var path = DockPath(launch.Path);
                 string? appId = launch.AppId ?? catalog.Items.FirstOrDefault(app => app.Target.Equals(pin.Target, StringComparison.OrdinalIgnoreCase))?.AppId;
-                string identity = !string.IsNullOrWhiteSpace(appId) ? "id:" + appId : "path:" + path;
+                bool settingsPin = IsWindowsSettings(pin.Target, path, appId);
+                string identity = settingsPin ? "system:windows-settings" : !string.IsNullOrWhiteSpace(appId) ? "id:" + appId : "path:" + path;
                 if (!pinnedIdentities.Add(identity)) continue;
-                var matching = windows.Where(w => !pinnedWindows.Contains(w.Handle) &&
-                    ((!string.IsNullOrWhiteSpace(appId) && !string.IsNullOrWhiteSpace(w.AppId))
-                        ? string.Equals(w.AppId, appId, StringComparison.OrdinalIgnoreCase)
-                        : (!string.IsNullOrWhiteSpace(w.Executable) && string.Equals(DockPath(w.Executable), path, StringComparison.OrdinalIgnoreCase)))).ToList();
+                var matching = windows.Where(w =>
+                {
+                    if (pinnedWindows.Contains(w.Handle)) return false;
+                    if (settingsPin) return IsWindowsSettings(w.Executable ?? "", w.Executable ?? "", w.AppId);
+                    if (!string.IsNullOrWhiteSpace(appId) && !string.IsNullOrWhiteSpace(w.AppId))
+                        return string.Equals(w.AppId, appId, StringComparison.OrdinalIgnoreCase);
+                    return !string.IsNullOrWhiteSpace(w.Executable) && string.Equals(DockPath(w.Executable), path, StringComparison.OrdinalIgnoreCase);
+                }).ToList();
                 foreach (var window in matching) pinnedWindows.Add(window.Handle);
                 entries.Add(new("pin:" + pin.Target, pin.Name, pin.Target, null, matching, pin, null));
             }
@@ -379,6 +384,11 @@ internal sealed partial class DockWindow : FloatingWindow
         }
         finally { rebuilding = false; }
     }
+    private static bool IsWindowsSettings(string target, string resolved, string? appId) =>
+        target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(System.IO.Path.GetFileName(resolved), "SystemSettings.exe", StringComparison.OrdinalIgnoreCase)
+        || appId?.StartsWith("windows.immersivecontrolpanel_", StringComparison.OrdinalIgnoreCase) == true
+        || target.StartsWith(@"shell:AppsFolder\windows.immersivecontrolpanel_", StringComparison.OrdinalIgnoreCase);
     private static string DockPath(string path)
     {
         path = Environment.ExpandEnvironmentVariables(path.Trim().Trim('"'));
