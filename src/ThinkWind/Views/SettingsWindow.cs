@@ -77,7 +77,11 @@ internal sealed partial class SettingsWindow : FloatingWindow
         root.Children.Add(CreateSettingsNavigation(new AdornerDecoratorHost(scroll)));
         Surface.Child = root;
         KeyDown += (_, e) => { if (!e.Handled && e.Key == Key.Escape) { if (store.IsEditing) store.SetEditing(false); Close(); e.Handled = true; } };
-        editing.Click += (_, _) => store.SetEditing(!store.IsEditing);
+        editing.Click += (_, _) =>
+        {
+            store.SetEditing(!store.IsEditing);
+            if (!store.IsEditing) Close();
+        };
         store.Changed += StoreChanged; store.PersistenceChanged += PersistenceChanged;
         Loaded += (_, _) =>
         {

@@ -32,16 +32,19 @@ public partial class App : Application
     private TutorialWindow? tutorial;
     internal void RepeatTutorial()
     {
+        ClosePersonalization();
         tutorial ??= new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
         tutorial.Repeat();
     }
     internal void ContinueTutorial()
     {
+        ClosePersonalization();
         tutorial ??= new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
         tutorial.Continue();
     }
     internal void RepeatUpdateTour()
     {
+        ClosePersonalization();
         tutorial ??= new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
         tutorial.RepeatUpdateTour();
     }
@@ -253,6 +256,11 @@ public partial class App : Application
         if (virtualKeyboard.IsVisible) { virtualKeyboard.Hide(); return; }
         VirtualKeyboardInput.RememberTarget(); VirtualKeyboardInput.RestoreTarget();
         virtualKeyboard.Show(); virtualKeyboard.Position();
+    }
+    internal void ClosePersonalization()
+    {
+        if (store.IsEditing) store.SetEditing(false);
+        settings?.Close();
     }
     internal void OpenWidgetSettings()
     {

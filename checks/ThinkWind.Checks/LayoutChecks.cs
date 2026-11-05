@@ -125,14 +125,28 @@ internal static class LayoutChecks
     }
     internal static void BluetoothSnapshot() => System.Threading.Tasks.Task.Run(async () =>
     {
-        using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(20));
-        var radios = await Windows.Devices.Radios.Radio.GetRadiosAsync().AsTask(timeout.Token).ConfigureAwait(false);
+        using var radioTimeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var radios = await Windows.Devices.Radios.Radio.GetRadiosAsync().AsTask(radioTimeout.Token).ConfigureAwait(false);
         int count = radios.Count(radio => radio.Kind == Windows.Devices.Radios.RadioKind.Bluetooth);
         Console.WriteLine("  Adaptadores Bluetooth: " + count);
         if (count == 0) return;
         foreach (var selector in BluetoothControl.DeviceSelectors)
         {
-            var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync("(" + selector + ") AND System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True", new[] { "System.Devices.Aep.IsConnected" }, Windows.Devices.Enumeration.DeviceInformationKind.AssociationEndpoint).AsTask(timeout.Token).ConfigureAwait(false);
+            // AEP enumeration can take around 30 seconds per protocol. Do not
+            // share one 20-second budget between Classic and LE scans.
+            // https://learn.microsoft.com/windows/apps/develop/devices-sensors/enumerate-devices
+            using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(45));
+            var elapsed = System.Diagnostics.Stopwatch.StartNew();
+            Windows.Devices.Enumeration.DeviceInformationCollection devices;
+            try
+            {
+                devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync("(" + selector + ") AND System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True", new[] { "System.Devices.Aep.IsConnected" }, Windows.Devices.Enumeration.DeviceInformationKind.AssociationEndpoint).AsTask(timeout.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException error) when (timeout.IsCancellationRequested)
+            {
+                throw new TimeoutException($"Enumeração Bluetooth não terminou em {elapsed.Elapsed.TotalSeconds:F1}s: {selector}. A falha permanece pendente; não publicar instalador.", error);
+            }
+            Console.WriteLine($"  Enumeração concluída em {elapsed.Elapsed.TotalSeconds:F1}s");
             Console.WriteLine("  Endpoints Bluetooth expostos: " + devices.Count);
             Require(devices.All(device => !string.IsNullOrEmpty(device.Id)));
         }

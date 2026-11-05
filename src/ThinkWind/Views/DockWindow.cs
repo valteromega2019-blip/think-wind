@@ -49,7 +49,6 @@ internal sealed partial class DockWindow : FloatingWindow
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private readonly ApplicationCatalog catalog;
     private LauncherPanelWindow? launcher;
-    private LauncherPanelMode panelMode;
     private bool temporaryFullscreenStart;
     private bool clearingDockSearch;
     private readonly TextBox dockSearch = new() { BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(4), VerticalContentAlignment = VerticalAlignment.Center, MaxLength = 160 };
@@ -89,8 +88,8 @@ internal sealed partial class DockWindow : FloatingWindow
         dockSearch.SetResourceReference(TextBox.ForegroundProperty, "Think.Text");
         System.Windows.Automation.AutomationProperties.SetName(dockSearch, "Pesquisar no Windows pelo Orby Launcher");
         TutorialGuide.Mark(dockSearch, "search");
-        dockSearch.TextChanged += (_, _) => { if (!clearingDockSearch && dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); if (!string.IsNullOrWhiteSpace(dockSearch.Text)) TutorialGuide.Notify("search-typed"); } };
-        dockSearch.GotKeyboardFocus += (_, _) => { AnimateSearch(true); EnsureLauncher(); panelMode = LauncherPanelMode.Search; launcher!.SearchFromDock(dockSearch.Text); };
+        dockSearch.TextChanged += (_, _) => { if (!clearingDockSearch && dockSearch.IsKeyboardFocusWithin) { EnsureLauncher(); launcher!.SearchFromDock(dockSearch.Text); if (!string.IsNullOrWhiteSpace(dockSearch.Text)) TutorialGuide.Notify("search-typed"); } };
+        dockSearch.GotKeyboardFocus += (_, _) => { AnimateSearch(true); EnsureLauncher(); launcher!.SearchFromDock(dockSearch.Text); };
         dockSearch.LostKeyboardFocus += (_, _) =>
         {
             AnimateSearch(false);
@@ -656,7 +655,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private void EnsureLauncher()
     {
         if (launcher is not null) return;
-        launcher = new LauncherPanelWindow(Store, catalog, () => TargetBounds, () => dockSearch.IsKeyboardFocusWithin) { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
+        launcher = new LauncherPanelWindow(Store, catalog, () => TargetBounds, () => dockSearch.IsKeyboardFocusWithin || IsMouseOver) { Owner = this, MonitorDeviceOverride = MonitorDeviceOverride };
         launcher.Dismissed += () =>
         {
             ClearDockSearch(); lastHover = DateTime.UtcNow; AnimateSearch(false);
@@ -680,9 +679,9 @@ internal sealed partial class DockWindow : FloatingWindow
         SetHidden(true);
     }
     private void ShowPanel(LauncherPanelMode mode)
-    { StopPreviews(); SetHidden(false, false); EnsureLauncher(); panelMode = mode; launcher!.Present(mode); if (mode == LauncherPanelMode.Start) TutorialGuide.Notify("start-open"); }
+    { StopPreviews(); SetHidden(false, false); EnsureLauncher(); launcher!.Present(mode); if (mode == LauncherPanelMode.Start) TutorialGuide.Notify("start-open"); }
     private void ToggleStart()
-    { if (launcher?.IsVisible == true && panelMode == LauncherPanelMode.Start) launcher.Dismiss(); else ShowPanel(LauncherPanelMode.Start); }
+    { if (launcher?.IsVisible == true) launcher.Dismiss(); else ShowPanel(LauncherPanelMode.Start); }
     internal void ToggleStartFromKeyboard(bool overFullscreen = false)
     {
         temporaryFullscreenStart |= overFullscreen && !IsVisible;

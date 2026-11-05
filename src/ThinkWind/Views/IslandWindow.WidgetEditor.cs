@@ -91,6 +91,7 @@ internal sealed partial class IslandWindow
         if (enabled && !IsPrimaryEditor) return;
         Store.SetEditing(enabled);
         if (enabled) ((App)Application.Current).OpenWidgetSettings();
+        else ((App)Application.Current).ClosePersonalization();
         TutorialGuide.Notify(enabled ? "widget-edit-open" : "widget-edit-finished");
     }
 
