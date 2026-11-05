@@ -10,6 +10,20 @@ namespace OrbyLauncher.Views;
 
 internal sealed partial class IslandWindow
 {
+    private bool editingPanel;
+    private double? editingWidth, editingHeight;
+    private void RememberEditingPanel()
+    {
+        if (Store.IsEditing == editingPanel) return;
+        editingPanel = Store.IsEditing;
+        if (editingPanel && Stage == IslandStage.Full && IsVisible)
+        {
+            var bounds = TargetBounds;
+            editingWidth = (bounds.Right - bounds.Left) / Display.Scale;
+            editingHeight = (bounds.Bottom - bounds.Top) / Display.Scale;
+        }
+        else { editingWidth = editingHeight = null; }
+    }
     private Button WidgetEditorButton(bool strip)
     {
         var button = ActionButton(Store.IsEditing ? "Concluir edição dos widgets" : "Editar tamanho e posição dos widgets", () =>

@@ -246,6 +246,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     public override void RefreshSettings()
     {
+        RememberEditingPanel();
         if (LayoutDrag.Active) return;
         ApplyAppearance();
         weather.Configure();
@@ -369,7 +370,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             var grip = Glyph("\uE784", 15); grip.Width = 22; AttachPositionGrip(grip); header.Children.Add(grip);
         }
         var standard = OrderBatteryBefore(Store.Value.QuickOrder.Where(id => id is not ("settings" or "monitor" or "tools") && IsQuickVisible(id)), "windows-settings");
-        var headerIds = Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing ? Array.Empty<string>() : standard;
+        var headerIds = Stage == IslandStage.Full && maximizedOnDisplay ? Array.Empty<string>() : standard;
         header.HorizontalAlignment = Stage == IslandStage.Full && maximizedOnDisplay
             ? Store.Value.IslandPanelSide == "Left" ? HorizontalAlignment.Left : HorizontalAlignment.Right
             : HorizontalAlignment.Center;
@@ -434,7 +435,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             header.Children.Add(MarkPanelIcon(monitor, "monitor"));
         }
         if (IsQuickVisible("tools")) header.Children.Add(SystemToolsButton(false));
-        header.Children.Add(WidgetEditorButton(false));
+        if (Stage == IslandStage.Full) header.Children.Add(WidgetEditorButton(false));
         BuildSecondaryQuickControls();
         if (Stage == IslandStage.Full || Store.IsEditing)
         {
@@ -739,6 +740,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         header.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         double compact = Math.Min(Display.Width - 16, Math.Max(220 * p.IslandScale, header.DesiredSize.Width + 32));
         double width = Stage == IslandStage.Compact ? compact : Stage == IslandStage.Hover ? Math.Min(Display.Width - 16, Math.Max(compact, Math.Min(540, p.IslandExpandedWidth))) : Math.Min(Display.Width - 16, p.IslandExpandedWidth);
+        if (Store.IsEditing && Stage == IslandStage.Full && editingWidth is double previousWidth)
+            width = Math.Min(Display.Width - 16, previousWidth);
         headerViewport.Width = Math.Max(1, width - 24);
         headerViewport.Height = Math.Max(40, 36 * p.IslandScale);
         double headerHeight = Math.Max(40, 36 * p.IslandScale) + Surface.Padding.Top + Surface.Padding.Bottom;
@@ -766,8 +769,11 @@ internal sealed partial class IslandWindow : FloatingWindow
             modules.Measure(new Size(boardWidth, double.PositiveInfinity));
             double naturalHeight = Math.Max(1, Math.Ceiling(modules.DesiredSize.Height));
             double fit = Math.Min(1, Math.Min(inner / boardWidth, contentLimit / naturalHeight));
-            inner = Math.Max(1, boardWidth * fit);
-            width = inner + Surface.Padding.Left + Surface.Padding.Right;
+            if (!Store.IsEditing)
+            {
+                inner = Math.Max(1, boardWidth * fit);
+                width = inner + Surface.Padding.Left + Surface.Padding.Right;
+            }
             moduleViewport.Width = inner;
             moduleViewport.Height = naturalHeight * fit;
             headerViewport.Width = inner;
@@ -802,6 +808,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         moduleViewport.Measure(new Size(inner, contentLimit));
         if (!secondAreaSelected) fullContentHeight = moduleViewport.DesiredSize.Height;
         double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height + 12 : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
+        if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
+            height = Math.Min(Display.Height - 48, Math.Max(height, previousHeight));
         // Keep the destination content layout stable while the native frame
         // reveals it; do not reflow the entire module tree on every frame.
         root.Width = inner;

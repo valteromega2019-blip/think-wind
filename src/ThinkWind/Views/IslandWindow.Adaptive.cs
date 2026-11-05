@@ -140,8 +140,6 @@ internal sealed partial class IslandWindow
         var tools = SystemToolsButton(true);
         tools.Visibility = IsQuickVisible("tools") ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.SetDock(tools, informationSide); statusRow.Children.Add(tools);
-        var editor = WidgetEditorButton(true);
-        DockPanel.SetDock(editor, informationSide); statusRow.Children.Add(editor);
         void Add(string label, string glyph, Action action, string panelId = "")
         {
             var button = ActionButton(label, action); button.Style = (Style)FindResource("Think.IconButton");
@@ -185,6 +183,9 @@ internal sealed partial class IslandWindow
     internal void RefreshForegroundLayout()
     {
         if (fullscreenReveal) return;
+        // Editing owns the existing panel: focus changes caused by its handles
+        // must not switch between the centered and side layouts mid-gesture.
+        if (Store.IsEditing && Stage == Services.IslandStage.Full) return;
         bool? covered = Desktop.ForegroundCoversDisplay(Display);
         bool modeChanged = covered.HasValue && covered.Value != maximizedOnDisplay;
         if (covered.HasValue) maximizedOnDisplay = covered.Value;
