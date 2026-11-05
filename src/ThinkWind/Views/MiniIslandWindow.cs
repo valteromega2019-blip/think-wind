@@ -32,6 +32,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     private DateTime nextRefresh;
     private OverlayChrome.PixelRect positionedAnchor;
     private bool hasPositionedAnchor;
+    private int presentationRevision;
     internal MiniIslandKind Kind { get; }
     internal event Action? Dismissed;
     internal int ActiveBluetoothWatchers => bluetooth?.ActiveWatchers ?? 0;
@@ -107,7 +108,16 @@ internal sealed class MiniIslandWindow : FloatingWindow
             wifi = new WifiControl(); wifi.LayoutChanged += Position; panel.Children.Add(wifi);
         }
         viewport.Child = panel; Surface.Child = viewport;
-        Deactivated += (_, _) => { if (!IsInteracting) Dismiss(); };
+        Deactivated += (_, _) =>
+        {
+            int revision = presentationRevision;
+            // Deactivation can happen inside the next icon mouse-down. Hiding
+            // synchronously interrupts activation before its Click is delivered.
+            Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+            {
+                if (revision == presentationRevision && IsVisible && !IsActive && !IsInteracting) Dismiss();
+            }));
+        };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
         Loaded += (_, _) => { RefreshContent(true); timer.Start(); };
         timer.Tick += (_, _) => { if (IsVisible) RefreshContent(false); };
@@ -120,6 +130,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     }
     internal void Present()
     {
+        ++presentationRevision;
         nextRefresh = DateTime.MinValue;
         // Establish the reserved content geometry before the first visible frame.
         RefreshSettings(); RefreshContent(true); Show(); Position(); timer.Start(); Activate();
@@ -132,7 +143,7 @@ internal sealed class MiniIslandWindow : FloatingWindow
     internal void Dismiss()
     {
         if (!IsVisible) return;
-        Hide(); timer.Stop();
+        ++presentationRevision; Hide(); timer.Stop();
     }
     private void RefreshContent(bool force)
     {
