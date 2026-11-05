@@ -103,7 +103,7 @@ internal sealed partial class IslandWindow
             SystemFonts.MessageFontSize * Math.Clamp(Store.Value.FontScale, .8, 1.15));
         Services.FontSizing.PrepareForMeasure(statusRow);
         string signature = string.Join('|', Store.Value.QuickOrder) + ":" + string.Join('|', Store.Value.HiddenQuickControls) + ":" + string.Join('|', Store.Value.DisabledQuickControls)
-            + ":" + batteryAvailable + ":" + Store.Value.ShowBatteryPercentage + ":" + Store.Value.IslandPanelSide + ":" + Store.IsEditing;
+            + ":" + batteryAvailable + ":" + Store.Value.ShowBatteryPercentage + ":" + Store.Value.IslandPanelSide;
         if (statusBuilt && statusControlsSignature == signature) return;
         if (statusBuilt) { DismissMinis(); systemTools?.Close(); }
         statusControlsSignature = signature;

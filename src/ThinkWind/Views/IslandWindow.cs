@@ -338,10 +338,6 @@ internal sealed partial class IslandWindow : FloatingWindow
         themeToggle = null;
         hoverQuick.Children.Clear();
         var scale = Store.Value.IslandScale;
-        if (Store.IsEditing)
-        {
-            var grip = Glyph("\uE784", 15); grip.Width = 22; AttachPositionGrip(grip); header.Children.Add(grip);
-        }
         var standard = OrderBatteryBefore(Store.Value.QuickOrder.Where(id => id is not ("settings" or "monitor" or "tools") && IsQuickVisible(id)), "windows-settings");
         var headerIds = Stage == IslandStage.Full && maximizedOnDisplay ? Array.Empty<string>() : standard;
         header.HorizontalAlignment = Stage == IslandStage.Full && maximizedOnDisplay
@@ -384,7 +380,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             if (id is not ("settings" or "windows-settings")) LayoutDrag.Attach(button, "quick", id, () => Store.IsEditing, (from, to, after) => Store.Update(p => LayoutCatalog.Move(p.QuickOrder, from, to, after)));
             header.Children.Add(MarkPanelIcon(button, id));
         }
-        if (!IsQuickVisible("clock") && Store.Value.ShowWeatherInHeader && WeatherEnabled && !(Stage == IslandStage.Full && maximizedOnDisplay && !Store.IsEditing))
+        if (!IsQuickVisible("clock") && Store.Value.ShowWeatherInHeader && WeatherEnabled && !(Stage == IslandStage.Full && maximizedOnDisplay))
             header.Children.Add(WeatherButton(false));
         if (SecondAreaAvailable && IsQuickVisible("monitor"))
         {
@@ -414,6 +410,11 @@ internal sealed partial class IslandWindow : FloatingWindow
         {
             if (Store.IsEditing)
             {
+                // Editor-only controls belong below the persistent header.
+                // Inserting a drag grip into the header shifted every icon.
+                var positionGrip = Glyph("\uE784", 15);
+                positionGrip.Width = 22; positionGrip.Height = 32;
+                AttachPositionGrip(positionGrip); hoverQuick.Children.Add(positionGrip);
                 var finish = ActionButton("✓ Concluir edição", () => SetWidgetEditing(false));
                 TutorialGuide.Mark(finish, "widget-edit-finish");
                 finish.SetResourceReference(Control.BackgroundProperty, "Think.AccentSurface");
