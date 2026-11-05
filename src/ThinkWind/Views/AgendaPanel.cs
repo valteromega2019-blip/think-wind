@@ -123,13 +123,13 @@ internal sealed partial class AgendaPanel : Grid, IDisposable
         alerts.Children.Add(FormLabel("\uE823", "Lembrete")); alerts.Children.Add(reminder);
         alerts.Children.Add(FormLabel("\uE767", "Som do lembrete")); alerts.Children.Add(sound);
         body.Children.Add(alerts);
-        void UpdateType()
+        void UpdateType(bool notify = true)
         {
             note = type.IsChecked == true;
             times.Visibility = alerts.Visibility = note ? Visibility.Collapsed : Visibility.Visible;
-            LayoutChanged?.Invoke();
+            if (notify) LayoutChanged?.Invoke();
         }
-        type.Checked += (_, _) => UpdateType(); type.Unchecked += (_, _) => UpdateType(); UpdateType();
+        type.Checked += (_, _) => UpdateType(); type.Unchecked += (_, _) => UpdateType(); UpdateType(false);
         var message = ClockDesign.Text("", 12); body.Children.Add(message);
         var actions = new WrapPanel();
         actions.Children.Add(ClockDesign.Button("\uE711", "Cancelar", Render));

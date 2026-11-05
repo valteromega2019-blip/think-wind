@@ -15,6 +15,17 @@ internal sealed class AgendaWindow : FloatingWindow
     private readonly Grid layout = new();
     private readonly ScrollViewer scroll;
     private readonly Func<OrbyLauncher.Native.OverlayChrome.PixelRect> getCalendarBounds;
+    private bool positionQueued, positioning, closed;
+    private void QueuePosition()
+    {
+        if (positionQueued || closed) return;
+        positionQueued = true;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            positionQueued = false;
+            if (IsVisible && !closed) Position();
+        }));
+    }
     internal AgendaWindow(SettingsStore store, Func<OrbyLauncher.Native.OverlayChrome.PixelRect> calendarBounds) : base(store)
     {
         getCalendarBounds = calendarBounds;
@@ -31,9 +42,10 @@ internal sealed class AgendaWindow : FloatingWindow
         scroll = new ScrollViewer { Content = agenda, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalAlignment = VerticalAlignment.Top };
         scroll.SetResourceReference(StyleProperty, "Think.SettingsScrollViewer");
         Grid.SetRow(scroll, 1); layout.Children.Add(scroll); Surface.Child = layout;
-        agenda.LayoutChanged += () => { if (IsVisible) Position(); };
+        agenda.LayoutChanged += () => { scroll.ScrollToTop(); QueuePosition(); };
+        agenda.Loaded += (_, _) => QueuePosition();
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
-        Closed += (_, _) => agenda.Dispose();
+        Closed += (_, _) => { closed = true; agenda.Dispose(); };
     }
     internal void Present(DateTime day, bool add)
     {
@@ -46,9 +58,17 @@ internal sealed class AgendaWindow : FloatingWindow
     }
     public override void Position()
     {
+        if (positioning || closed) return;
+        positioning = true;
+        try
+        {
         double width = Math.Min(460, Display.Width - 32);
         layout.Width = Math.Max(280, width - 32);
+        // The previous viewport must not constrain the new form's natural measure.
+        layout.Height = double.NaN;
+        scroll.MaxHeight = double.PositiveInfinity;
         FontSizing.PrepareForMeasure(layout);
+        agenda.InvalidateMeasure();
         var heading = (FrameworkElement)layout.Children[0];
         heading.Measure(new Size(layout.Width, double.PositiveInfinity));
         agenda.Measure(new Size(layout.Width, double.PositiveInfinity));
@@ -64,5 +84,7 @@ internal sealed class AgendaWindow : FloatingWindow
         if (x + pixelWidth > Display.Work.Right - 8) x = bounds.Left - gap - pixelWidth;
         PlaceNear(width, height,
             new OrbyLauncher.Native.OverlayChrome.PixelRect { Left = x, Right = x + pixelWidth, Top = bounds.Top, Bottom = bounds.Top - (int)(8 * Display.Scale) }, false);
+        }
+        finally { positioning = false; }
     }
 }
