@@ -596,6 +596,10 @@ internal sealed partial class IslandWindow : FloatingWindow
     private IEnumerable<FrameworkElement> MotionElements() => Stage == IslandStage.Full ? cards.Values.Cast<FrameworkElement>() : new FrameworkElement[] { media, output };
     private void ModuleSizeChanged()
     {
+        // Live sensor/media refreshes must not refit a panel already revealed.
+        // Explicit settings changes clear the snapshot before calling Resize.
+        if (Stage == IslandStage.Full && stableFullPanelHeight.HasValue && !Store.IsEditing && !preparingFullReveal)
+        { contentResizePending = false; return; }
         if (preparingFullReveal) { contentResizePending = true; return; }
         if (IsPositionAnimating) { contentResizePending = true; return; }
         if (updatingLayout || resizeQueued || !IsVisible || Stage == IslandStage.Compact || LayoutDrag.Active) return;
@@ -605,6 +609,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
         {
             resizeQueued = false;
+            if (Stage == IslandStage.Full && stableFullPanelHeight.HasValue && !Store.IsEditing && !preparingFullReveal)
+            { contentResizePending = false; return; }
             if (!IsVisible || Stage == IslandStage.Compact || LayoutDrag.Active) return;
             if (preparingFullReveal || IsPositionAnimating) { contentResizePending = true; return; }
             if (ControlsBusy) { contentResizePending = true; return; }
@@ -786,7 +792,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         modules.Width = boardWidth;
         double indicatorsHeight = SecondAreaAvailable ? 14 : 0;
         double panelLimit = Store.IsEditing && editingHeight is double savedHeight ? savedHeight : Math.Min(stableFullPanelHeight ?? limit, limit);
-        double contentLimit = Math.Max(24, panelLimit - headerHeight - indicatorsHeight - 16);
+        double contentLimit = Math.Max(24, panelLimit - headerHeight - indicatorsHeight);
         moduleViewport.MaxHeight = contentLimit;
         if (Stage == IslandStage.Full && !secondAreaSelected)
         {
@@ -887,10 +893,9 @@ internal sealed partial class IslandWindow : FloatingWindow
         double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
         if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
             height = previousHeight;
-        if (Stage == IslandStage.Full && !Store.IsEditing && p.IslandExpandedHeight > 0) height = limit;
         if (Stage == IslandStage.Full && !Store.IsEditing && !preparingFullReveal)
         {
-            stableFullPanelHeight ??= p.IslandExpandedHeight > 0 ? limit : height;
+            stableFullPanelHeight ??= height;
             height = Math.Min(limit, stableFullPanelHeight.Value);
         }
         // Keep the destination content layout stable while the native frame
