@@ -172,8 +172,11 @@ internal sealed partial class MediaCard : Grid, IDisposable
         title.TextTrimming = artist.TextTrimming = TextTrimming.CharacterEllipsis;
         player.TextWrapping = TextWrapping.NoWrap; player.TextTrimming = TextTrimming.CharacterEllipsis;
         double size = wide ? Math.Clamp(Math.Round(ActualWidth * .12), 44, 72) : 44;
-        cover.Width = cover.Height = artwork.Width = artwork.Height = size;
-        artwork.Clip = new RectangleGeometry(new Rect(0, 0, size, size), 12, 12);
+        if (cover.Width != size)
+        {
+            cover.Width = cover.Height = artwork.Width = artwork.Height = size;
+            artwork.Clip = new RectangleGeometry(new Rect(0, 0, size, size), 12, 12);
+        }
         progress.Width = double.NaN;
         progress.HorizontalAlignment = HorizontalAlignment.Stretch;
     }
