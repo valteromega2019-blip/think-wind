@@ -40,6 +40,11 @@ public partial class App : Application
         tutorial ??= new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
         tutorial.Continue();
     }
+    internal void RepeatUpdateTour()
+    {
+        tutorial ??= new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
+        tutorial.RepeatUpdateTour();
+    }
     private WindowsTaskbar? windowsTaskbar;
     private WindowsStartKey? startKey;
     private LauncherWindowsKey? launcherWindowsKey;

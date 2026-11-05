@@ -31,7 +31,7 @@ internal sealed partial class TutorialWindow
         var visible = Application.Current.Windows.Cast<Window>().Where(window => window.IsVisible && window != this)
             .OrderByDescending(window => device is not null && System.Windows.Forms.Screen.FromHandle(new WindowInteropHelper(window).Handle).DeviceName == device).ToArray();
         Window? panel = null;
-        if (progress.Step is 1 or 2) panel = visible.OfType<LauncherPanelWindow>().FirstOrDefault();
+        if (CurrentTarget is "start" or "search") panel = visible.OfType<LauncherPanelWindow>().FirstOrDefault();
         string? targetKey = progress.Step >= 0 && progress.Step < Steps.Length ? Steps[progress.Step].Target : null;
         if (targetKey is "island" or "expand" or "widget-editor" or "widget-resize" or "widget-edit-finish" or "monitor" or "optimizer" or "optimizer-analyze" or "customize")
         {

@@ -7,3 +7,5 @@ Não executar testes ou type check indiretamente por build, lint, hooks ou outro
 Quando não solicitados, informar que testes e type check não foram executados conforme a preferência do usuário. Nunca alegar que passaram sem execução.
 
 Não gerar novos instaladores durante o desenvolvimento. Gerar o instalador final somente quando o usuário pedir explicitamente.
+
+Quando uma atualização trouxer funcionalidades muito novas ou mudanças importantes de uso, criar um mini tutorial das novidades, separado do tutorial completo. Permitir pular/dispensar e rever pelas configurações, preservar o progresso anterior e evitar avisos durante jogos ou tela cheia. Não criar guias para toda correção pequena.

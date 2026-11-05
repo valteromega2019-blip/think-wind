@@ -16,7 +16,7 @@ namespace OrbyLauncher.Views;
 internal sealed partial class TutorialWindow : Window
 {
     private sealed record Step(string Module, string Title, string Text, string Target, string Action);
-    private static readonly Step[] Steps =
+    private static readonly Step[] MainSteps =
     {
         new("1 · Barra de aplicativos", "Encontre sua barra", "Leve o mouse até a barra inferior. Ela aparece ao aproximar o cursor da borda. Os ícones ampliam se o efeito Dock estiver ativado.", "dock", "dock-hover"),
         new("1 · Barra de aplicativos", "Abra seu menu", "Clique no botão Iniciar indicado. Aqui ficam seus aplicativos fixados, a biblioteca e os recentes. Você também pode usar a tecla Windows.", "start", "start-open"),
@@ -33,6 +33,22 @@ internal sealed partial class TutorialWindow : Window
         new("3 · Monitoramento e personalização", "Explore a aparência", "Selecione Aparência para tema, cores e cantos. No grupo Visual, Aplicativos e Central de controle organizam cada barra; Transparência cuida dos materiais e Tipografia das fontes. As mudanças aparecem na hora.", "appearance", "appearance-open"),
         new("3 · Monitoramento e personalização", "Dock flutuante ou barra fixa", "Em Aparência, passe o mouse sobre Barra inferior fixa de ponta a ponta. É opcional: mantém os controles centralizados e reserva espaço para os aplicativos. Desativada, volta ao Dock flutuante. Não é necessário mudar a opção para avançar. Para rever o guia, use Personalizar → Tutorial.", "fixed-bar", "fixed-bar-discovered")
     };
+    private static readonly Step[] UpdateSteps =
+    {
+        new("Novidades · Widgets e barras", "Abra a central", "Leve o mouse ao topo para acessar os controles da central.", "island", "island-hover"),
+        new("Novidades · Widgets e barras", "Veja os widgets", "Abra o painel completo pela seta. O editor aparece somente nesta área expandida.", "expand", "island-full"),
+        new("Novidades · Widgets e barras", "Novo editor pelas bordas", "Clique no lápis. O fundo desfocado indica o modo de edição; os controles dos widgets ficam bloqueados enquanto você organiza o layout.", "widget-editor", "widget-edit-open"),
+        new("Novidades · Widgets e barras", "Encaixe automático", "Arraste uma borda lateral: três, dois ou um widget por linha. Os vizinhos mudam de posição automaticamente. A borda inferior controla a altura com limites para proteger o conteúdo. Pule esta etapa se não quiser alterar seu layout.", "widget-resize", "widget-resized"),
+        new("Novidades · Widgets e barras", "Salve e volte a usar", "Clique em Concluir edição. O layout já fica salvo e os controles são liberados novamente.", "widget-edit-finish", "widget-edit-finished"),
+        new("Novidades · Widgets e barras", "Personalização organizada", "Abra Personalizar para conhecer a nova organização das opções visuais.", "customize", "settings-open"),
+        new("Novidades · Widgets e barras", "Aparência em um só lugar", "Selecione Aparência. Cores e arredondamento ficam aqui; as abas Aplicativos, Central, Transparência e Tipografia ficam juntas no grupo Visual.", "appearance", "appearance-open"),
+        new("Novidades · Widgets e barras", "Nova barra inferior fixa", "Passe o mouse sobre a opção Barra inferior fixa de ponta a ponta. Ela é opcional, centraliza os controles e reserva espaço para os aplicativos. Não é preciso ativar para concluir.", "fixed-bar", "fixed-bar-discovered")
+    };
+    private bool updateTour;
+    private Step[] Steps => updateTour ? UpdateSteps : MainSteps;
+    private string ProgressPath => updateTour
+        ? Path.Combine(Path.GetDirectoryName(store.TutorialStatePath)!, "update-tour-widgets-v1.json") : store.TutorialStatePath;
+    private string? CurrentTarget => progress.Step >= 0 && progress.Step < Steps.Length ? Steps[progress.Step].Target : null;
     public sealed class Progress
     {
         public int Schema { get; set; }
@@ -103,22 +119,39 @@ internal sealed partial class TutorialWindow : Window
     internal void OfferFirstRun()
     {
         // Never reopen onboarding merely because an existing installation updated.
-        if ((!store.IsNewProfile && !store.Value.TutorialPending) || File.Exists(store.TutorialStatePath) || store.LoadWarning is not null) return;
+        if ((!store.IsNewProfile && !store.Value.TutorialPending) || File.Exists(store.TutorialStatePath) || store.LoadWarning is not null)
+        {
+            if (!store.IsNewProfile && !store.Value.TutorialPending && store.LoadWarning is null) OfferUpdateTour();
+            return;
+        }
         progress = new Progress(); SaveProgress();
         if (store.Value.TutorialPending) store.Update(p => p.TutorialPending = false);
         StartVisible();
     }
     internal void Repeat()
     {
+        updateTour = false;
         advance.Stop(); progress = new Progress();
         progress.Dismissed = false;
         SaveProgress(); StartVisible();
     }
     internal void Continue()
     {
+        updateTour = false;
         advance.Stop(); progress = ReadProgress();
         if (progress.Finished) progress = new Progress();
         progress.Dismissed = false; SaveProgress(); StartVisible();
+    }
+    private void OfferUpdateTour()
+    {
+        updateTour = true; progress = ReadProgress();
+        if (progress.Finished || progress.Dismissed) { updateTour = false; return; }
+        SaveProgress(); StartVisible();
+    }
+    internal void RepeatUpdateTour()
+    {
+        advance.Stop(); updateTour = true; progress = new Progress();
+        SaveProgress(); StartVisible();
     }
     internal void Suspend(bool active)
     {
@@ -130,11 +163,11 @@ internal sealed partial class TutorialWindow : Window
     {
         try
         {
-            var value = File.Exists(store.TutorialStatePath) ? JsonSerializer.Deserialize<Progress>(File.ReadAllText(store.TutorialStatePath)) : null;
+            var value = File.Exists(ProgressPath) ? JsonSerializer.Deserialize<Progress>(File.ReadAllText(ProgressPath)) : null;
             if (value is not null && value.Step >= -1 && value.Step <= Steps.Length)
             {
-                if (value.Schema < 1 && value.Step >= 6) value.Step += 2;
-                if (value.Schema < 2 && value.Step >= 5) value.Step += 3;
+                if (!updateTour && value.Schema < 1 && value.Step >= 6) value.Step += 2;
+                if (!updateTour && value.Schema < 2 && value.Step >= 5) value.Step += 3;
                 value.Schema = 2;
                 return value;
             }
@@ -147,22 +180,22 @@ internal sealed partial class TutorialWindow : Window
         progress.Schema = 2;
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(store.TutorialStatePath)!);
-            File.WriteAllText(store.TutorialStatePath + ".tmp", JsonSerializer.Serialize(progress));
-            File.Move(store.TutorialStatePath + ".tmp", store.TutorialStatePath, true); saveError = null;
+            Directory.CreateDirectory(Path.GetDirectoryName(ProgressPath)!);
+            File.WriteAllText(ProgressPath + ".tmp", JsonSerializer.Serialize(progress));
+            File.Move(ProgressPath + ".tmp", ProgressPath, true); saveError = null;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { saveError = "Não foi possível salvar o progresso do tutorial."; }
     }
     private void StartVisible()
     {
-        if (!blocked()) SystemToolsMenu.ShowDesktop();
+        if (!blocked() && !updateTour) SystemToolsMenu.ShowDesktop();
         finishing = false; TutorialGuide.Active = true; Render();
         if (!blocked()) Show();
         follow.Start(); FollowTarget();
     }
     private void Pause()
     {
-        if (progress.Step is >= 5 and <= 7 && store.IsEditing) store.SetEditing(false);
+        if (CurrentTarget is "widget-editor" or "widget-resize" or "widget-edit-finish" && store.IsEditing) store.SetEditing(false);
         follow.Stop(); advance.Stop(); ClearHighlight(); TutorialGuide.Active = false;
         TutorialGuide.KeepDockOpen = TutorialGuide.KeepIslandOpen = TutorialGuide.CollapseDockOnDesktop = false;
         progress.Dismissed = true; SaveProgress(); Hide();
@@ -176,13 +209,18 @@ internal sealed partial class TutorialWindow : Window
     {
         FontSizing.Apply(this, store.Value.FontScale);
         success = false; finishing = false; lastGuideBounds = null; ClearHighlight(); actions.Children.Clear();
-        TutorialGuide.KeepDockOpen = progress.Step >= 0 && progress.Step <= 2;
-        TutorialGuide.KeepIslandOpen = progress.Step >= 4 && progress.Step <= 11;
-        TutorialGuide.CollapseDockOnDesktop = progress.Step >= 3 && progress.Step <= 11;
+        TutorialGuide.KeepDockOpen = CurrentTarget is "dock" or "start" or "search";
+        TutorialGuide.KeepIslandOpen = CurrentTarget is "expand" or "widget-editor" or "widget-resize" or "widget-edit-finish" or "monitor" or "optimizer" or "optimizer-analyze" or "customize";
+        TutorialGuide.CollapseDockOnDesktop = CurrentTarget is not null && !TutorialGuide.KeepDockOpen;
         if (progress.Step < 0)
         {
             module.Text = "Bem-vindo ao Orby Launcher"; title.Text = "Vamos conhecer seu desktop?";
             description.Text = "Três módulos rápidos. Siga os destaques e use os controles de verdade: o guia reconhece suas ações e avança automaticamente.";
+            if (updateTour)
+            {
+                module.Text = "Novidades desta atualização"; title.Text = "Conheça o novo editor";
+                description.Text = "Um guia curto para edição pelas bordas, encaixe dos widgets, personalização organizada e barra inferior fixa. Comece quando quiser.";
+            }
             hint.Text = "Você pode pular etapas ou sair a qualquer momento. Ajustes feitos por você durante o guia são salvos normalmente.";
             AddAction("Começar", () => { if (!blocked()) SystemToolsMenu.ShowDesktop(); progress.Step = 0; SaveProgress(); Render(); });
             AddAction("Agora não", Pause);
@@ -193,6 +231,7 @@ internal sealed partial class TutorialWindow : Window
             module.Text = "Tutorial concluído"; title.Text = "Tudo pronto!";
             description.Text = "Você conheceu os principais recursos. Explore no seu ritmo e ajuste o launcher do seu jeito.";
             hint.Text = "Para rever: Personalizar → Tutorial → Repetir tutorial.";
+            if (updateTour) hint.Text = "Para rever: Personalizar → Tutorial → Ver novidades desta atualização.";
             AddAction("Concluir", Pause);
         }
         else
@@ -218,8 +257,8 @@ internal sealed partial class TutorialWindow : Window
     private void AdvanceStep()
     {
         advance.Stop();
-        if (progress.Step == 7 && store.IsEditing) store.SetEditing(false);
-        bool leavingSearch = progress.Step == 2;
+        if (CurrentTarget == "widget-edit-finish" && store.IsEditing) store.SetEditing(false);
+        bool leavingSearch = CurrentTarget == "search";
         progress.Step++; SaveProgress(); Render();
         if (leavingSearch) ((App)Application.Current).CompleteTutorialSearch();
     }
