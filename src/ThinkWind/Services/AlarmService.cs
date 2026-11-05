@@ -21,6 +21,7 @@ internal sealed class ClockAlarm
     public DateTime? EndDate { get; set; }
     public string Notes { get; set; } = "";
     public int ReminderMinutes { get; set; }
+    public string ColorHex { get; set; } = "";
 }
 
 // One scheduler per app, independent of the visibility/lifetime of clock panels.
@@ -52,6 +53,7 @@ internal sealed class AlarmService : IDisposable
                 alarm.Sound = NormalizeSound(alarm.Sound);
                 alarm.Notes = (alarm.Notes ?? "")[..Math.Min(4000, (alarm.Notes ?? "").Length)];
                 alarm.ReminderMinutes = Math.Clamp(alarm.ReminderMinutes, 0, 10080);
+                alarm.ColorHex = NormalizeAgendaColor(alarm.ColorHex);
                 if (alarm.IsAgenda && alarm.EventDate is null) alarm.Enabled = false;
             }
         }
@@ -61,8 +63,11 @@ internal sealed class AlarmService : IDisposable
     }
 
     internal static string NormalizeSound(string? sound) => sound is "Beep" or "Exclamation" or "Silent" ? sound : "Asterisk";
+    internal static string NormalizeAgendaColor(string? color) => color is { Length: 7 } && color[0] == '#'
+        && color.Skip(1).All(Uri.IsHexDigit) ? color.ToUpperInvariant() : "";
     internal void Put(ClockAlarm value)
     {
+        value.ColorHex = NormalizeAgendaColor(value.ColorHex);
         if (value.Minute is < 0 or >= 1440) return;
         var index = alarms.FindIndex(a => a.Id == value.Id);
         if (index < 0) { if (alarms.Count >= 100) return; alarms.Add(value); } else alarms[index] = value;
