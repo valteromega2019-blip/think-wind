@@ -262,7 +262,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     {
         // Secondary displays keep their applied layout until editing is completed.
         if (Store.IsEditing && !IsPrimaryEditor) return;
-        if (!Store.IsEditing) stableFullPanelWidth = null;
+        if (!Store.IsEditing) stableFullPanelWidth = stableFullPanelHeight = null;
         RememberEditingPanel();
         if (LayoutDrag.Active) return;
         ApplyAppearance();
@@ -519,6 +519,21 @@ internal sealed partial class IslandWindow : FloatingWindow
             if (revision != expansionRevision) return;
             if (!IsVisible) { preparingFullReveal = false; return; }
             FontSizing.PrepareForMeasure(root);
+            if (Stage == IslandStage.Full && !Store.IsEditing)
+            {
+                // Arrange rehosted controls at their final width before the
+                // visible reveal; SizeChanged must not finish this afterwards.
+                stableFullPanelWidth = stableFullPanelHeight = null;
+                Resize(false);
+                root.UpdateLayout();
+                stableFullPanelWidth = null;
+                Resize(false);
+                root.UpdateLayout();
+                var ready = TargetBounds;
+                stableFullPanelWidth = (ready.Right - ready.Left) / Display.Scale;
+                stableFullPanelHeight = (ready.Bottom - ready.Top) / Display.Scale;
+                Place(stableFullPanelWidth.Value, 6, false);
+            }
             contentResizePending = false;
             preparingFullReveal = false;
             Resize(true);
@@ -734,7 +749,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             return;
         }
         var p = Store.Value;
-        if (Stage != IslandStage.Full) stableFullPanelWidth = null;
+        if (Stage != IslandStage.Full) stableFullPanelWidth = stableFullPanelHeight = null;
         FontSizing.LimitScale(modules, 1.25);
         FontSizing.LimitScale(hoverPanel, 1.25);
         System.Windows.Documents.TextElement.SetFontSize(modules,
@@ -767,7 +782,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         double boardWidth = Store.IsEditing && editingWidth.HasValue ? editingBoardWidth : Math.Max(760, inner);
         modules.Width = boardWidth;
         double indicatorsHeight = SecondAreaAvailable ? 14 : 0;
-        double panelLimit = Store.IsEditing && editingHeight is double savedHeight ? savedHeight : limit;
+        double panelLimit = Store.IsEditing && editingHeight is double savedHeight ? savedHeight : stableFullPanelHeight ?? limit;
         double contentLimit = Math.Max(24, panelLimit - headerHeight - indicatorsHeight - 16);
         moduleViewport.MaxHeight = contentLimit;
         if (Stage == IslandStage.Full && !secondAreaSelected)
@@ -859,6 +874,11 @@ internal sealed partial class IslandWindow : FloatingWindow
         double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
         if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
             height = previousHeight;
+        if (Stage == IslandStage.Full && !Store.IsEditing && !preparingFullReveal)
+        {
+            stableFullPanelHeight ??= height;
+            height = stableFullPanelHeight.Value;
+        }
         // Keep the destination content layout stable while the native frame
         // reveals it; do not reflow the entire module tree on every frame.
         root.Width = inner;
