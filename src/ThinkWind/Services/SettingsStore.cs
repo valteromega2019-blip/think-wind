@@ -67,6 +67,7 @@ public sealed class Preferences
     public string DockSearchMode { get; set; } = "Bar";
     public List<Shortcut> StartPins { get; set; } = new() { new("Explorador", "explorer.exe"), new("Configurações", "ms-settings:") };
     public List<Shortcut> RecentLaunches { get; set; } = new();
+    public List<string> HiddenLibraryApps { get; set; } = new();
     public List<string> TrayFavorites { get; set; } = new();
     public Dictionary<string, TrayActivity> TrayActivity { get; set; } = new();
     public bool ShowMemory { get; set; } = true;
@@ -259,6 +260,9 @@ public sealed class SettingsStore
         p.DockSearchMode = p.DockSearchMode is "Icon" or "Bar" ? p.DockSearchMode : "Bar";
         p.StartPins = (p.StartPins ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(100).ToList();
         p.RecentLaunches = (p.RecentLaunches ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(20).ToList();
+        p.HiddenLibraryApps = (p.HiddenLibraryApps ?? new()).Where(key => !string.IsNullOrWhiteSpace(key) && key.Length <= 2048
+            && (key.StartsWith("id:", StringComparison.OrdinalIgnoreCase) || key.StartsWith("target:", StringComparison.OrdinalIgnoreCase)))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(1000).ToList();
         p.TrayFavorites = (p.TrayFavorites ?? new()).Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).Take(128).ToList();
         p.TrayActivity = (p.TrayActivity ?? new()).Where(item => !string.IsNullOrWhiteSpace(item.Key) && item.Value is not null).OrderByDescending(item => item.Value.LastUsedUtc > item.Value.FirstSeenUtc ? item.Value.LastUsedUtc : item.Value.FirstSeenUtc).Take(512)
             .ToDictionary(item => item.Key, item => item.Value with { Count = Math.Clamp(item.Value.Count, 0, 1_000_000) }, StringComparer.Ordinal);

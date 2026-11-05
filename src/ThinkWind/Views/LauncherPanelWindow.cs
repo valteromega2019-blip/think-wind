@@ -39,6 +39,10 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private readonly TextBlock title = new() { FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 2, 6, 10) };
     private readonly TextBox query = new() { MinHeight = 38, Padding = new Thickness(12, 8, 12, 8), Margin = new Thickness(4), MaxLength = 160 };
     private readonly ComboBox category = new() { Margin = new Thickness(4), MinHeight = 30, MaxDropDownHeight = 220 };
+    private readonly Button hiddenLibraryToggle = new() { Margin = new Thickness(4), Padding = new Thickness(8, 5, 8, 5), FontSize = 11 };
+    private readonly Button restoreHiddenLibrary = new() { Content = "Restaurar todos", Margin = new Thickness(4), Padding = new Thickness(8, 5, 8, 5), FontSize = 11 };
+    private bool showHiddenLibrary;
+    private bool HiddenLibraryView => showHiddenLibrary && (section is "Biblioteca" or "Todos");
     private readonly UniformGrid resultsGrid = new() { Columns = 2 };
     private readonly TextBlock notice = new() { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 8, 6, 8) };
     private readonly TextBlock pagination = new() { FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8) };
@@ -70,11 +74,17 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         var tabs = new WrapPanel();
         foreach (string name in new[] { "Fixados", "Biblioteca", "Recentes", "Todos" })
         {
-            var button = ActionButton(name, () => { if (section == name && query.Text.Length == 0) return; section = name; mode = name == "Biblioteca" ? LauncherPanelMode.Library : LauncherPanelMode.Start; updating = true; query.Text = ""; updating = false; page = 0; Reload(); });
+            var button = ActionButton(name, () => { if (section == name && query.Text.Length == 0 && !showHiddenLibrary) return; showHiddenLibrary = false; section = name; mode = name == "Biblioteca" ? LauncherPanelMode.Library : LauncherPanelMode.Start; updating = true; query.Text = ""; updating = false; page = 0; Reload(); });
             tabButtons.Add(name, button);
             button.Padding = new Thickness(10, 6, 10, 6); tabs.Children.Add(button);
         }
-        content.Children.Add(tabs); content.Children.Add(category); content.Children.Add(new AdornerDecoratorHost(resultsGrid));
+        var libraryFilter = new DockPanel();
+        DockPanel.SetDock(hiddenLibraryToggle, Dock.Right); libraryFilter.Children.Add(hiddenLibraryToggle);
+        DockPanel.SetDock(restoreHiddenLibrary, Dock.Right); libraryFilter.Children.Add(restoreHiddenLibrary);
+        libraryFilter.Children.Add(category);
+        hiddenLibraryToggle.Click += (_, _) => { showHiddenLibrary = !showHiddenLibrary; Reload(); };
+        restoreHiddenLibrary.Click += (_, _) => Store.Update(p => p.HiddenLibraryApps.Clear());
+        content.Children.Add(tabs); content.Children.Add(libraryFilter); content.Children.Add(new AdornerDecoratorHost(resultsGrid));
         var navigation = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         previous.Click += (_, _) => { page--; RenderRows(); }; next.Click += (_, _) => { page++; RenderRows(); };
         navigation.Children.Add(previous); navigation.Children.Add(pagination); navigation.Children.Add(next); content.Children.Add(navigation); content.Children.Add(notice);
@@ -171,6 +181,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         bool openingSurface = !IsVisible;
         openingForeground = Desktop.GetForegroundWindow(); foregroundClaimed = IsActive; outsideForeground = 0;
         focusSearchOnActivation = focusSearch;
+        showHiddenLibrary = false;
         mode = requested; section = requested == LauncherPanelMode.Library ? "Biblioteca" : requested == LauncherPanelMode.Start ? "Fixados" : "Todos";
         updating = true; query.Text = text; updating = false; page = 0;
         UpdateCategories(); Reload(); ShowActivated = focusSearch;
@@ -262,6 +273,16 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     {
         generation++; cancellation?.Cancel(); cancellation?.Dispose(); cancellation = new CancellationTokenSource(); debounce.Stop(); if (reset) page = 0;
         string term = query.Text.Trim(); title.Text = mode == LauncherPanelMode.Library ? "Biblioteca de Aplicativos" : term.Length > 0 || mode == LauncherPanelMode.Search ? "Pesquisar no desktop" : "Iniciar";
+        if (HiddenLibraryView) title.Text = "Aplicativos ocultos";
+        bool librarySection = section is "Biblioteca" or "Todos";
+        var hidden = Store.Value.HiddenLibraryApps.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        hiddenLibraryToggle.Visibility = librarySection ? Visibility.Visible : Visibility.Collapsed;
+        hiddenLibraryToggle.Content = HiddenLibraryView ? "Voltar à biblioteca" : $"Ocultos ({catalog.Items.Count(app => hidden.Contains(AppVisibility.LibraryKey(app)))})";
+        hiddenLibraryToggle.SetResourceReference(Control.BackgroundProperty, HiddenLibraryView ? "Think.AccentSurface" : "Think.Control");
+        hiddenLibraryToggle.SetResourceReference(Control.ForegroundProperty, HiddenLibraryView ? "Think.AccentInk" : "Think.Text");
+        restoreHiddenLibrary.Visibility = HiddenLibraryView ? Visibility.Visible : Visibility.Collapsed;
+        restoreHiddenLibrary.IsEnabled = Store.Value.HiddenLibraryApps.Count > 0;
+        category.IsEnabled = !HiddenLibraryView;
         category.Visibility = (section is "Todos" or "Biblioteca") && term.Length == 0 ? Visibility.Visible : Visibility.Hidden;
         IEnumerable<AppEntry> source;
         if (term.Length > 0)
@@ -270,16 +291,24 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
             source = local.Where(app => app.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase));
         }
         else source = section switch { "Fixados" => Store.Value.StartPins.Select(FromShortcut), "Recentes" => Store.Value.RecentLaunches.Select(FromShortcut).Concat(recent), _ => catalog.Items };
-        if (term.Length == 0 && (section is "Todos" or "Biblioteca"))
+        if (term.Length == 0 && librarySection && !HiddenLibraryView)
         {
             string filter = category.SelectedItem as string ?? "Todas as categorias";
             if (filter is not ("Relevância · instalados primeiro" or "Todas as categorias" or "Ordem alfabética")) source = source.Where(app => app.Category == filter);
         }
-        source = source.Where(app => !AppVisibility.IsSystemTool(app));
+        // A stronger catalog filter must not remove explicitly pinned targets.
+        if (term.Length > 0 || section != "Fixados") source = source.Where(app => !AppVisibility.IsSystemTool(app));
+        if (librarySection)
+        {
+            var hiddenTargets = HiddenLibraryTargets(hidden);
+            source = source.Where(app => IsLibraryHidden(app, hidden, hiddenTargets) == HiddenLibraryView);
+        }
         if (section is "Todos" or "Biblioteca" || term.Length > 0) source = OrderApplications(source, term);
         results = source.DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList();
-        notice.Text = catalog.Warning ?? (results.Count == 0 ? "Nenhum item nesta seção. Use Todos ou Biblioteca para fixar aplicativos." : "Botão direito: fixar, remover atalho e reorganizar.");
-        if (term.Length >= 2 && mode != LauncherPanelMode.Library) { notice.Text = "Consultando também o índice de arquivos do Windows…"; debounce.Start(); }
+        notice.Text = catalog.Warning ?? (HiddenLibraryView ? "Botão direito: mostrar novamente na biblioteca. Os fixados não são removidos."
+            : results.Count == 0 ? "Nenhum item nesta seção. Confira também Ocultos na Biblioteca."
+            : librarySection ? "Botão direito: fixar, ocultar da biblioteca ou remover atalho." : "Botão direito: fixar, remover atalho e reorganizar.");
+        if (term.Length >= 2 && mode != LauncherPanelMode.Library && !HiddenLibraryView) { notice.Text = "Consultando também o índice de arquivos do Windows…"; debounce.Start(); }
         RenderRows();
     }
     private async Task ReadFiles()
@@ -289,7 +318,14 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         {
             var batch = await search.FilesAsync(term, token);
             if (disposed || !IsVisible || current != generation || token.IsCancellationRequested) return;
-            results = OrderApplications(results.Concat(batch.Items), term).DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList(); notice.Text = batch.Notice ?? notice.Text; RenderRows();
+            IEnumerable<AppEntry> files = batch.Items.Where(app => !AppVisibility.IsSystemTool(app));
+            if (section is "Biblioteca" or "Todos")
+            {
+                var hidden = Store.Value.HiddenLibraryApps.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var hiddenTargets = HiddenLibraryTargets(hidden);
+                files = files.Where(app => !IsLibraryHidden(app, hidden, hiddenTargets));
+            }
+            results = OrderApplications(results.Concat(files), term).DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).ToList(); notice.Text = batch.Notice ?? notice.Text; RenderRows();
         }
         catch (OperationCanceledException) { }
     }
@@ -312,7 +348,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     {
         int pages = Math.Max(1, (results.Count + perPage - 1) / perPage); page = Math.Clamp(page, 0, pages - 1);
         var visible = results.Skip(page * perPage).Take(perPage).ToArray();
-        string stamp = section + ":" + mode + ":" + page + ":" + perPage + ":" + query.Text + ":"
+        string stamp = section + ":" + mode + ":" + page + ":" + perPage + ":" + HiddenLibraryView + ":" + Store.Value.HiddenLibraryApps.Count + ":" + query.Text + ":"
             + string.Join("|", visible.Select(entry => entry.Target + ":" + entry.Name)) + ":"
             + string.Join("|", Store.Value.Shortcuts.Concat(Store.Value.StartPins).Select(pin => pin.Target));
         UpdateDrawerTabs();
@@ -359,14 +395,17 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         {
             card.Child = null; var tile = new Grid(); tile.Children.Add(main); card.Child = tile;
             bool pinned = Store.Value.Shortcuts.Any(pin => SameTarget(pin.Target, entry.Target));
-            var add = ActionButton(pinned ? "Já está na barra" : "Adicionar à barra", () => PinDock(entry));
-            add.Style = (Style)FindResource("Think.IconButton"); add.Content = Glyph(pinned ? "\uE73E" : "\uE710", 13);
-            add.IsEnabled = !pinned; add.Padding = new Thickness(2); add.Width = add.Height = 22;
+            var add = ActionButton(HiddenLibraryView ? "Mostrar novamente na biblioteca" : pinned ? "Já está na barra" : "Adicionar à barra",
+                () => { if (HiddenLibraryView) SetLibraryHidden(entry, false); else PinDock(entry); });
+            add.Style = (Style)FindResource("Think.IconButton"); add.Content = Glyph(HiddenLibraryView ? "\uE777" : pinned ? "\uE73E" : "\uE710", 13);
+            add.IsEnabled = HiddenLibraryView || !pinned; add.Padding = new Thickness(2); add.Width = add.Height = 22;
             add.HorizontalAlignment = HorizontalAlignment.Right; add.VerticalAlignment = VerticalAlignment.Top;
             add.SetBinding(VisibilityProperty, new System.Windows.Data.Binding(nameof(IsMouseOver)) { Source = card, Converter = new BooleanToVisibilityConverter() });
             tile.Children.Add(add);
         }
         var menu = new ContextMenu(); AddMenu(menu, "Abrir", () => Launch(entry)); AddMenu(menu, "Fixar na barra", () => PinDock(entry));
+        if ((section is "Biblioteca" or "Todos") && catalog.Items.Any(app => app.Target.Equals(entry.Target, StringComparison.OrdinalIgnoreCase)))
+            AddMenu(menu, HiddenLibraryView ? "Mostrar novamente na biblioteca" : "Ocultar da biblioteca", () => SetLibraryHidden(entry, !HiddenLibraryView));
         if (SystemActions.CanRunAsAdministrator(entry.Target))
             AddMenu(menu, "Executar como administrador…", () => { Dismiss(); SystemActions.RunAsAdministrator(entry.Target); });
         bool startPinned = Store.Value.StartPins.Any(pin => SameTarget(pin.Target, entry.Target));
@@ -382,6 +421,31 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         });
         LayoutDrag.Attach(card, "start-pins", entry.Target, () => mode == LauncherPanelMode.Start && section == "Fixados" && query.Text.Length == 0, ReorderPins);
         return card;
+    }
+    private HashSet<string> HiddenLibraryTargets(HashSet<string> hidden)
+    {
+        // Indexed files do not carry an AppId. Match their shortcut/executable
+        // against catalog metadata already resolved by the background worker.
+        var targets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (hidden.Count == 0) return targets;
+        foreach (var app in catalog.Items)
+            if (hidden.Contains(AppVisibility.LibraryKey(app)))
+            {
+                targets.Add(app.Target);
+                if (!string.IsNullOrWhiteSpace(app.ResolvedTarget)) targets.Add(app.ResolvedTarget);
+            }
+        return targets;
+    }
+    private static bool IsLibraryHidden(AppEntry entry, HashSet<string> hidden, HashSet<string> targets) =>
+        hidden.Contains(AppVisibility.LibraryKey(entry)) || (string.IsNullOrWhiteSpace(entry.AppId) && targets.Contains(entry.Target));
+    private void SetLibraryHidden(AppEntry entry, bool hidden)
+    {
+        string key = AppVisibility.LibraryKey(entry);
+        Store.Update(p =>
+        {
+            p.HiddenLibraryApps.RemoveAll(value => value.Equals(key, StringComparison.OrdinalIgnoreCase));
+            if (hidden) p.HiddenLibraryApps.Add(key);
+        });
     }
     private bool SameTarget(string left, string right)
     {

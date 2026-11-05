@@ -10,7 +10,7 @@ using System.Windows.Threading;
 using OrbyLauncher.Native;
 
 namespace OrbyLauncher.Services;
-internal sealed record AppEntry(string Name, string Target, string Category, ImageSource? Icon, string? AppId = null);
+internal sealed record AppEntry(string Name, string Target, string Category, ImageSource? Icon, string? AppId = null, string? ResolvedTarget = null);
 internal sealed class ApplicationCatalog : IDisposable
 {
     private readonly Dispatcher dispatcher;
@@ -162,7 +162,7 @@ internal sealed class ApplicationCatalog : IDisposable
                         string key = id.Length > 0 ? "id:" + id : "name:" + name + "|" + resolved;
                         string launchTarget = id.Contains('!') ? @"shell:AppsFolder\" + id : path;
                         cancellation.ThrowIfCancellationRequested();
-                        result.TryAdd(key, new(name, launchTarget, category.Length > 0 ? category : "Aplicativos", icons.Get(launchTarget), id.Length > 0 ? id : null));
+                        result.TryAdd(key, new(name, launchTarget, category.Length > 0 ? category : "Aplicativos", icons.Get(launchTarget), id.Length > 0 ? id : null, resolved));
                     }
                     catch (Exception error) when (error is COMException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or IOException or UnauthorizedAccessException) { }
                     finally { CoreAudio.Release(item); CoreAudio.Release(directory); }
@@ -185,12 +185,13 @@ internal sealed class ApplicationCatalog : IDisposable
                         string path = ((dynamic)item!).Path;
                         string id = Convert.ToString(((dynamic)item!).ExtendedProperty("System.AppUserModel.ID")) ?? "";
                         string target = File.Exists(path) ? path : @"shell:AppsFolder\" + (id.Length > 0 ? id : path);
-                        string key = id.Length > 0 ? "id:" + id : "name:" + name + "|" + icons.Resolve(target);
+                        string resolved = icons.Resolve(target);
+                        string key = id.Length > 0 ? "id:" + id : "name:" + name + "|" + resolved;
                         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path)) continue;
-                        if (AppVisibility.IsAuxiliaryEntry(name, icons.Resolve(target))) continue;
+                        if (AppVisibility.IsAuxiliaryEntry(name, resolved)) continue;
                         if (!id.Contains('!') && result.Values.Any(app => app.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))) continue;
                         cancellation.ThrowIfCancellationRequested();
-                        result.TryAdd(key, new(name, target, id.Contains('!') ? "Microsoft Store / MSIX" : "Aplicativos", icons.Get(target), id.Length > 0 ? id : null));
+                        result.TryAdd(key, new(name, target, id.Contains('!') ? "Microsoft Store / MSIX" : "Aplicativos", icons.Get(target), id.Length > 0 ? id : null, resolved));
                     }
                     catch (Exception error) when (error is COMException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or ArgumentException) { }
                     finally { CoreAudio.Release(item); }
