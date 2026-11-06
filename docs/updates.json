@@ -1,5 +1,13 @@
 [
     {
+        "id":  "v0.31.1-beta",
+        "title":  "Orby Launcher 0.31.1 Beta",
+        "state":  "published",
+        "date":  "2026-11-06T03:37:27Z",
+        "url":  "https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.31.1-beta",
+        "description":  "# Orby Launcher 0.31.1 Beta\n\nEsta atualização contém somente duas correções sobre o pacote 0.31.0 Beta já republicado:\n\n- Relógio: largura mínima reservada para evitar cortes da hora, inclusive com fontes ampliadas, tanto no modo ilha quanto na barra superior.\n- Ilha: preparação do tamanho e do layout dos controles de mídia e áudio antes de revelar a expansão parcial, evitando a abertura cortada seguida de redimensionamento visível.\n\nPreservados a agenda experimental, seu mini tutorial, backups e demais recursos da 0.31.0 Beta. A integração experimental com Google Home, o navegador em segundo plano e a dependência Playwright não fazem parte deste pacote.\n\n## Compilação e validação\n\nPacote Windows x64 em Release. Nesta preparação não foram executados novos testes nem type check, conforme a preferência do usuário. O commit das duas correções teve 132 cenários aprovados na revisão anterior; isso não substitui nova regressão ou conferência visual desta instalação. Fontes personalizadas, escalas DPI e transições ainda devem ser conferidas em uso real.\n\nConfigurações preservadas. Instalador com sete idiomas e PawnIO oficial opcional. O SHA-256 e a assinatura RSA separada acompanham o executável para o atualizador integrado. A assinatura separada não é um certificado Authenticode e não elimina avisos do SmartScreen.\n"
+    },
+    {
         "id":  "v0.31.0-beta",
         "title":  "Orby Launcher 0.31.0 Beta",
         "state":  "published",
