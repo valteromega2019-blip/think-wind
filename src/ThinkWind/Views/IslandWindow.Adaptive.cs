@@ -122,6 +122,9 @@ internal sealed partial class IslandWindow
         clockButton.Click += (_, _) => { if (!Store.IsEditing) ShowMini(MiniIslandKind.Clock, clockButton); };
         clockButton.Content = statusClock;
         clockButton.Style = (Style)FindResource("Think.IconButton");
+        statusClock.MinWidth = Math.Ceiling(statusClock.FontSize * 3.8);
+        statusClock.TextWrapping = TextWrapping.NoWrap;
+        clockButton.Padding = new Thickness(4, 0, 4, 0);
         clockButton.Visibility = statusClock.Visibility;
         DockPanel.SetDock(clockButton, informationSide); statusRow.Children.Add(MarkPanelIcon(clockButton, "clock"));
         var dateButton = DateButton(true);

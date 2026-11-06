@@ -11,6 +11,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Contains("--clock-layout")) return ClockLayoutChecks.Run();
         if (args.Contains("--agenda")) return AgendaChecks.Run();
         if (args.Contains("--shortcut-drag")) return ShortcutDragChecks.Run();
         if (args.Contains("--island-layout")) return IslandViewportChecks.Run();

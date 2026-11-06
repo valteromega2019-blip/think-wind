@@ -514,6 +514,13 @@ internal sealed partial class IslandWindow : FloatingWindow
             if (revision != expansionRevision) return;
             if (!IsVisible) { preparingFullReveal = false; return; }
             FontSizing.PrepareForMeasure(root);
+            if (Stage == IslandStage.Hover)
+            {
+                // Rehosted audio/media controls must reach their destination layout
+                // while hidden, rather than finishing their measure after reveal.
+                Resize(false); root.UpdateLayout();
+                Resize(false); root.UpdateLayout();
+            }
             if (Stage == IslandStage.Full && !Store.IsEditing)
             {
                 // Arrange rehosted controls at their final width before the
@@ -794,6 +801,8 @@ internal sealed partial class IslandWindow : FloatingWindow
         System.Windows.Documents.TextElement.SetFontSize(modules,
             SystemFonts.MessageFontSize * Math.Clamp(p.FontScale, .8, 1.25));
         FontSizing.PrepareForMeasure(root);
+        clock.MinWidth = Math.Ceiling(clock.FontSize * 3.8);
+        clock.TextWrapping = TextWrapping.NoWrap;
         Surface.Padding = Stage == IslandStage.Compact ? new Thickness(12, 5, 12, 5) : new Thickness(12);
         header.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         double compact = Math.Min(Display.Width - 16, Math.Max(220 * p.IslandScale, header.DesiredSize.Width + 32));
