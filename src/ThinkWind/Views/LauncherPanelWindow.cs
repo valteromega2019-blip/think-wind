@@ -60,6 +60,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private bool foregroundClaimed;
     private nint openingForeground;
     private nint outsideForeground;
+    private DateTime libraryPointerOutsideSince;
     private OutsideClickObserver? outsideClicks;
     internal bool Busy => IsVisible || modal;
     internal event Action? Dismissed;
@@ -149,7 +150,15 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
         visibility.Tick += (_, _) =>
         {
-            if (!IsVisible || menus > 0 || modal || LibraryShortcutDrag.Active) return;
+            if (!IsVisible || menus > 0 || modal || LibraryShortcutDrag.Active || LayoutDrag.Active || category.IsDropDownOpen)
+            { libraryPointerOutsideSince = default; return; }
+            if (!editingLibrary && (mode == LauncherPanelMode.Library || section == "Biblioteca"))
+            {
+                if (PointerInsideLauncherOrDock()) libraryPointerOutsideSince = default;
+                else if (libraryPointerOutsideSince == default) libraryPointerOutsideSince = DateTime.UtcNow;
+                else if (DateTime.UtcNow - libraryPointerOutsideSince >= TimeSpan.FromMilliseconds(650))
+                { Dismiss(); return; }
+            }
             // A brief activation during Show is not enough: only consider the
             // focus acquired after observing the visible menu in its normal tick.
             if (Desktop.ForegroundIsOurs() || dockHasFocus())
@@ -169,7 +178,9 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         {
             if (IsVisible)
             {
-                outsideClicks ??= new OutsideClickObserver(this, () => { if (menus == 0 && !modal && !LibraryShortcutDrag.Active) Dismiss(); }, () => LibraryShortcutDrag.Active || IsMouseOver || dockHasFocus());
+                outsideClicks ??= new OutsideClickObserver(this,
+                    () => { if (menus == 0 && !modal && !LibraryShortcutDrag.Active && !LayoutDrag.Active && !category.IsDropDownOpen) Dismiss(); },
+                    () => LibraryShortcutDrag.Active || LayoutDrag.Active || PointerInsideLauncherOrDock());
                 outsideClicks.Start();
             }
             else outsideClicks?.Stop();
@@ -182,6 +193,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     internal async void Present(LauncherPanelMode requested, string text = "", bool focusSearch = true)
     {
         bool openingSurface = !IsVisible;
+        libraryPointerOutsideSince = default;
         openingForeground = Desktop.GetForegroundWindow(); foregroundClaimed = IsActive; outsideForeground = 0;
         focusSearchOnActivation = focusSearch;
         showHiddenLibrary = false;
@@ -200,6 +212,21 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     {
         if (!IsVisible || mode != LauncherPanelMode.Search) { Present(LauncherPanelMode.Search, text, false); return; }
         updating = true; query.Text = text; updating = false; page = 0; Reload();
+    }
+    private bool PointerInsideLauncherOrDock()
+    {
+        var cursor = System.Windows.Forms.Cursor.Position;
+        bool Contains(Window window)
+        {
+            if (!window.IsVisible || window.ActualWidth <= 0 || window.ActualHeight <= 0) return false;
+            var local = window.PointFromScreen(new Point(cursor.X, cursor.Y));
+            return local.X >= 0 && local.Y >= 0 && local.X < window.ActualWidth && local.Y < window.ActualHeight;
+        }
+        // Keyboard focus in the Dock search box is not evidence that an outside
+        // mouse click occurred inside the launcher. Use screen geometry instead.
+        var dock = anchor();
+        return Contains(this) || (cursor.X >= dock.Left && cursor.X < dock.Right
+            && cursor.Y >= dock.Top && cursor.Y < dock.Bottom);
     }
     internal void OpenFirstResult()
     {
