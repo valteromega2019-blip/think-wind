@@ -82,9 +82,13 @@ internal static class SystemActions
         if (confirm && MessageBox.Show(action + " o computador agora?", "Orby Launcher", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         if (action == "Atualizar e desligar")
         {
-            try { WindowsUpdatePower.UpdateAndShutdown(); }
+            try { WindowsUpdatePower.StartInstallAndShutdown(); }
+            catch (System.ComponentModel.Win32Exception error) when (error.NativeErrorCode == 1223)
+            { return; } // Cancelling UAC must not fall back to a plain shutdown.
             catch (System.ComponentModel.Win32Exception error)
             { MessageBox.Show("O Windows não aceitou atualizar e desligar.\n" + error.Message, "Orby Launcher"); }
+            catch (InvalidOperationException error)
+            { MessageBox.Show("Não foi possível iniciar a instalação. O PC continuará ligado.\n" + error.Message, "Orby Launcher"); }
             return;
         }
         if (action == "Suspender")

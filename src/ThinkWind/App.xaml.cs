@@ -91,6 +91,12 @@ public partial class App : Application
         if (ShellInputBridge.Run(e.Args)) { Shutdown(); return; }
         AppBrand.InitializeWindowsIdentity();
         LaunchEnvironment.RemoveDevelopmentBootstrap();
+        if (e.Args.Length == 1 && e.Args[0] == "--windows-update-shutdown")
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            new WindowsUpdateShutdownWindow().Show();
+            return;
+        }
         if (StartupPermissions.RunSetup(e.Args, out int startupSetupCode)) { Shutdown(startupSetupCode); return; }
         if (WindowActionSetup.RunSetup(e.Args, out int windowSetupExitCode)) { Shutdown(windowSetupExitCode); return; }
         if (AuthorizedWindowAction.Run(e.Args, out int authorizedWindowExitCode)) { Shutdown(authorizedWindowExitCode); return; }

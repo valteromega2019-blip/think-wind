@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -7,6 +8,81 @@ namespace OrbyLauncher.Services;
 
 internal static class WindowsUpdatePower
 {
+    internal static void StartInstallAndShutdown()
+    {
+        string executable = Environment.ProcessPath ?? throw new InvalidOperationException("Executável do Orby indisponível.");
+        var start = new ProcessStartInfo(executable) { UseShellExecute = true, Verb = "runas" };
+        start.ArgumentList.Add("--windows-update-shutdown");
+        using var worker = Process.Start(start);
+    }
+
+    // Runs only in the explicitly elevated, visible update worker, never in the
+    // hourly detector. Downloaded updates must be installed before shutdown.
+    internal static void InstallDownloaded(Action<string> progress)
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        if (!new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
+            throw new InvalidOperationException("O Windows não concedeu permissão para instalar atualizações.");
+        object? session = null, searcher = null, result = null, available = null, collection = null, installer = null, installation = null;
+        try
+        {
+            progress("Consultando as atualizações já baixadas…");
+            session = Activator.CreateInstance(Type.GetTypeFromProgID("Microsoft.Update.Session", true)!);
+            searcher = ((dynamic)session!).CreateUpdateSearcher();
+            ((dynamic)searcher).Online = false;
+            result = ((dynamic)searcher).Search("IsInstalled=0 and IsHidden=0 and Type='Software'");
+            if ((int)((dynamic)result).ResultCode != 2)
+                throw new InvalidOperationException("O Windows não concluiu a consulta de atualizações. O desligamento foi cancelado.");
+            available = ((dynamic)result).Updates;
+            collection = Activator.CreateInstance(Type.GetTypeFromProgID("Microsoft.Update.UpdateColl", true)!);
+            int count = ((dynamic)available).Count;
+            bool skipped = false;
+            for (int i = 0; i < count; i++)
+            {
+                object? update = null, behavior = null;
+                try
+                {
+                    update = ((dynamic)available).Item(i);
+                    if (!((dynamic)update).IsDownloaded) continue;
+                    behavior = ((dynamic)update).InstallationBehavior;
+                    // Do not accept licensing or interactive updates implicitly,
+                    // or install packages that can force a reboot themselves.
+                    if (!((dynamic)update).EulaAccepted || ((dynamic)behavior).CanRequestUserInput
+                        || (int)((dynamic)behavior).RebootBehavior == 1) { skipped = true; continue; }
+                    ((dynamic)collection!).Add(update);
+                }
+                finally { Release(behavior); Release(update); }
+            }
+            if (skipped) throw new InvalidOperationException("Uma atualização precisa de confirmação ou instalação pelo Windows Update. O PC não será desligado. Conclua essa etapa nas configurações do Windows.");
+            int selected = ((dynamic)collection!).Count;
+            if (selected == 0) throw new InvalidOperationException("Não há atualizações baixadas compatíveis com esta instalação. O PC não será desligado. Confira o Windows Update.");
+            installer = ((dynamic)session!).CreateUpdateInstaller();
+            if (((dynamic)installer).IsBusy || ((dynamic)installer).RebootRequiredBeforeInstallation)
+                throw new InvalidOperationException("O Windows já está instalando ou exige reinicialização antes de continuar. O PC não será desligado automaticamente.");
+            ((dynamic)installer).Updates = collection;
+            ((dynamic)installer).AllowSourcePrompts = false;
+            progress($"Instalando {selected} atualização(ões). Aguarde; o computador permanece ligado até concluir…");
+            installation = ((dynamic)installer).Install();
+            if ((int)((dynamic)installation).ResultCode != 2)
+                throw new InvalidOperationException("O Windows não concluiu todas as atualizações com sucesso. O desligamento foi cancelado. Consulte o Windows Update.");
+            for (int i = 0; i < selected; i++)
+            {
+                object? item = null;
+                try
+                {
+                    item = ((dynamic)installation).GetUpdateResult(i);
+                    if ((int)((dynamic)item).ResultCode != 2 || (int)((dynamic)item).HResult < 0)
+                        throw new InvalidOperationException("Uma atualização não foi instalada com sucesso. O desligamento foi cancelado.");
+                }
+                finally { Release(item); }
+            }
+            if (((dynamic)installation).RebootRequired)
+                throw new InvalidOperationException("As atualizações foram instaladas, mas precisam de reinicialização para terminar. O PC continuará ligado: salve seu trabalho e escolha Atualizar e reiniciar no Windows.");
+            progress("Atualizações instaladas. Solicitando o desligamento…");
+            UpdateAndShutdown();
+        }
+        finally { Release(installation); Release(installer); Release(collection); Release(available); Release(result); Release(searcher); Release(session); }
+    }
     private static readonly object gate = new();
     private static Timer? refreshTimer;
     private static bool reading, stopped = true, updatePending;
