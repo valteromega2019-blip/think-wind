@@ -115,7 +115,15 @@ internal static class AppIconTheme
         {
             if (!geometry.TryGetValue(path, out var shape))
             {
-                try { shape = Geometry.Parse(path.StartsWith("F0 ", StringComparison.Ordinal) ? path : "F1 " + path); shape.Freeze(); }
+                try
+                {
+                    bool evenOdd = path.StartsWith("F0 ", StringComparison.Ordinal);
+                    shape = Geometry.Parse(evenOdd ? path : "F1 " + path);
+                    // Discard cancelled outer contours before measuring Adobe letters.
+                    // This is cached; no outline work is repeated on each frame.
+                    if (evenOdd) shape = shape.GetOutlinedPathGeometry();
+                    shape.Freeze();
+                }
                 catch (Exception error) when (error is FormatException or ArgumentException or InvalidOperationException or OverflowException)
                 { DrawText(dc, content, Initials(name), false, ink); return; }
                 if (geometry.Count >= 256) geometry.Clear(); geometry[path] = shape;

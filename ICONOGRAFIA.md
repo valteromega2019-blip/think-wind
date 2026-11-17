@@ -100,3 +100,16 @@ a área de clique e o zoom existente são preservados. A opção não recolore o
 ícones nativos quando a iconografia unificada está desligada e não há símbolo
 personalizado. Revisão por leitura de código e diff, sem compilação, testes ou
 type check neste pedido.
+
+## Tipografia dos símbolos Adobe
+
+Os símbolos Ps, Ai, Id, Ae, Pr, Lr e Au utilizam agora os contornos vetoriais
+originais do Simple Icons 11.15.0, em vez dos monogramas desenhados com Segoe UI.
+O contorno externo do quadrado é cancelado pela regra de preenchimento par/ímpar,
+preservando o desenho das letras e seus espaços internos. Assim o fundo continua
+sendo controlado pelo Orby, inclusive no modo sem fundo. Acrobat usa seu símbolo
+vetorial próprio, em vez de Ac. Os SVGs de referência e seus metadados de origem
+foram preservados. Creative Cloud mantém o símbolo vetorial já adicionado.
+
+Revisão por leitura dos recursos e do código; sem compilação, testes ou type check
+neste pedido. A conferência visual em execução permanece pendente.
