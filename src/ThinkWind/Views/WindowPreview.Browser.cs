@@ -98,7 +98,12 @@ internal sealed partial class WindowPreview
         {
             browserLayout.Children.Add(integration);
         }
-        viewport.Child = browserLayout;
+        var previousBody = browserLayout.Parent as Panel;
+        previousBody?.Children.Remove(browserLayout);
+        var browserBody = new StackPanel();
+        browserBody.Children.Add(browserLayout);
+        if (CreateGroupActions() is FrameworkElement groupActions) browserBody.Children.Add(groupActions);
+        viewport.Child = browserBody;
         RefreshAppearance();
         // Resolve the complete fan's desired size before making its HWND
         // visible, so it never opens as a small window-only placeholder.

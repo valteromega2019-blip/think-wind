@@ -194,6 +194,7 @@ internal sealed partial class WindowPreview : FloatingWindow
             var next = ActionButton("Próxima página", () => { page++; Render(); }); next.Content = "›"; next.IsEnabled = page + 1 < pages;
             nav.Children.Add(back); nav.Children.Add(new TextBlock { Text = $"{page + 1}/{pages}", Margin = new Thickness(8), VerticalAlignment = VerticalAlignment.Center }); nav.Children.Add(next); body.Children.Add(nav);
         }
+        if (CreateGroupActions() is FrameworkElement groupActions) body.Children.Add(groupActions);
         Position();
     }
     private Button PreviewControl(string label, string glyph, Action action)
