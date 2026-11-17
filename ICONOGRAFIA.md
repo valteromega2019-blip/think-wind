@@ -184,3 +184,13 @@ A enumeração existente é global entre monitores. Na troca de foco, reutilizam
 as identidades em cache e verificações leves de visibilidade; a cor não depende de
 qual monitor contém o primeiro plano. Não foram executados novos testes, type
 check ou compilação neste pedido; as 69 aprovações acima são da revisão anterior.
+
+## Energia no Iniciar
+
+Desligar, Suspender e Reiniciar ficam lado a lado no rodapé do Iniciar, com
+símbolos, tooltip e nome acessível. O quarto botão, Atualizar e desligar, aparece
+somente quando o resultado em cache do Windows Update indica pendência. A
+visibilidade acompanha o timer já existente do menu, sem consultas extras WUA.
+Mantidos o salvamento antes da ação, a proteção modal durante confirmações e os
+fluxos nativos de energia/atualização. Não foram acionadas ações de energia nem
+executados testes, type check ou compilação neste pedido.

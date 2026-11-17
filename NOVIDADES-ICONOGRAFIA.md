@@ -31,3 +31,9 @@ de jogos/tela cheia já implementadas.
 Aplicar este destaque às notas da release e ao histórico/site quando a próxima
 versão for publicada. Nenhum instalador ou publicação é autorizado por este
 arquivo. Registrar a versão definitiva nessa etapa.
+
+### Também nesta branch
+
+Atalhos de Desligar, Suspender e Reiniciar lado a lado no Iniciar. O ícone de
+Atualizar e desligar aparece diretamente quando há atualização pendente do
+Windows, usando a verificação já existente na inicialização e a cada hora.
