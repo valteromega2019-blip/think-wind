@@ -73,7 +73,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         query.Background = Brushes.Transparent; query.Margin = new Thickness(0); query.SetResourceReference(TextBox.ForegroundProperty, "Think.Text"); query.BorderThickness = new Thickness(0);
         System.Windows.Automation.AutomationProperties.SetName(query, "Pesquisar aplicativos, arquivos, documentos e configurações");
         var tabs = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        foreach (string name in new[] { "Fixados", "Biblioteca", "Recentes", "Todos" })
+        foreach (string name in new[] { "Fixados", "Biblioteca", "Recentes", "Todos", "Jogos" })
         {
             var button = ActionButton(name, () => { if (section == name && query.Text.Length == 0 && !showHiddenLibrary) return; showHiddenLibrary = false; section = name; mode = name == "Biblioteca" ? LauncherPanelMode.Library : LauncherPanelMode.Start; updating = true; query.Text = ""; updating = false; page = 0; Reload(); });
             tabButtons.Add(name, button);
@@ -295,7 +295,11 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     private void Reload(bool reset = true)
     {
         generation++; cancellation?.Cancel(); cancellation?.Dispose(); cancellation = new CancellationTokenSource(); debounce.Stop(); if (reset) page = 0;
+        bool hasGames = catalog.Items.Any(GameLibrary.IsGame);
+        tabButtons["Jogos"].Visibility = hasGames ? Visibility.Visible : Visibility.Collapsed;
+        if (!hasGames && section == "Jogos") section = "Fixados";
         string term = query.Text.Trim(); title.Text = mode == LauncherPanelMode.Library ? "Biblioteca de Aplicativos" : term.Length > 0 || mode == LauncherPanelMode.Search ? "Pesquisar no desktop" : "Iniciar";
+        if (section == "Jogos") title.Text = "Jogos";
         if (HiddenLibraryView) title.Text = "Aplicativos ocultos";
         bool librarySection = section is "Biblioteca" or "Todos";
         RefreshLibraryEditing();
@@ -315,6 +319,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
             source = local.Where(app => app.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase));
         }
         else source = section switch { "Fixados" => Store.Value.StartPins.Select(FromShortcut), "Recentes" => Store.Value.RecentLaunches.Select(FromShortcut).Concat(recent), _ => catalog.Items };
+        source = source.Where(app => section == "Jogos" ? GameLibrary.IsGame(app) : !GameLibrary.IsGame(app));
         if (term.Length == 0 && librarySection && !HiddenLibraryView)
         {
             string filter = category.SelectedItem as string ?? "Todas as categorias";
@@ -332,7 +337,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         notice.Text = catalog.Warning ?? (results.Count == 0
             ? HiddenLibraryView ? "Nenhum aplicativo oculto disponível." : "Nenhum item nesta seção. Confira também Ocultos na Biblioteca."
             : "");
-        if (term.Length >= 2 && mode != LauncherPanelMode.Library && !HiddenLibraryView) { notice.Text = "Consultando também o índice de arquivos do Windows…"; debounce.Start(); }
+        if (term.Length >= 2 && mode != LauncherPanelMode.Library && section != "Jogos" && !HiddenLibraryView) { notice.Text = "Consultando também o índice de arquivos do Windows…"; debounce.Start(); }
         notice.Visibility = string.IsNullOrWhiteSpace(notice.Text) ? Visibility.Collapsed : Visibility.Visible;
         RenderRows();
     }
@@ -343,7 +348,8 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         {
             var batch = await search.FilesAsync(term, token);
             if (disposed || !IsVisible || current != generation || token.IsCancellationRequested) return;
-            IEnumerable<AppEntry> files = batch.Items.Where(app => !AppVisibility.IsSystemTool(app));
+            IEnumerable<AppEntry> files = batch.Items.Where(app => !AppVisibility.IsSystemTool(app) && !GameLibrary.IsGame(app));
+            if (section == "Jogos") return;
             if (section is "Biblioteca" or "Todos")
             {
                 var hidden = Store.Value.HiddenLibraryApps.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -402,7 +408,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         var icon = entry.Icon ?? icons.Get(entry.Target);
         string iconTarget = entry.ResolvedTarget ?? icons.Resolve(entry.Target);
-        var image = new AppIcon { HighlightRunning = true, AppName = entry.Name, Target = iconTarget, AppId = entry.AppId, Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
+        var image = new AppIcon { PreserveOriginal = GameLibrary.IsGame(entry), HighlightRunning = true, AppName = entry.Name, Target = iconTarget, AppId = entry.AppId, Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality); inside.Children.Add(image);
         LoadLargeIcon(image, entry.Target);
         inside.Children.Add(new TextBlock { Text = entry.Name, FontSize = 12, LineHeight = 16, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Height = 32, Width = 96, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 8, 0, 0) });

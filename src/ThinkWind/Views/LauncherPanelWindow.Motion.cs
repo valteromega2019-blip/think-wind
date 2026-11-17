@@ -22,7 +22,7 @@ internal sealed partial class LauncherPanelWindow
     private int DrawerDirection()
     {
         if (renderedSection == section) return Math.Sign(page - renderedPage);
-        string[] sections = { "Fixados", "Biblioteca", "Recentes", "Todos" };
+        string[] sections = { "Fixados", "Biblioteca", "Recentes", "Todos", "Jogos" };
         return Math.Sign(Array.IndexOf(sections, section) - Array.IndexOf(sections, renderedSection));
     }
 

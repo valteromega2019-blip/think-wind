@@ -43,7 +43,7 @@ internal sealed partial class LauncherPanelWindow
 
     private StackPanel DrawerTabContent(string name)
     {
-        string glyph = name switch { "Fixados" => "\uE718", "Biblioteca" => "\uE8F1", "Recentes" => "\uE81C", _ => "\uE80A" };
+        string glyph = name switch { "Fixados" => "\uE718", "Biblioteca" => "\uE8F1", "Recentes" => "\uE81C", "Jogos" => "\uE7FC", _ => "\uE80A" };
         var row = new StackPanel { Orientation = Orientation.Horizontal };
         var icon = Glyph(glyph, 14); icon.Margin = new Thickness(0, 0, 7, 0);
         row.Children.Add(icon);

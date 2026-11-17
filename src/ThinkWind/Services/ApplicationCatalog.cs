@@ -125,7 +125,7 @@ internal sealed class ApplicationCatalog : IDisposable
         {
             var result = await worker.Run(() => Read(cancellation), cancellation);
             if (disposed || suspended || cancellation.IsCancellationRequested) return;
-            Items = result.Items; Warning = result.Warning; refreshed = DateTime.UtcNow; Changed?.Invoke();
+            Items = result.Items; GameLibrary.Update(Items); Warning = result.Warning; refreshed = DateTime.UtcNow; Changed?.Invoke();
         }
         catch (OperationCanceledException) { }
         catch (Exception error) when (error is COMException or IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -201,7 +201,42 @@ internal sealed class ApplicationCatalog : IDisposable
             finally { CoreAudio.Release(entries); CoreAudio.Release(apps); }
         }
         finally { CoreAudio.Release(shell); }
-        return (result.Values.Where(app => !AppVisibility.IsSystemTool(app)).DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warning);
+        // Steam/Epic commonly register games as Internet shortcuts, not .lnk.
+        // Inspect only known shortcut folders (no recursive installation scan).
+        foreach (string folder in StartFolders().Concat(new[] {
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory) }).Distinct())
+        {
+            if (!Directory.Exists(folder)) continue;
+            try
+            {
+                var options = new EnumerationOptions { RecurseSubdirectories = StartFolders().Contains(folder), IgnoreInaccessible = true,
+                    AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint };
+                foreach (string shortcut in Directory.EnumerateFiles(folder, "*.url", options).Take(2048))
+                {
+                    cancellation.ThrowIfCancellationRequested();
+                    try
+                    {
+                        if (new FileInfo(shortcut).Length > 65536) continue;
+                        var lines = File.ReadAllLines(shortcut);
+                        string? url = lines.FirstOrDefault(line => line.StartsWith("URL=", StringComparison.OrdinalIgnoreCase))?[4..].Trim();
+                        if (url is null || !GameLibrary.IsGameUri(url)) continue;
+                        string? iconFile = lines.FirstOrDefault(line => line.StartsWith("IconFile=", StringComparison.OrdinalIgnoreCase))?[9..].Trim();
+                        // Never fetch an icon URL or UNC share while cataloging.
+                        bool localIcon = iconFile is not null && Path.IsPathFullyQualified(iconFile)
+                            && !iconFile.StartsWith(@"\\", StringComparison.Ordinal) && File.Exists(iconFile);
+                        string name = Path.GetFileNameWithoutExtension(shortcut);
+                        if (result.Values.Any(app => app.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))) continue;
+                        result.TryAdd("game:" + url, new(name, shortcut, "Jogos", icons.Get(localIcon ? iconFile : shortcut), ResolvedTarget: url));
+                    }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { }
+                }
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        }
+        return (result.Values.Where(app => !AppVisibility.IsSystemTool(app))
+            .Select(app => GameLibrary.Detect(app) ? app with { Category = "Jogos" } : app)
+            .DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warning);
     }
     public void Dispose()
     {

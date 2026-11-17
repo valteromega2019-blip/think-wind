@@ -12,6 +12,7 @@ internal sealed class AppIcon : Image
     internal string Target { get; init; } = "";
     internal string? AppId { get; init; }
     internal bool HighlightRunning { get; init; }
+    internal bool PreserveOriginal { get; init; }
     internal AppIcon()
     {
         Loaded += (_, _) => { AppIconTheme.Changed -= ThemeChanged; AppIconTheme.Changed += ThemeChanged; InvalidateVisual(); };
@@ -28,7 +29,7 @@ internal sealed class AppIcon : Image
     }
     protected override void OnRender(DrawingContext dc)
     {
-        if (AppIconTheme.Enabled || AppIconTheme.HasCustom(Target, AppId)) AppIconTheme.Draw(dc, RenderSize, AppName, Target, AppId, HighlightRunning);
+        if (!PreserveOriginal && !GameLibrary.IsGame(Target, AppId) && (AppIconTheme.Enabled || AppIconTheme.HasCustom(Target, AppId))) AppIconTheme.Draw(dc, RenderSize, AppName, Target, AppId, HighlightRunning);
         else if (Source is not null) base.OnRender(dc);
         else
         {
