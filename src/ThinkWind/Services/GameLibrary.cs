@@ -24,6 +24,7 @@ internal static class GameLibrary
     // Called only on the existing catalog worker, never while drawing icons.
     internal static bool Detect(AppEntry entry)
     {
+        if (entry.Category.Equals("Jogos", StringComparison.OrdinalIgnoreCase)) return true;
         string path = entry.ResolvedTarget ?? entry.Target;
         string name = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
         if (name is "steam" or "epicgameslauncher" or "goggalaxy" or "galaxyclient" or "battle.net" or "ubisoftconnect") return false;

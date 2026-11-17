@@ -235,8 +235,12 @@ internal sealed class ApplicationCatalog : IDisposable
             catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
         }
         foreach (var game in SteamLibraryEntries.Read(icons))
-            if (!result.Values.Any(app => app.Name.Equals(game.Name, StringComparison.CurrentCultureIgnoreCase)))
-                result.TryAdd("game:" + game.Target, game);
+        {
+            var matches = result.Where(pair => pair.Value.Name.Equals(game.Name, StringComparison.CurrentCultureIgnoreCase)).Select(pair => pair.Key).ToArray();
+            if (matches.Length == 0) result.TryAdd("game:" + game.Target, game);
+            else foreach (string key in matches)
+                result[key] = result[key] with { Category = "Jogos", ResolvedTarget = game.Target };
+        }
         return (result.Values.Where(app => !AppVisibility.IsSystemTool(app))
             .Select(app => GameLibrary.Detect(app) ? app with { Category = "Jogos" } : app)
             .DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warning);
