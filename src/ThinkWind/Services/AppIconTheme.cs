@@ -208,11 +208,13 @@ internal static class AppIconTheme
             using var document = JsonDocument.Parse(stream);
             foreach (var entry in document.RootElement.EnumerateArray())
             {
-                string? path = entry.GetProperty("path").GetString();
+                if (entry.ValueKind != JsonValueKind.Object
+                    || !entry.TryGetProperty("path", out var pathValue) || pathValue.ValueKind != JsonValueKind.String) continue;
+                string? path = pathValue.GetString();
                 if (string.IsNullOrWhiteSpace(path)) continue;
-                if (entry.TryGetProperty("fillRule", out var rule) && rule.GetString() == "evenodd") path = "F0 " + path;
-                string id = Normalize(entry.GetProperty("id").GetString() ?? "");
-                string name = Normalize(entry.GetProperty("name").GetString() ?? "");
+                if (entry.TryGetProperty("fillRule", out var rule) && rule.ValueKind == JsonValueKind.String && rule.GetString() == "evenodd") path = "F0 " + path;
+                string id = Normalize(entry.TryGetProperty("id", out var idValue) && idValue.ValueKind == JsonValueKind.String ? idValue.GetString() ?? "" : "");
+                string name = Normalize(entry.TryGetProperty("name", out var nameValue) && nameValue.ValueKind == JsonValueKind.String ? nameValue.GetString() ?? "" : "");
                 if (id.Length > 0) result[id] = path;
                 if (name.Length > 0) result[name] = path;
             }
