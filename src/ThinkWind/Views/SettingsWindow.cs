@@ -96,6 +96,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         Closed += (_, _) => { diagnosticWindowClosed = true; diagnosticViewRevision++; };
         Closed += (_, _) => { weatherSettings.Dispose(); store.Changed -= StoreChanged; store.PersistenceChanged -= PersistenceChanged; store.Flush(); };
         Build();
+        Activated += (_, _) => refreshRegistration?.Invoke();
         EnableManualResize();
     }
     internal void ShowWeatherSection()
@@ -300,6 +301,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException) { Note(system, "A opção de inicialização não está disponível para esta conta."); }
         Note(system, "A ocultação da barra original pode ser desativada nesta seção. O launcher não substitui os arquivos do Explorer.");
         BuildUpdates();
+        BuildRegistration();
         var about = Section("Sobre e segurança", "Orby Launcher · " + AppBrand.Version);
         Note(about, "Desenvolvedor: " + AppBrand.Developer);
         Note(about, AppBrand.Copyright);

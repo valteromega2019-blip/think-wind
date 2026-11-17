@@ -236,6 +236,7 @@ public partial class App : Application
             tutorial = new TutorialWindow(store, () => gameMode?.Active == true || IsExiting);
             Dispatcher.BeginInvoke(new Action(() => { tutorial.OfferFirstRun(); tutorial.Suspend(gameMode?.Active == true); }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
+        if (!diagnosing && !batteryPreview) InitializeRegistration();
         if (diagnosing)
         {
             var exit = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
@@ -324,6 +325,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         IsExiting = true;
+        CloseRegistration();
         WindowsUpdatePower.StopMonitoring();
         if (Alarms is not null) { Alarms.Ring -= ShowAlarm; Alarms.Dispose(); }
         alarmQueue.Clear(); alarmNotice?.Close();
