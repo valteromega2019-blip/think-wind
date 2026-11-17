@@ -261,3 +261,9 @@ Esta cobertura se aplica aos aplicativos no pacote experimental; não inventa
 leituras de hardware nem muda os sensores. Preservados estilos, destaque,
 importações manuais e ícones nativos. Sem compilação, testes ou type check neste
 pedido. Reconhecimento em outras instalações e conferência visual pendentes.
+
+## 0.32.2 — padrão do Iniciar
+
+A abertura por permanência do cursor passa a ser ativa por padrão, com 1,2 s.
+Valores explícitos já salvos são preservados. Perfis sem as novas propriedades
+recebem os inicializadores padrão e os limites continuam de 1 a 2 s.

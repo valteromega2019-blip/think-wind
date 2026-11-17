@@ -30,8 +30,8 @@ public sealed class Preferences
     // to classify ordinary foreground applications as games.
     public bool GameModeProtectAllForeground { get; set; }
     public bool StartHotkeyEnabled { get; set; }
-    public bool StartHoverEnabled { get; set; }
-    public double StartHoverSeconds { get; set; } = 1.5;
+    public bool StartHoverEnabled { get; set; } = true;
+    public double StartHoverSeconds { get; set; } = 1.2;
     public bool WindowsKeyOpensLauncher { get; set; } = true;
     public bool WindowPreviewsEnabled { get; set; } = true;
     public bool CallPreviewsEnabled { get; set; } = true;
@@ -292,7 +292,7 @@ public sealed class SettingsStore
         p.DockMagnificationNeighbors = Math.Clamp(p.DockMagnificationNeighbors, 0, 4);
         p.CustomAppIcons = CustomAppIcons.Normalize(p.CustomAppIcons);
         p.DockSearchMode = p.DockSearchMode is "Icon" or "Bar" ? p.DockSearchMode : "Bar";
-        p.StartHoverSeconds = Limit(p.StartHoverSeconds, 1, 2, 1.5);
+        p.StartHoverSeconds = Limit(p.StartHoverSeconds, 1, 2, 1.2);
         p.StartPins = (p.StartPins ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(100).ToList();
         p.RecentLaunches = (p.RecentLaunches ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(20).ToList();
         p.HiddenLibraryApps = (p.HiddenLibraryApps ?? new()).Where(key => !string.IsNullOrWhiteSpace(key) && key.Length <= 2048

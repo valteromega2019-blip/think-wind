@@ -1,3 +1,7 @@
+# 0.32.2 Beta — 17/11/2026
+
+Iniciar por hover ativo por padrão em 1,2 s; correções de fechamento e paginação por rolagem; símbolos de marcas de hardware. [Notas e limites](RELEASE-0.32.2-BETA.md).
+
 # 0.32.1 Beta — 17/11/2026
 
 Seleção de estilo por três cartões visuais do Orby e símbolo monocromático escolhido pelo usuário. [Notas e limites](RELEASE-0.32.1-BETA.md).
