@@ -53,12 +53,12 @@ internal static class AppIconTheme
     private static Color accent;
     private static SolidColorBrush tile = Brushes.Transparent;
     private static Dictionary<string, string> custom = new(StringComparer.Ordinal);
-    private static HashSet<string> runningApps = new(StringComparer.Ordinal);
-    internal static void UpdateRunningApps(IEnumerable<(string Target, string? AppId)> apps)
+    private static HashSet<string> foregroundApp = new(StringComparer.Ordinal);
+    internal static void UpdateForegroundApp(string target, string? appId)
     {
-        var next = apps.SelectMany(app => CustomAppIcons.Keys(app.Target, app.AppId)).ToHashSet(StringComparer.Ordinal);
-        if (runningApps.SetEquals(next)) return;
-        runningApps = next;
+        var next = CustomAppIcons.Keys(target, appId).ToHashSet(StringComparer.Ordinal);
+        if (foregroundApp.SetEquals(next)) return;
+        foregroundApp = next;
         if (WithoutBackground) Changed?.Invoke();
     }
     private static readonly Dictionary<string, BitmapSource?> customImages = new(StringComparer.Ordinal);
@@ -92,14 +92,14 @@ internal static class AppIconTheme
             }
         return null;
     }
-    internal static void Draw(DrawingContext dc, Size size, string name, string target, string? appId, bool running = false)
+    internal static void Draw(DrawingContext dc, Size size, string name, string target, string? appId)
     {
         double side = Math.Min(size.Width, size.Height);
         if (!double.IsFinite(side) || side <= 0) return;
         var bounds = new Rect((size.Width - side) / 2, (size.Height - side) / 2, side, side);
         if (!WithoutBackground) dc.DrawRoundedRectangle(tile, null, bounds, side * .23, side * .23);
-        bool isOpen = running || (WithoutBackground && CustomAppIcons.Keys(target, appId).Any(runningApps.Contains));
-        Brush ink = WithoutBackground && isOpen ? tile : Brushes.White;
+        bool isForeground = WithoutBackground && CustomAppIcons.Keys(target, appId).Any(foregroundApp.Contains);
+        Brush ink = isForeground ? tile : Brushes.White;
         double inset = side * (WithoutBackground ? .08 : .2);
         var content = new Rect(bounds.X + inset, bounds.Y + inset, side - 2 * inset, side - 2 * inset);
         if (CustomImage(target, appId) is BitmapSource uploaded)

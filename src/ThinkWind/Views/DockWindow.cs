@@ -335,7 +335,8 @@ internal sealed partial class DockWindow : FloatingWindow
             + string.Join("|", pins.Select(pin => $"{pin.Target}:{pinIdentities[pin.Target].Path}:{pinIdentities[pin.Target].AppId}"));
         next += ":agenda:" + string.Join("|", AgendaWindow.DockItems.Select(a => a.DockKey));
         if (next == signature) return;
-        AppIconTheme.UpdateRunningApps(windows.Select(window => (window.Executable ?? "", window.AppId)));
+        var foreground = windows.FirstOrDefault(window => window.Handle == active && !window.Minimized);
+        AppIconTheme.UpdateForegroundApp(foreground?.Executable ?? "", foreground?.AppId);
         rebuilding = true;
         try
         {
@@ -508,7 +509,7 @@ internal sealed partial class DockWindow : FloatingWindow
         var icon = item.Glyph is null ? catalogApp?.Icon ?? icons.Get(item.Target, selected?.Handle ?? 0, selected?.AppId) : null;
         string iconTarget = catalogApp?.ResolvedTarget ?? (item.Target is string shortcutTarget ? icons.Resolve(shortcutTarget) : selected?.Executable ?? "");
         string? iconAppId = catalogApp?.AppId ?? selected?.AppId;
-        var image = new AppIcon { AppName = item.Name, Target = iconTarget, AppId = iconAppId, IsRunning = item.Windows.Count > 0, Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
+        var image = new AppIcon { AppName = item.Name, Target = iconTarget, AppId = iconAppId, Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
         Grid.SetRow(image, 1);
         FrameworkElement? fallback = null;
         if (item.Glyph is null) panel.Children.Add(image);

@@ -87,7 +87,7 @@ internal sealed class TrayCard : StackPanel
         foreach (var entry in shown)
         {
             string key = entry.Key;
-            var image = new AppIcon { IsRunning = true, AppName = entry.DisplayName, Target = entry.Executable ?? entry.Id, Source = entry.Icon, Width = 28, Height = 28, Stretch = Stretch.Uniform };
+            var image = new AppIcon { AppName = entry.DisplayName, Target = entry.Executable ?? entry.Id, Source = entry.Icon, Width = 28, Height = 28, Stretch = Stretch.Uniform };
             var label = new TextBlock { Text = entry.DisplayName, FontSize = 12, MaxWidth = 58, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
             var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; content.Children.Add(image); content.Children.Add(label);
             var button = new Button { Content = content, Margin = new Thickness(2), Padding = new Thickness(2), ToolTip = entry.Name + "\nCtrl + botão direito: fixar, abrir ou encerrar aplicativo" };

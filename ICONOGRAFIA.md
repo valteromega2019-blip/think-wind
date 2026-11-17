@@ -113,3 +113,11 @@ foram preservados. Creative Cloud mantém o símbolo vetorial já adicionado.
 
 Revisão por leitura dos recursos e do código; sem compilação, testes ou type check
 neste pedido. A conferência visual em execução permanece pendente.
+
+### Correção do estado de destaque
+
+No modo sem fundo, somente o aplicativo em primeiro plano recebe a cor de
+destaque. Aplicativos atrás de outras janelas ou minimizados ficam brancos.
+A identificação reutiliza a janela ativa já observada pelo Dock, sem novas
+consultas. Esta regra substitui a anterior, baseada em estar em execução.
+Sem compilação, testes ou type check neste pedido.
