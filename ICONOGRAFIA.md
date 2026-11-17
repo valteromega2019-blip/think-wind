@@ -244,3 +244,20 @@ entrar novamente, e o hover nunca fecha um menu que já está aberto. Menus,
 arrastes, edição e transições bloqueiam o disparo. O Modo Jogo suspende o timer
 e cancela a espera. Restaurar os padrões da barra também restaura essa opção.
 Sem compilação, testes, type check ou publicação nesta alteração.
+
+## Marcas de hardware e utilitários
+
+Complementadas associações para ASUS ROG / Armoury Crate, ASUS GPU Tweak/MyASUS,
+NVIDIA App/GeForce, AMD Radeon/Adrenalin/Ryzen Master, MSI Center/Afterburner,
+Intel Arc/Graphics, Corsair iCUE, Razer, SteelSeries, NZXT, Cooler Master,
+Alienware, Lenovo Vantage, Dell, HP, Samsung Magician, Kingston e Seagate.
+Os símbolos já presentes na base são reaproveitados. Logitech/Logitech G e
+Western Digital recebem vetores complementares com licença e referências.
+Correspondências curtas como AMD, Intel e MSI usam nome exato para não classificar
+programas com sequências parecidas. Nomes específicos de utilitários usam aliases.
+Armoury Crate e NVIDIA App foram identificados pelo catálogo instalado local.
+
+Esta cobertura se aplica aos aplicativos no pacote experimental; não inventa
+leituras de hardware nem muda os sensores. Preservados estilos, destaque,
+importações manuais e ícones nativos. Sem compilação, testes ou type check neste
+pedido. Reconhecimento em outras instalações e conferência visual pendentes.

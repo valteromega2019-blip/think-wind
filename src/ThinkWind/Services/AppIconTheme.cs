@@ -27,6 +27,24 @@ internal static class AppIconTheme
     private static readonly Dictionary<string, Geometry> geometry = new(StringComparer.Ordinal);
     private static readonly (string Match, string Icon)[] aliases = {
         ("orbylauncher", "orbylauncher"),
+        ("armourycrate", "republicofgamers"), ("armorycrate", "republicofgamers"),
+        ("rogcreate", "republicofgamers"), ("rogcrate", "republicofgamers"),
+        ("republicofgamers", "republicofgamers"), ("asusrog", "republicofgamers"),
+        ("aisuite", "asus"), ("gputweak", "asus"), ("myasus", "asus"),
+        ("nvidia", "nvidia"), ("geforce", "nvidia"), ("nvappexe", "nvidia"),
+        ("radeon", "amd"), ("ryzenmaster", "amd"), ("amdadrenalin", "amd"), ("radeonsoftware", "amd"),
+        ("msicenter", "msi"), ("dragoncenter", "msi"), ("afterburner", "msi"),
+        ("intelarc", "intel"), ("intelgraphics", "intel"), ("intelcommandcenter", "intel"),
+        ("corsair", "corsair"), ("icue", "corsair"),
+        ("razersynapse", "razer"), ("razercortex", "razer"), ("razer", "razer"),
+        ("steelseries", "steelseries"), ("nzxtcam", "nzxt"), ("nzxt", "nzxt"),
+        ("coolermaster", "coolermaster"), ("alienware", "alienware"),
+        ("lenovovantage", "lenovo"), ("dellcommand", "dell"), ("supportassist", "dell"),
+        ("hpomen", "hp"), ("hpsupportassistant", "hp"), ("samsungmagician", "samsung"),
+        ("kingston", "kingstontechnology"), ("seagate", "seagate"),
+        ("logitechghub", "logitechg"), ("lghub", "logitechg"), ("logitechg", "logitechg"),
+        ("logioptions", "logitech"), ("logitech", "logitech"),
+        ("westerndigital", "westerndigital"), ("wddashboard", "westerndigital"),
         ("wordcraft", "wordcraft"), ("gridcraft", "gridcraft"), ("deckcraft", "deckcraft"),
         ("vectorcraft", "vectorcraft"), ("solidcraft", "solidcraft"), ("artcraft", "artcraft"),
         ("microsoftwindowsstore", "microsoftstore"), ("microsoftstore", "microsoftstore"), ("lojamicrosoft", "microsoftstore"),
@@ -219,6 +237,10 @@ internal static class AppIconTheme
             {
                 "word" => "microsoftword", "excel" => "microsoftexcel", "powerpoint" => "microsoftpowerpoint",
                 "teams" => "microsoftteams", "access" => "microsoftaccess", "store" => "microsoftstore",
+                "amd" or "amdsoftware" or "adrenalin" => "amd", "asus" => "asus", "rog" => "republicofgamers",
+                "msi" => "msi", "intel" => "intel", "dell" => "dell", "hp" => "hp", "lenovo" => "lenovo",
+                "acer" => "acer", "samsung" => "samsung",
+                "amdradeonsoftware" or "amdsoftwareadrenalinedition" or "amdrssexe" or "radeonsoftwareexe" => "amd",
                 _ => aliases.FirstOrDefault(entry => title.Contains(entry.Match, StringComparison.Ordinal)
                     || identity.Contains(entry.Match, StringComparison.Ordinal)).Icon
             };

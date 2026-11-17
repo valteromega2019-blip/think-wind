@@ -54,6 +54,27 @@
         "guidelines":  "https://developer.adobe.com/developer-distribution/creative-cloud/docs/guides/branding_guidelines"
     },
     {
+        "title":  "Logitech",
+        "hex":  "00B8FC",
+        "source":  "https://www.logitech.com/en-us/pr/library",
+        "aliases":  {
+                        "dup":  [
+                                    {
+                                        "title":  "Logicool",
+                                        "hex":  "00BFFF",
+                                        "loc":  {
+                                                    "ja-JP":  "ロジクール"
+                                                }
+                                    }
+                                ]
+                    }
+    },
+    {
+        "title":  "Logitech G",
+        "hex":  "00B8FC",
+        "source":  "https://www.logitechg.com"
+    },
+    {
         "title":  "Microsoft",
         "hex":  "5E5E5E",
         "source":  "https://developer.microsoft.com",
@@ -202,6 +223,16 @@
         "title":  "Visual Studio Code",
         "hex":  "007ACC",
         "source":  "https://commons.wikimedia.org/wiki/File:Visual_Studio_Code_1.35_icon.svg"
+    },
+    {
+        "title":  "Western Digital",
+        "aliases":  {
+                        "aka":  [
+                                    "WD"
+                                ]
+                    },
+        "hex":  "995DFF",
+        "source":  "https://www.westerndigital.com"
     },
     {
         "title":  "Xbox",
