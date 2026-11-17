@@ -49,9 +49,18 @@ internal static class AppIconTheme
         ["cinema4d"]="C4D", ["visualstudiocode"]="VS", ["microsoftedge"]="e", ["winrar"]="RAR"
     };
     internal static bool Enabled { get; private set; }
+    internal static bool WithoutBackground { get; private set; }
     private static Color accent;
     private static SolidColorBrush tile = Brushes.Transparent;
     private static Dictionary<string, string> custom = new(StringComparer.Ordinal);
+    private static HashSet<string> runningApps = new(StringComparer.Ordinal);
+    internal static void UpdateRunningApps(IEnumerable<(string Target, string? AppId)> apps)
+    {
+        var next = apps.SelectMany(app => CustomAppIcons.Keys(app.Target, app.AppId)).ToHashSet(StringComparer.Ordinal);
+        if (runningApps.SetEquals(next)) return;
+        runningApps = next;
+        if (WithoutBackground) Changed?.Invoke();
+    }
     private static readonly Dictionary<string, BitmapSource?> customImages = new(StringComparer.Ordinal);
     internal static event Action? Changed;
     internal static void Apply(Preferences preferences)
@@ -61,9 +70,9 @@ internal static class AppIconTheme
         foreach (var entry in preferences.CustomAppIcons)
             foreach (string key in entry.Identities) nextCustom[key] = entry.Image;
         bool customChanged = nextCustom.Count != custom.Count || nextCustom.Any(pair => !custom.TryGetValue(pair.Key, out var image) || image != pair.Value);
-        if (Enabled == preferences.UnifiedAppIcons && next == accent && !customChanged) return;
+        if (Enabled == preferences.UnifiedAppIcons && WithoutBackground == preferences.AppIconsWithoutBackground && next == accent && !customChanged) return;
         if (customChanged) { custom = nextCustom; customImages.Clear(); }
-        Enabled = preferences.UnifiedAppIcons; accent = next;
+        Enabled = preferences.UnifiedAppIcons; WithoutBackground = preferences.AppIconsWithoutBackground; accent = next;
         tile = new SolidColorBrush(next); tile.Freeze(); Changed?.Invoke();
     }
     internal static bool HasCustom(string target, string? appId) => custom.Count > 0
@@ -83,13 +92,15 @@ internal static class AppIconTheme
             }
         return null;
     }
-    internal static void Draw(DrawingContext dc, Size size, string name, string target, string? appId)
+    internal static void Draw(DrawingContext dc, Size size, string name, string target, string? appId, bool running = false)
     {
         double side = Math.Min(size.Width, size.Height);
         if (!double.IsFinite(side) || side <= 0) return;
         var bounds = new Rect((size.Width - side) / 2, (size.Height - side) / 2, side, side);
-        dc.DrawRoundedRectangle(tile, null, bounds, side * .23, side * .23);
-        double inset = side * .2;
+        if (!WithoutBackground) dc.DrawRoundedRectangle(tile, null, bounds, side * .23, side * .23);
+        bool isOpen = running || (WithoutBackground && CustomAppIcons.Keys(target, appId).Any(runningApps.Contains));
+        Brush ink = WithoutBackground && isOpen ? tile : Brushes.White;
+        double inset = side * (WithoutBackground ? .08 : .2);
         var content = new Rect(bounds.X + inset, bounds.Y + inset, side - 2 * inset, side - 2 * inset);
         if (CustomImage(target, appId) is BitmapSource uploaded)
         {
@@ -97,7 +108,7 @@ internal static class AppIconTheme
             double width = uploaded.PixelWidth * imageScale, height = uploaded.PixelHeight * imageScale;
             var area = new Rect(content.X + (content.Width - width) / 2, content.Y + (content.Height - height) / 2, width, height);
             dc.PushOpacityMask(new ImageBrush(uploaded) { Stretch = Stretch.Fill });
-            dc.DrawRectangle(Brushes.White, null, area); dc.Pop(); return;
+            dc.DrawRectangle(ink, null, area); dc.Pop(); return;
         }
         var symbol = Resolve(name, target, appId);
         if (symbol.Path is string path)
@@ -106,7 +117,7 @@ internal static class AppIconTheme
             {
                 try { shape = Geometry.Parse(path.StartsWith("F0 ", StringComparison.Ordinal) ? path : "F1 " + path); shape.Freeze(); }
                 catch (Exception error) when (error is FormatException or ArgumentException or InvalidOperationException or OverflowException)
-                { DrawText(dc, content, Initials(name), false); return; }
+                { DrawText(dc, content, Initials(name), false, ink); return; }
                 if (geometry.Count >= 256) geometry.Clear(); geometry[path] = shape;
             }
             var original = shape.Bounds;
@@ -115,16 +126,16 @@ internal static class AppIconTheme
             dc.PushTransform(new MatrixTransform(scale, 0, 0, scale,
                 content.X + (content.Width - original.Width * scale) / 2 - original.X * scale,
                 content.Y + (content.Height - original.Height * scale) / 2 - original.Y * scale));
-            dc.DrawGeometry(Brushes.White, null, shape); dc.Pop();
+            dc.DrawGeometry(ink, null, shape); dc.Pop();
         }
-        else DrawText(dc, content, symbol.Glyph ?? symbol.Letters ?? Initials(name), symbol.Glyph is not null);
+        else DrawText(dc, content, symbol.Glyph ?? symbol.Letters ?? Initials(name), symbol.Glyph is not null, ink);
     }
-    private static void DrawText(DrawingContext dc, Rect box, string value, bool glyph)
+    private static void DrawText(DrawingContext dc, Rect box, string value, bool glyph, Brush ink)
     {
         var typeface = glyph ? new Typeface("Segoe Fluent Icons, Segoe MDL2 Assets")
             : new Typeface(new FontFamily("Segoe UI Variable, Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
         var text = new FormattedText(value, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-            typeface, box.Height * (glyph ? .95 : value.Length > 2 ? .55 : .78), Brushes.White, 1);
+            typeface, box.Height * (glyph ? .95 : value.Length > 2 ? .55 : .78), ink, 1);
         dc.DrawText(text, new Point(box.X + (box.Width - text.Width) / 2, box.Y + (box.Height - text.Height) / 2));
     }
     private static Symbol Resolve(string name, string target, string? appId)

@@ -11,6 +11,7 @@ public sealed record TrayActivity(int Count, DateTime LastUsedUtc, DateTime Firs
 public sealed class Preferences
 {
     public bool UnifiedAppIcons { get; set; } = false;
+    public bool AppIconsWithoutBackground { get; set; } = false;
     public List<AppIconOverride> CustomAppIcons { get; set; } = new();
     public bool OptimizerEnabled { get; set; }
     public string OptimizerPowerPlan { get; set; } = "Keep";

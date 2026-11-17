@@ -12,6 +12,8 @@ internal sealed partial class SettingsWindow
         Select(colors, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
         AddColorSetting(colors, "Cor de destaque", store.Value.AccentColor, value => Change(p => p.AccentColor = value));
         Check(colors, "Experimental · ícones unificados", store.Value.UnifiedAppIcons, value => Change(p => p.UnifiedAppIcons = value));
+        Check(colors, "Ícones sem fundo", store.Value.AppIconsWithoutBackground, value => Change(p => p.AppIconsWithoutBackground = value));
+        Note(colors, "Nos ícones unificados ou personalizados: remove o bloco e mantém apenas o símbolo. Branco quando fechado, cor de destaque quando aberto. As preferências são salvas automaticamente.");
         Note(colors, "Desligado por padrão. Fundo na cor de destaque e símbolo branco. Aplica ao Dock, às gavetas, aos favoritos e à bandeja de segundo plano. Alguns aplicativos usam monogramas; a cobertura visual ainda está em avaliação. Desative para voltar aos ícones originais.");
         Note(colors, "Ícones escolhidos manualmente são mantidos mesmo com esta opção desligada. Para removê-los, use Restaurar ícone padrão no botão direito do aplicativo.");
         AddContrastControl(colors);

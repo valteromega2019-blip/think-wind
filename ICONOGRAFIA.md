@@ -85,3 +85,18 @@ aos respectivos titulares. Ícones personalizados manualmente têm precedência.
 
 Estas alterações adicionais foram revisadas por leitura de código e diff.
 Não foram compiladas nem submetidas a testes ou type check neste pedido.
+
+## Símbolos sem fundo
+
+Em Aparência, “Ícones sem fundo” remove o quadrado dos símbolos unificados e
+personalizados. O modo com fundo continua sendo o padrão. Sem fundo, o símbolo
+usa branco quando fechado e a cor de destaque quando há uma janela aberta,
+incluindo janelas minimizadas. A bandeja de segundo plano identifica seus itens
+como ativos. Gavetas e favoritos reutilizam as identidades das janelas já lidas
+pelo Dock; não são criados timers nem consultas adicionais ao sistema.
+
+A escolha persiste nas preferências e muda em tempo real. O tamanho do controle,
+a área de clique e o zoom existente são preservados. A opção não recolore os
+ícones nativos quando a iconografia unificada está desligada e não há símbolo
+personalizado. Revisão por leitura de código e diff, sem compilação, testes ou
+type check neste pedido.
