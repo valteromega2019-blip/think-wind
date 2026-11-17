@@ -102,6 +102,12 @@ internal static class Desktop
         else RestoreAndActivate(hwnd);
     }
     internal static bool WindowExists(nint hwnd) => hwnd != 0 && IsWindow(hwnd);
+    internal static bool HasVisibleOwnedDialog(nint hwnd)
+    {
+        if (!WindowExists(hwnd)) return false;
+        nint popup = GetLastActivePopup(hwnd);
+        return popup != 0 && popup != hwnd && IsWindowVisible(popup);
+    }
     [DllImport("user32.dll")] private static extern nint GetAncestor(nint window, uint flags);
     internal static bool IsActiveWindow(nint window, nint foreground) => window != 0 && foreground != 0
         && (foreground == window || GetAncestor(foreground, 3) == window

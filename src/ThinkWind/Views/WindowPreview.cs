@@ -28,6 +28,15 @@ internal sealed partial class WindowPreview : FloatingWindow
     private int page, perPage = 4;
     private MediaCard? musicCard;
     private bool musicMode;
+    internal void PruneClosedWindows()
+    {
+        if (!IsVisible || WindowActionInteracting) return;
+        if (windows.RemoveAll(window => !Desktop.WindowExists(window.Handle)) == 0) return;
+        if (windows.Count == 0) { Hide(); return; }
+        if (browserMode)
+            PresentBrowser(windows.ToArray(), browserTabs.Where(tab => Desktop.WindowExists(tab.Window)).ToArray(), browserMeeting, browserMusic);
+        else if (!musicMode && !callMode) Render();
+    }
     private int musicPresentationRevision;
     private MusicPreviewSelection? selectedMusic;
     private CallPreviewCard? call;
@@ -175,7 +184,7 @@ internal sealed partial class WindowPreview : FloatingWindow
                 if (minimized) Hide();
                 else MessageBox.Show("O Windows não permitiu minimizar esta janela.", "Orby Launcher");
             });
-            var close = PreviewControl("Fechar esta janela", "\uE711", async () => { if (!WindowThumbnail.CloseWindow(window.Handle)) { if (ElevatedWindowAction.NeedsAdminFallback(window.Handle)) await ElevatedWindowAction.Request(window.Handle, close: true, owner: Owner ?? this); else MessageBox.Show("O Windows não permitiu solicitar o fechamento desta janela.", "Orby Launcher"); } });
+            var close = PreviewControl("Fechar esta janela", "\uE711", () => _ = ApplyWindowAction(window.Handle, true));
             controls.Children.Add(minimize); controls.Children.Add(close);
             var icon = new Image { Source = icons.Get(window.Executable, window.Handle), Width = 18, Height = 18, Margin = new Thickness(2, 0, 6, 0) }; DockPanel.SetDock(icon, Dock.Left); heading.Children.Add(icon);
             heading.Children.Add(new TextBlock { Text = window.Title, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }); card.Children.Add(heading);

@@ -45,6 +45,7 @@ internal sealed partial class WindowPreview
                     bool sent = close ? WindowThumbnail.CloseWindow(target.Handle) : Desktop.MinimizeWindow(target.Handle);
                     if (!sent && ElevatedWindowAction.NeedsAdminFallback(target.Handle))
                         sent = await ElevatedWindowAction.Request(target.Handle, close: close, minimize: !close, owner: Owner ?? this);
+                    if (sent && close) await CompleteCloseRequest(target.Handle);
                     if (!sent && WindowThumbnail.IsWindow(target.Handle)) failures++;
                 }
                 catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)

@@ -86,11 +86,30 @@ internal sealed partial class WindowPreview
             bool sent = close ? WindowThumbnail.CloseWindow(window) : await Desktop.ActivateFromDock(window, true);
             if (!sent && ElevatedWindowAction.NeedsAdminFallback(window))
                 sent = await ElevatedWindowAction.Request(window, close: close, minimize: !close, owner: Owner ?? this);
-            if (sent) Hide();
+            if (sent)
+            {
+                if (close) await CompleteCloseRequest(window);
+                Hide();
+            }
             else MessageBox.Show(close ? "O Windows não permitiu solicitar o fechamento desta janela." : "O Windows não permitiu minimizar esta janela.", "Orby Launcher");
         }
         catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)
         { MessageBox.Show(error.Message, "Orby Launcher"); }
         finally { windowActionBusy = false; }
+    }
+    private async Task CompleteCloseRequest(nint window)
+    {
+        // Wait only for this explicit close action. A surviving HWND alone
+        // does not imply a save prompt; require a visible owned dialog.
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            if (!Desktop.WindowExists(window)) break;
+            if (Desktop.HasVisibleOwnedDialog(window))
+            {
+                await Desktop.ActivateFromDock(window, false);
+                break;
+            }
+            await Task.Delay(50);
+        }
     }
 }

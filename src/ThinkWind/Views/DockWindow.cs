@@ -130,7 +130,7 @@ internal sealed partial class DockWindow : FloatingWindow
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
         IsVisibleChanged += (_, _) => { if (IsVisible) timer.Start(); else { timer.Stop(); magnifier.Reset(); launcher?.Dismiss(); } SyncBottomReservation(); };
         Closed += (_, _) => { bottomReservation?.Dispose(); bottomReservation = null; };
-        timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); UpdateStartHover(); RefreshForegroundIcon(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
+        timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); UpdateStartHover(); PruneClosedWindows(); RefreshForegroundIcon(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
         MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); TutorialGuide.Notify("dock-hover"); };
         MouseLeave += (_, _) => lastHover = DateTime.UtcNow;
         LayoutDrag.Completed += DragCompleted;
