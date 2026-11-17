@@ -198,7 +198,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     }
     private void StartOutsideObservation()
     {
-        if (new WindowInteropHelper(this).Handle == 0) return;
+        if (new System.Windows.Interop.WindowInteropHelper(this).Handle == 0) return;
         outsideClicks ??= new OutsideClickObserver(this,
             () => { if (menus == 0 && !modal && !LibraryShortcutDrag.Active && !LayoutDrag.Active && !category.IsDropDownOpen) Dismiss(); },
             () => LibraryShortcutDrag.Active || LayoutDrag.Active || PointerInsideLauncherOrDock());
