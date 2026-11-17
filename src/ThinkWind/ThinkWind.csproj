@@ -19,6 +19,7 @@
     <Copyright>© 2026 Think. Créditos do projeto: valteromega2019-blip.</Copyright>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Assets/Iconography/simple-icons-16.38.0.json" LogicalName="OrbyLauncher.Iconography" />
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" />
     <Content Include="UpdateInstaller.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

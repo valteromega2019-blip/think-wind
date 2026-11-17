@@ -504,11 +504,11 @@ internal sealed partial class DockWindow : FloatingWindow
             (!string.IsNullOrWhiteSpace(selected?.AppId) && string.Equals(app.AppId, selected?.AppId, StringComparison.OrdinalIgnoreCase))
             || (item.Target is not null && app.Target.Equals(item.Target, StringComparison.OrdinalIgnoreCase))) : null;
         var icon = item.Glyph is null ? catalogApp?.Icon ?? icons.Get(item.Target, selected?.Handle ?? 0, selected?.AppId) : null;
-        var image = new Image { Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
+        var image = new AppIcon { AppName = item.Name, Target = item.Target ?? selected?.Executable ?? "", AppId = selected?.AppId, Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
         Grid.SetRow(image, 1);
         FrameworkElement? fallback = null;
         if (item.Glyph is null) panel.Children.Add(image);
-        if (icon is null)
+        if (icon is null && item.Glyph is not null)
         {
             bool settingsIcon = item.Target?.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) == true
                 || string.Equals(System.IO.Path.GetFileName(selected?.Executable ?? item.Target ?? ""), "SystemSettings.exe", StringComparison.OrdinalIgnoreCase);

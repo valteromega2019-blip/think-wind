@@ -153,7 +153,7 @@ internal sealed partial class SettingsWindow : FloatingWindow
         BuildAppearance();
         BuildKeyboardSettings();
         BuildIntegratedOverlay();
-        var dock = Section("Barra de aplicativos", "Ícones originais, sem fundos individuais. Ajustes independentes da central de controle.");
+        var dock = Section("Barra de aplicativos", "Ícones originais ou unificados conforme Aparência. Ajustes independentes da central de controle.");
 
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");
         Slider(dock, "Tamanho dos ícones", 20, 48, store.Value.IconSize, v => Change(p => p.IconSize = v));

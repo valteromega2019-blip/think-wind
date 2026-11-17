@@ -11,6 +11,8 @@ internal sealed partial class SettingsWindow
         var colors = Section("Aparência", "Tema e cores. O destaque colore botões e indicadores; o fundo define a tonalidade das duas barras.");
         Select(colors, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
         AddColorSetting(colors, "Cor de destaque", store.Value.AccentColor, value => Change(p => p.AccentColor = value));
+        Check(colors, "Ícones unificados · fundo de destaque e símbolo branco", store.Value.UnifiedAppIcons, value => Change(p => p.UnifiedAppIcons = value));
+        Note(colors, "Aplica ao Dock, às gavetas de aplicativos, aos favoritos e à bandeja de segundo plano. Símbolos vetoriais quando disponíveis; monogramas nos demais. Desative para usar os ícones originais.");
         AddContrastControl(colors);
         Check(colors, "Personalizar a cor de fundo das duas barras", store.Value.UseCustomBarColor, value => Change(p => p.UseCustomBarColor = value));
         AddColorSetting(colors, "Cor de fundo", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));

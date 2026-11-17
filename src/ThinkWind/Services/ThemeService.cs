@@ -72,6 +72,7 @@ internal static class ThemeService
     internal static Color BaseColor => Light ? Color.FromRgb(242, 245, 249) : Color.FromRgb(17, 19, 24);
     internal static void Apply(Preferences p, bool refreshSystem = false)
     {
+        AppIconTheme.Apply(p);
         var light = IsLight(p);
         var next = string.Join('|', p.Theme, p.AccentColor, light, SystemParameters.HighContrast, p.InnerSurfaceOpacity,
             p.FontFamily, p.FontColor, p.AutomaticTextContrast, p.UseCustomBarColor, p.BarBackgroundColor, p.DockOpacity, p.IslandOpacity, p.TintOpacity);

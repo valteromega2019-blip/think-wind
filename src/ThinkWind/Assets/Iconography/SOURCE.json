@@ -1,0 +1,10 @@
+{
+  "library": "simple-icons",
+  "version": "16.38.0",
+  "source": "https://github.com/simple-icons/simple-icons",
+  "package": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.38.0.tgz",
+  "integrity": "sha512-B0Wws90eL0Fm65aH35CA8kM+7/Zzgsaytt0DndBx7VFm3+o9HurVIVRQZ1hvqqYYIyNJq7ycn3kQm2v2FhiWSQ==",
+  "symbols": 3472,
+  "import": "SVG title and path only; no package scripts executed",
+  "license": "See licenses/SimpleIcons-LICENSE.md, DISCLAIMER and per-icon METADATA. Brand rights remain with their respective owners."
+}
