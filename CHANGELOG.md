@@ -1,3 +1,7 @@
+# 0.32.0 Beta — 17/11/2026
+
+Iconografia personalizada experimental, símbolos com e sem fundo, destaque por janelas visíveis entre monitores e apps abertos na Biblioteca; importação de símbolos PNG/ICO e botões de energia diretos. [Notas completas](RELEASE-0.32.0-BETA.md).
+
 ## 0.18 Alfa — revisão 4
 
 Ícones compactos preservados na primeira linha, controles expandidos na segunda e ícone de retorno à área principal ao abrir diagnóstico. FPS confirmado manualmente pelo usuário. Compilação e instalador preparados, sem nova rodada de testes ou type check separados. [Notas](RELEASE-0.18.4-ALFA.md).

@@ -417,3 +417,20 @@ strong{font-weight:600}
 .history-section :focus-visible{outline:2px solid #6de6ff;outline-offset:4px}
 .history-section [hidden]{display:none}
 @media(max-width:720px){.history-layout{grid-template-columns:1fr}.history-list select{min-height:220px}.history-detail{padding:22px}}
+
+/* Optional iconography: release 0.32, same blue palette and existing typography. */
+.iconography-news{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.iconography-news h2{font-size:clamp(36px,4.5vw,64px);line-height:1.05;margin:18px 0 24px}
+.iconography-news p{line-height:1.7;color:#c7d7ed}
+.iconography-demo{margin:0;padding:28px;border:1px solid #294262;border-radius:26px;background:linear-gradient(145deg,#12233ed9,#10152ed9);color:#81dfff;text-align:center;min-width:0}
+.iconography-demo figcaption{font-size:11px;letter-spacing:.12em;margin-bottom:24px}
+.iconography-demo-row{display:flex;justify-content:center;gap:14px;margin:20px 0 32px}
+.iconography-sample{display:flex;flex:1;min-width:0;align-items:center;flex-direction:column;gap:10px}
+.iconography-sample svg{width:48px;height:48px;padding:10px;box-sizing:border-box;border-radius:14px;background:#3478d4;fill:#fff;transition:transform .2s ease}
+.iconography-sample:hover svg{transform:translateY(-4px) scale(1.12)}
+.iconography-sample small{font-size:9px;color:#c7d7ed;overflow-wrap:anywhere}
+.floating .iconography-sample svg{background:transparent;fill:#81dfff;padding:6px}
+.floating .iconography-sample:nth-child(even) svg{fill:#fff}
+.iconography-demo>small{display:block;font-size:10px;color:#a9bbd3;line-height:1.6}
+@media(max-width:800px){.iconography-news{grid-template-columns:1fr;gap:26px}.iconography-demo{padding:20px 14px}.iconography-demo-row{gap:8px}}
+@media(prefers-reduced-motion:reduce){.iconography-sample svg{transition:none}.iconography-sample:hover svg{transform:none}}
