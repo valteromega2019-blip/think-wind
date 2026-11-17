@@ -40,7 +40,7 @@ internal sealed class WindowsUpdateShutdownWindow : Window
                 catch (AbandonedMutexException) { ownsGuard = true; }
                 if (!ownsGuard) { status.Text = "Uma instalação já está em andamento. Acompanhe a outra janela do Orby."; return; }
                 await Task.Run(() => WindowsUpdatePower.InstallDownloaded(message => Dispatcher.BeginInvoke(new Action(() => status.Text = message))));
-                status.Text = "O Windows aceitou o desligamento após instalar as atualizações.";
+                status.Text = "O Windows aceitou a solicitação de atualizar e desligar. A conclusão é gerenciada pelo sistema.";
             }
             catch (Exception error)
             {

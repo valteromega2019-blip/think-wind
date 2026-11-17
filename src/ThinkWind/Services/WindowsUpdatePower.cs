@@ -13,7 +13,8 @@ internal static class WindowsUpdatePower
         string executable = Environment.ProcessPath ?? throw new InvalidOperationException("Executável do Orby indisponível.");
         var start = new ProcessStartInfo(executable) { UseShellExecute = true, Verb = "runas" };
         start.ArgumentList.Add("--windows-update-shutdown");
-        using var worker = Process.Start(start);
+        using var worker = Process.Start(start)
+            ?? throw new InvalidOperationException("Não foi possível iniciar a janela de atualização do Windows.");
     }
 
     // Runs only in the explicitly elevated, visible update worker, never in the
@@ -23,9 +24,20 @@ internal static class WindowsUpdatePower
         using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
         if (!new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
             throw new InvalidOperationException("O Windows não concedeu permissão para instalar atualizações.");
-        object? session = null, searcher = null, result = null, available = null, collection = null, installer = null, installation = null;
+        object? information = null, session = null, searcher = null, result = null, available = null, collection = null, installer = null, installation = null;
         try
         {
+            // The hourly detector also offers this action for already installed
+            // updates awaiting restart. Those are no longer returned by an
+            // IsInstalled=0 search: hand them to Windows instead of rejecting
+            // the action as an empty download collection.
+            information = Activator.CreateInstance(Type.GetTypeFromProgID("Microsoft.Update.SystemInfo", true)!);
+            if (((dynamic)information!).RebootRequired)
+            {
+                progress("O Windows tem atualizações aguardando conclusão. Solicitando atualizar e desligar pelo sistema…");
+                UpdateAndShutdown();
+                return;
+            }
             progress("Consultando as atualizações já baixadas…");
             session = Activator.CreateInstance(Type.GetTypeFromProgID("Microsoft.Update.Session", true)!);
             searcher = ((dynamic)session!).CreateUpdateSearcher();
@@ -57,8 +69,14 @@ internal static class WindowsUpdatePower
             int selected = ((dynamic)collection!).Count;
             if (selected == 0) throw new InvalidOperationException("Não há atualizações baixadas compatíveis com esta instalação. O PC não será desligado. Confira o Windows Update.");
             installer = ((dynamic)session!).CreateUpdateInstaller();
-            if (((dynamic)installer).IsBusy || ((dynamic)installer).RebootRequiredBeforeInstallation)
-                throw new InvalidOperationException("O Windows já está instalando ou exige reinicialização antes de continuar. O PC não será desligado automaticamente.");
+            if (((dynamic)installer).IsBusy)
+                throw new InvalidOperationException("O Windows já está instalando atualizações. Aguarde a conclusão antes de atualizar e desligar.");
+            if (((dynamic)installer).RebootRequiredBeforeInstallation)
+            {
+                progress("O Windows precisa concluir uma etapa pendente. Solicitando atualizar e desligar pelo sistema…");
+                UpdateAndShutdown();
+                return;
+            }
             ((dynamic)installer).Updates = collection;
             ((dynamic)installer).AllowSourcePrompts = false;
             progress($"Instalando {selected} atualização(ões). Aguarde; o computador permanece ligado até concluir…");
@@ -76,12 +94,15 @@ internal static class WindowsUpdatePower
                 }
                 finally { Release(item); }
             }
-            if (((dynamic)installation).RebootRequired)
-                throw new InvalidOperationException("As atualizações foram instaladas, mas precisam de reinicialização para terminar. O PC continuará ligado: salve seu trabalho e escolha Atualizar e reiniciar no Windows.");
-            progress("Atualizações instaladas. Solicitando o desligamento…");
+            // A successful installation commonly requires an offline servicing
+            // phase. This is not an installation failure. Keep INSTALL_UPDATES
+            // set and let Windows own that phase; never fall back to shutdown.exe.
+            progress(((dynamic)installation).RebootRequired
+                ? "Atualizações instaladas; há uma etapa pendente do Windows. Solicitando atualizar e desligar…"
+                : "Atualizações instaladas. Solicitando o desligamento…");
             UpdateAndShutdown();
         }
-        finally { Release(installation); Release(installer); Release(collection); Release(available); Release(result); Release(searcher); Release(session); }
+        finally { Release(installation); Release(installer); Release(collection); Release(available); Release(result); Release(searcher); Release(session); Release(information); }
     }
     private static readonly object gate = new();
     private static Timer? refreshTimer;
@@ -125,7 +146,9 @@ internal static class WindowsUpdatePower
             session = Activator.CreateInstance(Type.GetTypeFromProgID("Microsoft.Update.Session", true)!);
             searcher = ((dynamic)session!).CreateUpdateSearcher();
             ((dynamic)searcher).Online = false; // Local metadata only; never start a download or online scan.
-            result = ((dynamic)searcher).Search("IsInstalled=0 and IsHidden=0");
+            result = ((dynamic)searcher).Search("IsInstalled=0 and IsHidden=0 and Type='Software'");
+            if ((int)((dynamic)result).ResultCode != 2)
+                throw new InvalidOperationException("O Windows não concluiu a consulta local de atualizações.");
             updates = ((dynamic)result).Updates;
             int count = ((dynamic)updates).Count;
             for (int i = 0; i < count; i++)
@@ -138,7 +161,7 @@ internal static class WindowsUpdatePower
         catch (Exception error) when (error is COMException or InvalidCastException or TypeLoadException
             or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or UnauthorizedAccessException
             or InvalidOperationException or ArgumentException or System.Security.SecurityException)
-        { return false; }
+        { DiagnosticLog.Record("Detecção de atualizações do Windows", error); return false; }
         finally { Release(updates); Release(result); Release(searcher); Release(session); Release(information); }
         return false;
     }
