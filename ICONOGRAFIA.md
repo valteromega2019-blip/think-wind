@@ -219,3 +219,16 @@ Os estilos personalizados usam sua máscara de transparência; a cor acompanha o
 estado e o destaque existentes. A opção Original mantém o logo colorido.
 O bitmap é carregado uma vez e congelado; os cartões não alteram preferências ao
 desenhar suas alternativas. Sem novos testes ou type check nesta revisão.
+
+## Regressões do Iniciar — revisão após 0.32.1
+
+O recolhimento por saída do mouse passa a atender todas as seções do Iniciar,
+não apenas Biblioteca. Mantém 650 ms de tolerância fora do painel/Dock; retornar
+cancela o prazo. Menus, seletores, arrastes e edição em lote continuam protegidos.
+A observação de clique externo é garantida após Show, quando o HWND existe, e a
+classificação dentro/fora considera o instante do clique, não a posição posterior
+do cursor na fila do Dispatcher. A rolagem para páginas é capturada no painel
+inteiro, preservando o seletor de categorias e bloqueios de interação.
+
+Revisão por leitura e diff; sem compilação, testes, type check, instalador ou
+publicação neste pedido. Conferência prática do fechamento e da roda pendente.

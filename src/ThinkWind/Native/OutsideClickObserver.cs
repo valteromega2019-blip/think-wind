@@ -52,13 +52,17 @@ internal sealed class OutsideClickObserver : IDisposable
         if ((Marshal.ReadInt16(buffer, (int)header + 4) & 0x155) == 0 || !GetCursorPos(out var point)) return 0;
         GetWindowThreadProcessId(WindowFromPoint(point), out uint process);
         if (process == 0) return 0;
+        // Classify at button-down. The cursor can move before the queued
+        // dispatcher callback; that must not turn an outside click into inside.
+        var targets = observers.Where(observer => observer.active && !observer.disposed
+            && (observer.inside is not null ? !observer.inside() : process != Environment.ProcessId)).ToArray();
         queued = true;
         source.Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
         {
             queued = false;
             // One native mouse subscription shared by the visible panels.
-            foreach (var observer in observers.ToArray())
-                if (observer.active && !observer.disposed && (observer.inside is not null ? !observer.inside() : process != Environment.ProcessId)) observer.outside();
+            foreach (var observer in targets)
+                if (observer.active && !observer.disposed) observer.outside();
         }));
         return 0; // Let the native default procedure clean up WM_INPUT.
     }

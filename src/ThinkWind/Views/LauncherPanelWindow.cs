@@ -93,8 +93,12 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         previous.Click += (_, _) => { page--; RenderRows(); }; next.Click += (_, _) => { page++; RenderRows(); };
         navigation.Children.Add(previous); navigation.Children.Add(pagination); navigation.Children.Add(next); content.Children.Add(navigation); content.Children.Add(notice);
         resultsGrid.Background = Brushes.Transparent;
-        foreach (var area in new UIElement[] { resultsGrid, navigation })
-            PageWheel.Attach(area, () => Math.Max(1, (results.Count + perPage - 1) / perPage), () => page, value => { page = value; RenderRows(); }, () => menus > 0 || LayoutDrag.Active);
+        // Catch the wheel over the whole panel, including gaps, labels and
+        // search. A ComboBox keeps its own wheel while the pointer is over it.
+        PageWheel.Attach(this, () => Math.Max(1, (results.Count + perPage - 1) / perPage), () => page,
+            value => { page = value; RenderRows(); },
+            () => menus > 0 || modal || LayoutDrag.Active || LibraryShortcutDrag.Active
+                || category.IsMouseOver || category.IsDropDownOpen);
         var footer = new DockPanel { Margin = new Thickness(4, 6, 4, 0) };
         var power = BuildPowerActions();
         DockPanel.SetDock(power, Dock.Right); footer.Children.Add(power);
@@ -134,7 +138,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         {
             if (!IsVisible || menus > 0 || modal || LibraryShortcutDrag.Active || LayoutDrag.Active || category.IsDropDownOpen)
             { libraryPointerOutsideSince = default; return; }
-            if (!editingLibrary && (mode == LauncherPanelMode.Library || section == "Biblioteca"))
+            if (!editingLibrary)
             {
                 if (PointerInsideLauncherOrDock()) libraryPointerOutsideSince = default;
                 else if (libraryPointerOutsideSince == default) libraryPointerOutsideSince = DateTime.UtcNow;
@@ -160,10 +164,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         {
             if (IsVisible)
             {
-                outsideClicks ??= new OutsideClickObserver(this,
-                    () => { if (menus == 0 && !modal && !LibraryShortcutDrag.Active && !LayoutDrag.Active && !category.IsDropDownOpen) Dismiss(); },
-                    () => LibraryShortcutDrag.Active || LayoutDrag.Active || PointerInsideLauncherOrDock());
-                outsideClicks.Start();
+                StartOutsideObservation();
             }
             else outsideClicks?.Stop();
         };
@@ -183,7 +184,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         mode = requested; section = requested == LauncherPanelMode.Library ? "Biblioteca" : requested == LauncherPanelMode.Start ? "Fixados" : "Todos";
         updating = true; query.Text = text; updating = false; page = 0;
         UpdateCategories(); Reload(); ShowActivated = focusSearch;
-        Show(); RefreshSettings(); visibility.Start(); refresh.Start();
+        Show(); RefreshSettings(); StartOutsideObservation(); visibility.Start(); refresh.Start();
         if (focusSearch) FocusSearch();
         AnimateDrawerOpening(openingSurface);
         await catalog.RefreshAsync();
@@ -194,6 +195,14 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
     {
         if (!IsVisible || mode != LauncherPanelMode.Search) { Present(LauncherPanelMode.Search, text, false); return; }
         updating = true; query.Text = text; updating = false; page = 0; Reload();
+    }
+    private void StartOutsideObservation()
+    {
+        if (new WindowInteropHelper(this).Handle == 0) return;
+        outsideClicks ??= new OutsideClickObserver(this,
+            () => { if (menus == 0 && !modal && !LibraryShortcutDrag.Active && !LayoutDrag.Active && !category.IsDropDownOpen) Dismiss(); },
+            () => LibraryShortcutDrag.Active || LayoutDrag.Active || PointerInsideLauncherOrDock());
+        outsideClicks.Start();
     }
     private bool PointerInsideLauncherOrDock()
     {
