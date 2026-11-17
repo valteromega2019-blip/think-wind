@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Tretalk">
+  <!-- Versão para 32 px ou menos (favicon): sem o ponto, traço do "t" mais grosso. -->
+  <path d="M26 14h68a18 18 0 0 1 18 18v42a18 18 0 0 1-18 18H56l-24 20V92h-6A18 18 0 0 1 8 74V32a18 18 0 0 1 18-18z" fill="#5B8FF9"/>
+  <path d="M54 30v34a12 12 0 0 0 12 12h8" fill="none" stroke="#121821" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M40 46h32" fill="none" stroke="#121821" stroke-width="14" stroke-linecap="round"/>
+</svg>

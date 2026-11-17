@@ -72,3 +72,16 @@ processando UpdateLayout antes de capturar a imagem novamente; não houve falha
 na geometria do catálogo. Nenhuma preferência real foi alterada pelos testes.
 Não foi executada nova regressão completa, lint ou type check separado. Ainda é
 necessária conferência visual em uso real. Nenhum instalador ou release foi criado.
+
+## Complemento de símbolos — 17/11/2026
+
+Creative Cloud, ChatGPT e VS Code passam a usar vetores da versão 11.15.0 do
+Simple Icons, com licença e metadados preservados em licenses. Edge utiliza o
+símbolo de navegador do Windows. Hex2Think usa uma adaptação vetorial monocromática
+do seu ícone original; Tretalk usa uma adaptação do símbolo extraído do pacote
+instalado, preservando a referência SVG original. Esses recursos são locais,
+sem consultas de rede durante a renderização. As marcas continuam pertencendo
+aos respectivos titulares. Ícones personalizados manualmente têm precedência.
+
+Estas alterações adicionais foram revisadas por leitura de código e diff.
+Não foram compiladas nem submetidas a testes ou type check neste pedido.

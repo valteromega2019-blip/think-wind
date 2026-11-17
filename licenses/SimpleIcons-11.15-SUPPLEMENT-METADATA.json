@@ -1,0 +1,18 @@
+[
+    {
+        "title":  "Adobe Creative Cloud",
+        "hex":  "DA1F26",
+        "source":  "https://www.adobe.com/creativecloud.html",
+        "guidelines":  "https://developer.adobe.com/developer-distribution/creative-cloud/docs/guides/branding_guidelines"
+    },
+    {
+        "title":  "OpenAI",
+        "hex":  "412991",
+        "source":  "https://openai.com"
+    },
+    {
+        "title":  "Visual Studio Code",
+        "hex":  "007ACC",
+        "source":  "https://commons.wikimedia.org/wiki/File:Visual_Studio_Code_1.35_icon.svg"
+    }
+]

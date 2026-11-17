@@ -19,6 +19,9 @@ internal static class AppIconTheme
     private static readonly Dictionary<string, Symbol> resolved = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Geometry> geometry = new(StringComparer.Ordinal);
     private static readonly (string Match, string Icon)[] aliases = {
+        ("creativecloud", "adobecreativecloud"), ("chatgpt", "openai"),
+        ("hextothink", "hex2think"), ("hex2think", "hex2think"), ("hexthink", "hex2think"),
+        ("tretalk", "tretalk"), ("tretaalk", "tretalk"), ("vscode", "visualstudiocode"),
         ("visualstudiocode", "visualstudiocode"), ("codeinsiders", "visualstudiocode"), ("codeexe", "visualstudiocode"),
         ("youtubemusic", "youtubemusic"), ("googlechrome", "googlechrome"), ("chromeexe", "googlechrome"),
         ("firefox", "firefox"), ("brave", "brave"), ("msedge", "microsoftedge"), ("microsoftedge", "microsoftedge"),
@@ -101,7 +104,7 @@ internal static class AppIconTheme
         {
             if (!geometry.TryGetValue(path, out var shape))
             {
-                try { shape = Geometry.Parse("F1 " + path); shape.Freeze(); }
+                try { shape = Geometry.Parse(path.StartsWith("F0 ", StringComparison.Ordinal) ? path : "F1 " + path); shape.Freeze(); }
                 catch (Exception error) when (error is FormatException or ArgumentException or InvalidOperationException or OverflowException)
                 { DrawText(dc, content, Initials(name), false); return; }
                 if (geometry.Count >= 256) geometry.Clear(); geometry[path] = shape;
@@ -138,6 +141,7 @@ internal static class AppIconTheme
         else if (identity.Contains("explorerexe") || title is "explorador" or "exploradordearquivos" or "fileexplorer" or "pasta" or "pastas"
             or "documentos" or "documents" or "downloads" or "imagens" or "pictures" or "musicas" or "music" or "videos" or "areadetrabalho" or "desktop") result = new(Glyph: "\uE8B7");
         else if (identity is "calcexe" or "calculatorexe" || title is "calculadora" or "calculator") result = new(Glyph: "\uE8EF");
+        else if (identity.Contains("msedge") || title is "microsoftedge" or "edge") result = new(Glyph: "\uE774");
         else if (identity.Contains("notepad") || title is "blocodenotas") result = new(Glyph: "\uE70B");
         else if (identity.Contains("powershell") || identity.Contains("windowsterminal") || identity is "cmdexe" or "wtexe") result = new(Glyph: "\uE756");
         else
@@ -178,16 +182,21 @@ internal static class AppIconTheme
     private static Dictionary<string, string> LoadPaths()
     {
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        using var stream = typeof(AppIconTheme).Assembly.GetManifestResourceStream("OrbyLauncher.Iconography");
-        if (stream is null) return result;
-        using var document = JsonDocument.Parse(stream);
-        foreach (var entry in document.RootElement.EnumerateArray())
+        foreach (string resource in new[] { "OrbyLauncher.Iconography", "OrbyLauncher.Iconography.Supplemental" })
         {
-            string? path = entry.GetProperty("path").GetString(); if (path is null) continue;
-            string id = Normalize(entry.GetProperty("id").GetString() ?? "");
-            string name = Normalize(entry.GetProperty("name").GetString() ?? "");
-            if (id.Length > 0) result.TryAdd(id, path);
-            if (name.Length > 0) result.TryAdd(name, path);
+            using var stream = typeof(AppIconTheme).Assembly.GetManifestResourceStream(resource);
+            if (stream is null) continue;
+            using var document = JsonDocument.Parse(stream);
+            foreach (var entry in document.RootElement.EnumerateArray())
+            {
+                string? path = entry.GetProperty("path").GetString();
+                if (string.IsNullOrWhiteSpace(path)) continue;
+                if (entry.TryGetProperty("fillRule", out var rule) && rule.GetString() == "evenodd") path = "F0 " + path;
+                string id = Normalize(entry.GetProperty("id").GetString() ?? "");
+                string name = Normalize(entry.GetProperty("name").GetString() ?? "");
+                if (id.Length > 0) result[id] = path;
+                if (name.Length > 0) result[name] = path;
+            }
         }
         return result;
     }
