@@ -17,6 +17,14 @@ internal sealed class AppIcon : Image
         Unloaded += (_, _) => AppIconTheme.Changed -= ThemeChanged;
     }
     private void ThemeChanged() => InvalidateVisual();
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        var nativeSize = base.ArrangeOverride(finalSize);
+        // Image returns zero when Source is absent. Our vector/fallback still
+        // has content and must retain the slot reserved by the Dock or drawer.
+        return Source is null || AppIconTheme.Enabled || AppIconTheme.HasCustom(Target, AppId)
+            ? finalSize : nativeSize;
+    }
     protected override void OnRender(DrawingContext dc)
     {
         if (AppIconTheme.Enabled || AppIconTheme.HasCustom(Target, AppId)) AppIconTheme.Draw(dc, RenderSize, AppName, Target, AppId);

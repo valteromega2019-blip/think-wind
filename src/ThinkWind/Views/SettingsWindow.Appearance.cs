@@ -11,11 +11,16 @@ internal sealed partial class SettingsWindow
         var colors = Section("Aparência", "Tema e cores. O destaque colore botões e indicadores; o fundo define a tonalidade das duas barras.");
         Select(colors, "Tema do launcher e Windows", store.Value.Theme, new[] { new Choice("Auto", "Automático · acompanhar Windows"), new Choice("Dark", "Escuro"), new Choice("Light", "Claro") }, async value => { if (!building) await ThemeService.SelectTheme(store, value); });
         AddColorSetting(colors, "Cor de destaque", store.Value.AccentColor, value => Change(p => p.AccentColor = value));
-        Check(colors, "Experimental · ícones unificados", store.Value.UnifiedAppIcons, value => Change(p => p.UnifiedAppIcons = value));
-        Check(colors, "Ícones sem fundo", store.Value.AppIconsWithoutBackground, value => Change(p => p.AppIconsWithoutBackground = value));
-        Note(colors, "Nos ícones unificados ou personalizados: remove o bloco e mantém apenas o símbolo. Cor de destaque apenas no aplicativo em primeiro plano; os demais ficam brancos. As preferências são salvas automaticamente.");
-        Note(colors, "Desligado por padrão. Fundo na cor de destaque e símbolo branco. Aplica ao Dock, às gavetas, aos favoritos e à bandeja de segundo plano. Alguns aplicativos usam monogramas; a cobertura visual ainda está em avaliação. Desative para voltar aos ícones originais.");
-        Note(colors, "Ícones escolhidos manualmente são mantidos mesmo com esta opção desligada. Para removê-los, use Restaurar ícone padrão no botão direito do aplicativo.");
+        AppearanceLabel(colors, "Iconografia personalizada · Experimental");
+        var iconOptions = new StackPanel(); colors.Children.Add(iconOptions);
+        TutorialGuide.Mark(iconOptions, "iconography");
+        iconOptions.MouseEnter += (_, _) => TutorialGuide.Notify("iconography-discovered");
+        Select(iconOptions, "Estilo dos ícones", !store.Value.UnifiedAppIcons ? "Original" : store.Value.AppIconsWithoutBackground ? "Floating" : "Tile",
+            new[] { new Choice("Original", "Originais · padrão"), new Choice("Tile", "Símbolo branco · fundo na cor de destaque"), new Choice("Floating", "Símbolo flutuante · sem fundo") },
+            value => Change(p => { p.UnifiedAppIcons = value != "Original"; p.AppIconsWithoutBackground = value == "Floating"; }));
+        Note(iconOptions, "Opcional e desligado por padrão. Sem fundo, apenas o aplicativo em primeiro plano acende na cor de destaque; os demais ficam brancos. A cor acompanha seu destaque e a escolha é salva automaticamente.");
+        Note(iconOptions, "Adobe, Microsoft e ArtCraft têm novos símbolos. A cobertura é experimental: alguns aplicativos ainda usam um símbolo genérico ou iniciais. Para escolher seu próprio PNG ou ICO transparente, clique com o botão direito no app → Personalizar ícone…");
+        Note(iconOptions, "Originais desativa o pacote experimental sem apagar seus símbolos importados. Para desfazer uma importação, use Restaurar ícone padrão no botão direito do aplicativo.");
         AddContrastControl(colors);
         Check(colors, "Personalizar a cor de fundo das duas barras", store.Value.UseCustomBarColor, value => Change(p => p.UseCustomBarColor = value));
         AddColorSetting(colors, "Cor de fundo", store.Value.BarBackgroundColor, value => Change(p => p.BarBackgroundColor = value));

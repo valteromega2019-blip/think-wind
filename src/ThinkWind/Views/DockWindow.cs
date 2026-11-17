@@ -70,6 +70,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private DockFit fit = new(1, 32, 10, 4, 0);
     private int page;
     private nint activeWindow;
+    private nint iconForeground = -1;
     private double TotalWidth => contentWidth + 20 + magnificationReserve;
     internal System.Drawing.Rectangle MonitorBounds => Display.Bounds;
     internal int ExpandedSurfaceTop => ReservedBottomTop ?? Display.Bounds.Bottom - (int)Math.Ceiling((Math.Max(44, contentHeight + 20) + Store.Value.DockBottomOffset) * Display.Scale);
@@ -129,7 +130,7 @@ internal sealed partial class DockWindow : FloatingWindow
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
         IsVisibleChanged += (_, _) => { if (IsVisible) timer.Start(); else { timer.Stop(); magnifier.Reset(); launcher?.Dismiss(); } SyncBottomReservation(); };
         Closed += (_, _) => { bottomReservation?.Dispose(); bottomReservation = null; };
-        timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
+        timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); RefreshForegroundIcon(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
         MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); TutorialGuide.Notify("dock-hover"); };
         MouseLeave += (_, _) => lastHover = DateTime.UtcNow;
         LayoutDrag.Completed += DragCompleted;
@@ -611,6 +612,20 @@ internal sealed partial class DockWindow : FloatingWindow
         return button;
     }
     private bool openingDockItem;
+    private void RefreshForegroundIcon()
+    {
+        if (!AppIconTheme.WithoutBackground) { iconForeground = -1; return; }
+        nint foreground = Desktop.GetForegroundWindow();
+        if (foreground == iconForeground) return;
+        iconForeground = foreground;
+        // The actual foreground HWND is authoritative even if the cached
+        // snapshot still says minimized while Windows is restoring it.
+        var window = entries.SelectMany(entry => entry.Windows).FirstOrDefault(window => window.Handle == foreground);
+        AppIconTheme.UpdateForegroundApp(window?.Executable ?? "", window?.AppId);
+        // A newly launched app may not be in the snapshot yet. Refresh once
+        // on this foreground transition, never on every 100-ms tick.
+        if (window is null && foreground != 0 && !Desktop.ForegroundIsOurs()) nextAppRefresh = DateTime.MinValue;
+    }
     private nint lastApplicationForeground;
     private void RememberApplicationForeground()
     {
@@ -678,7 +693,7 @@ internal sealed partial class DockWindow : FloatingWindow
             // In that case use the original pinned shortcut, not a stale handle.
             if (item.Target is not null) SystemActions.Run(item.Target);
         }
-        finally { openingDockItem = false; }
+        finally { openingDockItem = false; RefreshForegroundIcon(); }
     }
     private FrameworkElement SearchSlot(double width)
     {

@@ -35,6 +35,9 @@ internal sealed partial class TutorialWindow : Window
     };
     private static readonly Step[] UpdateSteps =
     {
+        new("Novidades · Iconografia experimental", "Novos símbolos para seus aplicativos", "O pacote opcional inclui símbolos Adobe, Microsoft e ArtCraft. Abra Personalizar para conhecer os estilos; seus ícones originais continuam sendo o padrão.", "customize", "settings-open"),
+        new("Novidades · Iconografia experimental", "Escolha seu estilo", "Em Aparência você pode manter os originais, usar símbolos brancos sobre a cor de destaque ou deixá-los flutuantes, sem fundo.", "appearance", "appearance-open"),
+        new("Novidades · Iconografia experimental", "Seu destaque, seus símbolos", "Passe o mouse sobre Estilo dos ícones. No modo sem fundo, apenas o app em primeiro plano acende. Botão direito no app → Personalizar ícone permite importar PNG ou ICO; Restaurar ícone padrão desfaz. Não é necessário ativar o experimento para concluir.", "iconography", "iconography-discovered"),
         new("Novidades · Agenda experimental", "Abra o calendário", "A agenda é experimental. Clique no calendário para conhecer eventos, notas coloridas e lembretes. Você também pode usar o calendário do widget expandido.", "calendar", "agenda-calendar-open"),
         new("Novidades · Agenda experimental", "Escolha um dia", "Um clique no dia consulta seus itens; dois cliques abrem a criação. A janela aparece ao lado do calendário, pode ser movida e minimizada na barra. Os lembretes funcionam enquanto o Orby estiver aberto.", "agenda-calendar", "agenda-open"),
         new("Novidades · Agenda experimental", "Eventos e notas no mesmo lugar", "O seletor com ícones alterna Evento e Nota. Escolha uma cor para marcar o dia. O backup da agenda e das configurações fica em Personalizar → Backup, em arquivos separados. Explore e use Pular etapa para continuar sem criar um item.", "agenda-form", "agenda-saved"),
@@ -51,7 +54,7 @@ internal sealed partial class TutorialWindow : Window
     private bool updateTour;
     private Step[] Steps => updateTour ? UpdateSteps : MainSteps;
     private string ProgressPath => updateTour
-        ? Path.Combine(Path.GetDirectoryName(store.TutorialStatePath)!, "update-tour-0.31.0-agenda-v1.json") : store.TutorialStatePath;
+        ? Path.Combine(Path.GetDirectoryName(store.TutorialStatePath)!, "update-tour-iconography-v1.json") : store.TutorialStatePath;
     private string? CurrentTarget => progress.Step >= 0 && progress.Step < Steps.Length ? Steps[progress.Step].Target : null;
     public sealed class Progress
     {

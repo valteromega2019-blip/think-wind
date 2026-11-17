@@ -144,3 +144,28 @@ Preservados os ícones importados manualmente, o modo sem fundo e o destaque
 somente para o aplicativo em primeiro plano. Sem novas consultas periódicas,
 compilação, testes ou type check neste pedido. Conferência visual pendente.
 SolidCraft também recebe um símbolo de cubo adaptado do ícone local instalado.
+
+## Resposta do destaque e revisão das opções
+
+A cor do primeiro plano deixou de depender da enumeração de janelas (intervalo de
+2 s). O Dock reaproveita seu ciclo de 100 ms para detectar mudança de HWND e
+atualizar os símbolos da lista em cache. Após ações de ativação/minimização, faz
+uma sincronização imediata. Se uma nova janela ainda não existe no cache, solicita
+uma atualização da lista uma vez por mudança de primeiro plano. Sem novos timers,
+hooks ou enumerações contínuas; esse caminho fica inativo com o estilo sem fundo
+desligado e o timer permanece suspenso no Modo Jogo conforme a regra existente.
+
+Aparência oferece um seletor com três estilos: Originais, símbolo branco com
+fundo e flutuante sem fundo, além de orientações sobre importação e restauração.
+O experimento continua opcional. O mini tutorial das novidades ganhou destaque
+próprio e arquivo de progresso separado; notas prontas em NOVIDADES-ICONOGRAFIA.md.
+
+Validação autorizada em 17/11/2026: Release compilado sem avisos/erros; 8 testes
+focados aprovados (3.472 vetores da base e 37 complementos) e 61 testes de regressão
+aprovados, sem falhas ou ignorados. A falha inicial de renderização sem Source
+revelou que Image reduzia o controle a tamanho zero: ArrangeOverride agora mantém
+o espaço reservado para símbolos vetoriais e fallback. A correção e repetição
+foram autorizadas pelo usuário. A suíte focada foi repetida após os ajustes finais.
+Nenhuma preferência real foi alterada pelos testes. Não houve type check separado,
+instalador ou publicação. Não foi medida latência física de clique a pixel; 100 ms
+é a cadência do ciclo existente, não uma garantia sob bloqueio do Dispatcher.
