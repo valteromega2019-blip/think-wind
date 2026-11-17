@@ -19,6 +19,7 @@ internal static class AppIconTheme
     private static readonly Dictionary<string, Symbol> resolved = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Geometry> geometry = new(StringComparer.Ordinal);
     private static readonly (string Match, string Icon)[] aliases = {
+        ("orbylauncher", "orbylauncher"),
         ("wordcraft", "wordcraft"), ("gridcraft", "gridcraft"), ("deckcraft", "deckcraft"),
         ("vectorcraft", "vectorcraft"), ("solidcraft", "solidcraft"), ("artcraft", "artcraft"),
         ("microsoftwindowsstore", "microsoftstore"), ("microsoftstore", "microsoftstore"), ("lojamicrosoft", "microsoftstore"),
@@ -124,18 +125,23 @@ internal static class AppIconTheme
         return null;
     }
     internal static void Draw(DrawingContext dc, Size size, string name, string target, string? appId, bool highlightRunning = false)
+        => DrawCore(dc, size, name, target, appId, highlightRunning, WithoutBackground, false);
+    internal static void DrawPreview(DrawingContext dc, Size size, bool withoutBackground)
+        => DrawCore(dc, size, "Orby Launcher", "OrbyLauncher.exe", null, false, withoutBackground, true);
+    private static void DrawCore(DrawingContext dc, Size size, string name, string target, string? appId,
+        bool highlightRunning, bool withoutBackground, bool preview)
     {
         double side = Math.Min(size.Width, size.Height);
         if (!double.IsFinite(side) || side <= 0) return;
         var bounds = new Rect((size.Width - side) / 2, (size.Height - side) / 2, side, side);
-        if (!WithoutBackground) dc.DrawRoundedRectangle(tile, null, bounds, side * .23, side * .23);
+        if (!withoutBackground) dc.DrawRoundedRectangle(tile, null, bounds, side * .23, side * .23);
         var activeApps = highlightRunning ? runningApps : visibleApps;
-        bool highlighted = WithoutBackground && CustomAppIcons.Keys(target, appId)
-            .Any(key => activeApps.Contains(key) || foregroundApp.Contains(key));
+        bool highlighted = withoutBackground && (preview || CustomAppIcons.Keys(target, appId)
+            .Any(key => activeApps.Contains(key) || foregroundApp.Contains(key)));
         Brush ink = highlighted ? tile : Brushes.White;
-        double inset = side * (WithoutBackground ? .08 : .2);
+        double inset = side * (withoutBackground ? .08 : .2);
         var content = new Rect(bounds.X + inset, bounds.Y + inset, side - 2 * inset, side - 2 * inset);
-        if (CustomImage(target, appId) is BitmapSource uploaded)
+        if (!preview && CustomImage(target, appId) is BitmapSource uploaded)
         {
             double imageScale = Math.Min(content.Width / uploaded.PixelWidth, content.Height / uploaded.PixelHeight);
             double width = uploaded.PixelWidth * imageScale, height = uploaded.PixelHeight * imageScale;

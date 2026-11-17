@@ -240,5 +240,11 @@
         "path":  "M2 6 L12 1 L22 6 V18 L12 23 L2 18 Z M4 7 L12 11 L20 7 L12 3 Z M4 9 V17 L11 20.5 V12.5 Z M13 12.5 V20.5 L20 17 V9 Z",
         "fillRule":  "evenodd",
         "source":  "Local installed SolidCraft cube icon; monochrome vector adaptation"
+    },
+    {
+        "id":  "orbylauncher",
+        "name":  "Orby Launcher",
+        "path":  "M20 12 A8 8 0 1 1 4 12 A8 8 0 1 1 20 12 Z M8 7 Q7 7 7 8 V10 Q7 11 8 11 H10 Q11 11 11 10 V8 Q11 7 10 7 Z M14 7 Q13 7 13 8 V10 Q13 11 14 11 H16 Q17 11 17 10 V8 Q17 7 16 7 Z M8 13 Q7 13 7 14 V16 Q7 17 8 17 H10 Q11 17 11 16 V14 Q11 13 10 13 Z M14 13 Q13 13 13 14 V16 Q13 17 14 17 H16 Q17 17 17 16 V14 Q17 13 16 13 Z M1.4 17 A12 4 -30 1 1 22.6 5 A12 4 -30 1 1 1.4 17 Z M3.2 16 A10 2 -30 1 0 20.8 6 A10 2 -30 1 0 3.2 16 Z",
+        "source":  "Monochrome vector adaptation of the Orby planet, orbit and four tiles; original reference Assets/OrbyLauncher.png"
     }
 ]

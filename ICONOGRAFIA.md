@@ -194,3 +194,19 @@ visibilidade acompanha o timer já existente do menu, sem consultas extras WUA.
 Mantidos o salvamento antes da ação, a proteção modal durante confirmações e os
 fluxos nativos de energia/atualização. Não foram acionadas ações de energia nem
 executados testes, type check ou compilação neste pedido.
+
+## Seleção visual dos estilos
+
+Aparência mostra três cartões clicáveis com o Orby: Original, Com fundo e Sem
+fundo. O clique aplica e salva as duas preferências existentes, sem ativar ou
+alternar os outros estilos durante o desenho da prévia. A marca de seleção é
+atualizada pelas mudanças de preferências. Os cartões podem quebrar de linha
+para caber em janelas menores. As prévias acompanham a cor de destaque; o estilo
+sem fundo mostra o exemplo ativo nessa cor. O bitmap original é decodificado
+em tamanho reduzido e compartilhado. Eventos são removidos quando a área sai
+da tela, sem timers novos.
+
+Criado um símbolo vetorial monocromático do planeta, órbita e quatro blocos do
+Orby, também disponível no pacote unificado. Referência original mantida em
+Assets/OrbyLauncher.png. Sem compilação, testes, type check ou publicação nesta
+alteração; os resultados da versão anterior não validam estes cartões novos.
