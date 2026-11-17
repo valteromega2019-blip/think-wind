@@ -210,3 +210,12 @@ Criado um símbolo vetorial monocromático do planeta, órbita e quatro blocos d
 Orby, também disponível no pacote unificado. Referência original mantida em
 Assets/OrbyLauncher.png. Sem compilação, testes, type check ou publicação nesta
 alteração; os resultados da versão anterior não validam estes cartões novos.
+
+## Símbolo escolhido — próxima revisão 0.32.1
+
+O usuário escolheu o PNG original orby@2x.png. Arquivo copiado sem modificar os
+pixels para Assets/Iconography/orby-symbol.png e incorporado ao aplicativo.
+Os estilos personalizados usam sua máscara de transparência; a cor acompanha o
+estado e o destaque existentes. A opção Original mantém o logo colorido.
+O bitmap é carregado uma vez e congelado; os cartões não alteram preferências ao
+desenhar suas alternativas. Sem novos testes ou type check nesta revisão.

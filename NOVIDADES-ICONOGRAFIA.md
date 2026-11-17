@@ -38,10 +38,10 @@ Atalhos de Desligar, Suspender e Reiniciar lado a lado no Iniciar. O ícone de
 Atualizar e desligar aparece diretamente quando há atualização pendente do
 Windows, usando a verificação já existente na inicialização e a cada hora.
 
-### Próxima revisão da seleção
+### Revisão da seleção — 0.32.1 Beta
 
 Os estilos passam a ser escolhidos em cartões visuais com o ícone Orby: Original,
 Com fundo e Sem fundo. O clique aplica o estilo e a seleção acompanha as
 preferências. Prévia usa a cor de destaque atual, sem ativar o modo ao exibir os
 outros exemplos. Incluído símbolo monocromático do Orby no pacote experimental.
-Esta revisão ainda não está no instalador publicado 0.32.0 Beta.
+Esta revisão integra o instalador 0.32.1 Beta.

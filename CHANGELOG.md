@@ -1,3 +1,7 @@
+# 0.32.1 Beta — 17/11/2026
+
+Seleção de estilo por três cartões visuais do Orby e símbolo monocromático escolhido pelo usuário. [Notas e limites](RELEASE-0.32.1-BETA.md).
+
 # 0.32.0 Beta — 17/11/2026
 
 Iconografia personalizada experimental, símbolos com e sem fundo, destaque por janelas visíveis entre monitores e apps abertos na Biblioteca; importação de símbolos PNG/ICO e botões de energia diretos. [Notas completas](RELEASE-0.32.0-BETA.md).

@@ -11,7 +11,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/OrbyLauncher.ico</ApplicationIcon>
-    <Version>0.32.0-beta</Version>
+    <Version>0.32.1-beta</Version>
     <Company>Think</Company>
     <Authors>Think</Authors>
     <Product>Orby Launcher</Product>
@@ -21,6 +21,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets/Iconography/simple-icons-16.38.0.json" LogicalName="OrbyLauncher.Iconography" />
     <EmbeddedResource Include="Assets/Iconography/supplemental.json" LogicalName="OrbyLauncher.Iconography.Supplemental" />
+    <EmbeddedResource Include="Assets/Iconography/orby-symbol.png" LogicalName="OrbyLauncher.Iconography.OrbySymbol" />
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" />
     <Content Include="UpdateInstaller.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

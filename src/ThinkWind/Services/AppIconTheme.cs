@@ -14,7 +14,14 @@ namespace OrbyLauncher.Services;
 // Presentation only: never modifies shell resources, associations or identity.
 internal static class AppIconTheme
 {
-    private sealed record Symbol(string? Path = null, string? Glyph = null, string? Letters = null);
+    private sealed record Symbol(string? Path = null, string? Glyph = null, string? Letters = null, bool Orby = false);
+    private static readonly Lazy<BitmapSource?> orbySymbol = new(() =>
+    {
+        using var stream = typeof(AppIconTheme).Assembly.GetManifestResourceStream("OrbyLauncher.Iconography.OrbySymbol");
+        if (stream is null) return null;
+        var image = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames[0];
+        image.Freeze(); return image;
+    });
     private static readonly Lazy<Dictionary<string, string>> paths = new(LoadPaths);
     private static readonly Dictionary<string, Symbol> resolved = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Geometry> geometry = new(StringComparer.Ordinal);
@@ -141,7 +148,10 @@ internal static class AppIconTheme
         Brush ink = highlighted ? tile : Brushes.White;
         double inset = side * (withoutBackground ? .08 : .2);
         var content = new Rect(bounds.X + inset, bounds.Y + inset, side - 2 * inset, side - 2 * inset);
-        if (!preview && CustomImage(target, appId) is BitmapSource uploaded)
+        var symbol = Resolve(name, target, appId);
+        BitmapSource? bitmap = !preview ? CustomImage(target, appId) : null;
+        if (bitmap is null && symbol.Orby) bitmap = orbySymbol.Value;
+        if (bitmap is BitmapSource uploaded)
         {
             double imageScale = Math.Min(content.Width / uploaded.PixelWidth, content.Height / uploaded.PixelHeight);
             double width = uploaded.PixelWidth * imageScale, height = uploaded.PixelHeight * imageScale;
@@ -149,7 +159,6 @@ internal static class AppIconTheme
             dc.PushOpacityMask(new ImageBrush(uploaded) { Stretch = Stretch.Fill });
             dc.DrawRectangle(ink, null, area); dc.Pop(); return;
         }
-        var symbol = Resolve(name, target, appId);
         if (symbol.Path is string path)
         {
             if (!geometry.TryGetValue(path, out var shape))
@@ -194,7 +203,8 @@ internal static class AppIconTheme
         // Do not match parent folders (e.g. every game under Steam\common).
         string title = Normalize(name), identity = Normalize(fileName + " " + appId);
         Symbol result;
-        if (identity.Contains("mssettings") || identity.Contains("immersivecontrolpanel") || identity.Contains("systemsettingsexe")
+        if (title is "orby" or "orbylauncher" || identity.Contains("orbylauncher")) result = new(Orby: true);
+        else if (identity.Contains("mssettings") || identity.Contains("immersivecontrolpanel") || identity.Contains("systemsettingsexe")
             || title is "configuracoes" or "settings" or "configuracoesdowindows" or "paineldecontrole" or "controlpanel") result = new(Glyph: "\uE713");
         else if (identity.Contains("explorerexe") || title is "explorador" or "exploradordearquivos" or "fileexplorer" or "pasta" or "pastas"
             or "documentos" or "documents" or "downloads" or "imagens" or "pictures" or "musicas" or "music" or "videos" or "areadetrabalho" or "desktop") result = new(Glyph: "\uE8B7");
