@@ -411,7 +411,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         var icon = entry.Icon ?? icons.Get(entry.Target);
         string iconTarget = entry.ResolvedTarget ?? icons.Resolve(entry.Target);
-        var image = new AppIcon { AppName = entry.Name, Target = iconTarget, AppId = entry.AppId, Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
+        var image = new AppIcon { HighlightRunning = true, AppName = entry.Name, Target = iconTarget, AppId = entry.AppId, Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality); inside.Children.Add(image);
         LoadLargeIcon(image, entry.Target);
         inside.Children.Add(new TextBlock { Text = entry.Name, FontSize = 12, LineHeight = 16, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Height = 32, Width = 96, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 8, 0, 0) });

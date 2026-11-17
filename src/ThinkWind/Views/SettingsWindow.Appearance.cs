@@ -18,7 +18,7 @@ internal sealed partial class SettingsWindow
         Select(iconOptions, "Estilo dos ícones", !store.Value.UnifiedAppIcons ? "Original" : store.Value.AppIconsWithoutBackground ? "Floating" : "Tile",
             new[] { new Choice("Original", "Originais · padrão"), new Choice("Tile", "Símbolo branco · fundo na cor de destaque"), new Choice("Floating", "Símbolo flutuante · sem fundo") },
             value => Change(p => { p.UnifiedAppIcons = value != "Original"; p.AppIconsWithoutBackground = value == "Floating"; }));
-        Note(iconOptions, "Opcional e desligado por padrão. Sem fundo, apenas o aplicativo em primeiro plano acende na cor de destaque; os demais ficam brancos. A cor acompanha seu destaque e a escolha é salva automaticamente.");
+        Note(iconOptions, "Opcional e desligado por padrão. Sem fundo, apps com janelas visíveis em qualquer monitor acendem na cor de destaque. Na biblioteca, todos os apps abertos acendem, inclusive minimizados. A cor acompanha seu destaque e a escolha é salva automaticamente.");
         Note(iconOptions, "Adobe, Microsoft e ArtCraft têm novos símbolos. A cobertura é experimental: alguns aplicativos ainda usam um símbolo genérico ou iniciais. Para escolher seu próprio PNG ou ICO transparente, clique com o botão direito no app → Personalizar ícone…");
         Note(iconOptions, "Originais desativa o pacote experimental sem apagar seus símbolos importados. Para desfazer uma importação, use Restaurar ícone padrão no botão direito do aplicativo.");
         AddContrastControl(colors);

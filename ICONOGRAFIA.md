@@ -169,3 +169,18 @@ foram autorizadas pelo usuário. A suíte focada foi repetida após os ajustes f
 Nenhuma preferência real foi alterada pelos testes. Não houve type check separado,
 instalador ou publicação. Não foi medida latência física de clique a pixel; 100 ms
 é a cadência do ciclo existente, não uma garantia sob bloqueio do Dispatcher.
+
+### Destaque por contexto — múltiplos monitores
+
+Regra atual: no Dock e nas demais superfícies sem fundo, aplicativos com pelo
+menos uma janela visível e não minimizada recebem a cor de destaque em qualquer
+monitor. Janelas restauradas em segundo plano também contam; não é feita análise
+pixel a pixel da oclusão por outras janelas. Na Biblioteca, Fixados, Recentes,
+Todos e resultados do menu, qualquer aplicativo aberto na lista de janelas conta,
+inclusive minimizado. Programas sem janela, apenas como serviço, não entram nessa
+classificação. A cor continua sendo a de destaque configurada pelo usuário.
+
+A enumeração existente é global entre monitores. Na troca de foco, reutilizamos
+as identidades em cache e verificações leves de visibilidade; a cor não depende de
+qual monitor contém o primeiro plano. Não foram executados novos testes, type
+check ou compilação neste pedido; as 69 aprovações acima são da revisão anterior.

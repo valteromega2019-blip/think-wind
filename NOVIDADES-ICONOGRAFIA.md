@@ -1,4 +1,4 @@
-﻿# Destaque preparado para a próxima publicação
+# Destaque preparado para a próxima publicação
 
 ## Iconografia personalizada — Experimental
 
@@ -6,7 +6,7 @@ Uma nova forma de deixar os aplicativos com a identidade do seu desktop.
 
 - Escolha entre ícones originais, símbolo branco com fundo na cor de destaque ou
   símbolos flutuantes, sem fundo.
-- No estilo flutuante, somente o aplicativo em primeiro plano acende na cor de
+- No estilo flutuante, apps com janelas visíveis em qualquer monitor acendem na cor de
   destaque. A atualização usa o ciclo leve de 100 ms do Dock, sem esperar a
   consulta completa da lista de janelas, feita a cada dois segundos.
 - Símbolos Adobe com os contornos das letras; Microsoft Store, Office, Teams,

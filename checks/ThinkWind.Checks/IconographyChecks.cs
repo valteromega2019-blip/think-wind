@@ -146,6 +146,28 @@ internal static class IconographyChecks
             }
             finally { icon.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent)); }
         });
+        Check("Dock destaca janelas restauradas de qualquer monitor; biblioteca inclui minimizadas", () =>
+        {
+            AppIconTheme.Apply(new Preferences { UnifiedAppIcons = true, AppIconsWithoutBackground = true, AccentColor = "#3478D4" });
+            AppIconTheme.UpdateForegroundApp("", null);
+            // Snapshot global: two restored windows and one minimized window.
+            AppIconTheme.UpdateWindowApps(new[] { ("primary.exe", (string?)null, true), ("secondary.exe", (string?)null, true), ("minimized.exe", (string?)null, false) });
+            RenderTargetBitmap Frame(string target, bool library)
+            {
+                var visual = new DrawingVisual();
+                using (var dc = visual.RenderOpen()) AppIconTheme.Draw(dc, new Size(64, 64), "Spotify", target, null, library);
+                var bitmap = new RenderTargetBitmap(64, 64, 96, 96, PixelFormats.Pbgra32);
+                bitmap.Render(visual); return bitmap;
+            }
+            var blue = Color.FromRgb(52, 120, 212);
+            Require(CountColor(Frame("primary.exe", false), blue) > 50, "Monitor primário apagado.");
+            Require(CountColor(Frame("secondary.exe", false), blue) > 50, "Janela de outro monitor apagada.");
+            Require(CountColor(Frame("minimized.exe", false), Colors.White) > 50, "Dock destacou minimizada.");
+            Require(CountColor(Frame("minimized.exe", true), blue) > 50, "Biblioteca não destacou minimizada.");
+            Require(CountColor(Frame("closed.exe", true), Colors.White) > 50, "Biblioteca destacou app fechado.");
+            AppIconTheme.UpdateWindowApps(Array.Empty<(string Target, string? AppId, bool Visible)>());
+            Require(CountColor(Frame("secondary.exe", true), Colors.White) > 50, "Estado de app encerrado ficou retido.");
+        });
         AppIconTheme.Apply(new Preferences()); app.Shutdown();
         Console.WriteLine($"Iconografia: {passed} aprovados; {failed} falhas. Nenhuma preferência real alterada.");
         return failed == 0 ? 0 : 1;

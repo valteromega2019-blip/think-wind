@@ -336,6 +336,7 @@ internal sealed partial class DockWindow : FloatingWindow
             + string.Join("|", pins.Select(pin => $"{pin.Target}:{pinIdentities[pin.Target].Path}:{pinIdentities[pin.Target].AppId}"));
         next += ":agenda:" + string.Join("|", AgendaWindow.DockItems.Select(a => a.DockKey));
         if (next == signature) return;
+        AppIconTheme.UpdateWindowApps(windows.Select(window => (window.Executable ?? "", window.AppId, !window.Minimized)));
         var foreground = windows.FirstOrDefault(window => window.Handle == active && !window.Minimized);
         AppIconTheme.UpdateForegroundApp(foreground?.Executable ?? "", foreground?.AppId);
         rebuilding = true;
@@ -618,6 +619,11 @@ internal sealed partial class DockWindow : FloatingWindow
         nint foreground = Desktop.GetForegroundWindow();
         if (foreground == iconForeground) return;
         iconForeground = foreground;
+        // Reuse cached identities across all monitors. Only lightweight HWND
+        // visibility checks are needed on a foreground transition.
+        AppIconTheme.UpdateWindowApps(entries.SelectMany(entry => entry.Windows).DistinctBy(window => window.Handle)
+            .Where(window => Desktop.WindowExists(window.Handle))
+            .Select(window => (window.Executable ?? "", window.AppId, Desktop.IsVisibleAndRestored(window.Handle))));
         // The actual foreground HWND is authoritative even if the cached
         // snapshot still says minimized while Windows is restoring it.
         var window = entries.SelectMany(entry => entry.Windows).FirstOrDefault(window => window.Handle == foreground);
