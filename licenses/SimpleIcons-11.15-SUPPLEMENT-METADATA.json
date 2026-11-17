@@ -54,13 +54,158 @@
         "guidelines":  "https://developer.adobe.com/developer-distribution/creative-cloud/docs/guides/branding_guidelines"
     },
     {
+        "title":  "Microsoft",
+        "hex":  "5E5E5E",
+        "source":  "https://developer.microsoft.com",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks"
+    },
+    {
+        "title":  "Microsoft Access",
+        "hex":  "A4373A",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft Azure",
+        "hex":  "0078D4",
+        "source":  "https://github.com/microsoft/vscode-azureresourcegroups/blob/0a06362e82170fd7f8dc2496286825b1a69cc42b/resources/azure.svg",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks"
+    },
+    {
+        "title":  "Microsoft Bing",
+        "hex":  "258FFA",
+        "source":  "https://www.bing.com/covid/",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks"
+    },
+    {
+        "title":  "Microsoft Excel",
+        "hex":  "217346",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft OneDrive",
+        "hex":  "0078D4",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft OneNote",
+        "hex":  "7719AA",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft Outlook",
+        "hex":  "0078D4",
+        "source":  "https://developer.microsoft.com/en-us/outlook/docs",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks"
+    },
+    {
+        "title":  "Microsoft PowerPoint",
+        "hex":  "B7472A",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft SharePoint",
+        "hex":  "0078D4",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft SQL Server",
+        "hex":  "CC2927",
+        "source":  "https://de.wikipedia.org/wiki/Datei:Microsoft_SQL_Server_Logo.svg"
+    },
+    {
+        "title":  "Microsoft Store",
+        "hex":  "005FB8",
+        "source":  "https://github.com/microsoft/fluentui-system-icons/blob/4c58d8fb4d8549b9af9f7db8764d5d154df796c2/assets/Store%20Microsoft/SVG/ic_fluent_store_microsoft_24_regular.svg",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft Teams",
+        "hex":  "6264A7",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft Translator",
+        "hex":  "057B00",
+        "source":  "https://translator.microsoft.com",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks"
+    },
+    {
+        "title":  "Microsoft Visio",
+        "hex":  "3955A3",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
+        "title":  "Microsoft Word",
+        "hex":  "2B579A",
+        "source":  "https://developer.microsoft.com/en-us/fluentui#/styles/web/colors/products",
+        "guidelines":  "https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks",
+        "license":  {
+                        "type":  "custom",
+                        "url":  "https://aka.ms/fluentui-assets-license"
+                    }
+    },
+    {
         "title":  "OpenAI",
         "hex":  "412991",
         "source":  "https://openai.com"
     },
     {
+        "title":  "Skype",
+        "hex":  "00AFF0",
+        "source":  "https://blogs.skype.com/?attachment_id=56273"
+    },
+    {
         "title":  "Visual Studio Code",
         "hex":  "007ACC",
         "source":  "https://commons.wikimedia.org/wiki/File:Visual_Studio_Code_1.35_icon.svg"
+    },
+    {
+        "title":  "Xbox",
+        "hex":  "107C10",
+        "source":  "https://www.xbox.com/en-US/consoles"
     }
 ]

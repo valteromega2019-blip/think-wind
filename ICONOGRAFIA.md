@@ -121,3 +121,26 @@ destaque. Aplicativos atrás de outras janelas ou minimizados ficam brancos.
 A identificação reutiliza a janela ativa já observada pelo Dock, sem novas
 consultas. Esta regra substitui a anterior, baseada em estar em execução.
 Sem compilação, testes ou type check neste pedido.
+
+## Microsoft e ArtCraft
+
+Ampliada a correspondência por nome, executável e identidade de aplicativo do
+Windows. Store, Word, Excel, PowerPoint, Outlook, OneNote, OneDrive, Teams, Access,
+SharePoint, Visio, Bing, Translator, Azure, SQL Server, Skype e Xbox usam vetores
+locais Simple Icons 11.15.0, com referências SVG e metadados de licença.
+Utilitários (Paint, Fotos, Captura, Câmera, Relógio, To Do, gravador, mídia,
+segurança, entre outros) recebem símbolos funcionais do Windows. Aplicativos
+Microsoft não mapeados individualmente usam o símbolo Microsoft, evitando
+iniciais genéricas; isso não representa cobertura de logotipos exclusivos para
+todos os produtos presentes e futuros.
+
+ArtCraft Launcher, WordCraft, GridCraft e DeckCraft usam adaptações monocromáticas
+dos ícones instalados. VectorCraft usa uma pena vetorial para diferenciá-lo: o
+recurso de ícone encontrado no executável era o mesmo desenho de apresentação do
+DeckCraft. As imagens de referência e os hashes dos executáveis de origem foram
+preservados, sem redistribuir ou executar esses binários.
+
+Preservados os ícones importados manualmente, o modo sem fundo e o destaque
+somente para o aplicativo em primeiro plano. Sem novas consultas periódicas,
+compilação, testes ou type check neste pedido. Conferência visual pendente.
+SolidCraft também recebe um símbolo de cubo adaptado do ícone local instalado.

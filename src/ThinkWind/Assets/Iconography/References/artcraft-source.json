@@ -1,0 +1,26 @@
+[
+    {
+        "sha256":  "3196793F6F981591BF6018E0DB4DA33797EEECF78BDBE1326375D1A7C783E4CF",
+        "file":  "artcraft-launcher.exe"
+    },
+    {
+        "sha256":  "7DFB317C7457F70FD810D284656A13F404E57DBB224431E52FFE82E9D540AF83",
+        "file":  "wordcraft.exe"
+    },
+    {
+        "sha256":  "3077D09F118ED917E1006F82BD903CEEFE766EA63596A23FEAC2C298C5EB0FB7",
+        "file":  "gridcraft.exe"
+    },
+    {
+        "sha256":  "CB5276E31F2B9EC3A46E252DB19FAD432A84F95E4921D5ECDF6A0943618F4D9D",
+        "file":  "deckcraft.exe"
+    },
+    {
+        "sha256":  "DC6EC21D8ADE4D18854476020B0F251FBE7A14A2D85E1B652B462B99507F4F1E",
+        "file":  "vectorcraft.exe"
+    },
+    {
+        "file":  "solidcraft.exe",
+        "sha256":  "799F497DB85716B3988006B37F4B9B199E442E5A7AFCDCEB8116B4C92819AF77"
+    }
+]

@@ -19,6 +19,21 @@ internal static class AppIconTheme
     private static readonly Dictionary<string, Symbol> resolved = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Geometry> geometry = new(StringComparer.Ordinal);
     private static readonly (string Match, string Icon)[] aliases = {
+        ("wordcraft", "wordcraft"), ("gridcraft", "gridcraft"), ("deckcraft", "deckcraft"),
+        ("vectorcraft", "vectorcraft"), ("solidcraft", "solidcraft"), ("artcraft", "artcraft"),
+        ("microsoftwindowsstore", "microsoftstore"), ("microsoftstore", "microsoftstore"), ("lojamicrosoft", "microsoftstore"),
+        ("microsoftword", "microsoftword"), ("winword", "microsoftword"),
+        ("microsoftexcel", "microsoftexcel"), ("excelexe", "microsoftexcel"),
+        ("microsoftpowerpoint", "microsoftpowerpoint"), ("powerpnt", "microsoftpowerpoint"),
+        ("microsoftoutlook", "microsoftoutlook"), ("outlook", "microsoftoutlook"),
+        ("onenote", "microsoftonenote"), ("onedrive", "microsoftonedrive"),
+        ("msteams", "microsoftteams"), ("microsoftteams", "microsoftteams"), ("teamsexe", "microsoftteams"),
+        ("msaccess", "microsoftaccess"), ("microsoftaccess", "microsoftaccess"),
+        ("sharepoint", "microsoftsharepoint"), ("visio", "microsoftvisio"),
+        ("microsoftbing", "microsoftbing"), ("microsofttranslator", "microsofttranslator"),
+        ("microsoftazure", "microsoftazure"), ("sqlserver", "microsoftsqlserver"),
+        ("skype", "skype"), ("xbox", "xbox"), ("microsoftgamingapp", "xbox"),
+        ("microsoftoffice", "microsoft"), ("microsoft365", "microsoft"),
         ("creativecloud", "adobecreativecloud"), ("chatgpt", "openai"),
         ("hextothink", "hex2think"), ("hex2think", "hex2think"), ("hexthink", "hex2think"),
         ("tretalk", "tretalk"), ("tretaalk", "tretalk"), ("vscode", "visualstudiocode"),
@@ -163,18 +178,63 @@ internal static class AppIconTheme
         else if (identity.Contains("msedge") || title is "microsoftedge" or "edge") result = new(Glyph: "\uE774");
         else if (identity.Contains("notepad") || title is "blocodenotas") result = new(Glyph: "\uE70B");
         else if (identity.Contains("powershell") || identity.Contains("windowsterminal") || identity is "cmdexe" or "wtexe") result = new(Glyph: "\uE756");
+        else if (MicrosoftUtilityGlyph(title, identity) is string utility) result = new(Glyph: utility);
         else
         {
-            string? icon = aliases.FirstOrDefault(entry => title.Contains(entry.Match, StringComparison.Ordinal)
-                || identity.Contains(entry.Match, StringComparison.Ordinal)).Icon;
+            string? icon = title switch
+            {
+                "word" => "microsoftword", "excel" => "microsoftexcel", "powerpoint" => "microsoftpowerpoint",
+                "teams" => "microsoftteams", "access" => "microsoftaccess", "store" => "microsoftstore",
+                _ => aliases.FirstOrDefault(entry => title.Contains(entry.Match, StringComparison.Ordinal)
+                    || identity.Contains(entry.Match, StringComparison.Ordinal)).Icon
+            };
             string file = ""; try { file = Normalize(Path.GetFileNameWithoutExtension(target)); } catch (ArgumentException) { }
             if (icon is not null && paths.Value.TryGetValue(icon, out var brand)) result = new(Path: brand);
             else if (paths.Value.TryGetValue(title, out var exact) || paths.Value.TryGetValue(file, out exact)) result = new(Path: exact);
+            else if ((title.StartsWith("microsoft", StringComparison.Ordinal) || identity.Contains("microsoft"))
+                && paths.Value.TryGetValue("microsoft", out var microsoft)) result = new(Path: microsoft);
             else if (IsFolder(target)) result = new(Glyph: "\uE8B7");
             else if (icon is not null && monograms.TryGetValue(icon, out var letters)) result = new(Letters: letters);
             else result = new(Letters: Initials(name));
         }
         if (resolved.Count >= 512) resolved.Clear(); resolved[key] = result; return result;
+    }
+    private static readonly (string Match, string Glyph)[] microsoftUtilities = {
+        ("clipchamp", "\uE714"), ("microsoftpaint", "\uE790"), ("mspaint", "\uE790"),
+        ("windowsphotos", "\uEB9F"), ("windowscamera", "\uE722"),
+        ("screensketch", "\uE8C6"), ("snippingtool", "\uE8C6"),
+        ("todos", "\uE73E"), ("microsofttodo", "\uE73E"), ("sticky", "\uE70B"),
+        ("bingnews", "\uE8A5"), ("bingweather", "\uE753"),
+        ("windowsalarms", "\uE823"), ("windowssoundrecorder", "\uE720"),
+        ("zunemusic", "\uE8D6"), ("zunevideo", "\uE714"),
+        ("yourphone", "\uE8EA"), ("sechealth", "\uEA18"), ("gethelp", "\uE897"),
+        ("feedbackhub", "\uE939"), ("powerautomate", "\uE945"),
+        ("devhome", "\uE80F"), ("remotedesktop", "\uE8AF"), ("mstsc", "\uE8AF"),
+        ("microsoftproject", "\uE9D5"), ("microsoftplanner", "\uE9D5"),
+        ("powerbi", "\uE9D9"), ("whiteboard", "\uE70F"), ("microsoftdesigner", "\uE790"),
+        ("magnify", "\uE71E"), ("narrator", "\uED4D"), ("oskexe", "\uE765"),
+        ("taskmgr", "\uE9D9"), ("resmon", "\uE9D9"), ("regedit", "\uE713"),
+        ("visualstudio", "\uE943"), ("powertoys", "\uE90F"), ("copilot", "\uE945")
+    };
+    private static string? MicrosoftUtilityGlyph(string title, string identity)
+    {
+        // VS Code has its own brand vector, not the Visual Studio utility glyph.
+        if (title.Contains("visualstudiocode") || title.Contains("vscode") || identity.Contains("codeexe")) return null;
+        string? exact = title switch
+        {
+            "paint" or "paint3d" => "\uE790", "fotos" or "photos" => "\uEB9F",
+            "camera" => "\uE722", "relogio" or "clock" or "alarmeserelogio" => "\uE823",
+            "ferramentadecaptura" or "snippingtool" => "\uE8C6",
+            "gravadordesom" or "soundrecorder" => "\uE720",
+            "noticias" or "news" => "\uE8A5", "clima" or "weather" => "\uE753",
+            "segurancadowindows" or "windowssecurity" => "\uEA18",
+            "gerenciadordetarefas" or "taskmanager" => "\uE9D9",
+            "conexaoareadetrabalhoremota" or "remotedesktop" => "\uE8AF",
+            "vincularaocelular" or "phonelink" => "\uE8EA",
+            "reprodutormultimidia" or "mediaplayer" => "\uE8D6", _ => null
+        };
+        return exact ?? microsoftUtilities.FirstOrDefault(entry => title.Contains(entry.Match, StringComparison.Ordinal)
+            || identity.Contains(entry.Match, StringComparison.Ordinal)).Glyph;
     }
     private static string Initials(string name)
     {
