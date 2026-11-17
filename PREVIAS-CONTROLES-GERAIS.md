@@ -37,3 +37,10 @@ janela lenta seja uma solicitação de salvar e não se força encerramento.
 Diálogos personalizados que não sejam janelas nativas pertencentes podem não
 ser detectados automaticamente. Nenhum teste, type check ou build foi executado
 nesta revisão. Nenhuma janela do usuário foi fechada durante a implementação.
+
+## Refinamento minimalista
+
+Controles gerais mostram somente os símbolos de minimizar e fechar, sem rótulo
+visível ou superfície Acrylic envolvendo a linha. Botões transparentes mantêm
+área de clique, tooltip e nome acessível. Comandos individuais e ações gerais
+não mudaram. Sem compilação, testes ou type check nesta alteração.

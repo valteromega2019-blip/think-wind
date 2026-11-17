@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using OrbyLauncher.Native;
 using OrbyLauncher.Services;
 
@@ -18,13 +19,14 @@ internal sealed partial class WindowPreview
         {
             bool close = action.Item3;
             var button = ActionButton(action.Item1, () => _ = ApplyGroupAction(close));
-            var label = new StackPanel { Orientation = Orientation.Horizontal };
-            label.Children.Add(Glyph(action.Item2, 13));
-            label.Children.Add(new TextBlock { Text = action.Item1, Margin = new Thickness(7, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
-            button.Content = label; button.Padding = new Thickness(12, 8, 12, 8); button.Margin = new Thickness(3);
+            button.Style = (Style)FindResource("Think.IconButton");
+            button.Background = Brushes.Transparent; button.BorderThickness = new Thickness(0);
+            button.Content = Glyph(action.Item2, 14);
+            button.Width = 36; button.Height = 30;
+            button.Padding = new Thickness(7); button.Margin = new Thickness(3, 0, 3, 0);
             row.Children.Add(button);
         }
-        return PreviewSurface(row, false);
+        return row;
     }
 
     private async Task ApplyGroupAction(bool close)
