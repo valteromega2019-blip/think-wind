@@ -44,3 +44,21 @@ Controles gerais mostram somente os símbolos de minimizar e fechar, sem rótulo
 visível ou superfície Acrylic envolvendo a linha. Botões transparentes mantêm
 área de clique, tooltip e nome acessível. Comandos individuais e ações gerais
 não mudaram. Sem compilação, testes ou type check nesta alteração.
+
+## Clique no ícone de aplicativos com várias janelas
+
+Clique simples ativa a última janela usada sem minimizar o grupo. Duplo clique
+minimiza todas se uma janela do grupo estava em primeiro plano no primeiro
+clique; caso contrário restaura o grupo, deixando a última usada à frente.
+A ordem de uso acompanha as mudanças de primeiro plano pelo ciclo existente,
+com histórico limitado a 256 handles. Antes de observar o histórico da sessão,
+a ordem da lista de janelas é a alternativa inicial.
+
+Para não executar uma ação contraditória no primeiro clique do duplo, o clique
+simples em grupos aguarda o intervalo de duplo clique configurado no Windows.
+A segunda confirmação respeita também a distância de duplo clique do sistema.
+O timer só roda enquanto há clique pendente; ocultar/fechar o Dock cancela.
+Apps com uma janela e ações internas mantêm a regra anterior. Restauração usa
+as permissões e auxiliares existentes, sem fechar processos nem maximizar uma
+janela que o usuário deixou em tamanho normal. Sem compilação, testes ou type
+check nesta alteração; comportamento real permanece pendente de conferência.

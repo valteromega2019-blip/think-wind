@@ -560,8 +560,8 @@ internal sealed partial class DockWindow : FloatingWindow
             if (item.Action is not null && (item.Windows.Count == 0 || item.Key.StartsWith("system:agenda:", StringComparison.Ordinal))) item.Action();
             else
             {
-                var current = item.Windows.FirstOrDefault(window => Desktop.IsActiveWindow(window.Handle, foregroundBeforeClick)) ?? selected;
-                OpenDockItem(item, current, true, foregroundBeforeClick);
+                if (item.Windows.Count > 1) QueueMultiWindowClick(item, foregroundBeforeClick);
+                else OpenDockItem(item, selected, true, foregroundBeforeClick);
             }
             foregroundBeforeClick = 0;
         }, item.Name + (minimized ? " · minimizado" : focused is not null ? " · ativo" : item.Windows.Count > 0 ? " · em execução" : ""));
@@ -619,6 +619,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private bool openingDockItem;
     private void RefreshForegroundIcon()
     {
+        RememberApplicationForeground();
         if (!AppIconTheme.WithoutBackground) { iconForeground = -1; return; }
         nint foreground = Desktop.GetForegroundWindow();
         if (foreground == iconForeground) return;
@@ -640,7 +641,11 @@ internal sealed partial class DockWindow : FloatingWindow
     private void RememberApplicationForeground()
     {
         nint foreground = Desktop.GetForegroundWindow();
-        if (!Desktop.ForegroundIsOurs() && Desktop.IsVisibleAndRestored(foreground)) lastApplicationForeground = foreground;
+        if (!Desktop.ForegroundIsOurs() && Desktop.IsVisibleAndRestored(foreground))
+        {
+            lastApplicationForeground = foreground;
+            RememberWindowUse(foreground);
+        }
     }
     private nint DockClickForeground()
     {
