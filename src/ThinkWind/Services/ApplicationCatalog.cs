@@ -234,6 +234,9 @@ internal sealed class ApplicationCatalog : IDisposable
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
         }
+        foreach (var game in SteamLibraryEntries.Read(icons))
+            if (!result.Values.Any(app => app.Name.Equals(game.Name, StringComparison.CurrentCultureIgnoreCase)))
+                result.TryAdd("game:" + game.Target, game);
         return (result.Values.Where(app => !AppVisibility.IsSystemTool(app))
             .Select(app => GameLibrary.Detect(app) ? app with { Category = "Jogos" } : app)
             .DistinctBy(app => app.Target, StringComparer.OrdinalIgnoreCase).OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase).ToArray(), warning);

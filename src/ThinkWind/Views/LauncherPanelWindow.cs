@@ -73,7 +73,7 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         query.Background = Brushes.Transparent; query.Margin = new Thickness(0); query.SetResourceReference(TextBox.ForegroundProperty, "Think.Text"); query.BorderThickness = new Thickness(0);
         System.Windows.Automation.AutomationProperties.SetName(query, "Pesquisar aplicativos, arquivos, documentos e configurações");
         var tabs = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        foreach (string name in new[] { "Fixados", "Biblioteca", "Recentes", "Todos", "Jogos" })
+        foreach (string name in new[] { "Fixados", "Biblioteca", "Jogos", "Recentes", "Todos" })
         {
             var button = ActionButton(name, () => { if (section == name && query.Text.Length == 0 && !showHiddenLibrary) return; showHiddenLibrary = false; section = name; mode = name == "Biblioteca" ? LauncherPanelMode.Library : LauncherPanelMode.Start; updating = true; query.Text = ""; updating = false; page = 0; Reload(); });
             tabButtons.Add(name, button);
