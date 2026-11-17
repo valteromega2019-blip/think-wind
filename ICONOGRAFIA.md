@@ -5,7 +5,7 @@ opcional foi revertido; o serviço online não foi publicado, e não houve colet
 
 ## Uso
 
-Personalizar → Aparência → **Ícones unificados · fundo de destaque e símbolo branco**.
+Personalizar → Aparência → **Experimental · ícones unificados**.
 Desligada por padrão, preservando os ícones originais. A escolha é salva nas
 preferências e afeta os ícones carregados imediatamente, sem reiniciar.
 
@@ -40,7 +40,12 @@ Vetores locais, sem downloads durante o uso, timers, hooks ou novas consultas ao
 sistema. O catálogo só é lido ao usar o modo unificado. Geometrias e resoluções têm
 caches limitados, e os controles removem suas assinaturas ao sair da tela.
 
-Revisão por leitura e diff. Não foram executados build, testes, lint ou type check
-nesta implementação, conforme preferência do usuário. Ainda é necessária conferência
-visual com diferentes aplicativos, cores e escalas DPI. Nenhum instalador ou release
-foi criado para essa função.
+Validação autorizada em 17/11/2026: compilação Release sem erros nem avisos e cinco
+testes focados aprovados. Cobertura: padrão desligado e perfis anteriores,
+persistência em arquivo temporário, compatibilidade dos 3.472 vetores com WPF,
+renderização de símbolos e monogramas em quatro escalas DPI, mudança de cor e
+retorno à imagem original. Uma falha inicial da captura off-screen foi corrigida
+processando UpdateLayout antes de capturar a imagem novamente; não houve falha
+na geometria do catálogo. Nenhuma preferência real foi alterada pelos testes.
+Não foi executada nova regressão completa, lint ou type check separado. Ainda é
+necessária conferência visual em uso real. Nenhum instalador ou release foi criado.
