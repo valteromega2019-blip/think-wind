@@ -289,7 +289,7 @@ internal sealed partial class DockWindow : FloatingWindow
     }
     private async void RefreshApps()
     {
-        if (LayoutDrag.Active || fileDragging || MenuOpen || rebuilding || dockSearch.IsKeyboardFocusWithin) return;
+        if (LayoutDrag.Active || fileDragging || MenuOpen || rebuilding || MultiClickPending || dockSearch.IsKeyboardFocusWithin) return;
         if (readingWindows) { nextAppRefresh = DateTime.MinValue; return; }
         readingWindows = true;
         List<Desktop.RunningWindow> windows;
@@ -305,7 +305,7 @@ internal sealed partial class DockWindow : FloatingWindow
         catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { return; }
         finally { readingWindows = false; }
         if (!pins.SequenceEqual(Store.Value.Shortcuts) || !startPins.SequenceEqual(Store.Value.StartPins)) { signature = ""; nextAppRefresh = DateTime.MinValue; return; }
-        if (!IsVisible || LayoutDrag.Active || fileDragging || MenuOpen) return;
+        if (!IsVisible || LayoutDrag.Active || fileDragging || MenuOpen || MultiClickPending) return;
         BrowserTabs.Observe(windows);
         var screen = Display;
         int dockHeight = (int)Math.Ceiling((ExpandedHeight + Store.Value.DockBottomOffset) * screen.Scale);

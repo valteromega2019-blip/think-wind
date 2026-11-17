@@ -15,15 +15,18 @@ internal sealed partial class WindowPreview
     {
         if (windows.Where(window => WindowThumbnail.IsWindow(window.Handle)).DistinctBy(window => window.Handle).Take(2).Count() < 2) return null;
         var row = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(4, 8, 4, 0) };
+        var all = new TextBlock { Text = "Todos", FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 8, 0) };
+        all.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); row.Children.Add(all);
         foreach (var action in new[] { ("Minimizar todas", "\uE921", false), ("Fechar todas", "\uE711", true) })
         {
             bool close = action.Item3;
             var button = ActionButton(action.Item1, () => _ = ApplyGroupAction(close));
             button.Style = (Style)FindResource("Think.IconButton");
             button.Background = Brushes.Transparent; button.BorderThickness = new Thickness(0);
-            button.Content = Glyph(action.Item2, 14);
-            button.Width = 36; button.Height = 30;
-            button.Padding = new Thickness(7); button.Margin = new Thickness(3, 0, 3, 0);
+            var block = new Border { Child = Glyph(action.Item2, 14), CornerRadius = new CornerRadius(9), Padding = new Thickness(8, 6, 8, 6) };
+            block.SetResourceReference(Border.BackgroundProperty, "Think.Control");
+            button.Content = block; button.Width = 36; button.Height = 32;
+            button.Padding = new Thickness(0); button.Margin = new Thickness(3, 0, 3, 0);
             row.Children.Add(button);
         }
         return row;
@@ -44,7 +47,7 @@ internal sealed partial class WindowPreview
                 if (!close && !Desktop.IsVisibleAndRestored(target.Handle)) continue;
                 try
                 {
-                    bool sent = close ? WindowThumbnail.CloseWindow(target.Handle) : Desktop.MinimizeWindow(target.Handle);
+                    bool sent = close ? WindowThumbnail.CloseWindow(target.Handle) : await Desktop.ActivateFromDock(target.Handle, true);
                     if (!sent && ElevatedWindowAction.NeedsAdminFallback(target.Handle))
                         sent = await ElevatedWindowAction.Request(target.Handle, close: close, minimize: !close, owner: Owner ?? this);
                     if (sent && close) await CompleteCloseRequest(target.Handle);

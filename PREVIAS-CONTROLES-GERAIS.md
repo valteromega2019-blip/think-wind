@@ -62,3 +62,16 @@ Apps com uma janela e ações internas mantêm a regra anterior. Restauração u
 as permissões e auxiliares existentes, sem fechar processos nem maximizar uma
 janela que o usuário deixou em tamanho normal. Sem compilação, testes ou type
 check nesta alteração; comportamento real permanece pendente de conferência.
+
+## Correção do grupo parcialmente aberto e controles
+
+Duplo clique restaura primeiro quando qualquer janela válida está minimizada;
+só minimiza todas quando o grupo inteiro está restaurado e uma das janelas
+estava ativa no primeiro clique. A atualização completa do Dock aguarda o clique
+pendente para não substituir o botão no meio do duplo clique. Minimização de
+grupos e do botão geral agora usa o caminho assíncrono existente que verifica
+se a janela realmente minimizou, com fallback administrativo quando necessário.
+
+A linha abaixo das prévias tem “Todos” sem bloco e dois símbolos, cada um em um
+pequeno bloco com o fundo do tema. Sem compilação, testes ou type check nesta
+correção. Conferência prática ainda pendente.

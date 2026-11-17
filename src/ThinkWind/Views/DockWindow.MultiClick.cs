@@ -18,6 +18,7 @@ internal sealed partial class DockWindow
     private Item? pendingMultiItem;
     private bool pendingMinimizeAll;
     private System.Drawing.Point firstMultiClickPoint;
+    private bool MultiClickPending => multiClickTimer?.IsEnabled == true;
 
     private void RememberWindowUse(nint handle)
     {
@@ -48,7 +49,11 @@ internal sealed partial class DockWindow
         }
         if (foreground != 0) RememberWindowUse(foreground);
         pendingMultiItem = item;
-        pendingMinimizeAll = item.Windows.Any(window => Desktop.IsActiveWindow(window.Handle, foreground));
+        // Restore missing/minimized windows first, even if another window of
+        // this app is active. Only minimize when the whole group is restored.
+        pendingMinimizeAll = item.Windows.Where(window => Desktop.WindowExists(window.Handle))
+            .All(window => Desktop.IsVisibleAndRestored(window.Handle))
+            && item.Windows.Any(window => Desktop.IsActiveWindow(window.Handle, foreground));
         firstMultiClickPoint = point;
         if (multiClickTimer is null)
         {
@@ -77,7 +82,7 @@ internal sealed partial class DockWindow
             {
                 if (!Desktop.WindowExists(window.Handle)) continue;
                 if (minimize && !Desktop.IsVisibleAndRestored(window.Handle)) continue;
-                bool sent = minimize ? Desktop.MinimizeWindow(window.Handle) : await Desktop.ActivateFromDock(window.Handle, false);
+                bool sent = await Desktop.ActivateFromDock(window.Handle, minimize);
                 if (!sent && ElevatedWindowAction.NeedsAdminFallback(window.Handle))
                     await ElevatedWindowAction.Request(window.Handle, close: false, minimize: minimize, owner: this);
             }
