@@ -51,9 +51,7 @@ internal sealed partial class DockWindow
         pendingMultiItem = item;
         // Restore missing/minimized windows first, even if another window of
         // this app is active. Only minimize when the whole group is restored.
-        pendingMinimizeAll = item.Windows.Where(window => Desktop.WindowExists(window.Handle))
-            .All(window => Desktop.IsVisibleAndRestored(window.Handle))
-            && item.Windows.Any(window => Desktop.IsActiveWindow(window.Handle, foreground));
+        pendingMinimizeAll = DockGroupAction.ShouldMinimize(item.Windows.Select(window => window.Handle));
         firstMultiClickPoint = point;
         if (multiClickTimer is null)
         {

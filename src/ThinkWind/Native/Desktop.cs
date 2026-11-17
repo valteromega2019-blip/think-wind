@@ -118,8 +118,9 @@ internal static class Desktop
     {
         if (!WindowExists(hwnd)) return false;
         nint popup = GetLastActivePopup(hwnd);
-        if (minimizeRequested && IsVisibleAndRestored(hwnd))
+        if (minimizeRequested)
         {
+            if (IsIconic(hwnd)) return true;
             if (!ShowWindowAsync(hwnd, 6)) return false;
             for (int attempt = 0; attempt < 4; attempt++)
             {

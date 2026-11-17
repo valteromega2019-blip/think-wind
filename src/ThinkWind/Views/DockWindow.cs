@@ -588,6 +588,18 @@ internal sealed partial class DockWindow : FloatingWindow
         }
         if (item.Action is null && item.Target is string adminTarget && SystemActions.CanRunAsAdministrator(adminTarget))
             Menu(menu, "Executar como administrador…", () => SystemActions.RunAsAdministrator(adminTarget));
+        if (item.Windows.Any(BrowserTabs.IsBrowser))
+            Menu(menu, "Abrir nova guia", async () =>
+            {
+                var browser = LastUsedWindow(item);
+                if (browser is null) return;
+                try
+                {
+                    StopPreviews();
+                    if (await Desktop.ActivateFromDock(browser.Handle, false)) Desktop.Chord(0x11, 0x54);
+                }
+                catch (InvalidOperationException error) { DiagnosticLog.Record("Dock: nova guia", error); }
+            });
         foreach (var window in item.Windows) Menu(menu, (window.Minimized ? "Restaurar · " : "Abrir · ") + window.Title, () => OpenDockItem(item, window, false));
         if (item.Pin is not null) Menu(menu, "Remover atalho", () => Store.Update(p => p.Shortcuts.Remove(item.Pin)));
         else if (selected?.Executable is string executable) Menu(menu, "Fixar aplicativo", () => Store.Update(p =>
