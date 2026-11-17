@@ -410,7 +410,8 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
         var main = ActionButton(entry.Name, () => Launch(entry)); main.Style = (Style)FindResource("Think.IconButton"); main.Padding = new Thickness(6); main.ToolTip = entry.Name;
         var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         var icon = entry.Icon ?? icons.Get(entry.Target);
-        var image = new AppIcon { AppName = entry.Name, Target = entry.Target, Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
+        string iconTarget = entry.ResolvedTarget ?? icons.Resolve(entry.Target);
+        var image = new AppIcon { AppName = entry.Name, Target = iconTarget, AppId = entry.AppId, Source = icon, Width = 56, Height = 56, Stretch = Stretch.Uniform };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality); inside.Children.Add(image);
         LoadLargeIcon(image, entry.Target);
         inside.Children.Add(new TextBlock { Text = entry.Name, FontSize = 12, LineHeight = 16, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Height = 32, Width = 96, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 8, 0, 0) });
@@ -450,6 +451,16 @@ internal sealed partial class LauncherPanelWindow : FloatingWindow
             tile.Children.Add(add);
         }
         var menu = new ContextMenu(); AddMenu(menu, "Abrir", () => Launch(entry)); AddMenu(menu, "Fixar na barra", () => PinDock(entry));
+        AddMenu(menu, "Personalizar ícone…", async () =>
+        {
+            modal = true;
+            try { await CustomAppIconPicker.PickAsync(this, Store, iconTarget, entry.AppId); }
+            finally { modal = false; }
+        });
+        var restoreIcon = new MenuItem { Header = "Restaurar ícone padrão" };
+        restoreIcon.Click += (_, _) => CustomAppIcons.Restore(Store, iconTarget, entry.AppId);
+        menu.Opened += (_, _) => restoreIcon.IsEnabled = CustomAppIcons.Has(Store.Value, iconTarget, entry.AppId);
+        menu.Items.Add(restoreIcon);
         if ((section is "Biblioteca" or "Todos") && catalog.Items.Any(app => app.Target.Equals(entry.Target, StringComparison.OrdinalIgnoreCase)))
             AddMenu(menu, HiddenLibraryView ? "Mostrar novamente na biblioteca" : "Ocultar da biblioteca", () => SetLibraryHidden(entry, !HiddenLibraryView));
         if (SystemActions.CanRunAsAdministrator(entry.Target))

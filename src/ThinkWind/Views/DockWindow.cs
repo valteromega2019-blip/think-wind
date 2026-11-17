@@ -61,6 +61,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private bool applicationOverDock;
     private bool readingWindows;
     private ContextMenu? activeContextMenu;
+    private bool customIconDialogOpen;
     private DateTime contextMenuRequested;
     private bool settingsAfterMenu;
     private int layoutRevision;
@@ -183,7 +184,7 @@ internal sealed partial class DockWindow : FloatingWindow
         launcher?.RefreshSettings();
         preview?.RefreshSettings();
     }
-    private bool MenuOpen => startTools?.IsVisible == true || activeContextMenu is not null || items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
+    private bool MenuOpen => customIconDialogOpen || startTools?.IsVisible == true || activeContextMenu is not null || items.Children.OfType<Button>().Any(b => b.ContextMenu?.IsOpen == true);
     private bool PointerInsideDock
     {
         get
@@ -504,7 +505,9 @@ internal sealed partial class DockWindow : FloatingWindow
             (!string.IsNullOrWhiteSpace(selected?.AppId) && string.Equals(app.AppId, selected?.AppId, StringComparison.OrdinalIgnoreCase))
             || (item.Target is not null && app.Target.Equals(item.Target, StringComparison.OrdinalIgnoreCase))) : null;
         var icon = item.Glyph is null ? catalogApp?.Icon ?? icons.Get(item.Target, selected?.Handle ?? 0, selected?.AppId) : null;
-        var image = new AppIcon { AppName = item.Name, Target = item.Target ?? selected?.Executable ?? "", AppId = selected?.AppId, Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
+        string iconTarget = catalogApp?.ResolvedTarget ?? (item.Target is string shortcutTarget ? icons.Resolve(shortcutTarget) : selected?.Executable ?? "");
+        string? iconAppId = catalogApp?.AppId ?? selected?.AppId;
+        var image = new AppIcon { AppName = item.Name, Target = iconTarget, AppId = iconAppId, Source = icon, Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Stretch = Stretch.Uniform };
         Grid.SetRow(image, 1);
         FrameworkElement? fallback = null;
         if (item.Glyph is null) panel.Children.Add(image);
@@ -562,6 +565,19 @@ internal sealed partial class DockWindow : FloatingWindow
         AddAttentionDot(panel, button, item);
         button.Margin = new Thickness(fit.Gap / 2, 0, fit.Gap / 2, 0);
         var menu = new ContextMenu();
+        if (item.Glyph is null && !string.IsNullOrWhiteSpace(iconTarget))
+        {
+            Menu(menu, "Personalizar ícone…", async () =>
+            {
+                customIconDialogOpen = true;
+                try { await CustomAppIconPicker.PickAsync(this, Store, iconTarget, iconAppId); }
+                finally { customIconDialogOpen = false; lastHover = DateTime.UtcNow; }
+            });
+            var restoreIcon = new MenuItem { Header = "Restaurar ícone padrão" };
+            restoreIcon.Click += (_, _) => CustomAppIcons.Restore(Store, iconTarget, iconAppId);
+            menu.Opened += (_, _) => restoreIcon.IsEnabled = CustomAppIcons.Has(Store.Value, iconTarget, iconAppId);
+            menu.Items.Add(restoreIcon);
+        }
         if (item.Action is null && item.Target is string adminTarget && SystemActions.CanRunAsAdministrator(adminTarget))
             Menu(menu, "Executar como administrador…", () => SystemActions.RunAsAdministrator(adminTarget));
         foreach (var window in item.Windows) Menu(menu, (window.Minimized ? "Restaurar · " : "Abrir · ") + window.Title, () => OpenDockItem(item, window, false));

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace OrbyLauncher.Services;
 
@@ -47,13 +48,37 @@ internal static class AppIconTheme
     internal static bool Enabled { get; private set; }
     private static Color accent;
     private static SolidColorBrush tile = Brushes.Transparent;
+    private static Dictionary<string, string> custom = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, BitmapSource?> customImages = new(StringComparer.Ordinal);
     internal static event Action? Changed;
     internal static void Apply(Preferences preferences)
     {
         var next = (Color)ColorConverter.ConvertFromString(preferences.AccentColor);
-        if (Enabled == preferences.UnifiedAppIcons && next == accent) return;
+        var nextCustom = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var entry in preferences.CustomAppIcons)
+            foreach (string key in entry.Identities) nextCustom[key] = entry.Image;
+        bool customChanged = nextCustom.Count != custom.Count || nextCustom.Any(pair => !custom.TryGetValue(pair.Key, out var image) || image != pair.Value);
+        if (Enabled == preferences.UnifiedAppIcons && next == accent && !customChanged) return;
+        if (customChanged) { custom = nextCustom; customImages.Clear(); }
         Enabled = preferences.UnifiedAppIcons; accent = next;
         tile = new SolidColorBrush(next); tile.Freeze(); Changed?.Invoke();
+    }
+    internal static bool HasCustom(string target, string? appId) => custom.Count > 0
+        && CustomAppIcons.Keys(target, appId).Any(custom.ContainsKey);
+    private static BitmapSource? CustomImage(string target, string? appId)
+    {
+        if (custom.Count == 0) return null;
+        foreach (string key in CustomAppIcons.Keys(target, appId))
+            if (custom.TryGetValue(key, out var encoded))
+            {
+                if (!customImages.TryGetValue(encoded, out var image))
+                {
+                    image = CustomAppIcons.Decode(encoded);
+                    if (customImages.Count >= 64) customImages.Clear(); customImages[encoded] = image;
+                }
+                return image;
+            }
+        return null;
     }
     internal static void Draw(DrawingContext dc, Size size, string name, string target, string? appId)
     {
@@ -61,9 +86,17 @@ internal static class AppIconTheme
         if (!double.IsFinite(side) || side <= 0) return;
         var bounds = new Rect((size.Width - side) / 2, (size.Height - side) / 2, side, side);
         dc.DrawRoundedRectangle(tile, null, bounds, side * .23, side * .23);
-        var symbol = Resolve(name, target, appId);
         double inset = side * .2;
         var content = new Rect(bounds.X + inset, bounds.Y + inset, side - 2 * inset, side - 2 * inset);
+        if (CustomImage(target, appId) is BitmapSource uploaded)
+        {
+            double imageScale = Math.Min(content.Width / uploaded.PixelWidth, content.Height / uploaded.PixelHeight);
+            double width = uploaded.PixelWidth * imageScale, height = uploaded.PixelHeight * imageScale;
+            var area = new Rect(content.X + (content.Width - width) / 2, content.Y + (content.Height - height) / 2, width, height);
+            dc.PushOpacityMask(new ImageBrush(uploaded) { Stretch = Stretch.Fill });
+            dc.DrawRectangle(Brushes.White, null, area); dc.Pop(); return;
+        }
+        var symbol = Resolve(name, target, appId);
         if (symbol.Path is string path)
         {
             if (!geometry.TryGetValue(path, out var shape))

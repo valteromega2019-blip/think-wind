@@ -19,7 +19,7 @@ internal sealed class AppIcon : Image
     private void ThemeChanged() => InvalidateVisual();
     protected override void OnRender(DrawingContext dc)
     {
-        if (AppIconTheme.Enabled) AppIconTheme.Draw(dc, RenderSize, AppName, Target, AppId);
+        if (AppIconTheme.Enabled || AppIconTheme.HasCustom(Target, AppId)) AppIconTheme.Draw(dc, RenderSize, AppName, Target, AppId);
         else if (Source is not null) base.OnRender(dc);
         else
         {

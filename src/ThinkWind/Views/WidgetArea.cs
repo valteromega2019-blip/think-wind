@@ -94,7 +94,7 @@ internal sealed class WidgetArea : IDisposable
         foreach (var item in store.Value.WidgetFavorites)
         {
             var content = new StackPanel();
-            content.Children.Add(new AppIcon { AppName = item.Name, Target = item.Target, Source = icons.Get(item.Target), Width = 30, Height = 30, Stretch = Stretch.Uniform });
+            content.Children.Add(new AppIcon { AppName = item.Name, Target = icons.Resolve(item.Target), Source = icons.Get(item.Target), Width = 30, Height = 30, Stretch = Stretch.Uniform });
             var name = new TextBlock { Text = item.Name, FontSize = 11, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
             name.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); content.Children.Add(name);
             var button = new Button { Content = content, ToolTip = item.Name, Padding = new Thickness(5), Margin = new Thickness(2) };

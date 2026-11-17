@@ -16,7 +16,30 @@ preferências e afeta os ícones carregados imediatamente, sem reiniciar.
 - Não muda atalhos, identidade dos aplicativos, arquivos, ícones do sistema ou
   imagens de capas/miniaturas. Os controles do launcher mantêm seus ícones atuais.
 
-## Catálogo
+## Personalização por aplicativo
+
+No botão direito de um aplicativo no Dock ou nas gavetas (Fixados, Biblioteca,
+Recentes e Todos), use **Personalizar ícone…**. O seletor aceita PNG/ICO de até
+2 MB, com transparência e dimensões de até 1024 × 1024 pixels. A cópia é recortada
+ao símbolo, reduzida para até 256 pixels e convertida para branco, preservando o
+alfa. O original não é modificado, e o desenho é colocado sobre a cor de destaque.
+
+O arquivo normalizado fica incorporado às preferências, sem referência ao caminho
+original; assim, acompanha o backup das configurações. São permitidos até 64
+registros, com orçamento total de aproximadamente 1 MB para as imagens codificadas.
+A escolha usa AppUserModelID e/ou destino resolvido do atalho. **Restaurar ícone
+padrão** remove essa escolha e retorna ao catálogo unificado ou ao ícone original,
+conforme a opção global.
+
+A personalização individual é explícita: funciona mesmo com o modo unificado
+global desligado, sem ativá-lo para os outros aplicativos. Por padrão não há
+ícones personalizados. O arquivo é processado em tarefa de fundo após a seleção;
+os controles existentes permanecem protegidos contra fechamento por clique fora
+enquanto o seletor está aberto. Esta adição foi revisada por leitura e diff, ainda
+sem nova compilação, testes ou type check. Os cinco testes citados abaixo são da
+implementação anterior e não validam a importação personalizada.
+
+## Base de símbolos
 
 Importação fixada em Simple Icons 16.38.0: 3.472 símbolos de marcas. Não significa
 3.472 aplicativos instalados ou todos os aplicativos existentes. O pacote de origem

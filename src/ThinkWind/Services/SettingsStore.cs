@@ -11,6 +11,7 @@ public sealed record TrayActivity(int Count, DateTime LastUsedUtc, DateTime Firs
 public sealed class Preferences
 {
     public bool UnifiedAppIcons { get; set; } = false;
+    public List<AppIconOverride> CustomAppIcons { get; set; } = new();
     public bool OptimizerEnabled { get; set; }
     public string OptimizerPowerPlan { get; set; } = "Keep";
     public bool KeyboardUseNative { get; set; }
@@ -285,6 +286,7 @@ public sealed class SettingsStore
         p.DockMagnificationAmount = Limit(p.DockMagnificationAmount, .4, .6, .5);
         p.DockMagnificationSpeed = Limit(p.DockMagnificationSpeed, .5, 2, 1);
         p.DockMagnificationNeighbors = Math.Clamp(p.DockMagnificationNeighbors, 0, 4);
+        p.CustomAppIcons = CustomAppIcons.Normalize(p.CustomAppIcons);
         p.DockSearchMode = p.DockSearchMode is "Icon" or "Bar" ? p.DockSearchMode : "Bar";
         p.StartPins = (p.StartPins ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(100).ToList();
         p.RecentLaunches = (p.RecentLaunches ?? new()).Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Target)).DistinctBy(s => s.Target, StringComparer.OrdinalIgnoreCase).Take(20).ToList();
