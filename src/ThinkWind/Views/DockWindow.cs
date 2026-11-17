@@ -130,7 +130,7 @@ internal sealed partial class DockWindow : FloatingWindow
         Loaded += (_, _) => { RefreshSettings(); timer.Start(); };
         IsVisibleChanged += (_, _) => { if (IsVisible) timer.Start(); else { timer.Stop(); magnifier.Reset(); launcher?.Dismiss(); } SyncBottomReservation(); };
         Closed += (_, _) => { bottomReservation?.Dispose(); bottomReservation = null; };
-        timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); RefreshForegroundIcon(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
+        timer.Tick += (_, _) => { if (!IsVisible) return; PollFileDrag(); UpdateStartHover(); RefreshForegroundIcon(); if (DateTime.UtcNow >= nextAppRefresh) { nextAppRefresh = DateTime.UtcNow.AddSeconds(2); RefreshApps(); } UpdateVisibility(); };
         MouseEnter += (_, _) => { lastHover = DateTime.UtcNow; SetHidden(false); TutorialGuide.Notify("dock-hover"); };
         MouseLeave += (_, _) => lastHover = DateTime.UtcNow;
         LayoutDrag.Completed += DragCompleted;
@@ -152,6 +152,7 @@ internal sealed partial class DockWindow : FloatingWindow
     private void DragCompleted() { signature = ""; RefreshApps(); }
     internal void SuspendForGame(bool active)
     {
+        if (active) { startHoverSince = default; startHoverConsumed = true; }
         if (!active) temporaryFullscreenStart = false;
         if (active) { StopPreviews(); magnifier.Reset(); timer.Stop(); launcher?.Dismiss(); FinishFileDrag(); }
     }
@@ -427,10 +428,13 @@ internal sealed partial class DockWindow : FloatingWindow
         int pages = fit.Pages(entries.Count); page = Math.Clamp(page, 0, pages - 1);
         items.Width = double.NaN;
         items.Children.Clear();
+        startHoverButton = null;
         if (primaryControls)
         {
             var start = ActionButton("Iniciar Orby Launcher", ToggleStart); start.Style = (Style)FindResource("Think.IconButton"); start.Content = WindowsStartIcon(fit.Icon); start.Width = DockGeometry.StartWidth(fit.Icon); start.Height = fit.Icon + 22; start.Padding = new Thickness(4); items.Children.Add(start);
             AttachStartTools(start);
+            startHoverButton = start;
+            start.PreviewMouseDown += (_, _) => { startHoverSince = default; startHoverConsumed = true; };
             TutorialGuide.Mark(start, "start");
             items.Children.Add(SearchSlot(searchWidth));
             start.Margin = new Thickness(0, 0, 8, 0);

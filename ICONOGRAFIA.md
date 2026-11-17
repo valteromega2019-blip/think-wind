@@ -232,3 +232,15 @@ inteiro, preservando o seletor de categorias e bloqueios de interação.
 
 Revisão por leitura e diff; sem compilação, testes, type check, instalador ou
 publicação neste pedido. Conferência prática do fechamento e da roda pendente.
+
+## Iniciar por permanência do cursor
+
+Em Personalizar → Barra de aplicativos, a opção “Abrir Iniciar ao manter o mouse
+sobre o ícone” é desligada por padrão. O usuário ajusta a espera entre 1 e 2 s
+(padrão 1,5 s), com salvamento automático e limites de normalização. A abertura
+reutiliza o caminho normal e o timer já existente do Dock; não há novos hooks ou
+timers. Saída do cursor cancela a espera, clicar consome a abertura até sair e
+entrar novamente, e o hover nunca fecha um menu que já está aberto. Menus,
+arrastes, edição e transições bloqueiam o disparo. O Modo Jogo suspende o timer
+e cancela a espera. Restaurar os padrões da barra também restaura essa opção.
+Sem compilação, testes, type check ou publicação nesta alteração.

@@ -154,6 +154,9 @@ internal sealed partial class SettingsWindow : FloatingWindow
         BuildKeyboardSettings();
         BuildIntegratedOverlay();
         var dock = Section("Barra de aplicativos", "Ícones originais ou unificados conforme Aparência. Ajustes independentes da central de controle.");
+        Check(dock, "Abrir Iniciar ao manter o mouse sobre o ícone", store.Value.StartHoverEnabled, value => Change(p => p.StartHoverEnabled = value));
+        Slider(dock, "Espera para abrir Iniciar", 1, 2, store.Value.StartHoverSeconds, value => Change(p => p.StartHoverSeconds = value), "0.0 's'", .1);
+        Note(dock, "Desligado por padrão. Sair do ícone ou clicar cancela a espera; menus e arrastes impedem a abertura automática.");
 
         Slider(dock, "Escala da barra", .75, 1.5, store.Value.DockScale, v => Change(p => p.DockScale = v), "P0");
         Slider(dock, "Tamanho dos ícones", 20, 48, store.Value.IconSize, v => Change(p => p.IconSize = v));
