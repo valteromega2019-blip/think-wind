@@ -15,7 +15,7 @@ internal sealed partial class SettingsWindow
     private nint ResizeMessage(nint hwnd, int message, nint wp, nint lp, ref bool handled)
     {
         if (message == 0x231) manualResize = true;
-        if (message == 0x232) { manualResize = false; UpdateClip(); }
+        if (message == 0x232) { manualResize = false; positionedInterfaceScale = Store.Value.InterfaceScale; UpdateClip(); }
         if (message != 0x84 || !OverlayChrome.GetWindowRect(hwnd, out var rectangle)) return 0;
         int x = unchecked((short)(lp.ToInt64() & 0xffff)), y = unchecked((short)((lp.ToInt64() >> 16) & 0xffff));
         double scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? Display.Scale;

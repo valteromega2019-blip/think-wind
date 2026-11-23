@@ -165,6 +165,7 @@ public partial class App : Application
         preferenceStamp = PreferenceStamp.Capture(store);
         store.Changed += PreferencesChanged;
         SystemEvents.UserPreferenceChanged += WindowsPreferencesChanged;
+        NotifyWindowsScaleChanged();
         SystemEvents.DisplaySettingsChanged += DisplaySettingsChanged;
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Personalizar", null, (_, _) => Dispatcher.Invoke(OpenSettings));
@@ -323,6 +324,7 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        scaleChangeDebounce?.Stop();
         IsExiting = true;
         WindowsUpdatePower.StopMonitoring();
         if (Alarms is not null) { Alarms.Ring -= ShowAlarm; Alarms.Dispose(); }
@@ -370,6 +372,7 @@ public partial class App : Application
             if (editing || preferenceStamp?.Dock != next.Dock) pair.Dock.RefreshSettings(); else pair.Dock.RefreshAppearance();
             if (editing || preferenceStamp?.Island != next.Island) pair.Island?.RefreshSettings(); else pair.Island?.RefreshAppearance();
         }
+        RefreshInterfaceScaleWindows();
         preferenceStamp = next;
     }
     private void ConfigureStartHotkey()
@@ -439,6 +442,7 @@ public partial class App : Application
             { if (ReferenceEquals(window, island) && !window.IsLoaded) island?.PrepareInitialLayout(); bool activate = window.ShowActivated; window.ShowActivated = false; window.Show(); window.ShowActivated = activate; }
             gameHidden.Clear(); windowsTaskbar?.Apply(store.Value.HideWindowsTaskbar);
             PresentNextAlarm();
+            NotifyWindowsScaleChanged();
         }
         ApplyHardwareOverlay();
     }

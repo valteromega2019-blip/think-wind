@@ -13,6 +13,7 @@ namespace OrbyLauncher.Views;
 internal sealed partial class SettingsWindow : FloatingWindow
 {
     private const double SettingsVisualScale = .85;
+    private double positionedInterfaceScale = 1;
     protected override bool AttachedTop => false;
     protected override bool HideOnClose => false;
     protected override string? MaterialOverride => "Acrylic";
@@ -130,12 +131,14 @@ internal sealed partial class SettingsWindow : FloatingWindow
     {
         if (manualResize) { UpdateClip(); return; }
         var screen = Display; int gap = (int)Math.Round(12 * screen.Scale);
+        double logicalWidth = Width / positionedInterfaceScale, logicalHeight = Height / positionedInterfaceScale;
+        positionedInterfaceScale = Store.Value.InterfaceScale;
         var handle = new WindowInteropHelper(this).Handle; if (handle == 0) return;
         OverlayChrome.Move(handle, new OverlayChrome.PixelRect
         {
             Left = screen.Work.Left + gap, Top = screen.Work.Top + gap,
-            Right = screen.Work.Left + gap + (int)Math.Round(Width * screen.Scale),
-            Bottom = screen.Work.Top + gap + (int)Math.Round(Height * screen.Scale)
+            Right = screen.Work.Left + gap + (int)Math.Round(logicalWidth * screen.Scale),
+            Bottom = screen.Work.Top + gap + (int)Math.Round(logicalHeight * screen.Scale)
         });
     }
     private string LayoutSignature() => string.Join('|', store.Value.QuickOrder) + "/" + string.Join('|', store.Value.HiddenQuickControls) + "/" + string.Join('|', store.Value.DisabledQuickControls) + "/" + string.Join('|', store.Value.ModuleOrder) + "/" + string.Join('|', store.Value.HiddenModules) + store.Value.ShowAudio + store.Value.ShowWeatherInHeader + store.Value.ShowBatteryPercentage;

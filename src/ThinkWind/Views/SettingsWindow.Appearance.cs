@@ -28,6 +28,12 @@ internal sealed partial class SettingsWindow
         TutorialGuide.Mark(fixedBar, "fixed-bar");
         fixedBar.MouseEnter += (_, _) => TutorialGuide.Notify("fixed-bar-discovered");
         Note(colors, "No modo fixo, os controles ficam centralizados e os aplicativos respeitam o espaço da barra. Desative para voltar ao Dock flutuante com suas preferências anteriores.");
+        AppearanceLabel(colors, "Barra superior e escala");
+        Check(colors, "Barra superior fixa de ponta a ponta", store.Value.IslandFixedBar, value => Change(p => p.IslandFixedBar = value));
+        Note(colors, "Reserva espaço no topo também no desktop. Jogos e tela cheia mantêm a ocultação configurada.");
+        Slider(colors, "Escala geral do Orby", .6, 1.4, store.Value.InterfaceScale, value => Change(p => p.InterfaceScale = value), "P0", .05);
+        colors.Children.Add(Button("Restaurar escala · 100%", () => Change(p => p.InterfaceScale = 1)));
+        Note(colors, "Independente da escala do Windows; reduz menus e painéis em TVs. O overlay mantém sua escala própria.");
         AppearanceLabel(colors, "Arredondamento");
         Slider(colors, "Barra de aplicativos · cantos", 0, 48, store.Value.DockRadius, value => Change(p => p.DockRadius = value));
         Slider(colors, "Central de controle · cantos", 0, 28, store.Value.IslandRadius, value => Change(p => p.IslandRadius = value));

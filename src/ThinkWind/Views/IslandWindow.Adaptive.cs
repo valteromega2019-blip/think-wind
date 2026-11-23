@@ -30,22 +30,22 @@ internal sealed partial class IslandWindow
 
     protected override bool FullWidthTop => !fullscreenReveal && edgeReduced && Stage == Services.IslandStage.Compact;
     protected override bool SuppressMaterial => edgeReduced || preparingFullReveal;
-    protected override string? TopPanelSide => Stage == Services.IslandStage.Full ? (!fullscreenReveal && maximizedOnDisplay ? Store.Value.IslandPanelSide : "Center") : null;
-    protected override double TopEdgeOffset => !fullscreenReveal && Stage == Services.IslandStage.Full && maximizedOnDisplay ? 36 : 0;
+    protected override string? TopPanelSide => Stage == Services.IslandStage.Full ? (!fullscreenReveal && (maximizedOnDisplay || Store.Value.IslandFixedBar) ? Store.Value.IslandPanelSide : "Center") : null;
+    protected override double TopEdgeOffset => !fullscreenReveal && (Store.Value.IslandFixedBar && Stage != Services.IslandStage.Compact || Stage == Services.IslandStage.Full && maximizedOnDisplay) ? 36 : 0;
     private IslandStatusWindow? statusWindow;
     private readonly MaximizedWindowInset applicationInset = new();
     private StatusBarReservation? fixedReservation;
     private void RefreshApplicationInset()
     {
         if (fullscreenReveal) return;
-        if (fixedReservation is null && Store.Value.IslandReserveTop)
+        if (fixedReservation is null && (Store.Value.IslandReserveTop || Store.Value.IslandFixedBar))
         {
             nint handle = new WindowInteropHelper(this).EnsureHandle();
             fixedReservation = new StatusBarReservation(HwndSource.FromHwnd(handle));
         }
         // Fixed reservation does not follow hover, visibility or app mode.
         // Native fullscreen still uses monitor bounds rather than this work area.
-        if (Store.Value.IslandReserveTop)
+        if ((Store.Value.IslandReserveTop || Store.Value.IslandFixedBar))
         {
             applicationInset.Apply(Display, 0);
             fixedReservation?.Set(Display, (int)Math.Ceiling(28 * Display.Scale));
@@ -61,7 +61,7 @@ internal sealed partial class IslandWindow
     private void SyncStatusSurface()
     {
         BuildStatusRow();
-        if (!fullscreenReveal && (edgeReduced || (Stage == Services.IslandStage.Full && maximizedOnDisplay)))
+        if (!fullscreenReveal && (Store.Value.IslandFixedBar || edgeReduced || (Stage == Services.IslandStage.Full && maximizedOnDisplay)))
         {
             if (ReferenceEquals(Surface.Child, statusRow)) Surface.Child = null;
             if (statusWindow is null)
@@ -225,7 +225,7 @@ internal sealed partial class IslandWindow
     private bool UpdateAdaptiveState()
     {
         // Opening a mini-panel must not replace the strip under the clicked icon.
-        bool reduce = !fullscreenReveal && Store.Value.IslandReduceOverMaximized && maximizedOnDisplay
+        bool reduce = !fullscreenReveal && (Store.Value.IslandFixedBar || (Store.Value.IslandReduceOverMaximized && maximizedOnDisplay))
             && Stage == Services.IslandStage.Compact && !Store.IsEditing;
         if (reduce == edgeReduced) { SyncStatusSurface(); return false; }
         bool returningToIsland = edgeReduced && !reduce && Stage == Services.IslandStage.Compact && IsVisible;

@@ -21,7 +21,7 @@ public partial class App
     private void DisplaySettingsChanged(object? sender, EventArgs e)
     {
         if (!IsExiting && !Dispatcher.HasShutdownStarted)
-            Dispatcher.BeginInvoke(new Action(ConfigureMonitors));
+            Dispatcher.BeginInvoke(new Action(() => { ConfigureMonitors(); NotifyWindowsScaleChanged(); }));
     }
 
     private void ConfigureMonitors()

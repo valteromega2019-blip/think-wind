@@ -38,7 +38,14 @@ internal abstract class FloatingWindow : Window
     internal string? MonitorDeviceOverride { get; set; }
     private bool retiring;
     internal void Retire() { retiring = true; Close(); }
-    protected OverlayChrome.Display Display => OverlayChrome.GetDisplay(Store.Value.MonitorIndex, MonitorDeviceOverride ?? Store.Value.MonitorDeviceName);
+    protected OverlayChrome.Display Display
+    {
+        get
+        {
+            var display = OverlayChrome.GetDisplay(Store.Value.MonitorIndex, MonitorDeviceOverride ?? Store.Value.MonitorDeviceName);
+            return display with { Scale = display.Scale * Store.Value.InterfaceScale };
+        }
+    }
     private readonly FrameClock animation = new();
     private readonly Stopwatch elapsed = new();
     private OverlayChrome.PixelRect start, target;
@@ -59,6 +66,7 @@ internal abstract class FloatingWindow : Window
     }
     internal double AnimationMilliseconds => Store.Value.AnimationMilliseconds;
     protected bool IsPositionAnimating => animation.IsRunning;
+    private readonly ScaleTransform interfaceTransform = new();
     private double radius;
     private double animationDuration;
     private UIElement? openingContent;
@@ -138,6 +146,7 @@ internal abstract class FloatingWindow : Window
         // change. Keep the independent material HWND aligned on those moves.
         // Our animated Move already synchronizes once after SetWindowPos.
         if ((message == 0x0005 || message == 0x0047) && !positioning) UpdateClip();
+        if (message == 0x02E0 && Application.Current is App app) app.NotifyWindowsScaleChanged();
         if (message is 0x007E or 0x02E0 or 0x001A)
         {
             if (!positioning) Dispatcher.BeginInvoke(new Action(() => { ApplyAppearance(); Position(); }));
@@ -146,6 +155,9 @@ internal abstract class FloatingWindow : Window
     }
     protected void ApplyAppearance()
     {
+        double interfaceScale = Store.Value.InterfaceScale;
+        interfaceTransform.ScaleX = interfaceTransform.ScaleY = interfaceScale;
+        if (!ReferenceEquals(Surface.LayoutTransform, interfaceTransform)) Surface.LayoutTransform = interfaceTransform;
         FontSizing.Apply(this, TextScale);
         var p = Store.Value;
         radius = CollapsedDock ? 3 : FullWidthTop || FullWidthBottom ? 0 : UsesIslandAppearance ? p.IslandRadius : p.DockRadius;
