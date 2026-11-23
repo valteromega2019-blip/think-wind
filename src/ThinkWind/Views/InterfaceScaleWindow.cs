@@ -10,6 +10,7 @@ namespace OrbyLauncher.Views;
 
 internal sealed class InterfaceScaleWindow : FloatingWindow
 {
+    protected override bool AttachedTop => false;
     protected override bool UsesIslandAppearance => true;
     protected override bool HideOnClose => false;
     private readonly double original;
