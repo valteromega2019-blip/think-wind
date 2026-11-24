@@ -199,6 +199,7 @@ public partial class App : Application
         if (e.Args.Contains("--inspect"))
             foreach (var window in Windows.OfType<FloatingWindow>()) window.ShowInTaskbar = true;
         InitializeUpdates();
+        InitializePeripheralAlerts();
         ApplyHardwareOverlay();
         // Window families are built once by ConfigureMonitors. Let their first
         // layout/render complete before warming nonvisual services. The cache
@@ -326,6 +327,7 @@ public partial class App : Application
     {
         scaleChangeDebounce?.Stop();
         PeripheralBatteries.Stop();
+        StopPeripheralAlerts();
         IsExiting = true;
         WindowsUpdatePower.StopMonitoring();
         if (Alarms is not null) { Alarms.Ring -= ShowAlarm; Alarms.Dispose(); }

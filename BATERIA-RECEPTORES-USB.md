@@ -94,3 +94,9 @@ Encontrado o cartão local LocalState/StartMenu/StartMenuCompanion.json do pacot
 Leitura do arquivo a cada2s apenas quando o Refresh existente permite, com cache por modificação/tamanho; não reabre JSON inalterado. Limite1MiB e profundidade32, leitura compartilhada, campos permitidos de layout e rótulos estritos PT/EN. Rejeita valores fora de0–100, cartões desconectados/ambíguos, formatos desconhecidos e arquivos antigos. Sinalização de última leitura após2min, rejeição do cartão após10min mais tolerância do agregador. Usa ícone de celular E8EA, BatteryIcon e detalhes existentes; raio somente se o tooltip afirmar carregamento. Não altera heurísticas do teclado/headset.
 Revisão por leitura e diff apenas; não compilado nem executados testes ou type check nesta etapa. A integração ainda não está na prévia aberta.
 
+
+## Preferências e avisos de bateria
+Nova seção Personalizar/Baterias dos dispositivos: visibilidade e tipo de ícone individual, restaurável mesmo oculto, persistência por nome, opção global de alerta abaixo de15%. Não interrompe coleta ao ocultar; alertas continuam independentes da visibilidade. Alterações aplicadas no próximo refresh visual existente sem reconstruir indicadores preservados. Dispositivos novos aparecem ao atualizar lista.
+Aviso Acrylic não ativa janela, fecha em12s ou Dispensar. Usa snapshot compartilhado, sem leituras adicionais, ignora leituras stale/carregando, adia em jogo/fullscreen usando UpdateBlocked existente. Notificação persistida por nome, liberada após carga ou20%; verificação leve30s para avisos adiados. Percentual desconhecido não gera aviso. Preferências limitadas e normalizadas; sem informação de usuário fora do armazenamento local.
+Revisão de código/diff somente. Não executados testes, type check, build ou prévia nesta alteração.
+

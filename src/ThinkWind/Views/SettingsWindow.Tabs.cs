@@ -37,7 +37,7 @@ internal sealed partial class SettingsWindow
     private static readonly (string Name, string[] Pages)[] navigationGroups =
     {
         ("Visual", new[] { "Aparência", "Barra de aplicativos", "Central de controle", "Transparência", "Tipografia", "Animações" }),
-        ("Seu desktop", new[] { "Ícones da central de controle", "Widgets", "Clima", "Teclado", "Editor de layout" }),
+        ("Seu desktop", new[] { "Ícones da central de controle", "Widgets", "Clima", "Teclado", "Baterias dos dispositivos", "Editor de layout" }),
         ("Desempenho", new[] { "Overlay", "Overlay e sensores", "Jogos", "Monitores" }),
         ("Aplicativo", new[] { "Sistema", "Backup", "Atualizações", "Diagnóstico e suporte", "Tutorial", "Sobre e segurança" })
     };

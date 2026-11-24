@@ -10,6 +10,10 @@ public sealed record Shortcut(string Name, string Target);
 public sealed record TrayActivity(int Count, DateTime LastUsedUtc, DateTime FirstSeenUtc);
 public sealed class Preferences
 {
+    public List<string> HiddenBatteryDevices { get; set; } = new();
+    public Dictionary<string, string> BatteryDeviceIcons { get; set; } = new();
+    public bool BatteryLowAlerts { get; set; } = true;
+    public List<string> BatteryLowNotified { get; set; } = new();
     public bool UnifiedAppIcons { get; set; } = false;
     public bool AppIconsWithoutBackground { get; set; } = false;
     public List<AppIconOverride> CustomAppIcons { get; set; } = new();
@@ -266,6 +270,9 @@ public sealed class SettingsStore
     private static double Limit(double value, double min, double max, double fallback) => double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
     private void Normalize()
     {
+        Value.HiddenBatteryDevices = (Value.HiddenBatteryDevices ?? new()).Where(s => !string.IsNullOrWhiteSpace(s) && s.Length <= 200).Distinct().Take(100).ToList();
+        Value.BatteryLowNotified = (Value.BatteryLowNotified ?? new()).Where(s => !string.IsNullOrWhiteSpace(s) && s.Length <= 200).Distinct().Take(100).ToList();
+        Value.BatteryDeviceIcons = (Value.BatteryDeviceIcons ?? new()).Where(p => p.Key.Length <= 200 && p.Value is "mouse" or "keyboard" or "headset" or "controller" or "phone").Take(100).ToDictionary(p => p.Key, p => p.Value);
         Value.MonitoringDiskId = (Value.MonitoringDiskId ?? "").Trim().TrimEnd('\\').ToUpperInvariant();
         if (Value.MonitoringDiskId.Length != 2 || Value.MonitoringDiskId[0] is < 'A' or > 'Z' || Value.MonitoringDiskId[1] != ':') Value.MonitoringDiskId = "";
         Value.CompactMonitoringMetrics = (Value.CompactMonitoringMetrics ?? new() { "ram" })
