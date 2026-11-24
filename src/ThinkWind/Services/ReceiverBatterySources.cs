@@ -20,6 +20,18 @@ internal static class ReceiverBatterySources
         var result = new List<PeripheralBattery>();
         try
         {
+            foreach (var controller in Windows.Gaming.Input.RawGameController.RawGameControllers)
+            {
+                if (controller.HardwareVendorId != 0x2DC8 || controller.HardwareProductId != 0x3106) continue;
+                var report = controller.TryGetBatteryReport();
+                int? percent = null;
+                if (report?.RemainingCapacityInMilliwattHours is int remaining && report.FullChargeCapacityInMilliwattHours is int full
+                    && full > 0 && remaining >= 0 && remaining <= full)
+                    percent = (int)Math.Round(remaining * 100d / full);
+                result.Add(new("8BitDo Ultimate", percent, "\uE7FC", "Nível não informado"));
+            }
+            if (!result.Exists(device => device.Name == "8BitDo Ultimate") && OrbyLauncher.Native.PeripheralHid.Present(0x2DC8, 0x3106))
+                result.Add(new("8BitDo Ultimate", null, "\uE7FC", "Receptor · carga não informada"));
             for (uint slot = 0; slot < 4; slot++)
             {
                 if (GetBattery(slot, 0, out var battery) != 0) continue;
@@ -29,8 +41,10 @@ internal static class ReceiverBatterySources
                 result.Add(new("Controle XInput " + (slot + 1), null, "\uE7FC", level));
             }
         }
-        catch (Exception error) when (error is DllNotFoundException or EntryPointNotFoundException)
+        catch (Exception error) when (error is DllNotFoundException or EntryPointNotFoundException or COMException or InvalidOperationException)
         { DiagnosticLog.Record("Bateria XInput", error); }
+        if (!result.Exists(device => device.Name == "8BitDo Ultimate") && OrbyLauncher.Native.PeripheralHid.Present(0x2DC8, 0x3106))
+            result.Add(new("8BitDo Ultimate", null, "\uE7FC", "Receptor · carga não informada"));
         return result;
     }
 

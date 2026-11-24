@@ -13,7 +13,8 @@ internal sealed class PeripheralBatteryStrip : WrapPanel
     {
         HorizontalAlignment = HorizontalAlignment.Center;
         VerticalAlignment = VerticalAlignment.Center;
-        Loaded += (_, _) => Refresh();
+        Loaded += (_, _) => { PeripheralBatteries.Changed += Refresh; Refresh(); };
+        Unloaded += (_, _) => PeripheralBatteries.Changed -= Refresh;
     }
     internal void Refresh()
     {

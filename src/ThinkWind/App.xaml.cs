@@ -325,6 +325,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         scaleChangeDebounce?.Stop();
+        PeripheralBatteries.Stop();
         IsExiting = true;
         WindowsUpdatePower.StopMonitoring();
         if (Alarms is not null) { Alarms.Ring -= ShowAlarm; Alarms.Dispose(); }

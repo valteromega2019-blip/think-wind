@@ -26,3 +26,14 @@ Porcentagem estimada pela curva de tensão da referência, identificada com ≈ 
 ## Attack Shark X11 e 8BitDo Ultimate V1
 Usuário confirmou modelos. X11: implementada escuta passiva da coleção 000A:0000 do receptor 1D57:FA60, report 03 55 40 ST NN. Exigir dois níveis consecutivos iguais para rejeitar 100% transitório ao reconectar. Janela máxima seis segundos uma vez por minuto, sem escritas; cancelar e liberar handle/evento ao terminar. Fonte: https://github.com/vasfvitor/attackshark-x11/blob/main/docs/PROTOCOL.md e observação de frames iniciais em https://github.com/daeoxide/attackshark-battery-windows/blob/main/attackshark_battery/protocol.py. Implementação própria, sem incorporar código desses projetos. WinRT pode negar acesso: ainda sem compilação ou verificação no hardware.
 8BitDo Ultimate V1: identidade conectada 2DC8:3106, modo XInput. Nível discretizado já suportado quando fornecido; não converter artificialmente em %. Protocolo de porcentagem exata do modelo ainda não confirmado. Não aplicado protocolo do Ultimate 2 ou Pro 2 a esse PID.
+
+## Transporte nativo e resposta à conexão
+Implementado PeripheralHid próprio com cfgmgr32, capabilities hid.dll, SafeFileHandle/FileStream assíncrono, compartilhamento de leitura/escrita e I/O cancelável. Escopado a VID/PID/página/usage exatos. X11 e G435 migrados do WinRT para esse transporte. G435 continua usando referência MIT; nenhum driver GPL incorporado.
+
+Ultimate V1 2DC8:3106: adicionada tentativa de telemetria nas coleções FF7A/FFA0 usage1 somente quando existentes, comandos de link e bateria com eco/tamanho/subcampo validados e timeout. Leitura Windows.Gaming.Input quando publica capacidade restante/total; fallback identifica receptor com "carga não informada", sem fabricar nível ou porcentagem. O caminho vendor no 3106 permanece não validado no hardware.
+
+Atraso anterior: cache fixo de60s e publicação só após todos os leitores; receptor Ultimate descartado por emular XInput wired. Agora watchers nativos HID/Bluetooth invalidam snapshots na conexão; cache de apoio10s; fontes independentes preservam outros valores durante uma leitura e são publicadas assim que terminam. Resultados anteriores a uma mudança de conexão são rejeitados por revisão. Watchers encerrados no OnExit. Sem consulta de teclas/eixos e sem serviço administrativo.
+
+Centralização: statusHost Grid com a mesma largura total da faixa de status; indicadores centrados nessa camada em vez de LastChildFill do DockPanel. Máximo34% da largura disponível para conter a área central. Rodapé expandido mantém seu alinhamento ao painel.
+
+Validação: revisão de código/diff apenas. Nenhum teste, type check, compilação, execução ou leitura experimental no hardware nesta etapa. Pendente conferir a resposta real do Ultimate e a convivência de áudio do G435 no runtime. Não declarar esses dispositivos validados sem execução autorizada.

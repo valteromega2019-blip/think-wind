@@ -78,7 +78,10 @@ internal sealed partial class IslandWindow
                 };
             }
             statusRow.Width = Math.Max(1, Display.Bounds.Width / Display.Scale - 24); statusRow.Height = 24;
-            statusWindow.Attach(statusRow); Surface.Child = stableLayout;
+            if (statusHost.Children.Count == 0) { statusHost.Children.Add(statusRow); statusHost.Children.Add(peripheralStatus); }
+            statusHost.Width = statusRow.Width; statusHost.Height = 24;
+            peripheralStatus.MaxWidth = Math.Max(1, statusRow.Width * .34);
+            statusWindow.Attach(statusHost); Surface.Child = stableLayout;
             Surface.Visibility = edgeReduced || preparingFullReveal ? Visibility.Hidden : Visibility.Visible;
             if (IsVisible) { if (!statusWindow.IsVisible) statusWindow.Show(); statusWindow.Position(); statusWindow.RefreshAppTint(); }
             else statusWindow.Hide();
@@ -91,6 +94,7 @@ internal sealed partial class IslandWindow
         RefreshApplicationInset();
     }
     private readonly DockPanel statusRow = new() { LastChildFill = false };
+    private readonly Grid statusHost = new();
     private readonly TextBlock statusClock = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     private bool statusBuilt;
     private string statusControlsSignature = "";
@@ -182,7 +186,7 @@ internal sealed partial class IslandWindow
             controls.Children.Clear(); foreach (var control in reversed) controls.Children.Add(control);
         }
         DockPanel.SetDock(controls, mirrored ? Dock.Left : Dock.Right); statusRow.Children.Add(controls);
-        statusRow.LastChildFill = true; statusRow.Children.Add(peripheralStatus);
+        statusRow.LastChildFill = false;
     }
     private bool AdaptiveCollapse => fullscreenReveal || Store.Value.IslandAutoCollapse
         || (Store.Value.IslandReduceOverMaximized && maximizedOnDisplay);
