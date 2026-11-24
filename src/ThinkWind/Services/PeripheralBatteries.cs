@@ -157,7 +157,17 @@ internal static class PeripheralBatteries
         try
         {
             UpdateSource("controllers", ReceiverBatterySources.ReadControllers(), started);
-            UpdateSource("keyboards", ReceiverBatterySources.ReadCustomKeyboard(), started);
+            var driverBatteries = BluetoothDriverBattery.Read();
+            UpdateSource("bluetooth-driver", driverBatteries, started);
+            if (driverBatteries.Any(device => device.Name.Equals("BT+2.4G KB", StringComparison.OrdinalIgnoreCase)))
+            {
+                lock (gate)
+                {
+                    if (started == revision && sources.Remove("keyboards"))
+                    { lastSuccess.Remove("keyboards"); Publish(sources.Values.SelectMany(value => value)); }
+                }
+            }
+            else UpdateSource("keyboards", ReceiverBatterySources.ReadCustomKeyboard(), started);
             var sharkRead = AttackSharkBattery.Read();
             var ultimateRead = UltimateBattery.Read();
             var g435 = await G435Battery.Read();
