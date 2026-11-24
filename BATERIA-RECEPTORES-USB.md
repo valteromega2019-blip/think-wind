@@ -45,3 +45,11 @@ Charging agora é transportado pelos leitores X11 (estado3), Ultimate vendor (bi
 Inventário do teclado: USB1EA7:0002 descrito pelo barramento como "2.4G RF Keyboard & Mouse". Interfaces HID MI00 e MI01 são do mesmo receptor. HID1D57:FA60 são funções auxiliares do mouse X11. HID046D:C232 pertence a LGHUBDevice, virtual. Exibida identificação genérica do receptor1EA7:0002 e aviso de bateria não informada; marca/modelo físico do teclado personalizado e protocolo da bateria continuam desconhecidos. Sem leitura de teclas, sem abrir a coleção de teclado para captura.
 
 Validação nesta etapa: inventário PnP de leitura e revisão do código/diff. Nenhum teste, type check, build ou execução da nova UI. Necessária conferência visual autorizada antes de afirmar resultado em runtime.
+## Investigação do teclado personalizado — 24/11/2026
+Inventário PnP somente leitura: USB1EA7:0002, revisão0200, nome de barramento2.4G RF Keyboard & Mouse, input.inf/usb.inf genéricos. Não há propriedade Battery nos filhos HID examinados. Encontradas coleções proprietárias FFB5:0001 (MI01 Col01) e FFBC:0088 (MI01 Col07), além de teclas/mouse/consumer/system. Isso prova canais vendor, não bateria nem protocolo.
+
+Não localizado configurador dedicado em entradas de desinstalação ou pastas principais pesquisadas (Downloads e Program Files por nomes de marcas/teclados). Attack Shark Software e ATTACKSHARKX11.zip são do mouse, não do teclado. Não executados/instalados utilitários de terceiros.
+
+Pesquisa por1EA7:0002 não identificou um protocolo de bateria específico. A referência pública Acer PopGo tem páginaFFB5 mas outros VID/PID; portanto não copiar comandos dela. Também1EA7:0907 de Skyloong/Semitek é PID diferente. Nome de fabricante no catálogo USB não basta para afirmar fabricante da placa personalizada.
+
+Pendente nome físico da base/kit/PCB fornecido pelo usuário para localizar software/firmware adequado. Não enviados comandos a esses canais desconhecidos, não capturadas teclas, não executados testes/type check/build. Nenhuma alteração na leitura do Orby nesta investigação.
