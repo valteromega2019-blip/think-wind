@@ -11,6 +11,25 @@ namespace OrbyLauncher.Services;
 // Copyright (c) 2026 Oğuz Kayra Bozkurt. See licenses/G435-MIT.txt.
 internal static class G435Battery
 {
+    private static readonly object statusGate = new();
+    private static bool charging;
+    private static long statusAt;
+    // Passive Lightspeed status: 00 .. 50 49, state before 04 00 04 01.
+    // Protocol evidence: gearhub LogitechHidppProvider (MIT); never infer from voltage.
+    private static void ObserveStatus(byte[] packet)
+    {
+        if (packet.Length != 65 || packet[0] != 0 || packet[2] != 0x50 || packet[3] != 0x49) return;
+        for (int i = 5; i + 3 < packet.Length; i++)
+            if (packet[i] == 4 && packet[i + 1] == 0 && packet[i + 2] == 4 && packet[i + 3] == 1)
+            {
+                lock (statusGate) { charging = (packet[i - 1] & 2) != 0; statusAt = Environment.TickCount64; }
+                return;
+            }
+    }
+    private static bool IsCharging()
+    {
+        lock (statusGate) return statusAt != 0 && Environment.TickCount64 - statusAt <= 90000 && charging;
+    }
     internal static Task<PeripheralBattery?> Read() => Task.Run(async () =>
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(3));
@@ -35,6 +54,7 @@ internal static class G435Battery
                     while (!deadline.IsCancellationRequested)
                     {
                         var packet = await hid.Read(deadline.Token).ConfigureAwait(false);
+                        ObserveStatus(packet);
                         if (packets.Count < 32) packets.Enqueue(packet);
                     }
                 }
@@ -62,7 +82,7 @@ internal static class G435Battery
                     if (packet[i] == 0 && packet[i + 1] == 7 && packet[i + 2] == 0 && packet[i + 3] == 6 && packet[i + 5] == 0)
                     {
                         int mv = packet[i + 6] | packet[i + 7] << 8;
-                        if (mv >= 2500 && mv <= 4500) return new PeripheralBattery("Logitech G435 · estimativa por tensão", Percentage(mv), "\uE7F6", Estimated: true);
+                        if (mv >= 2500 && mv <= 4500) return new PeripheralBattery("Logitech G435 · estimativa por tensão", Percentage(mv), "\uE7F6", Estimated: true, Charging: IsCharging());
                     }
         }
         catch (OperationCanceledException) { }

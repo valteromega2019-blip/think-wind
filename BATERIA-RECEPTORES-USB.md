@@ -69,3 +69,7 @@ Possível próximo caminho: identificar endpoint Bluetooth do próprio teclado e
 Após o pareamento realizado pelo usuário, o inventário PnP identificou BT+2.4G KB, serviço Battery 0x180F e propriedade do driver {104EA319-6EE2-4701-BD47-8DDBF425BBE5}, ID 2, tipo Byte, valor 50. Implementada leitura do cache do driver Bluetooth via Configuration Manager, sem captura de teclado, comandos HID ou necessidade de administrador. O item genérico do receptor é suprimido quando esse teclado Bluetooth está identificado. Não inferir carregamento dessa propriedade. A presença PnP e o valor em cache não garantem atualização instantânea após desconexão.
 Revisão por leitura e diff; sem compilação, testes ou type check nesta etapa. Exibição no Orby ainda não conferida em execução.
 
+
+## Carregamento G435
+O leitor anterior retornava somente a estimativa por tensão, deixando Charging false. Incorporada observação de mensagens passivas Lightspeed (marcador 50 49 e registro 04 00 04 01, bit 02 do estado anterior), conforme evidência da implementação MIT GearHub. Retenção limitada a 90 segundos; mensagens sem estado não apagam o último estado recebido. Mantida a janela limitada de leitura existente, sem listener permanente ou polling adicional. Como os broadcasts podem ocorrer fora dessa janela, detecção não é garantida em cada ciclo. Necessária confirmação física conectando e retirando o cabo. Nenhum teste, type check ou build executado. Licença preservada em licenses/GearHub-MIT.txt.
+
