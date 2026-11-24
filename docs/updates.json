@@ -1,5 +1,13 @@
 [
     {
+        "id":  "v0.33.0-beta",
+        "title":  "Orby Launcher 0.33.0 Beta — Experimental",
+        "state":  "published",
+        "date":  "2026-11-24T19:42:46Z",
+        "url":  "https://github.com/valteromega2019-blip/think-wind/releases/tag/v0.33.0-beta",
+        "description":  "# Orby Launcher 0.33.0 Beta — Experimental\n\n## Em desenvolvimento: baterias dos dispositivos\n- Indicadores para periféricos compatíveis na central e no overlay: mouse, teclado, headset e controles. Celular pelo cartão local do Vincular ao Celular, quando disponível.\n- Personalizar → Baterias dos dispositivos: ocultar indicadores, corrigir ícones e configurar o aviso abaixo de 15%. Preferências salvas.\n- Avisos de bateria baixa sem repetição contínua, adiados durante jogos/tela cheia.\n- Consultas independentes por fonte, preservando o último valor e evitando que enumerações lentas bloqueiem os outros dispositivos.\n- G435: indicação experimental de carregamento por salto de tensão, com confirmação em duas amostras, nível anterior preservado e identificação explícita de estimativa.\n- Barra superior fixa opcional e ajuste da escala da interface, incluindo aviso quando a escala do Windows mudar.\n- Mini tutorial das novidades experimentais, que pode ser dispensado e repetido nas configurações.\n\n## Limitações importantes\nRecurso experimental/em desenvolvimento. Disponibilidade, precisão e atualização dependem do modelo, receptor, driver e Windows. Nem todos os dispositivos informam carga ou carregamento. No teclado testado, o Windows forneceu porcentagem, mas não foi possível confirmar carregamento. A estimativa do G435 exige uma leitura anterior à conexão do cabo; não é medição oficial de corrente. O arquivo local do Phone Link não é uma API pública estável e pode mudar. Nenhum firmware é alterado e não são capturadas teclas ou movimentos do mouse.\n\n## Segurança da atualização\nInstalador acompanhado de SHA-256 e assinatura RSA verificada pelo atualizador do Orby. Essa assinatura não é Authenticode e não elimina alertas de editor desconhecido do Windows.\r\n## Validação\r\n111 verificações aprovadas: 61 gerais, 16 de bateria/Phone Link/preferências, 10 de grupos de janelas, 9 de iconografia e 5 de jogos; mais 10 do atualizador (total 111). Compilação Release x64 concluída. Não foi realizado novo teste interativo completo de instalação; suporte a cada periférico continua experimental.\r\n"
+    },
+    {
         "id":  "v0.32.3-beta",
         "title":  "Orby Launcher 0.32.3 Beta",
         "state":  "published",
@@ -421,6 +429,6 @@
         "state":  "planned",
         "date":  null,
         "url":  null,
-        "description":  "A versão 0.33.0 Beta disponibiliza os primeiros indicadores de bateria. Seguimos desenvolvendo compatibilidade com receptores, carregamento e novos modelos. Nem todo dispositivo informa esses dados. Consulte a release experimental para conhecer as limitações."
+        "description":  "O suporte experimental da 0.33.0 Beta continuará recebendo compatibilidade com receptores e carregamento. Nem todo modelo disponibiliza esses dados. Não há prazo para os próximos modelos."
     }
 ]
