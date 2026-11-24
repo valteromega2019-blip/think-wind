@@ -26,8 +26,11 @@ internal static class PeripheralBatteries
         try
         {
             var result = new List<PeripheralBattery>();
+            var sharkRead = AttackSharkBattery.Read();
             var g435 = await G435Battery.Read();
             if (g435 is not null) result.Add(g435);
+            var shark = await sharkRead;
+            if (shark is not null) result.Add(shark);
             result.AddRange(ReceiverBatterySources.ReadControllers());
             result.AddRange(await ReceiverBatterySources.ReadWindowsDevices());
             string[] protocols = { "{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}", "{bb7bb05e-5972-42b5-94fc-76eaa7084d49}" };
