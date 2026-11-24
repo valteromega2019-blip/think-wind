@@ -82,3 +82,9 @@ Os onze testes direcionados cobrem primeira leitura, ruído, confirmação, pico
 
 Validação final: suíte geral61/61 e direcionada11/11, sem falhas; Release preview-carga-estimada compilada com zero avisos e erros. Prévia iniciada após diagnóstico. Limite: uma nova instância começando com cabo já conectado precisa observar uma transição para inferir; não foi persistida uma suposição de carregamento entre processos.
 
+
+## Frequência e estabilidade da coleta
+Removida a trava global que aguardava o ciclo inteiro, inclusive enumerações Windows/Bluetooth, antes de consultar novamente os receptores. Agora cada fonte tem exclusão de concorrência e agenda própria, acionada pelo Refresh visual existente: cache do driver Bluetooth a cada2s; G435, X11, Ultimate e controladores a cada5s; inventários genéricos mais caros a cada60s. Eventos de conexão antecipam as agendas. Não há timer novo, captura de entrada ou loop de renderização. Frequências são alvos de consulta, não garantias de dado novo: dependem do dispositivo, cache do Windows, interface visível e duração da resposta.
+Aplicado cancelamento de5s à enumeração genérica antes sem limite. Falha de uma fonte não bloqueia outras; cancelamento preserva o histórico conforme política de validade existente. Notificações simultâneas de UI são agrupadas numa entrega do snapshot mais recente; botões existentes e última leitura são mantidos, não apagados ao iniciar consulta. Ordenação continua estável por nome.
+Revisão nesta etapa apenas por código e diff. Não executados testes, type check ou compilação, conforme preferência do usuário; prévia aberta ainda é a anterior.
+

@@ -62,9 +62,10 @@ internal static class ReceiverBatterySources
         {
             // Query only present devices for which the driver publishes battery.
             // Do not open keyboard/mouse input collections or send guessed reports.
+            using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
             var devices = await DeviceInformation.FindAllAsync(
                 "System.Devices.Present:=System.StructuredQueryType.Boolean#True AND System.Devices.BatteryLife:>=0",
-                new[] { "System.Devices.BatteryLife", "System.Devices.HardwareIds" }, DeviceInformationKind.Device);
+                new[] { "System.Devices.BatteryLife", "System.Devices.HardwareIds" }, DeviceInformationKind.Device).AsTask(timeout.Token).ConfigureAwait(false);
             foreach (var device in devices)
             {
                 if (!device.Properties.TryGetValue("System.Devices.HardwareIds", out var ids) || ids is not string[] hardware

@@ -57,6 +57,7 @@ internal static class PeripheralBatteries
         }
     }
     internal static event Action? Changed;
+    private static bool notificationPending;
     private static void Publish(IEnumerable<PeripheralBattery> readings)
     {
         var next = readings.GroupBy(device => device.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -65,14 +66,22 @@ internal static class PeripheralBatteries
         if (Current.SequenceEqual(next)) return;
         Current = next;
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher is not null && !dispatcher.HasShutdownStarted)
-            dispatcher.BeginInvoke(new Action(() => Changed?.Invoke()));
+        if (dispatcher is not null && !dispatcher.HasShutdownStarted && !notificationPending)
+        {
+            notificationPending = true;
+            dispatcher.BeginInvoke(new Action(() =>
+            {
+                lock (gate) notificationPending = false;
+                if (!stopped) Changed?.Invoke();
+            }));
+        }
     }
     private static void Invalidate(string? removedId = null, string? removedName = null)
     {
         lock (gate)
         {
-            nextRead = 0; revision++;
+            foreach (string key in nextReads.Keys.ToArray()) nextReads[key] = 0;
+            revision++;
             // A USB receiver exposes several interfaces. Retire only its source;
             // unrelated HID events must never blank the entire indicator strip.
             string? source = removedId is null ? null : removedId.Contains("vid_046d&pid_0adf", StringComparison.OrdinalIgnoreCase) ? "g435"
@@ -135,28 +144,57 @@ internal static class PeripheralBatteries
             if (watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted) watcher.Stop();
         watchers.Clear();
     }
-    private static long nextRead;
-    private static bool busy;
+    private static readonly Dictionary<string, long> nextReads = new();
+    private static readonly HashSet<string> reading = new();
     private static bool stopped;
     internal static PeripheralBattery[] Current { get; private set; } = Array.Empty<PeripheralBattery>();
     internal static void Refresh()
     {
         if (stopped) return;
         WatchDevices();
-        lock (gate)
-        {
-            if (busy || Environment.TickCount64 < nextRead) return;
-            busy = true; nextRead = Environment.TickCount64 + 10000;
-        }
-        _ = Task.Run(Read);
-    }
-    private static async Task Read()
-    {
-        int started;
-        lock (gate) started = revision;
-        try
+        Schedule("local", 2000, ReadLocal);
+        Schedule("controllers", 5000, started =>
         {
             UpdateSource("controllers", ReceiverBatterySources.ReadControllers(), started);
+            return Task.CompletedTask;
+        });
+        Schedule("g435", 5000, async started =>
+        {
+            var value = await G435Battery.Read().ConfigureAwait(false);
+            UpdateSource("g435", value is null ? Array.Empty<PeripheralBattery>() : new[] { value }, started);
+        });
+        Schedule("ultimate", 5000, async started =>
+        {
+            var value = await UltimateBattery.Read().ConfigureAwait(false);
+            UpdateSource("ultimate", value is null ? Array.Empty<PeripheralBattery>() : new[] { value }, started);
+        });
+        Schedule("x11", 5000, async started =>
+        {
+            var value = await AttackSharkBattery.Read().ConfigureAwait(false);
+            UpdateSource("x11", value is null ? Array.Empty<PeripheralBattery>() : new[] { value }, started);
+        });
+        Schedule("windows", 60000, async started => UpdateSource("windows", await ReceiverBatterySources.ReadWindowsDevices().ConfigureAwait(false), started));
+        Schedule("bluetooth", 60000, ReadBluetooth);
+    }
+    private static void Schedule(string key, int interval, Func<int, Task> read)
+    {
+        int started;
+        lock (gate)
+        {
+            if (stopped || reading.Contains(key) || nextReads.TryGetValue(key, out long due) && Environment.TickCount64 < due) return;
+            reading.Add(key); nextReads[key] = Environment.TickCount64 + interval; started = revision;
+        }
+        _ = Task.Run(async () =>
+        {
+            try { await read(started).ConfigureAwait(false); }
+            catch (OperationCanceledException) { UpdateSource(key, Array.Empty<PeripheralBattery>(), started); }
+            catch (Exception error) when (error is System.Runtime.InteropServices.COMException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.IO.IOException)
+            { DiagnosticLog.Record("Bateria de periféricos: " + key, error); }
+            finally { lock (gate) reading.Remove(key); }
+        });
+    }
+    private static Task ReadLocal(int started)
+    {
             var driverBatteries = BluetoothDriverBattery.Read();
             UpdateSource("bluetooth-driver", driverBatteries, started);
             if (driverBatteries.Any(device => device.Name.Equals("BT+2.4G KB", StringComparison.OrdinalIgnoreCase)))
@@ -168,15 +206,10 @@ internal static class PeripheralBatteries
                 }
             }
             else UpdateSource("keyboards", ReceiverBatterySources.ReadCustomKeyboard(), started);
-            var sharkRead = AttackSharkBattery.Read();
-            var ultimateRead = UltimateBattery.Read();
-            var g435 = await G435Battery.Read();
-            UpdateSource("g435", g435 is null ? Array.Empty<PeripheralBattery>() : new[] { g435 }, started);
-            var ultimate = await ultimateRead;
-            UpdateSource("ultimate", ultimate is null ? Array.Empty<PeripheralBattery>() : new[] { ultimate }, started);
-            var shark = await sharkRead;
-            UpdateSource("x11", shark is null ? Array.Empty<PeripheralBattery>() : new[] { shark }, started);
-            UpdateSource("windows", await ReceiverBatterySources.ReadWindowsDevices(), started);
+            return Task.CompletedTask;
+    }
+    private static async Task ReadBluetooth(int started)
+    {
             var result = new List<PeripheralBattery>();
             using var deadline = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
             string[] protocols = { "{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}", "{bb7bb05e-5972-42b5-94fc-76eaa7084d49}" };
@@ -197,10 +230,5 @@ internal static class PeripheralBatteries
                 }
             }
             UpdateSource("bluetooth", result, started);
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception error) when (error is System.Runtime.InteropServices.COMException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        { DiagnosticLog.Record("Bateria de periféricos", error); /* Preserve independently successful sources. */ }
-        finally { lock (gate) busy = false; }
     }
 }
