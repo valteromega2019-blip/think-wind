@@ -6,7 +6,10 @@ using Windows.Devices.Enumeration;
 
 namespace OrbyLauncher.Services;
 
-internal sealed record PeripheralBattery(string Name, int Percent, string Glyph);
+internal sealed record PeripheralBattery(string Name, int? Percent, string Glyph, string? Level = null)
+{
+    internal string Display => Percent is int percent ? percent + "%" : Level ?? "Indisponível";
+}
 internal static class PeripheralBatteries
 {
     private static long nextRead;
@@ -23,6 +26,8 @@ internal static class PeripheralBatteries
         try
         {
             var result = new List<PeripheralBattery>();
+            result.AddRange(ReceiverBatterySources.ReadControllers());
+            result.AddRange(await ReceiverBatterySources.ReadWindowsDevices());
             string[] protocols = { "{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}", "{bb7bb05e-5972-42b5-94fc-76eaa7084d49}" };
             foreach (string protocol in protocols)
             {

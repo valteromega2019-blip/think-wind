@@ -19,16 +19,16 @@ internal sealed class PeripheralBatteryStrip : WrapPanel
     {
         if (!IsVisible) return;
         PeripheralBatteries.Refresh();
-        string next = string.Join("|", System.Linq.Enumerable.Select(PeripheralBatteries.Current, device => device.Name + device.Percent));
+        string next = string.Join("|", System.Linq.Enumerable.Select(PeripheralBatteries.Current, device => device.Name + device.Display));
         if (next == signature) return;
         signature = next; Children.Clear();
         foreach (var device in PeripheralBatteries.Current)
         {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(5, 2, 5, 2), ToolTip = device.Name + " · " + device.Percent + "%" };
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(5, 2, 5, 2), ToolTip = device.Name + " · " + device.Display };
             var icon = new TextBlock { Text = device.Glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
             icon.SetResourceReference(TextBlock.ForegroundProperty, "Think.Accent");
             row.Children.Add(icon);
-            var value = new TextBlock { Text = device.Percent + "%", FontSize = 11, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            var value = new TextBlock { Text = device.Display, FontSize = 11, Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             value.SetResourceReference(TextBlock.ForegroundProperty, "Think.Text"); row.Children.Add(value); Children.Add(row);
         }
     }

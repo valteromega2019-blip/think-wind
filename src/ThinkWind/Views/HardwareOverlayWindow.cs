@@ -150,7 +150,7 @@ internal sealed class HardwareOverlayWindow : Window
         if (extra.Length > 0) rows.Children.Add(Text(extra, 10, true));
         PeripheralBatteries.Refresh();
         foreach (var battery in PeripheralBatteries.Current)
-            rows.Children.Add(Text(battery.Name + " · " + battery.Percent + "%", 11));
+            rows.Children.Add(Text(battery.Name + " · " + battery.Display, 11));
         if (rows.Children.Count == 0) rows.Children.Add(Text("Nenhuma métrica selecionada", 11, true));
         PositionOverlay();
     }
