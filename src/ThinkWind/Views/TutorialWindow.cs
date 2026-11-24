@@ -35,26 +35,13 @@ internal sealed partial class TutorialWindow : Window
     };
     private static readonly Step[] UpdateSteps =
     {
-        new("Novidades · Iconografia experimental", "Novos símbolos para seus aplicativos", "O pacote opcional inclui símbolos Adobe, Microsoft e ArtCraft. Abra Personalizar para conhecer os estilos; seus ícones originais continuam sendo o padrão.", "customize", "settings-open"),
-        new("Novidades · Iconografia experimental", "Escolha seu estilo", "Em Aparência você pode manter os originais, usar símbolos brancos sobre a cor de destaque ou deixá-los flutuantes, sem fundo.", "appearance", "appearance-open"),
-        new("Novidades · Iconografia experimental", "Seu destaque, seus símbolos", "Passe o mouse sobre Estilo dos ícones. No modo sem fundo, janelas visíveis em qualquer monitor acendem; na biblioteca, todos os apps abertos acendem. Botão direito no app → Personalizar ícone permite importar PNG ou ICO; Restaurar ícone padrão desfaz. Não é necessário ativar o experimento para concluir.", "iconography", "iconography-discovered"),
-        new("Novidades · Agenda experimental", "Abra o calendário", "A agenda é experimental. Clique no calendário para conhecer eventos, notas coloridas e lembretes. Você também pode usar o calendário do widget expandido.", "calendar", "agenda-calendar-open"),
-        new("Novidades · Agenda experimental", "Escolha um dia", "Um clique no dia consulta seus itens; dois cliques abrem a criação. A janela aparece ao lado do calendário, pode ser movida e minimizada na barra. Os lembretes funcionam enquanto o Orby estiver aberto.", "agenda-calendar", "agenda-open"),
-        new("Novidades · Agenda experimental", "Eventos e notas no mesmo lugar", "O seletor com ícones alterna Evento e Nota. Escolha uma cor para marcar o dia. O backup da agenda e das configurações fica em Personalizar → Backup, em arquivos separados. Explore e use Pular etapa para continuar sem criar um item.", "agenda-form", "agenda-saved"),
-        new("Novidades · Widgets e barras", "Abra a central", "Leve o mouse ao topo para acessar os controles da central.", "island", "island-hover"),
-        new("Novidades · Widgets e barras", "Veja os widgets", "Abra o painel completo pela seta. O editor aparece somente nesta área expandida.", "expand", "island-full"),
-        new("Novidades · Widgets e barras", "Novo editor pelas bordas", "Clique no lápis. O fundo desfocado indica o modo de edição; os controles dos widgets ficam bloqueados enquanto você organiza o layout.", "widget-editor", "widget-edit-open"),
-        new("Novidades · Widgets e barras", "Encaixe automático", "Arraste uma borda lateral: três, dois ou um widget por linha. Os vizinhos mudam de posição automaticamente. A borda inferior controla a altura com limites para proteger o conteúdo. Pule esta etapa se não quiser alterar seu layout.", "widget-resize", "widget-resized"),
-        new("Novidades · Widgets e barras", "Salve e volte a usar", "Clique em Concluir edição. O layout já fica salvo e os controles são liberados novamente.", "widget-edit-finish", "widget-edit-finished"),
-        new("Novidades · Widgets e barras", "Personalização organizada", "Abra Personalizar para conhecer a nova organização das opções visuais.", "customize", "settings-open"),
-        new("Novidades · Widgets e barras", "Aparência em um só lugar", "Selecione Aparência. Cores e arredondamento ficam aqui; as abas Aplicativos, Central, Transparência e Tipografia ficam juntas no grupo Visual.", "appearance", "appearance-open"),
-        new("Novidades · Widgets e barras", "Nova barra inferior fixa", "Passe o mouse sobre a opção Barra inferior fixa de ponta a ponta. Ela é opcional, centraliza os controles e reserva espaço para os aplicativos. Não é preciso ativar para concluir.", "fixed-bar", "fixed-bar-discovered"),
-        new("Novidades · Diagnóstico e suporte", "Relate um problema", "No grupo Aplicativo de Personalizar, clique em Diagnóstico e suporte. Ali você pode consultar erros locais, descrever um problema e revisar um relatório. Abrir relato no GitHub prepara um rascunho no navegador; só você confirma a publicação. Nada é enviado durante o tutorial.", "diagnostics", "diagnostics-open")
+        new("Novidades · Baterias experimentais", "Seus dispositivos em um só lugar", "A central e o overlay mostram as baterias que o Windows ou receptores compatíveis disponibilizarem. O celular usa o cartão do Vincular ao Celular. Suporte em desenvolvimento: alguns modelos não informam carga ou carregamento.", "customize", "settings-open"),
+        new("Novidades · Baterias experimentais", "Escolha seus indicadores", "Abra Baterias dos dispositivos. Você pode ocultar cada item, corrigir seu ícone e desativar o aviso abaixo de 15%. O G435 pode indicar carregamento estimado por salto de tensão: a barra mantém o nível anterior, sem inventar porcentagem.", "battery-settings", "battery-settings-open")
     };
     private bool updateTour;
     private Step[] Steps => updateTour ? UpdateSteps : MainSteps;
     private string ProgressPath => updateTour
-        ? Path.Combine(Path.GetDirectoryName(store.TutorialStatePath)!, "update-tour-iconography-v1.json") : store.TutorialStatePath;
+        ? Path.Combine(Path.GetDirectoryName(store.TutorialStatePath)!, "update-tour-batteries-033.json") : store.TutorialStatePath;
     private string? CurrentTarget => progress.Step >= 0 && progress.Step < Steps.Length ? Steps[progress.Step].Target : null;
     public sealed class Progress
     {
@@ -225,8 +212,8 @@ internal sealed partial class TutorialWindow : Window
             description.Text = "Três módulos rápidos. Siga os destaques e use os controles de verdade: o guia reconhece suas ações e avança automaticamente.";
             if (updateTour)
             {
-                module.Text = "Novidades desta atualização"; title.Text = "Conheça o novo editor";
-                description.Text = "Um guia curto para edição pelas bordas, encaixe dos widgets, personalização organizada, barra inferior fixa e diagnóstico de problemas. Comece quando quiser.";
+                module.Text = "Novidades desta atualização"; title.Text = "Baterias · em desenvolvimento";
+                description.Text = "Conheça os indicadores de bateria experimentais e suas preferências. As leituras dependem dos dispositivos e do Windows; você pode pular este guia.";
             }
             hint.Text = "Você pode pular etapas ou sair a qualquer momento. Ajustes feitos por você durante o guia são salvos normalmente.";
             AddAction("Começar", () => { if (!blocked()) SystemToolsMenu.ShowDesktop(); progress.Step = 0; SaveProgress(); Render(); });

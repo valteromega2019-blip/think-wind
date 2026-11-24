@@ -1,3 +1,20 @@
+# Orby Launcher 0.33.0 Beta — Experimental
+
+## Em desenvolvimento: baterias dos dispositivos
+- Indicadores para periféricos compatíveis na central e no overlay: mouse, teclado, headset e controles. Celular pelo cartão local do Vincular ao Celular, quando disponível.
+- Personalizar → Baterias dos dispositivos: ocultar indicadores, corrigir ícones e configurar o aviso abaixo de 15%. Preferências salvas.
+- Avisos de bateria baixa sem repetição contínua, adiados durante jogos/tela cheia.
+- Consultas independentes por fonte, preservando o último valor e evitando que enumerações lentas bloqueiem os outros dispositivos.
+- G435: indicação experimental de carregamento por salto de tensão, com confirmação em duas amostras, nível anterior preservado e identificação explícita de estimativa.
+- Barra superior fixa opcional e ajuste da escala da interface, incluindo aviso quando a escala do Windows mudar.
+- Mini tutorial das novidades experimentais, que pode ser dispensado e repetido nas configurações.
+
+## Limitações importantes
+Recurso experimental/em desenvolvimento. Disponibilidade, precisão e atualização dependem do modelo, receptor, driver e Windows. Nem todos os dispositivos informam carga ou carregamento. No teclado testado, o Windows forneceu porcentagem, mas não foi possível confirmar carregamento. A estimativa do G435 exige uma leitura anterior à conexão do cabo; não é medição oficial de corrente. O arquivo local do Phone Link não é uma API pública estável e pode mudar. Nenhum firmware é alterado e não são capturadas teclas ou movimentos do mouse.
+
+## Segurança da atualização
+Instalador acompanhado de SHA-256 e assinatura RSA verificada pelo atualizador do Orby. Essa assinatura não é Authenticode e não elimina alertas de editor desconhecido do Windows.
+
 # 0.32.2 Beta — 17/11/2026
 
 Iniciar por hover ativo por padrão em 1,2 s; correções de fechamento e paginação por rolagem; símbolos de marcas de hardware. [Notas e limites](RELEASE-0.32.2-BETA.md).

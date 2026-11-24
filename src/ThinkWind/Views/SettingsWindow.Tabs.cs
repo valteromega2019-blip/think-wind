@@ -93,6 +93,7 @@ internal sealed partial class SettingsWindow
         AutomationProperties.SetName(tab, "Configurações: " + name);
         if (name == "Aparência") TutorialGuide.Mark(tab, "appearance");
         if (name == "Diagnóstico e suporte") TutorialGuide.Mark(tab, "diagnostics");
+        if (name == "Baterias dos dispositivos") TutorialGuide.Mark(tab, "battery-settings");
         page.Visibility = Visibility.Collapsed;
         settingsPages[name] = (page, tab);
     }
@@ -124,6 +125,7 @@ internal sealed partial class SettingsWindow
         changingNavigation = false;
         if (name == "Aparência") TutorialGuide.Notify("appearance-open");
         if (name == "Diagnóstico e suporte") TutorialGuide.Notify("diagnostics-open");
+        if (name == "Baterias dos dispositivos") TutorialGuide.Notify("battery-settings-open");
         bool changedTab = selectedSettingsTab != name;
         if (!searching && settingsPages.TryGetValue(selectedSettingsTab, out var old) && old.Page.Visibility == Visibility.Visible)
             tabOffsets[selectedSettingsTab] = settingsScroll.VerticalOffset;

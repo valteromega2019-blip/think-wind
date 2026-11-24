@@ -33,6 +33,16 @@ internal static class PeripheralBatteryChecks
             Check(!expiry.Update(80, 620000), "Estimativa expira sem se perpetuar");
             var reading = new PeripheralBattery("Teclado", 50, "", Charging: true, ChargingEstimated: true);
             Check(!reading.Display.Contains("%") && reading.VisualCharge == 50, "UI oculta percentual inflado e preserva barra");
+            string card = "{\"type\":\"AdaptiveCard\",\"speak\":\"Telefone - Conectado ao computador\",\"body\":[{\"type\":\"Image\",\"tooltip\":\"Bateria com 37% restante\"}]}";
+            var phone = PhoneLinkBattery.Parse(System.Text.Encoding.UTF8.GetBytes(card));
+            Check(phone.Length == 1 && phone[0].Percent == 37, "Phone Link: cartão português com bateria real");
+            Check(PhoneLinkBattery.Parse(System.Text.Encoding.UTF8.GetBytes(card.Replace("Conectado ao computador", "Desconectado"))).Length == 0, "Phone Link: desconectado não produz leitura");
+            Check(PhoneLinkBattery.Parse(System.Text.Encoding.UTF8.GetBytes(card.Replace("37%", "137%"))).Length == 0, "Phone Link: rejeita nível inválido");
+            Check(PhoneLinkBattery.Parse(System.Text.Encoding.UTF8.GetBytes(card.Replace("Image", "Action.Submit"))).Length == 0, "Phone Link: não busca bateria em ações");
+            var preferences = new Preferences(); preferences.HiddenBatteryDevices.Add("Teclado"); preferences.BatteryDeviceIcons["Teclado"] = "mouse";
+            PeripheralPresentation.Preferences = preferences;
+            Check(PeripheralPresentation.Hidden("Teclado") && PeripheralPresentation.Glyph(reading) == PeripheralPresentation.Icon("mouse"), "Preferências ocultam e corrigem ícone sem alterar leitura");
+            PeripheralPresentation.Preferences = null;
             Console.WriteLine($"RESULTADO: {count} aprovados; 0 falhos.");
             if (args.Contains("--live")) Live(args.Last()).GetAwaiter().GetResult();
             if (args.Contains("--keyboard-gatt")) KeyboardGatt(Convert.ToUInt64(args.Last(), 16)).GetAwaiter().GetResult();

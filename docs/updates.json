@@ -417,10 +417,10 @@
     },
     {
         "id":  "proxima-versao",
-        "title":  "Proximas atualizacoes",
+        "title":  "Baterias de dispositivos · em desenvolvimento experimental",
         "state":  "planned",
         "date":  null,
         "url":  null,
-        "description":  "Planejamento em revisao, sem data definida. As proximas alteracoes serao apresentadas aqui quando houver um escopo confirmado. Consulte as versoes publicadas para conhecer os recursos disponiveis."
+        "description":  "A versão 0.33.0 Beta disponibiliza os primeiros indicadores de bateria. Seguimos desenvolvendo compatibilidade com receptores, carregamento e novos modelos. Nem todo dispositivo informa esses dados. Consulte a release experimental para conhecer as limitações."
     }
 ]

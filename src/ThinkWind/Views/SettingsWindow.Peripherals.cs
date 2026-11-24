@@ -8,7 +8,7 @@ internal sealed partial class SettingsWindow
 {
     private void BuildPeripheralSettings()
     {
-        var section = Section("Baterias dos dispositivos", "Oculte indicadores ou corrija o tipo identificado. As escolhas ficam salvas por nome do dispositivo.");
+        var section = Section("Baterias dos dispositivos", "Experimental · em desenvolvimento. A disponibilidade e a atualização dependem do dispositivo e do Windows. Oculte indicadores ou corrija o tipo identificado; as escolhas ficam salvas por nome.");
         Check(section, "Avisar quando a bateria ficar abaixo de 15%", store.Value.BatteryLowAlerts, value => store.Update(p => p.BatteryLowAlerts = value));
         var names = PeripheralBatteries.Current.Select(d => d.Name).Concat(store.Value.HiddenBatteryDevices).Concat(store.Value.BatteryDeviceIcons.Keys).Distinct().OrderBy(n => n).ToArray();
         if (names.Length == 0) Note(section, "Os dispositivos aparecerão aqui quando houver uma leitura de bateria.");
