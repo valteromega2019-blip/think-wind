@@ -11,6 +11,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Contains("--peripheral-battery")) return PeripheralBatteryChecks.Run(args);
         if (args.Contains("--games")) return GameLibraryChecks.Run();
         if (args.Contains("--dock-group")) return DockGroupChecks.Run();
         if (args.Contains("--iconography")) return IconographyChecks.Run();

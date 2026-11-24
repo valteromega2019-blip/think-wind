@@ -14,8 +14,10 @@ internal static class G435Battery
     private static readonly object statusGate = new();
     private static bool charging;
     private static long statusAt;
+    private static readonly ChargeRiseDetector riseDetector = new(120, 80);
+    internal static int? LastMillivolts { get; private set; }
     // Passive Lightspeed status: 00 .. 50 49, state before 04 00 04 01.
-    // Protocol evidence: gearhub LogitechHidppProvider (MIT); never infer from voltage.
+    // Protocol evidence: gearhub LogitechHidppProvider (MIT). Separate from voltage heuristic.
     private static void ObserveStatus(byte[] packet)
     {
         if (packet.Length != 65 || packet[0] != 0 || packet[2] != 0x50 || packet[3] != 0x49) return;
@@ -82,7 +84,15 @@ internal static class G435Battery
                     if (packet[i] == 0 && packet[i + 1] == 7 && packet[i + 2] == 0 && packet[i + 3] == 6 && packet[i + 5] == 0)
                     {
                         int mv = packet[i + 6] | packet[i + 7] << 8;
-                        if (mv >= 2500 && mv <= 4500) return new PeripheralBattery("Logitech G435 · estimativa por tensão", Percentage(mv), "\uE7F6", Estimated: true, Charging: IsCharging());
+                        if (mv >= 2500 && mv <= 4500)
+                        {
+                            LastMillivolts = mv;
+                            bool inferred = riseDetector.Update(mv, Environment.TickCount64);
+                            bool confirmed = IsCharging();
+                            return new PeripheralBattery("Logitech G435 · estimativa por tensão",
+                                Percentage(riseDetector.HoldBaseline && !confirmed ? riseDetector.Baseline : mv), "\uE7F6",
+                                Estimated: true, Charging: confirmed || inferred, ChargingEstimated: inferred && !confirmed);
+                        }
                     }
         }
         catch (OperationCanceledException) { }

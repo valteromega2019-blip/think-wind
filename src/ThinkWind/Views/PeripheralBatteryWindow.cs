@@ -36,14 +36,15 @@ internal sealed class PeripheralBatteryWindow : FloatingWindow
         battery.Charge = device?.VisualCharge ?? -1; battery.Charging = device?.Charging == true;
         state.Text = device is null ? "Dispositivo desconectado ou leitura indisponível."
             : device.Display + (device.Charging ? " · Carregando ⚡" : "")
-                + (device.Estimated ? "\nEstimativa obtida pela tensão da bateria." : "")
+                + (device.Estimated && !device.ChargingEstimated ? "\nEstimativa obtida pela tensão da bateria." : "")
+                + (device.ChargingEstimated ? "\nSubida brusca: barra no nível anterior. Carregamento não confirmado pelo dispositivo." : "")
                 + (device.Stale ? "\nÚltima leitura válida; aguardando nova resposta do dispositivo." : "");
     }
     public override void Position()
     {
         var display = Display;
         int width = (int)Math.Round(Math.Min(400, display.Width - 24) * display.Scale);
-        int height = (int)Math.Round(Math.Min(270, display.Height - 24) * display.Scale);
+        int height = (int)Math.Round(Math.Min(300, display.Height - 24) * display.Scale);
         int left = display.Work.Left + (display.Work.Width - width) / 2, top = display.Work.Top + (display.Work.Height - height) / 2;
         OverlayChrome.Move(new WindowInteropHelper(this).Handle, new OverlayChrome.PixelRect { Left = left, Top = top, Right = left + width, Bottom = top + height }); UpdateClip();
     }

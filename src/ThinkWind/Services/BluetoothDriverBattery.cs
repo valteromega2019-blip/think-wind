@@ -9,6 +9,7 @@ namespace OrbyLauncher.Services;
 // No GATT connection, pairing, HID reports, shell process or keyboard capture.
 internal static class BluetoothDriverBattery
 {
+    private static readonly Dictionary<string, ChargeRiseDetector> rises = new(StringComparer.OrdinalIgnoreCase);
     [StructLayout(LayoutKind.Sequential)] private struct PropertyKey { internal Guid Format; internal uint Id; }
     [DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)] private static extern uint CM_Get_Device_ID_List_SizeW(out uint size, string filter, uint flags);
     [DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)] private static extern uint CM_Get_Device_ID_ListW(string filter, [Out] char[] buffer, uint size, uint flags);
@@ -36,7 +37,16 @@ internal static class BluetoothDriverBattery
             string label = name.ToLowerInvariant();
             string glyph = label.Contains("keyboard") || label.Contains("teclado") || label.EndsWith(" kb") ? "\uE765"
                 : label.Contains("mouse") ? "\uE962" : label.Contains("controller") || label.Contains("controle") ? "\uE7FC" : "\uE7F6";
-            result.Add(new(name, percent, glyph));
+            // This keyboard exposes percentage, not voltage. Limit the heuristic to
+            // the identified model; a normal coarse percentage step may still be a false positive.
+            bool inferred = false;
+            if (name.Equals("BT+2.4G KB", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!rises.TryGetValue(id, out var detector)) rises[id] = detector = new(20, 10);
+                inferred = detector.Update(percent, Environment.TickCount64);
+                if (detector.HoldBaseline) percent = detector.Baseline;
+            }
+            result.Add(new(name, percent, glyph, Charging: inferred, ChargingEstimated: inferred));
         }
         return result.ToArray();
     }

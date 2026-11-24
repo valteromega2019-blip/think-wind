@@ -6,10 +6,10 @@ using Windows.Devices.Enumeration;
 
 namespace OrbyLauncher.Services;
 
-internal sealed record PeripheralBattery(string Name, int? Percent, string Glyph, string? Level = null, bool Estimated = false, bool Charging = false, bool Stale = false)
+internal sealed record PeripheralBattery(string Name, int? Percent, string Glyph, string? Level = null, bool Estimated = false, bool Charging = false, bool Stale = false, bool ChargingEstimated = false)
 {
     internal int VisualCharge => Percent ?? (Level switch { "Vazia" => 0, "Baixa" => 20, "Média" => 50, "Cheia" => 100, _ => -1 });
-    internal string Display => Percent is int percent ? (Estimated ? "≈" : "") + percent + "%" : Level ?? "Indisponível";
+    internal string Display => ChargingEstimated ? "Possível carregamento · estimado" : Percent is int percent ? (Estimated ? "≈" : "") + percent + "%" : Level ?? "Indisponível";
 }
 internal static class PeripheralBatteries
 {
@@ -50,7 +50,7 @@ internal static class PeripheralBatteries
             {
                 long age = Environment.TickCount64 - success;
                 if (age <= 120000) sources[key] = previous.Select(device => device with { Stale = true }).ToArray();
-                else if (present == true) sources[key] = previous.Select(device => device with { Percent = null, Level = "Sem leitura recente", Charging = false, Stale = true }).ToArray();
+                else if (present == true) sources[key] = previous.Select(device => device with { Percent = null, Level = "Sem leitura recente", Charging = false, ChargingEstimated = false, Stale = true }).ToArray();
                 else { sources.Remove(key); lastSuccess.Remove(key); }
             }
             Publish(sources.Values.SelectMany(value => value));
