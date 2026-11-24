@@ -19,3 +19,7 @@ Fontes primárias consultadas:
 - https://github.com/portyporty/g435-battery-percentage (referência apontada pelo protocolo G435; ainda não incorporada)
 
 Pendente: modelos exatos, implementação dos protocolos proprietários autorizados e conferência real. Não declarar todas as marcas suportadas. Compilação, testes, hardware e type check não executados neste pedido.
+## Continuação — G435 046D:0ADF
+Adicionado transporte WinRT HID na coleção exata FF00:0001 do receptor 046D:0ADF. Consulta a tensão usando a sessão documentada por portyporty/g435-battery-percentage (MIT; licença incluída no pacote), com CRC-16/XMODEM, fila de até 32 respostas e limite de quatro segundos. Fechamento da sessão em finally, com prazo separado de 300 ms, seguido de remoção do evento e Dispose. Sem threads dedicadas, sem alterar volume/microfone/pareamento/firmware. A seleção remota do protocolo é transitória; o comando de sessão não é uma simples leitura genérica de HID. Não aplicado ao receptor antigo 0ACB.
+
+Porcentagem estimada pela curva de tensão da referência, identificada com ≈ e descrição. Falha de acesso ou ausência de resposta não gera um valor fictício. Requer conferência no hardware; WinRT pode recusar acesso à coleção conforme permissões/driver. Não compilado nem testado nesta alteração, por preferência do usuário. Logitech HID++, Razer e Attack Shark continuam sem protocolo específico integrado. 8BitDo usa a leitura XInput anterior, quando o driver oferece nível válido; não prometer porcentagem exata nem chamar conexão wired de bateria cheia.
