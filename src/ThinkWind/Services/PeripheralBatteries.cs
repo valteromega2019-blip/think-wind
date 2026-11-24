@@ -6,7 +6,7 @@ using Windows.Devices.Enumeration;
 
 namespace OrbyLauncher.Services;
 
-internal sealed record PeripheralBattery(string Name, int? Percent, string Glyph, string? Level = null, bool Estimated = false, bool Charging = false)
+internal sealed record PeripheralBattery(string Name, int? Percent, string Glyph, string? Level = null, bool Estimated = false, bool Charging = false, bool Stale = false)
 {
     internal int VisualCharge => Percent ?? (Level switch { "Vazia" => 0, "Baixa" => 20, "Média" => 50, "Cheia" => 100, _ => -1 });
     internal string Display => Percent is int percent ? (Estimated ? "≈" : "") + percent + "%" : Level ?? "Indisponível";
@@ -17,27 +17,83 @@ internal static class PeripheralBatteries
     private static readonly List<DeviceWatcher> watchers = new();
     private static int revision;
     private static readonly Dictionary<string, PeripheralBattery[]> sources = new();
+    private static readonly Dictionary<string, long> lastSuccess = new();
     private static void UpdateSource(string key, IEnumerable<PeripheralBattery> values, int expected)
     {
+        var incoming = values.ToArray();
+        bool? present = key switch
+        {
+            "g435" => OrbyLauncher.Native.PeripheralHid.Present(0x046D, 0x0ADF),
+            "x11" => OrbyLauncher.Native.PeripheralHid.Present(0x1D57, 0xFA60),
+            "ultimate" => OrbyLauncher.Native.PeripheralHid.Present(0x2DC8, 0x3106),
+            _ => null
+        };
         lock (gate)
         {
             if (expected != revision) return;
-            sources[key] = values.ToArray(); Publish(sources.Values.SelectMany(value => value));
+            if (present == false) { sources.Remove(key); lastSuccess.Remove(key); }
+            else if (incoming.Length > 0)
+            {
+                bool keptPrevious = false;
+                if (sources.TryGetValue(key, out var old) && lastSuccess.TryGetValue(key, out long last) && Environment.TickCount64 - last <= 120000)
+                    incoming = incoming.Select(device =>
+                    {
+                        var known = old.FirstOrDefault(value => value.Name == device.Name && value.Percent.HasValue);
+                        if (known is not null && device.Percent is null && device.Level?.Contains("informad", StringComparison.OrdinalIgnoreCase) == true)
+                        { keptPrevious = true; return known with { Stale = true }; }
+                        return device;
+                    }).ToArray();
+                sources[key] = incoming;
+                if (!keptPrevious) lastSuccess[key] = Environment.TickCount64;
+            }
+            else if (sources.TryGetValue(key, out var previous) && lastSuccess.TryGetValue(key, out long success))
+            {
+                long age = Environment.TickCount64 - success;
+                if (age <= 120000) sources[key] = previous.Select(device => device with { Stale = true }).ToArray();
+                else if (present == true) sources[key] = previous.Select(device => device with { Percent = null, Level = "Sem leitura recente", Charging = false, Stale = true }).ToArray();
+                else { sources.Remove(key); lastSuccess.Remove(key); }
+            }
+            Publish(sources.Values.SelectMany(value => value));
         }
     }
     internal static event Action? Changed;
     private static void Publish(IEnumerable<PeripheralBattery> readings)
     {
-        Current = readings.GroupBy(device => device.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Select(group => group.OrderByDescending(device => device.Percent.HasValue).First())
+        var next = readings.GroupBy(device => device.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(group => group.OrderByDescending(device => device.Percent.HasValue).ThenBy(device => device.Stale).First())
             .OrderBy(device => device.Name).ToArray();
+        if (Current.SequenceEqual(next)) return;
+        Current = next;
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
         if (dispatcher is not null && !dispatcher.HasShutdownStarted)
             dispatcher.BeginInvoke(new Action(() => Changed?.Invoke()));
     }
-    private static void Invalidate()
+    private static void Invalidate(string? removedId = null, string? removedName = null)
     {
-        lock (gate) { nextRead = 0; revision++; sources.Clear(); Publish(Array.Empty<PeripheralBattery>()); }
+        lock (gate)
+        {
+            nextRead = 0; revision++;
+            // A USB receiver exposes several interfaces. Retire only its source;
+            // unrelated HID events must never blank the entire indicator strip.
+            string? source = removedId is null ? null : removedId.Contains("vid_046d&pid_0adf", StringComparison.OrdinalIgnoreCase) ? "g435"
+                : removedId.Contains("vid_1d57&pid_fa60", StringComparison.OrdinalIgnoreCase) ? "x11"
+                : removedId.Contains("vid_2dc8&pid_3106", StringComparison.OrdinalIgnoreCase) ? "ultimate"
+                : removedId.Contains("vid_1ea7&pid_0002", StringComparison.OrdinalIgnoreCase) ? "keyboards" : null;
+            bool removed = source switch
+            {
+                "g435" => !OrbyLauncher.Native.PeripheralHid.Present(0x046D, 0x0ADF),
+                "x11" => !OrbyLauncher.Native.PeripheralHid.Present(0x1D57, 0xFA60),
+                "ultimate" => !OrbyLauncher.Native.PeripheralHid.Present(0x2DC8, 0x3106),
+                "keyboards" => !OrbyLauncher.Native.PeripheralHid.Present(0x1EA7, 0x0002),
+                _ => false
+            };
+            if (source is not null && removed) { sources.Remove(source); lastSuccess.Remove(source); }
+            if (source == "ultimate" && removed && sources.TryGetValue("controllers", out var controllers))
+                sources["controllers"] = controllers.Where(device => device.Name != "8BitDo Ultimate").ToArray();
+            if (!string.IsNullOrWhiteSpace(removedName))
+                foreach (string key in sources.Keys.ToArray()) sources[key] = sources[key].Where(device => device.Name != removedName).ToArray();
+            Publish(sources.Values.SelectMany(value => value));
+        }
     }
     private static void WatchDevices()
     {
@@ -45,15 +101,26 @@ internal static class PeripheralBatteries
         foreach (var kind in new[] { DeviceInformationKind.DeviceInterface, DeviceInformationKind.AssociationEndpoint })
         {
             bool ready = false;
+            var names = new Dictionary<string, string>();
+            var namesGate = new object();
             string selector = kind == DeviceInformationKind.DeviceInterface
                 ? "System.Devices.InterfaceClassGuid:=\"{4D1E55B2-F16F-11CF-88CB-001111000030}\""
                 : "System.Devices.Aep.ProtocolId:=\"{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}\" OR System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\"";
             try
             {
                 var watcher = DeviceInformation.CreateWatcher(selector, new[] { "System.Devices.Aep.IsConnected" }, kind);
-                watcher.Added += (_, _) => { if (ready) Invalidate(); };
-                watcher.Removed += (_, _) => { if (ready) Invalidate(); };
-                watcher.Updated += (_, change) => { if (ready && change.Properties.ContainsKey("System.Devices.Aep.IsConnected")) Invalidate(); };
+                watcher.Added += (_, device) => { lock (namesGate) names[device.Id] = device.Name; if (ready) Invalidate(); };
+                watcher.Removed += (_, device) =>
+                {
+                    string? name; lock (namesGate) { names.Remove(device.Id, out name); }
+                    if (ready) Invalidate(device.Id, kind == DeviceInformationKind.AssociationEndpoint ? name : null);
+                };
+                watcher.Updated += (_, change) =>
+                {
+                    if (!ready || !change.Properties.TryGetValue("System.Devices.Aep.IsConnected", out var connected)) return;
+                    string? name; lock (namesGate) names.TryGetValue(change.Id, out name);
+                    Invalidate(connected is false ? change.Id : null, connected is false ? name : null);
+                };
                 watcher.EnumerationCompleted += (_, _) => ready = true;
                 watchers.Add(watcher); watcher.Start();
             }

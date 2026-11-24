@@ -36,7 +36,8 @@ internal sealed class PeripheralBatteryWindow : FloatingWindow
         battery.Charge = device?.VisualCharge ?? -1; battery.Charging = device?.Charging == true;
         state.Text = device is null ? "Dispositivo desconectado ou leitura indisponível."
             : device.Display + (device.Charging ? " · Carregando ⚡" : "")
-                + (device.Estimated ? "\nEstimativa obtida pela tensão da bateria." : "");
+                + (device.Estimated ? "\nEstimativa obtida pela tensão da bateria." : "")
+                + (device.Stale ? "\nÚltima leitura válida; aguardando nova resposta do dispositivo." : "");
     }
     public override void Position()
     {

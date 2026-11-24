@@ -53,3 +53,9 @@ Não localizado configurador dedicado em entradas de desinstalação ou pastas p
 Pesquisa por1EA7:0002 não identificou um protocolo de bateria específico. A referência pública Acer PopGo tem páginaFFB5 mas outros VID/PID; portanto não copiar comandos dela. Também1EA7:0907 de Skyloong/Semitek é PID diferente. Nome de fabricante no catálogo USB não basta para afirmar fabricante da placa personalizada.
 
 Pendente nome físico da base/kit/PCB fornecido pelo usuário para localizar software/firmware adequado. Não enviados comandos a esses canais desconhecidos, não capturadas teclas, não executados testes/type check/build. Nenhuma alteração na leitura do Orby nesta investigação.
+## Estabilidade das leituras
+Causas observadas no código: Invalidate apagava todas as fontes para qualquer evento HID; UpdateSource substituía fonte por array vazio em timeouts; a UI reconstruía todos os botões em cada alteração de leitura. Corrigido para preservar fontes independentes, confirmar ausência física do receptor antes de retirar apenas a fonte correspondente, e reutilizar Button/BatteryIcon ao atualizar carga. Eventos de conexão Bluetooth são associados ao nome conhecido do endpoint.
+
+Última leitura válida retida por até120s em ausência de resposta, com indicação na janela de detalhes/tooltip; findo prazo, um receptor ainda presente permanece com nível desconhecido, sem perpetuar porcentagem antiga. Desconexões confirmadas removem o dispositivo. Snapshot idêntico não envia evento UI, e fontes duplicadas preferem valor conhecido/fresco. Não são filtros que inventam ou suavizam porcentagens reportadas: dados válidos novos continuam substituindo os anteriores.
+
+Revisão por código e diff; não executados testes, type check, compilação ou nova prévia nesta correção. Efeito visual e desconexão ainda pendentes de conferência autorizada.
