@@ -37,3 +37,11 @@ Atraso anterior: cache fixo de60s e publicação só após todos os leitores; re
 Centralização: statusHost Grid com a mesma largura total da faixa de status; indicadores centrados nessa camada em vez de LastChildFill do DockPanel. Máximo34% da largura disponível para conter a área central. Rodapé expandido mantém seu alinhamento ao painel.
 
 Validação: revisão de código/diff apenas. Nenhum teste, type check, compilação, execução ou leitura experimental no hardware nesta etapa. Pendente conferir a resposta real do Ultimate e a convivência de áudio do G435 no runtime. Não declarar esses dispositivos validados sem execução autorizada.
+## Indicadores e identificação de teclado
+UI compacta usa BatteryIcon já existente no notebook, com ícone do periférico e barra preenchida; porcentagem retirada da linha principal. Clique abre uma janela Acrylic usando os recursos atuais, com nome completo, leitura e carregamento; Esc/Fechar encerra. Uma janela por vez. Overlay reaproveita os indicadores, permanecendo não clicável como antes. Níveis discretos XInput são representados por preenchimentos categóricos, mantendo o texto real na janela; não exibem porcentagem calculada.
+
+Charging agora é transportado pelos leitores X11 (estado3), Ultimate vendor (bit7) e Windows.Gaming.Input (BatteryStatus.Charging). G435 fornece tensão, não foi inferido carregamento sem fonte. Unknown usa os pontos do BatteryIcon, não uma barra vazia falsamente interpretada como0%.
+
+Inventário do teclado: USB1EA7:0002 descrito pelo barramento como "2.4G RF Keyboard & Mouse". Interfaces HID MI00 e MI01 são do mesmo receptor. HID1D57:FA60 são funções auxiliares do mouse X11. HID046D:C232 pertence a LGHUBDevice, virtual. Exibida identificação genérica do receptor1EA7:0002 e aviso de bateria não informada; marca/modelo físico do teclado personalizado e protocolo da bateria continuam desconhecidos. Sem leitura de teclas, sem abrir a coleção de teclado para captura.
+
+Validação nesta etapa: inventário PnP de leitura e revisão do código/diff. Nenhum teste, type check, build ou execução da nova UI. Necessária conferência visual autorizada antes de afirmar resultado em runtime.

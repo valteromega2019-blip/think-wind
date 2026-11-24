@@ -21,7 +21,7 @@ internal static class AttackSharkBattery
                 var packet = await device.Read(deadline.Token).ConfigureAwait(false);
                 if (packet.Length < 5 || packet[0] != 3 || packet[1] != 0x55 || packet[2] != 0x40 || packet[3] is < 1 or > 3 || packet[4] > 100) continue;
                 int percent = packet[4];
-                if (previous == percent) return new PeripheralBattery("Attack Shark X11", percent, "\uE962");
+                if (previous == percent) return new PeripheralBattery("Attack Shark X11", percent, "\uE962", Charging: packet[3] == 3);
                 previous = percent;
             }
         }

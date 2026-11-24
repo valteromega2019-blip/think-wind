@@ -28,7 +28,7 @@ internal static class ReceiverBatterySources
                 if (report?.RemainingCapacityInMilliwattHours is int remaining && report.FullChargeCapacityInMilliwattHours is int full
                     && full > 0 && remaining >= 0 && remaining <= full)
                     percent = (int)Math.Round(remaining * 100d / full);
-                result.Add(new("8BitDo Ultimate", percent, "\uE7FC", "Nível não informado"));
+                result.Add(new("8BitDo Ultimate", percent, "\uE7FC", "Nível não informado", Charging: report?.Status == Windows.System.Power.BatteryStatus.Charging));
             }
             if (!result.Exists(device => device.Name == "8BitDo Ultimate") && OrbyLauncher.Native.PeripheralHid.Present(0x2DC8, 0x3106))
                 result.Add(new("8BitDo Ultimate", null, "\uE7FC", "Receptor · carga não informada"));
@@ -48,6 +48,13 @@ internal static class ReceiverBatterySources
         return result;
     }
 
+    internal static IEnumerable<PeripheralBattery> ReadCustomKeyboard()
+    {
+        // Identified USB receiver; never open the keyboard collection or inspect keystrokes.
+        if (OrbyLauncher.Native.PeripheralHid.Present(0x1EA7, 0x0002))
+            return new[] { new PeripheralBattery("Teclado 2.4G RF Keyboard & Mouse · 1EA7:0002", null, "\uE765", "Bateria não informada pelo receptor") };
+        return Array.Empty<PeripheralBattery>();
+    }
     internal static async Task<IEnumerable<PeripheralBattery>> ReadWindowsDevices()
     {
         var result = new List<PeripheralBattery>();

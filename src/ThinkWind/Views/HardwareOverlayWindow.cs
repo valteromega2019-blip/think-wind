@@ -149,8 +149,7 @@ internal sealed class HardwareOverlayWindow : Window
         string extra = string.Join(" · ", new[] { selected.Contains("game") ? V("game") : null, selected.Contains("clock") ? V("clock") : null }.Where(value => value is not null));
         if (extra.Length > 0) rows.Children.Add(Text(extra, 10, true));
         PeripheralBatteries.Refresh();
-        foreach (var battery in PeripheralBatteries.Current)
-            rows.Children.Add(Text(battery.Name + " · " + battery.Display, 11));
+        if (PeripheralBatteries.Current.Length > 0) rows.Children.Add(new PeripheralBatteryStrip { IsHitTestVisible = false });
         if (rows.Children.Count == 0) rows.Children.Add(Text("Nenhuma métrica selecionada", 11, true));
         PositionOverlay();
     }

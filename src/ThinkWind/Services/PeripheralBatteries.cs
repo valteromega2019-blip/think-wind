@@ -6,8 +6,9 @@ using Windows.Devices.Enumeration;
 
 namespace OrbyLauncher.Services;
 
-internal sealed record PeripheralBattery(string Name, int? Percent, string Glyph, string? Level = null, bool Estimated = false)
+internal sealed record PeripheralBattery(string Name, int? Percent, string Glyph, string? Level = null, bool Estimated = false, bool Charging = false)
 {
+    internal int VisualCharge => Percent ?? (Level switch { "Vazia" => 0, "Baixa" => 20, "Média" => 50, "Cheia" => 100, _ => -1 });
     internal string Display => Percent is int percent ? (Estimated ? "≈" : "") + percent + "%" : Level ?? "Indisponível";
 }
 internal static class PeripheralBatteries
@@ -89,6 +90,7 @@ internal static class PeripheralBatteries
         try
         {
             UpdateSource("controllers", ReceiverBatterySources.ReadControllers(), started);
+            UpdateSource("keyboards", ReceiverBatterySources.ReadCustomKeyboard(), started);
             var sharkRead = AttackSharkBattery.Read();
             var ultimateRead = UltimateBattery.Read();
             var g435 = await G435Battery.Read();

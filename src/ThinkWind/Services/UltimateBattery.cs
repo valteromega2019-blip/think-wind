@@ -40,7 +40,7 @@ internal static class UltimateBattery
             if (data is null || data[6] != 6) return null;
             int percent = data[18] & 0x7F;
             if (percent > 100) return null;
-            return new PeripheralBattery("8BitDo Ultimate", percent, "\uE7FC");
+            return new PeripheralBattery("8BitDo Ultimate", percent, "\uE7FC", Charging: (data[18] & 0x80) != 0);
         }
         catch (OperationCanceledException) { }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
