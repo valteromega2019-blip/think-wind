@@ -153,6 +153,11 @@ internal static class PeripheralBatteries
         if (stopped) return;
         WatchDevices();
         Schedule("local", 2000, ReadLocal);
+        Schedule("phone", 2000, started =>
+        {
+            UpdateSource("phone", PhoneLinkBattery.Read(), started);
+            return Task.CompletedTask;
+        });
         Schedule("controllers", 5000, started =>
         {
             UpdateSource("controllers", ReceiverBatterySources.ReadControllers(), started);

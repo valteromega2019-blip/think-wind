@@ -88,3 +88,9 @@ Removida a trava global que aguardava o ciclo inteiro, inclusive enumerações W
 Aplicado cancelamento de5s à enumeração genérica antes sem limite. Falha de uma fonte não bloqueia outras; cancelamento preserva o histórico conforme política de validade existente. Notificações simultâneas de UI são agrupadas numa entrega do snapshot mais recente; botões existentes e última leitura são mantidos, não apagados ao iniciar consulta. Ordenação continua estável por nome.
 Revisão nesta etapa apenas por código e diff. Não executados testes, type check ou compilação, conforme preferência do usuário; prévia aberta ainda é a anterior.
 
+
+## Celular pelo Vincular ao Celular
+Encontrado o cartão local LocalState/StartMenu/StartMenuCompanion.json do pacote Microsoft.YourPhone. Inventário restrito identificou cabeçalho de aparelho conectado e dois tooltips concordantes de bateria37%, sem extrair mensagens/notificações. Implementação própria PhoneLinkBattery em System.Text.Json, sem copiar parser GPL da referência Wireless Device Battery Monitor. Formato local não documentado e não garantido pela Microsoft; sem nova conta, rede, ADB, inicialização do Phone Link ou leitura dos bancos de mensagens.
+Leitura do arquivo a cada2s apenas quando o Refresh existente permite, com cache por modificação/tamanho; não reabre JSON inalterado. Limite1MiB e profundidade32, leitura compartilhada, campos permitidos de layout e rótulos estritos PT/EN. Rejeita valores fora de0–100, cartões desconectados/ambíguos, formatos desconhecidos e arquivos antigos. Sinalização de última leitura após2min, rejeição do cartão após10min mais tolerância do agregador. Usa ícone de celular E8EA, BatteryIcon e detalhes existentes; raio somente se o tooltip afirmar carregamento. Não altera heurísticas do teclado/headset.
+Revisão por leitura e diff apenas; não compilado nem executados testes ou type check nesta etapa. A integração ainda não está na prévia aberta.
+
