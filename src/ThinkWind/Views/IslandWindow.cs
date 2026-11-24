@@ -22,6 +22,7 @@ internal sealed partial class IslandWindow : FloatingWindow
     private readonly StackPanel header = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly IslandModuleBoard modules = new();
     private readonly IslandLayoutHost stableLayout = new();
+    private readonly PeripheralBatteryStrip peripheralFooter = new(), peripheralStatus = new();
     private readonly StackPanel hoverPanel = new();
     private readonly Grid hoverModules = new();
     private readonly Border mediaSlot = new(), outputSlot = new(), microphoneSlot = new(), hoverMediaSlot = new(), hoverOutputSlot = new(), hoverMicrophoneSlot = new();
@@ -127,6 +128,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         DockPanel.SetDock(hoverViewport, Dock.Top); root.Children.Add(hoverViewport);
         moduleViewport.Child = modules;
         fullPanel.Children.Add(new AdornerDecoratorHost(moduleViewport));
+        DockPanel.SetDock(peripheralFooter, Dock.Bottom); root.Children.Add(peripheralFooter);
         root.Children.Add(fullPanel); Surface.Child = stableLayout;
         InitializeSecondArea();
         BuildBodies();
@@ -140,7 +142,7 @@ internal sealed partial class IslandWindow : FloatingWindow
             }
             if (NearActivationZone && !interaction.MiniOpen) { if (!hoverEnter.IsEnabled) hoverEnter.Start(); } else if (!IsMouseOver) hoverEnter.Stop();
         };
-        timer.Tick += (_, _) => { RefreshAdaptiveReveal(); UpdateClock(); RefreshAudio(); UpdateHoverStatus(); weather.Poll(); if (contentResizePending && !ControlsBusy) ModuleSizeChanged(); if (IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("connections")) brightness.Refresh(); };
+        timer.Tick += (_, _) => { RefreshAdaptiveReveal(); UpdateClock(); RefreshAudio(); peripheralFooter.Visibility = Stage == IslandStage.Compact ? Visibility.Collapsed : Visibility.Visible; peripheralFooter.Refresh(); peripheralStatus.Refresh(); UpdateHoverStatus(); weather.Poll(); if (contentResizePending && !ControlsBusy) ModuleSizeChanged(); if (IsVisible && Stage == IslandStage.Full && Store.ModuleVisible("connections")) brightness.Refresh(); };
         hoverEnter.Tick += (_, _) => { hoverEnter.Stop(); if (!escapeDismissed && !edgeReduced && (IsMouseOver || NearActivationZone) && !interaction.MiniOpen) Transition(() => interaction.Enter()); };
         hoverLeave.Tick += (_, _) =>
         {
@@ -568,6 +570,8 @@ internal sealed partial class IslandWindow : FloatingWindow
     }
     private void UpdateStageVisibility()
     {
+        peripheralFooter.Visibility = Stage == IslandStage.Compact ? Visibility.Collapsed : Visibility.Visible;
+        peripheralFooter.Refresh();
         if (IsVisible && (Stage != IslandStage.Compact || interaction.MiniOpen)) outsidePanelClicks?.Start();
         else outsidePanelClicks?.Stop();
         hoverViewport.Visibility = Stage == IslandStage.Hover ? Visibility.Visible : Visibility.Collapsed;
@@ -884,7 +888,7 @@ internal sealed partial class IslandWindow : FloatingWindow
         double fullContentHeight = secondAreaSelected ? secondArea.Height : moduleViewport.Height;
         moduleViewport.Measure(new Size(inner, contentLimit));
         if (!secondAreaSelected) fullContentHeight = Math.Min(contentLimit, moduleViewport.Height);
-        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight);
+        double height = Stage == IslandStage.Compact ? headerHeight : Stage == IslandStage.Hover ? headerHeight + hoverViewport.Height + 24 : Math.Min(limit, headerHeight + fullContentHeight + indicatorsHeight + 24);
         if (Store.IsEditing && Stage == IslandStage.Full && editingHeight is double previousHeight)
             height = previousHeight;
         if (Stage == IslandStage.Full && !Store.IsEditing && !preparingFullReveal)

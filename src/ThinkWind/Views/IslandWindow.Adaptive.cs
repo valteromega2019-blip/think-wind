@@ -182,6 +182,7 @@ internal sealed partial class IslandWindow
             controls.Children.Clear(); foreach (var control in reversed) controls.Children.Add(control);
         }
         DockPanel.SetDock(controls, mirrored ? Dock.Left : Dock.Right); statusRow.Children.Add(controls);
+        statusRow.LastChildFill = true; statusRow.Children.Add(peripheralStatus);
     }
     private bool AdaptiveCollapse => fullscreenReveal || Store.Value.IslandAutoCollapse
         || (Store.Value.IslandReduceOverMaximized && maximizedOnDisplay);
